@@ -1,7 +1,8 @@
 use iced::{
     Task,
-    runtime::platform_specific::wayland::commands::layer_surface::{
-        Anchor, KeyboardInteractivity, Layer, set_anchor, set_keyboard_interactivity, set_layer
+    platform_specific::shell::wayland::commands::layer_surface::{
+        Anchor, KeyboardInteractivity, Layer, set_anchor, set_keyboard_interactivity, set_layer,
+        set_size, set_exclusive_zone
     },
     window::Id
 };

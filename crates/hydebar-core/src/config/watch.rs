@@ -208,7 +208,7 @@ pub fn subscription(path: &Path, manager: Arc<ConfigManager>) -> Subscription<Co
     let id = TypeId::of::<ConfigEvent>();
     let path = path.to_path_buf();
 
-    Subscription::run_with_id(
+    Subscription::run_with(
         id,
         channel(100, move |output| {
             let manager = Arc::clone(&manager);

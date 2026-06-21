@@ -425,7 +425,7 @@ pub(crate) fn spawn_keyboard_listener(
             listener.add_monitor_added_handler({
                 let tx = tx.clone();
                 let client = client.clone();
-                move || {
+                move |_| {
                     let tx = tx.clone();
                     let client = client.clone();
                     Box::pin(async move {
@@ -458,7 +458,7 @@ pub(crate) fn spawn_keyboard_listener(
                 }
             });
 
-            listener.add_submap_change_handler({
+            listener.add_sub_map_change_handler({
                 let tx = tx.clone();
                 move |submap| {
                     let tx = tx.clone();

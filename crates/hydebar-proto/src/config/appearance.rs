@@ -170,6 +170,8 @@ pub struct Appearance {
     pub success_color:            AppearanceColor,
     #[serde(default = "default_danger_color")]
     pub danger_color:             AppearanceColor,
+    #[serde(default = "default_warning_color")]
+    pub warning_color:            AppearanceColor,
     #[serde(default = "default_text_color")]
     pub text_color:               AppearanceColor,
     #[serde(default = "default_workspace_colors")]
@@ -261,6 +263,10 @@ fn default_danger_color() -> AppearanceColor {
     }
 }
 
+fn default_warning_color() -> AppearanceColor {
+    AppearanceColor::Simple(HexColor::rgb(250, 179, 135))
+}
+
 fn default_text_color() -> AppearanceColor {
     AppearanceColor::Simple(HexColor::rgb(205, 214, 244))
 }
@@ -287,6 +293,7 @@ impl Default for Appearance {
             secondary_color:          default_secondary_color(),
             success_color:            default_success_color(),
             danger_color:             default_danger_color(),
+            warning_color:            default_warning_color(),
             text_color:               default_text_color(),
             workspace_colors:         default_workspace_colors(),
             special_workspace_colors: None
