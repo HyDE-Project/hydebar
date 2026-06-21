@@ -232,6 +232,10 @@ impl BrightnessService {
                 Ok(next_state) => {
                     state = next_state;
                 }
+                Err(BrightnessError::MissingDevice) => {
+                    info!("Brightness service: no backlight devices available, service disabled");
+                    return;
+                }
                 Err(err) => {
                     error!("Brightness service failure: {err:?}");
                     let _ = publisher.send(ServiceEvent::Error(err.clone())).await;

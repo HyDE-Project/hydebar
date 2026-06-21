@@ -66,16 +66,18 @@ pub(crate) async fn fetch_players(conn: &Connection, names: &[String]) -> Vec<Mp
                 let state = proxy
                     .playback_status()
                     .await
-                    .map(PlaybackStatus::from)
-                    .unwrap_or_default();
+                    .map(PlaybackStatus::from);
 
-                Some(MprisPlayerData {
-                    service: service.to_string(),
-                    metadata,
-                    volume,
-                    state,
-                    proxy
-                })
+                match state {
+                    Ok(state) => Some(MprisPlayerData {
+                        service: service.to_string(),
+                        metadata,
+                        volume,
+                        state,
+                        proxy
+                    }),
+                    Err(_) => None
+                }
             }
             Err(_) => None
         }

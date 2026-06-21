@@ -119,10 +119,10 @@ impl BluetoothService {
                 let rfkill = BluetoothService::listen_rfkill_soft_block_changes().await?;
                 let devices = bluetooth.devices().await?;
 
-                let mut batteries = Vec::with_capacity(devices.len());
-                for device in devices {
+                let mut batteries = Vec::new();
+                for device in devices.iter().filter(|d| d.battery.is_some()) {
                     let battery = BatteryProxy::builder(bluetooth.bluez.inner().connection())
-                        .path(device.path)
+                        .path(device.path.clone())
                         .map_err(|e| {
                             AppError::internal(format!("Failed to set battery path: {}", e))
                         })?
