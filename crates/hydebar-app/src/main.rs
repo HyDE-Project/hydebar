@@ -5,7 +5,7 @@
 
 use std::{backtrace::Backtrace, borrow::Cow, num::NonZeroUsize, panic, path::PathBuf, sync::Arc};
 
-use clap::{Parser, command};
+use clap::Parser;
 use flexi_logger::{Age, Cleanup, Criterion, FileSpec, LogSpecBuilder, Logger, Naming};
 use hydebar_core::{
     adapters::hyprland_client::HyprlandClient,
@@ -126,14 +126,8 @@ async fn run() -> Result<(), MainError> {
     let runtime_handle = Handle::current();
     let bus_receiver = event_bus.receiver();
 
-    iced::daemon(App::title, App::update, App::view)
-        .subscription(App::subscription)
-        .theme(App::theme)
-        .style(App::style)
-        .scale_factor(App::scale_factor)
-        .font(Cow::from(ICON_FONT))
-        .default_font(font)
-        .run_with(App::new((
+    let boot = {
+        let deps = std::cell::Cell::new(Some((
             logger,
             config,
             config_manager,
@@ -142,6 +136,21 @@ async fn run() -> Result<(), MainError> {
             event_sender,
             runtime_handle,
             bus_receiver
-        )))
+        )));
+        move || {
+            deps.take()
+                .map(App::new)
+                .expect("boot called more than once")
+        }
+    };
+
+    iced::daemon(boot, App::update, App::view)
+        .subscription(App::subscription)
+        .theme(App::theme)
+        .style(App::style)
+        .scale_factor(App::scale_factor)
+        .font(Cow::from(ICON_FONT))
+        .default_font(font)
+        .run()
         .map_err(MainError::from)
 }

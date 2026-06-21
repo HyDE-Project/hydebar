@@ -193,58 +193,56 @@ impl App {
             runtime_handle,
             bus_receiver
         ): AppDependencies
-    ) -> impl FnOnce() -> (Self, Task<Message>) {
-        move || {
-            let (outputs, task) = Outputs::new(config.appearance.style, config.position, &config);
+    ) -> (Self, Task<Message>) {
+        let (outputs, task) = Outputs::new(config.appearance.style, config.position, &config);
 
-            let custom = config
-                .custom_modules
-                .iter()
-                .map(|o| (o.name.clone(), Custom::default()))
-                .collect();
-            let module_context = ModuleContext::new(event_sender, runtime_handle);
-            let hyprland_clone = Arc::clone(&hyprland);
-            let mut app = App {
-                config_path,
-                logger,
-                _hyprland: hyprland,
-                config_manager,
-                bus_receiver: Arc::new(Mutex::new(bus_receiver)),
-                micro_ticker: MicroTicker::default(),
-                module_context,
-                outputs,
-                navigation_mode: false,
-                focused_module_index: None,
-                app_launcher: AppLauncher,
-                custom,
-                updates: Updates::default(),
-                clipboard: Clipboard,
-                workspaces: Workspaces::new(Arc::clone(&hyprland_clone), &config.workspaces),
-                window_title: WindowTitle::new(Arc::clone(&hyprland_clone), &config.window_title),
-                system_info: SystemInfo::default(),
-                keyboard_layout: KeyboardLayout::new(Arc::clone(&hyprland_clone)),
-                keyboard_submap: KeyboardSubmap::new(hyprland_clone),
-                tray: TrayModule::default(),
-                clock: Clock::default(),
-                battery: Battery::default(),
-                privacy: Privacy::default(),
-                settings: Settings::default(),
-                media_player: MediaPlayer::default(),
-                notifications: Notifications::default(),
-                screenshot: Screenshot::default(),
-                weather: Weather::new(
-                    config.weather.location.clone(),
-                    config.weather.api_key.clone(),
-                    config.weather.use_celsius,
-                    config.weather.update_interval_minutes
-                ),
-                config
-            };
+        let custom = config
+            .custom_modules
+            .iter()
+            .map(|o| (o.name.clone(), Custom::default()))
+            .collect();
+        let module_context = ModuleContext::new(event_sender, runtime_handle);
+        let hyprland_clone = Arc::clone(&hyprland);
+        let mut app = App {
+            config_path,
+            logger,
+            _hyprland: hyprland,
+            config_manager,
+            bus_receiver: Arc::new(Mutex::new(bus_receiver)),
+            micro_ticker: MicroTicker::default(),
+            module_context,
+            outputs,
+            navigation_mode: false,
+            focused_module_index: None,
+            app_launcher: AppLauncher,
+            custom,
+            updates: Updates::default(),
+            clipboard: Clipboard,
+            workspaces: Workspaces::new(Arc::clone(&hyprland_clone), &config.workspaces),
+            window_title: WindowTitle::new(Arc::clone(&hyprland_clone), &config.window_title),
+            system_info: SystemInfo::default(),
+            keyboard_layout: KeyboardLayout::new(Arc::clone(&hyprland_clone)),
+            keyboard_submap: KeyboardSubmap::new(hyprland_clone),
+            tray: TrayModule::default(),
+            clock: Clock::default(),
+            battery: Battery::default(),
+            privacy: Privacy::default(),
+            settings: Settings::default(),
+            media_player: MediaPlayer::default(),
+            notifications: Notifications::default(),
+            screenshot: Screenshot::default(),
+            weather: Weather::new(
+                config.weather.location.clone(),
+                config.weather.api_key.clone(),
+                config.weather.use_celsius,
+                config.weather.update_interval_minutes
+            ),
+            config
+        };
 
-            app.register_modules();
+        app.register_modules();
 
-            (app, task)
-        }
+        (app, task)
     }
 }
 
@@ -295,7 +293,7 @@ mod tests {
             event_sender,
             runtime_handle,
             bus_receiver
-        ))();
+        ));
 
         assert!(Arc::ptr_eq(&app._hyprland, &mock_port));
     }
@@ -325,7 +323,7 @@ mod tests {
             event_sender,
             runtime_handle,
             bus_receiver
-        ))();
+        ));
 
         let _ = app.update(Message::KeyboardLayout(
             hydebar_core::modules::keyboard_layout::Message::ChangeLayout
