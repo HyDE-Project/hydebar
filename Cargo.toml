@@ -26,7 +26,7 @@ iced = { git = "https://github.com/pop-os/iced", features = [
   "canvas",
 ] }
 chrono = "0.4"
-hyprland = "0.3"
+hyprland = "0.4.0-beta.3"
 serde = { version = "1.0", features = ["derive"] }
 sysinfo = "0.39"
 tokio = { version = "1", features = ["full", "test-util"] }

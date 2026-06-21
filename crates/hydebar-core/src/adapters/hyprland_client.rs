@@ -191,7 +191,7 @@ impl HyprlandPort for HyprlandClient {
         self.execute_with_retry(TOGGLE_SPECIAL_OP, move || {
             let monitor_identifier = match &monitor {
                 HyprlandMonitorSelector::Id(id) => {
-                    MonitorIdentifier::Id((*id).try_into().unwrap_or(u8::MAX))
+                    MonitorIdentifier::Id((*id).try_into().unwrap_or(i128::MAX))
                 }
                 HyprlandMonitorSelector::Name(name) => MonitorIdentifier::Name(name.as_str())
             };
