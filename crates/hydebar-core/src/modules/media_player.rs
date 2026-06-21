@@ -6,7 +6,7 @@ use std::{
 use iced::{
     Background, Border, Element, Length, Theme,
     alignment::Vertical,
-    widget::{Column, button, column, container, horizontal_rule, row, slider, text}
+    widget::{Column, button, column, container, row, rule, slider, text}
 };
 use log::{error, warn};
 use tokio::{
@@ -298,7 +298,7 @@ impl MediaPlayer {
             None => text("Not connected to MPRIS service").into(),
             Some(s) => column!(
                 text("Players").size(20),
-                horizontal_rule(1),
+                rule::horizontal(1),
                 column(s.iter().map(|d| {
                     let title = text(Self::get_title(d, config))
                         .wrapping(text::Wrapping::WordOrGlyph)

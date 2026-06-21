@@ -146,7 +146,7 @@ impl HyprlandPort for HyprlandClient {
                 .map(|monitor| HyprlandMonitorInfo {
                     id:                   i32::try_from(monitor.id).unwrap_or(i32::MAX),
                     name:                 monitor.name,
-                    special_workspace_id: Some(monitor.special_workspace.id)
+                    special_workspace_id: None
                 })
                 .collect();
 
@@ -155,7 +155,7 @@ impl HyprlandPort for HyprlandClient {
                 .map(|workspace| HyprlandWorkspaceInfo {
                     id:           workspace.id,
                     name:         workspace.name,
-                    monitor_id:   workspace.monitor_id.and_then(|id| usize::try_from(id).ok()),
+                    monitor_id:   workspace.monitor.and_then(|m| usize::try_from(m.id).ok()),
                     monitor_name: workspace.monitor,
                     window_count: workspace.windows
                 })

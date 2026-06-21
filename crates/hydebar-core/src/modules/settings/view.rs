@@ -1,7 +1,7 @@
 use iced::{
     Alignment, Background, Border, Element, Length, Padding, Theme,
     alignment::{Horizontal, Vertical},
-    widget::{Column, Row, Space, button, column, container, horizontal_space, row, text},
+    widget::{Column, Row, Space, button, column, container, row, rule, text},
     window::Id
 };
 
@@ -134,7 +134,7 @@ impl SettingsViewExt for Settings {
 
             let header = Row::new()
                 .push_maybe(battery_data)
-                .push(Space::with_width(Length::Fill))
+                .push(Space::new().width(Length::Fill))
                 .push(right_buttons)
                 .spacing(8)
                 .width(Length::Fill);
@@ -308,7 +308,7 @@ pub(crate) fn quick_settings_section<'a>(
 
     if let Some((before_button, before_menu)) = before.take() {
         section = section.push(
-            row![before_button, horizontal_space()]
+            row![before_button, Space::new().width(Length::Fill)]
                 .width(Length::Fill)
                 .spacing(8)
         );

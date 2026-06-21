@@ -1,6 +1,6 @@
 use iced::{
     Alignment, Element, Length, Theme,
-    widget::{Column, Row, column, container, horizontal_rule, row, text}
+    widget::{Column, Row, column, container, row, rule, text}
 };
 
 use super::{Message, data::SystemInfoData};
@@ -74,7 +74,7 @@ fn format_speed(speed: u32) -> (u32, &'static str) {
 pub fn build_menu_view(data: &SystemInfoData) -> Element<'_, Message> {
     column![
         text("System Info").size(20),
-        horizontal_rule(1),
+        rule::horizontal(1),
         Column::new()
             .push(info_element(
                 Icons::Cpu,

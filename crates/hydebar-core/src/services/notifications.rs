@@ -326,8 +326,8 @@ impl ReadOnlyService for NotificationsService {
     }
 
     fn subscribe() -> Subscription<ServiceEvent<Self>> {
-        Subscription::run_with_id(
-            std::any::TypeId::of::<NotificationsService>(),
+        let id = std::any::TypeId::of::<NotificationsService>();
+        Subscription::run_with(id, |&id| {
             stream::channel(100, |mut output| async move {
                 // Initialize storage
                 let storage = Arc::new(std::sync::Mutex::new(NotificationStorage::default()));
@@ -398,7 +398,7 @@ impl ReadOnlyService for NotificationsService {
                     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
                 }
             })
-        )
+        })
     }
 }
 

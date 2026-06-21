@@ -1,7 +1,7 @@
 use iced::{
     Alignment, Element, Length,
     alignment::Vertical,
-    widget::{button, column, horizontal_space, row, text, text_input},
+    widget::{button, column, row, text, text_input, Space},
     window::Id
 };
 
@@ -39,7 +39,7 @@ pub fn view<'a>(
             .on_input(Message::PasswordChanged)
             .on_submit(Message::DialogConfirmed(id)),
         row!(
-            horizontal_space(),
+            Space::new().width(Length::Fill),
             button(text("Cancel").align_y(Vertical::Center))
                 .padding([4, 32])
                 .style(outline_button_style(opacity))

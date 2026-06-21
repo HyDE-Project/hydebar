@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use iced::{
     Alignment, Element, Length, Padding,
     alignment::Horizontal,
-    widget::{Column, button, column, container, horizontal_rule, row, scrollable, text},
+    widget::{Column, button, column, container, row, rule, scrollable, text},
     window::Id
 };
 
@@ -20,7 +20,7 @@ pub(super) fn menu_view(updates: &Updates, id: Id, opacity: f32) -> Element<'_, 
         } else {
             build_updates_list(updates, opacity)
         },
-        horizontal_rule(1),
+        rule::horizontal(1),
         action_button("Update", Message::Update(id), opacity),
         check_now_button(updates, opacity),
     )

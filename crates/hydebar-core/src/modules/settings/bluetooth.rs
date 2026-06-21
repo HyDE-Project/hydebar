@@ -1,6 +1,6 @@
 use iced::{
     Element, Length, Theme,
-    widget::{Column, Row, button, column, container, horizontal_rule, row, text},
+    widget::{Column, Row, button, column, container, row, rule, text},
     window::Id
 };
 
@@ -91,7 +91,7 @@ impl BluetoothData {
         if show_more_button {
             column!(
                 main,
-                horizontal_rule(1),
+                rule::horizontal(1),
                 button("More")
                     .on_press(Message::Bluetooth(BluetoothMessage::More(id)))
                     .padding([4, 12])

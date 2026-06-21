@@ -1,6 +1,6 @@
 use iced::{
     Alignment, Element, Length, Theme,
-    widget::{Column, button, column, container, horizontal_rule, row, scrollable, text, toggler},
+    widget::{Column, button, column, container, row, rule, scrollable, text, toggler},
     window::Id
 };
 
@@ -240,7 +240,7 @@ impl NetworkData {
             .spacing(8)
             .width(Length::Fill)
             .align_y(Alignment::Center),
-            horizontal_rule(1),
+            rule::horizontal(1),
             container(scrollable(
                 Column::with_children(
                     self.wireless_access_points
@@ -309,7 +309,7 @@ impl NetworkData {
         if show_more_button {
             column!(
                 main,
-                horizontal_rule(1),
+                rule::horizontal(1),
                 button("More")
                     .on_press(NetworkMessage::WiFiMore(id))
                     .padding([4, 12])
@@ -356,7 +356,7 @@ impl NetworkData {
         if show_more_button {
             column!(
                 main,
-                horizontal_rule(1),
+                rule::horizontal(1),
                 button("More")
                     .on_press(NetworkMessage::VpnMore(id))
                     .padding([4, 12])

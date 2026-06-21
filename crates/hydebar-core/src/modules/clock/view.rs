@@ -1,6 +1,6 @@
 use iced::{
     Alignment, Border, Color, Element, Length, Theme,
-    widget::{Column, Row, button, column, container, horizontal_rule, row, text},
+    widget::{Column, Row, button, column, container, row, rule, text},
 };
 
 use super::{CalendarState, Message};
@@ -78,7 +78,7 @@ pub fn build_calendar_menu_view(state: &CalendarState) -> Element<'_, Message> {
 
     column![
         header,
-        horizontal_rule(1),
+        rule::horizontal(1),
         weekday_header,
         calendar_grid
     ]
