@@ -6,8 +6,7 @@ use iced::{
         layout::{self, Layout, Limits, Node},
         mouse, overlay, renderer,
         widget::{Operation, Tree}
-    },
-    event
+    }
 };
 
 /// A container that distributes its contents horizontally.
