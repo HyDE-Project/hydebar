@@ -112,7 +112,7 @@ impl ReadOnlyService for NetworkService {
     fn subscribe() -> Subscription<ServiceEvent<Self>> {
         let id = TypeId::of::<Self>();
 
-        Subscription::run_with(id, |&id| {
+        Subscription::run_with(id, |&_id| {
             channel(50, async |mut output| {
                 NetworkService::listen(&mut output).await;
             })

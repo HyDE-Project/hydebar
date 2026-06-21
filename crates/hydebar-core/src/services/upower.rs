@@ -150,7 +150,7 @@ impl ReadOnlyService for UPowerService {
 
 impl UPowerService {
     pub fn subscription_with_id(id: TypeId) -> Subscription<ServiceEvent<Self>> {
-        Subscription::run_with(id, |&id| {
+        Subscription::run_with(id, |&_id| {
             channel(100, async |mut output| {
                 UPowerService::listen(&mut output).await;
             })

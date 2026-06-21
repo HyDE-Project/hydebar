@@ -266,7 +266,7 @@ impl ReadOnlyService for AudioService {
     fn subscribe() -> Subscription<ServiceEvent<Self>> {
         let id = TypeId::of::<Self>();
 
-        Subscription::run_with(id, |&id| {
+        Subscription::run_with(id, |&_id| {
             channel(100, |mut output| async move {
                 AudioService::listen(&mut output).await;
             })
