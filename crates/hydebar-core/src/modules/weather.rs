@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use log::error;
+use log::{error, warn};
 use masterror::{AppError, AppResult};
 use serde::Deserialize;
 use tokio::{task::JoinHandle, time::interval};
@@ -147,6 +147,15 @@ impl Weather {
 
         if let Some(task) = self.task.take() {
             task.abort();
+        }
+
+        if self.api_key.is_none() {
+            warn!(
+                "Weather module: no API key configured in config.toml, \
+                 weather data will not be available"
+            );
+            self.data.description = String::from("No API key");
+            return;
         }
 
         if let Some(sender) = self.sender.clone() {
