@@ -60,3 +60,6 @@ reqwest = { version = "0.13", features = ["json"] }
 lto = true
 codegen-units = 1
 opt-level = 3
+
+[patch."https://github.com/pop-os/iced"]
+iced = { path = "./iced-patch" }
