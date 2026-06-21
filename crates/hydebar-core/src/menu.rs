@@ -221,7 +221,7 @@ pub fn menu_wrapper<Message: Clone + 'static>(
             mouse_area(
                 container(content)
                     .height(Length::Shrink)
-                    .width(Length::Shrink)
+                    .width(Length::Fill)
                     .max_width(menu_size.size())
                     .padding(16)
                     .style(menu_container_style(opacity))
