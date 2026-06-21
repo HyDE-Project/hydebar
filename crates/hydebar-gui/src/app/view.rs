@@ -10,8 +10,8 @@ use hydebar_core::{
 use hydebar_proto::config::{AppearanceStyle, Position};
 use iced::{
     Alignment, Color, Element, Gradient, Length, Radians, Theme,
-    daemon::Appearance,
     gradient::Linear,
+    theme::Style,
     widget::{Row, container},
     window::Id
 };
@@ -28,8 +28,8 @@ impl App {
         hydebar_theme(&self.config.appearance)
     }
 
-    pub fn style(&self, theme: &Theme) -> Appearance {
-        Appearance {
+    pub fn style(&self, theme: &Theme) -> Style {
+        Style {
             background_color: Color::TRANSPARENT,
             text_color:       theme.palette().text,
             icon_color:       theme.palette().text
