@@ -59,7 +59,9 @@ impl BluetoothData {
         opacity: f32
     ) -> Element<'_, Message> {
         let main = if self.devices.is_empty() {
-            text("No paired devices").into()
+            container(text("No paired devices"))
+                .width(Length::Fill)
+                .into()
         } else {
             Column::with_children(
                 self.devices
@@ -85,6 +87,7 @@ impl BluetoothData {
                     .collect::<Vec<Element<'_, Message>>>()
             )
             .spacing(8)
+            .width(Length::Fill)
             .into()
         };
 
