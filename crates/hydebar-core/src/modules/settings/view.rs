@@ -273,6 +273,7 @@ impl SettingsViewExt for Settings {
                 .push_maybe(bottom_source_slider)
                 .push_maybe(self.brightness.as_ref().map(|b| b.brightness_slider()))
                 .push(quick_settings)
+                .width(Length::Fill)
                 .spacing(16)
                 .into()
         }
@@ -283,7 +284,7 @@ pub(crate) fn quick_settings_section<'a>(
     buttons: Vec<(Element<'a, Message>, Option<Element<'a, Message>>)>,
     opacity: f32
 ) -> Element<'a, Message> {
-    let mut section = column!().spacing(8);
+    let mut section = column!().width(Length::Fill).spacing(8);
 
     let mut before: Option<(Element<'a, Message>, Option<Element<'a, Message>>)> = None;
 
