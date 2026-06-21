@@ -1,7 +1,7 @@
 use iced::{
     Alignment, Background, Border, Element, Length, Padding, Theme,
     alignment::{Horizontal, Vertical},
-    widget::{Column, Row, Space, button, column, container, row, rule, text},
+    widget::{Column, Row, Space, button, column, container, row,  text},
     window::Id
 };
 

@@ -2,7 +2,7 @@ use iced::{
     Background, Color, Element, Length, Padding, Point, Rectangle, Size, Vector,
     core::{
         Clipboard, Layout, Shell, Widget,
-        event::{self, Event},
+        event::Event,
         keyboard, layout, mouse, overlay, renderer, touch,
         widget::{Operation, Tree, tree}
     },
@@ -162,7 +162,7 @@ where
     ) -> layout::Node {
         layout::padded(limits, self.width, self.height, self.padding, |limits| {
             self.content
-                .as_widget()
+                .as_widget_mut()
                 .layout(&mut tree.children[0], renderer, limits)
         })
     }
@@ -175,7 +175,7 @@ where
         operation: &mut dyn Operation
     ) {
         operation.container(None, layout.bounds());
-        self.content.as_widget().operate(
+        self.content.as_widget_mut().operate(
             &mut tree.children[0],
             layout.children().next().unwrap(),
             renderer,
@@ -361,7 +361,7 @@ where
         _tree: &Tree,
         layout: Layout<'_>,
         cursor: mouse::Cursor,
-        viewport: &Rectangle,
+        _viewport: &Rectangle,
         _renderer: &Renderer
     ) -> mouse::Interaction {
         let is_mouse_over = cursor.is_over(layout.bounds());
@@ -376,7 +376,7 @@ where
     fn overlay<'b>(
         &'b mut self,
         tree: &'b mut Tree,
-        layout: Layout<'_>,
+        layout: Layout<'b>,
         renderer: &Renderer,
         viewport: &Rectangle,
         translation: Vector

@@ -3,13 +3,15 @@ use std::{
     ffi::{OsStr, OsString},
     fmt::Display,
     future::Future,
-    path::Path,
+    hash::Hash,
+    path::{Path, PathBuf},
     pin::Pin,
     sync::Arc
 };
 
 use iced::{
     Subscription,
+    advanced::subscription::{self, Recipe, from_recipe},
     futures::{
         SinkExt, Stream, StreamExt,
         channel::mpsc::{SendError, Sender},
@@ -204,13 +206,28 @@ async fn send_degradation(
     }
 }
 
-pub fn subscription(path: &Path, manager: Arc<ConfigManager>) -> Subscription<ConfigEvent> {
-    let id = TypeId::of::<ConfigEvent>();
-    let path = path.to_path_buf();
+struct ConfigWatcher {
+    path: PathBuf,
+    manager: Arc<ConfigManager>
+}
 
-    Subscription::run_with(
-        id,
-        channel(100, move |output| {
+impl Recipe for ConfigWatcher {
+    type Output = ConfigEvent;
+
+    fn hash(&self, state: &mut subscription::Hasher) {
+        TypeId::of::<Self>().hash(state);
+        self.path.hash(state);
+        Arc::as_ptr(&self.manager).hash(state);
+    }
+
+    fn stream(
+        self: Box<Self>,
+        _input: subscription::EventStream
+    ) -> iced::futures::stream::BoxStream<'static, Self::Output> {
+        let path = self.path;
+        let manager = self.manager;
+
+        Box::pin(channel(100, move |output: Sender<ConfigEvent>| {
             let manager = Arc::clone(&manager);
 
             async move {
@@ -294,8 +311,15 @@ pub fn subscription(path: &Path, manager: Arc<ConfigManager>) -> Subscription<Co
 
                 info!("Config watcher terminated");
             }
-        })
-    )
+        }))
+    }
+}
+
+pub fn subscription(path: &Path, manager: Arc<ConfigManager>) -> Subscription<ConfigEvent> {
+    from_recipe(ConfigWatcher {
+        path: path.to_path_buf(),
+        manager
+    })
 }
 
 #[cfg(test)]

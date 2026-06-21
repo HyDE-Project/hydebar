@@ -65,7 +65,7 @@ fn build_extended_palette(appearance: &Appearance, palette: Palette) -> palette:
             background: build_pair(
                 &appearance.background_color,
                 palette.text,
-                default_bg.color,
+                default_bg.base,
                 default_bg.weak,
                 default_bg.strong
             ),
@@ -90,8 +90,8 @@ fn build_pair(
     color: &AppearanceColor,
     text_fallback: Color,
     base: palette::Pair,
-    default_weak: palette::Pair,
-    default_strong: palette::Pair
+    _default_weak: palette::Pair,
+    _default_strong: palette::Pair
 ) -> palette::Background {
     let mut bg = palette::Background::new(base.color, base.text);
     if let Some(weak) = color.get_weak_pair(text_fallback) {
