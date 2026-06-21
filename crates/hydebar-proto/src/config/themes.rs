@@ -55,6 +55,7 @@ fn catppuccin_mocha() -> Appearance {
         secondary_color:          AppearanceColor::Simple(HexColor::rgb(137, 180, 250)),
         success_color:            AppearanceColor::Simple(HexColor::rgb(166, 227, 161)),
         danger_color:             AppearanceColor::Simple(HexColor::rgb(243, 139, 168)),
+        warning_color:            AppearanceColor::Simple(HexColor::rgb(250, 179, 135)),
         text_color:               AppearanceColor::Simple(HexColor::rgb(205, 214, 244)),
         workspace_colors:         vec![
             AppearanceColor::Simple(HexColor::rgb(137, 180, 250)),
@@ -90,6 +91,7 @@ fn catppuccin_macchiato() -> Appearance {
         secondary_color:          AppearanceColor::Simple(HexColor::rgb(138, 173, 244)),
         success_color:            AppearanceColor::Simple(HexColor::rgb(166, 218, 149)),
         danger_color:             AppearanceColor::Simple(HexColor::rgb(237, 135, 150)),
+        warning_color:            AppearanceColor::Simple(HexColor::rgb(250, 179, 135)),
         text_color:               AppearanceColor::Simple(HexColor::rgb(202, 211, 245)),
         workspace_colors:         vec![
             AppearanceColor::Simple(HexColor::rgb(138, 173, 244)),
@@ -125,6 +127,7 @@ fn catppuccin_frappe() -> Appearance {
         secondary_color:          AppearanceColor::Simple(HexColor::rgb(140, 170, 238)),
         success_color:            AppearanceColor::Simple(HexColor::rgb(166, 209, 137)),
         danger_color:             AppearanceColor::Simple(HexColor::rgb(231, 130, 132)),
+        warning_color:            AppearanceColor::Simple(HexColor::rgb(250, 179, 135)),
         text_color:               AppearanceColor::Simple(HexColor::rgb(198, 208, 245)),
         workspace_colors:         vec![
             AppearanceColor::Simple(HexColor::rgb(140, 170, 238)),
@@ -160,6 +163,7 @@ fn catppuccin_latte() -> Appearance {
         secondary_color:          AppearanceColor::Simple(HexColor::rgb(30, 102, 245)),
         success_color:            AppearanceColor::Simple(HexColor::rgb(64, 160, 43)),
         danger_color:             AppearanceColor::Simple(HexColor::rgb(210, 15, 57)),
+        warning_color:            AppearanceColor::Simple(HexColor::rgb(250, 179, 135)),
         text_color:               AppearanceColor::Simple(HexColor::rgb(76, 79, 105)),
         workspace_colors:         vec![
             AppearanceColor::Simple(HexColor::rgb(30, 102, 245)),
@@ -193,6 +197,7 @@ fn dracula() -> Appearance {
         secondary_color:          AppearanceColor::Simple(HexColor::rgb(139, 233, 253)),
         success_color:            AppearanceColor::Simple(HexColor::rgb(80, 250, 123)),
         danger_color:             AppearanceColor::Simple(HexColor::rgb(255, 85, 85)),
+        warning_color:            AppearanceColor::Simple(HexColor::rgb(250, 179, 135)),
         text_color:               AppearanceColor::Simple(HexColor::rgb(248, 248, 242)),
         workspace_colors:         vec![
             AppearanceColor::Simple(HexColor::rgb(139, 233, 253)),
@@ -222,6 +227,7 @@ fn nord() -> Appearance {
         secondary_color:          AppearanceColor::Simple(HexColor::rgb(129, 161, 193)),
         success_color:            AppearanceColor::Simple(HexColor::rgb(163, 190, 140)),
         danger_color:             AppearanceColor::Simple(HexColor::rgb(191, 97, 106)),
+        warning_color:            AppearanceColor::Simple(HexColor::rgb(250, 179, 135)),
         text_color:               AppearanceColor::Simple(HexColor::rgb(236, 239, 244)),
         workspace_colors:         vec![
             AppearanceColor::Simple(HexColor::rgb(129, 161, 193)),
@@ -251,6 +257,7 @@ fn gruvbox_dark() -> Appearance {
         secondary_color:          AppearanceColor::Simple(HexColor::rgb(131, 165, 152)),
         success_color:            AppearanceColor::Simple(HexColor::rgb(184, 187, 38)),
         danger_color:             AppearanceColor::Simple(HexColor::rgb(251, 73, 52)),
+        warning_color:            AppearanceColor::Simple(HexColor::rgb(250, 179, 135)),
         text_color:               AppearanceColor::Simple(HexColor::rgb(235, 219, 178)),
         workspace_colors:         vec![
             AppearanceColor::Simple(HexColor::rgb(131, 165, 152)),
@@ -280,6 +287,7 @@ fn gruvbox_light() -> Appearance {
         secondary_color:          AppearanceColor::Simple(HexColor::rgb(7, 102, 120)),
         success_color:            AppearanceColor::Simple(HexColor::rgb(121, 116, 14)),
         danger_color:             AppearanceColor::Simple(HexColor::rgb(204, 36, 29)),
+        warning_color:            AppearanceColor::Simple(HexColor::rgb(250, 179, 135)),
         text_color:               AppearanceColor::Simple(HexColor::rgb(60, 56, 54)),
         workspace_colors:         vec![
             AppearanceColor::Simple(HexColor::rgb(7, 102, 120)),
@@ -309,6 +317,7 @@ fn tokyo_night() -> Appearance {
         secondary_color:          AppearanceColor::Simple(HexColor::rgb(122, 162, 247)),
         success_color:            AppearanceColor::Simple(HexColor::rgb(158, 206, 106)),
         danger_color:             AppearanceColor::Simple(HexColor::rgb(247, 118, 142)),
+        warning_color:            AppearanceColor::Simple(HexColor::rgb(250, 179, 135)),
         text_color:               AppearanceColor::Simple(HexColor::rgb(192, 202, 245)),
         workspace_colors:         vec![
             AppearanceColor::Simple(HexColor::rgb(122, 162, 247)),
@@ -342,6 +351,7 @@ fn tokyo_night_storm() -> Appearance {
         secondary_color:          AppearanceColor::Simple(HexColor::rgb(122, 162, 247)),
         success_color:            AppearanceColor::Simple(HexColor::rgb(158, 206, 106)),
         danger_color:             AppearanceColor::Simple(HexColor::rgb(247, 118, 142)),
+        warning_color:            AppearanceColor::Simple(HexColor::rgb(250, 179, 135)),
         text_color:               AppearanceColor::Simple(HexColor::rgb(166, 173, 200)),
         workspace_colors:         vec![
             AppearanceColor::Simple(HexColor::rgb(122, 162, 247)),
@@ -375,6 +385,7 @@ fn tokyo_night_light() -> Appearance {
         secondary_color:          AppearanceColor::Simple(HexColor::rgb(52, 108, 197)),
         success_color:            AppearanceColor::Simple(HexColor::rgb(51, 153, 51)),
         danger_color:             AppearanceColor::Simple(HexColor::rgb(185, 29, 71)),
+        warning_color:            AppearanceColor::Simple(HexColor::rgb(250, 179, 135)),
         text_color:               AppearanceColor::Simple(HexColor::rgb(60, 62, 73)),
         workspace_colors:         vec![
             AppearanceColor::Simple(HexColor::rgb(52, 108, 197)),

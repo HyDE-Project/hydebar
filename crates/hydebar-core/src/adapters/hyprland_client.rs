@@ -155,7 +155,7 @@ impl HyprlandPort for HyprlandClient {
                 .map(|workspace| HyprlandWorkspaceInfo {
                     id:           workspace.id,
                     name:         workspace.name,
-                    monitor_id:   workspace.monitor.and_then(|m| usize::try_from(m.id).ok()),
+                    monitor_id:   workspace.monitor.parse::<usize>().ok(),
                     monitor_name: workspace.monitor,
                     window_count: workspace.windows
                 })
@@ -191,7 +191,7 @@ impl HyprlandPort for HyprlandClient {
         self.execute_with_retry(TOGGLE_SPECIAL_OP, move || {
             let monitor_identifier = match &monitor {
                 HyprlandMonitorSelector::Id(id) => {
-                    MonitorIdentifier::Id((*id).try_into().unwrap_or(i128::MAX))
+                    MonitorIdentifier::Id((*id).try_into().unwrap_or(u8::MAX))
                 }
                 HyprlandMonitorSelector::Name(name) => MonitorIdentifier::Name(name.as_str())
             };

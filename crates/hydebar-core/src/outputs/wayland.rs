@@ -1,9 +1,9 @@
 use iced::{
     Task,
-    runtime::platform_specific::wayland::commands::layer_surface::{
+    platform_specific::shell::wayland::commands::layer_surface::{
         Anchor, KeyboardInteractivity, Layer, destroy_layer_surface, get_layer_surface
     },
-    runtime::platform_specific::wayland::layer_surface::{IcedOutput, SctkLayerSurfaceSettings},
+    platform_specific::runtime::wayland::layer_surface::{IcedOutput, SctkLayerSurfaceSettings},
     window::Id
 };
 use wayland_client::protocol::wl_output::WlOutput;
@@ -43,7 +43,6 @@ pub(crate) fn create_layer_surfaces<Message: 'static>(
         namespace: "hydebar-main-layer".to_string(),
         size: Some((None, Some(height as u32))),
         layer: Layer::Bottom,
-        pointer_interactivity: true,
         keyboard_interactivity: if menu_keyboard_focus {
             KeyboardInteractivity::OnDemand
         } else {
@@ -67,7 +66,6 @@ pub(crate) fn create_layer_surfaces<Message: 'static>(
         namespace: "hydebar-main-layer".to_string(),
         size: Some((None, None)),
         layer: Layer::Background,
-        pointer_interactivity: true,
         keyboard_interactivity: KeyboardInteractivity::None,
         output: wl_output.map_or(IcedOutput::Active, IcedOutput::Output),
         anchor: Anchor::TOP | Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT,

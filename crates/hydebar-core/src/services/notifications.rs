@@ -328,7 +328,7 @@ impl ReadOnlyService for NotificationsService {
     fn subscribe() -> Subscription<ServiceEvent<Self>> {
         let id = std::any::TypeId::of::<NotificationsService>();
         Subscription::run_with(id, |&id| {
-            stream::channel(100, |mut output| async move {
+            stream::channel(100, |mut output: iced::futures::channel::mpsc::Sender<ServiceEvent<Self>>| async move {
                 // Initialize storage
                 let storage = Arc::new(std::sync::Mutex::new(NotificationStorage::default()));
                 let service = NotificationsService {
