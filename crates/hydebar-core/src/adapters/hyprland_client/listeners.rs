@@ -30,7 +30,7 @@ pub(crate) fn spawn_window_listener(
         loop {
             let mut listener = AsyncEventListener::new();
 
-            listener.add_active_window_changed_handler({
+            listener.add_active_window_change_handler({
                 let tx = tx.clone();
                 move |_| {
                     let tx = tx.clone();
@@ -47,7 +47,7 @@ pub(crate) fn spawn_window_listener(
                 }
             });
 
-            listener.add_window_closed_handler({
+            listener.add_window_close_handler({
                 let tx = tx.clone();
                 move |_| {
                     let tx = tx.clone();
@@ -63,7 +63,7 @@ pub(crate) fn spawn_window_listener(
                 }
             });
 
-            listener.add_workspace_changed_handler({
+            listener.add_workspace_change_handler({
                 let tx = tx.clone();
                 move |_| {
                     let tx = tx.clone();
@@ -163,7 +163,7 @@ pub(crate) fn spawn_workspace_listener(
                 }
             });
 
-            listener.add_workspace_changed_handler({
+            listener.add_workspace_change_handler({
                 let tx = tx.clone();
                 move |_| {
                     let tx = tx.clone();
@@ -179,7 +179,7 @@ pub(crate) fn spawn_workspace_listener(
                 }
             });
 
-            listener.add_workspace_deleted_handler({
+            listener.add_workspace_added_handler({
                 let tx = tx.clone();
                 move |_| {
                     let tx = tx.clone();
@@ -211,7 +211,7 @@ pub(crate) fn spawn_workspace_listener(
                 }
             });
 
-            listener.add_changed_special_handler({
+            listener.add_layer_open_handler({
                 let tx = tx.clone();
                 move |_| {
                     let tx = tx.clone();
@@ -230,7 +230,7 @@ pub(crate) fn spawn_workspace_listener(
                 }
             });
 
-            listener.add_special_removed_handler({
+            listener.add_monitor_removed_handler({
                 let tx = tx.clone();
                 move |_| {
                     let tx = tx.clone();
@@ -249,7 +249,7 @@ pub(crate) fn spawn_workspace_listener(
                 }
             });
 
-            listener.add_window_closed_handler({
+            listener.add_window_close_handler({
                 let tx = tx.clone();
                 move |_| {
                     let tx = tx.clone();
@@ -268,7 +268,7 @@ pub(crate) fn spawn_workspace_listener(
                 }
             });
 
-            listener.add_window_opened_handler({
+            listener.add_window_open_handler({
                 let tx = tx.clone();
                 move |_| {
                     let tx = tx.clone();
@@ -303,7 +303,7 @@ pub(crate) fn spawn_workspace_listener(
                 }
             });
 
-            listener.add_active_monitor_changed_handler({
+            listener.add_active_monitor_change_handler({
                 let tx = tx.clone();
                 move |_| {
                     let tx = tx.clone();
@@ -388,7 +388,7 @@ pub(crate) fn spawn_keyboard_listener(
         loop {
             let mut listener = AsyncEventListener::new();
 
-            listener.add_layout_changed_handler({
+            listener.add_layer_closed_handler({
                 let tx = tx.clone();
                 let client = client.clone();
                 move |_| {
@@ -422,7 +422,7 @@ pub(crate) fn spawn_keyboard_listener(
                 }
             });
 
-            listener.add_config_reloaded_handler({
+            listener.add_monitor_added_handler({
                 let tx = tx.clone();
                 let client = client.clone();
                 move || {
@@ -458,7 +458,7 @@ pub(crate) fn spawn_keyboard_listener(
                 }
             });
 
-            listener.add_sub_map_changed_handler({
+            listener.add_submap_change_handler({
                 let tx = tx.clone();
                 move |submap| {
                     let tx = tx.clone();

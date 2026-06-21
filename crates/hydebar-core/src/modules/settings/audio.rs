@@ -1,6 +1,6 @@
 use iced::{
     Alignment, Element, Length, Theme,
-    widget::{Column, Row, button, column, container, horizontal_rule, row, slider, text},
+    widget::{Column, Row, button, column, container, row, rule, slider, text},
     window::Id
 };
 
@@ -249,7 +249,7 @@ pub fn audio_submenu<'a, Message: 'a + Clone>(
     match more_msg {
         Some(more_msg) => column!(
             entries,
-            horizontal_rule(1),
+            rule::horizontal(1),
             button("More")
                 .on_press(more_msg)
                 .padding([4, 12])

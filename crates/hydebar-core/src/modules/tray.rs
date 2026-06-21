@@ -2,7 +2,7 @@ use std::{future::Future, pin::Pin, sync::Arc};
 
 use iced::{
     Element, Length,
-    widget::{Column, Row, button, horizontal_rule, row, text, toggler},
+    widget::{Column, Row, button, row, rule, text, toggler},
     window::Id
 };
 use log::{debug, error, warn};
@@ -220,7 +220,7 @@ impl TrayModule {
                 .into(),
             LayoutProps {
                 type_: Some(t), ..
-            } if t == "separator" => horizontal_rule(1).into(),
+            } if t == "separator" => rule::horizontal(1).into(),
             _ => Row::new().into()
         }
     }
