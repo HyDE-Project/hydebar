@@ -30,7 +30,7 @@ pub(crate) fn spawn_window_listener(
         loop {
             let mut listener = AsyncEventListener::new();
 
-            listener.add_active_window_change_handler({
+            listener.add_active_window_changed_handler({
                 let tx = tx.clone();
                 move |_| {
                     let tx = tx.clone();
@@ -47,7 +47,7 @@ pub(crate) fn spawn_window_listener(
                 }
             });
 
-            listener.add_window_close_handler({
+            listener.add_window_closed_handler({
                 let tx = tx.clone();
                 move |_| {
                     let tx = tx.clone();
@@ -63,7 +63,7 @@ pub(crate) fn spawn_window_listener(
                 }
             });
 
-            listener.add_workspace_change_handler({
+            listener.add_workspace_changed_handler({
                 let tx = tx.clone();
                 move |_| {
                     let tx = tx.clone();
@@ -163,7 +163,7 @@ pub(crate) fn spawn_workspace_listener(
                 }
             });
 
-            listener.add_workspace_change_handler({
+            listener.add_workspace_changed_handler({
                 let tx = tx.clone();
                 move |_| {
                     let tx = tx.clone();
@@ -211,7 +211,7 @@ pub(crate) fn spawn_workspace_listener(
                 }
             });
 
-            listener.add_layer_open_handler({
+            listener.add_layer_opened_handler({
                 let tx = tx.clone();
                 move |_| {
                     let tx = tx.clone();
@@ -249,7 +249,7 @@ pub(crate) fn spawn_workspace_listener(
                 }
             });
 
-            listener.add_window_close_handler({
+            listener.add_window_closed_handler({
                 let tx = tx.clone();
                 move |_| {
                     let tx = tx.clone();
@@ -268,7 +268,7 @@ pub(crate) fn spawn_workspace_listener(
                 }
             });
 
-            listener.add_window_open_handler({
+            listener.add_window_opened_handler({
                 let tx = tx.clone();
                 move |_| {
                     let tx = tx.clone();
@@ -303,7 +303,7 @@ pub(crate) fn spawn_workspace_listener(
                 }
             });
 
-            listener.add_active_monitor_change_handler({
+            listener.add_active_monitor_changed_handler({
                 let tx = tx.clone();
                 move |_| {
                     let tx = tx.clone();
@@ -458,7 +458,7 @@ pub(crate) fn spawn_keyboard_listener(
                 }
             });
 
-            listener.add_sub_map_change_handler({
+            listener.add_sub_map_changed_handler({
                 let tx = tx.clone();
                 move |submap| {
                     let tx = tx.clone();
