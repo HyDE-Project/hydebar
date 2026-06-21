@@ -17,6 +17,7 @@ fn info_element<'a>(info_icon: Icons, label: &'a str, value: String) -> Element<
         text(label).width(Length::Fill),
         text(value)
     )
+    .width(Length::Fill)
     .align_y(Alignment::Center)
     .spacing(8)
     .into()
@@ -76,6 +77,7 @@ pub fn build_menu_view(data: &SystemInfoData) -> Element<'_, Message> {
         text("System Info").size(20),
         rule::horizontal(1),
         Column::new()
+            .width(Length::Fill)
             .push(info_element(
                 Icons::Cpu,
                 "CPU Usage",
