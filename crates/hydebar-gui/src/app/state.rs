@@ -1,7 +1,8 @@
 use std::{
     collections::HashMap,
     path::PathBuf,
-    sync::{Arc, Mutex}
+    sync::{Arc, Mutex},
+    time::Instant
 };
 
 use flexi_logger::LoggerHandle;
@@ -42,41 +43,44 @@ use wayland_client::protocol::wl_output::WlOutput;
 use super::{bus::BusFlushOutcome, micro_ticker::MicroTicker};
 
 pub struct App {
-    pub(super) config_path:         PathBuf,
-    pub(super) logger:              LoggerHandle,
-    pub(super) _hyprland:           Arc<dyn HyprlandPort>,
-    pub(super) config_manager:      Arc<ConfigManager>,
-    pub(super) bus_receiver:        Arc<Mutex<EventReceiver>>,
-    pub(super) micro_ticker:        MicroTicker,
-    pub(super) module_context:      ModuleContext,
-    pub config:                     Arc<Config>,
-    pub outputs:                    Outputs,
-    pub navigation_mode:            bool,
-    pub focused_module_index:       Option<usize>,
-    pub app_launcher:               AppLauncher,
-    pub custom:                     HashMap<String, Custom>,
-    pub updates:                    Updates,
-    pub clipboard:                  Clipboard,
-    pub workspaces:                 Workspaces,
-    pub window_title:               WindowTitle,
-    pub system_info:                SystemInfo,
-    pub keyboard_layout:            KeyboardLayout,
-    pub keyboard_submap:            KeyboardSubmap,
-    pub tray:                       TrayModule,
-    pub clock:                      Clock,
-    pub battery:                    Battery,
-    pub privacy:                    Privacy,
-    pub settings:                   Settings,
-    pub media_player:               MediaPlayer,
-    pub notifications:              Notifications,
-    pub screenshot:                 Screenshot,
-    pub weather:                    Weather
+    pub(super) config_path:    PathBuf,
+    pub(super) logger:         LoggerHandle,
+    pub(super) _hyprland:      Arc<dyn HyprlandPort>,
+    pub(super) config_manager: Arc<ConfigManager>,
+    pub(super) bus_receiver:   Arc<Mutex<EventReceiver>>,
+    pub(super) micro_ticker:   MicroTicker,
+    pub(super) last_frame:     Option<Instant>,
+    pub(super) module_context: ModuleContext,
+    pub config:                Arc<Config>,
+    pub outputs:               Outputs,
+    pub navigation_mode:       bool,
+    pub focused_module_index:  Option<usize>,
+    pub app_launcher:          AppLauncher,
+    pub custom:                HashMap<String, Custom>,
+    pub updates:               Updates,
+    pub clipboard:             Clipboard,
+    pub workspaces:            Workspaces,
+    pub window_title:          WindowTitle,
+    pub system_info:           SystemInfo,
+    pub keyboard_layout:       KeyboardLayout,
+    pub keyboard_submap:       KeyboardSubmap,
+    pub tray:                  TrayModule,
+    pub clock:                 Clock,
+    pub battery:               Battery,
+    pub privacy:               Privacy,
+    pub settings:              Settings,
+    pub media_player:          MediaPlayer,
+    pub notifications:         Notifications,
+    pub screenshot:            Screenshot,
+    pub weather:               Weather
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
     None,
     MicroTick,
+    /// A compositor frame callback carrying the frame timestamp.
+    Frame(Instant),
     BusFlushed(BusFlushOutcome),
     ConfigChanged(ConfigApplied),
     ConfigDegraded(ConfigDegradation),
@@ -172,7 +176,7 @@ impl App {
                 .iter()
                 .map(|def| match def {
                     ModuleDef::Single(_) => 1,
-                    ModuleDef::Group(group) => group.len(),
+                    ModuleDef::Group(group) => group.len()
                 })
                 .sum()
         };
@@ -210,6 +214,7 @@ impl App {
             config_manager,
             bus_receiver: Arc::new(Mutex::new(bus_receiver)),
             micro_ticker: MicroTicker::default(),
+            last_frame: None,
             module_context,
             outputs,
             navigation_mode: false,

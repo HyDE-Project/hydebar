@@ -122,6 +122,14 @@ impl Spring {
             || self.velocity.abs() > self.precision / self.response
     }
 
+    /// Replaces the response time while the spring is live.
+    ///
+    /// Applied when the user edits the animation duration and the config is
+    /// hot reloaded.
+    pub fn set_response(&mut self, response: Duration) {
+        self.response = response.as_secs_f32().max(0.001);
+    }
+
     /// Points the spring at `target`, preserving the current velocity.
     pub fn set_target(&mut self, target: f32) {
         self.target = target;
