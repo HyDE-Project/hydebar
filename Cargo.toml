@@ -10,7 +10,7 @@ resolver = "3"
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.95"
+rust-version = "1.97"
 
 [workspace.dependencies]
 iced = { git = "https://github.com/pop-os/iced", features = [
@@ -51,7 +51,7 @@ uuid = { version = "1", features = ["v4"] }
 clap = { version = "4", features = ["derive"] }
 shellexpand = { version = "3", features = ["path"] }
 inotify = "0.11"
-masterror = "0.27"
+masterror = "0.29"
 futures = "0.3"
 dirs = "6"
 reqwest = { version = "0.13", features = ["json"] }
