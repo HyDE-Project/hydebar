@@ -2,6 +2,7 @@
 pub const HEIGHT: f64 = 34.;
 
 pub mod adapters;
+pub mod animation;
 pub mod components;
 pub mod config;
 /// Event bus primitives for communicating UI updates across the core.
