@@ -113,10 +113,22 @@ impl BackendHandle {
     }
 }
 
+/// Connection to the PulseAudio daemon owned by a single backend thread.
+///
+/// Field order is load bearing: the introspector borrows the context and the
+/// context registers io events on the mainloop, so both must be torn down
+/// before the mainloop. Dropping the mainloop first makes libpulse abort the
+/// whole process with an `!e->dead` assertion.
 struct PulseAudioServer {
-    mainloop:     Mainloop,
+    introspector: Introspector,
     context:      Context,
-    introspector: Introspector
+    mainloop:     Mainloop
+}
+
+impl Drop for PulseAudioServer {
+    fn drop(&mut self) {
+        self.context.disconnect();
+    }
 }
 
 impl PulseAudioServer {
@@ -154,9 +166,9 @@ impl PulseAudioServer {
         let introspector = context.introspect();
 
         Ok(Self {
-            mainloop,
+            introspector,
             context,
-            introspector
+            mainloop
         })
     }
 
@@ -242,10 +254,11 @@ impl PulseAudioServer {
                     }
 
                     let introspector = server.context.introspect();
+                    let server_introspector = server.context.introspect();
                     let from_server_tx_clone = from_server_tx.clone();
                     server.context.set_subscribe_callback(Some(Box::new(
                         move |_facility, _operation, _idx| {
-                            server.introspector.get_server_info({
+                            server_introspector.get_server_info({
                                 let tx = from_server_tx_clone.clone();
 
                                 move |info| {
