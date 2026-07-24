@@ -15,26 +15,32 @@ use log::error;
 use super::state::{App, Message};
 
 impl App {
-    pub fn get_module_at_index(&self, index: usize, window_id: Id) -> Option<OnModulePress<Message>> {
+    pub fn get_module_at_index(
+        &self,
+        index: usize,
+        window_id: Id
+    ) -> Option<OnModulePress<Message>> {
         use hydebar_core::config::{ModuleDef, ModuleName};
 
         let mut current_index = 0;
         let sections = [
             &self.config.modules.left[..],
             &self.config.modules.center[..],
-            &self.config.modules.right[..],
+            &self.config.modules.right[..]
         ];
 
         for section in sections {
             for module_def in section {
                 let modules_in_def: Vec<&ModuleName> = match module_def {
                     ModuleDef::Single(m) => vec![m],
-                    ModuleDef::Group(group) => group.iter().collect(),
+                    ModuleDef::Group(group) => group.iter().collect()
                 };
 
                 for module_name in modules_in_def {
                     if current_index == index {
-                        if let Some((_, action)) = self.get_module_view(module_name, window_id, 1.0) {
+                        if let Some((_, action)) =
+                            self.get_module_view(module_name, window_id, 1.0)
+                        {
                             return action;
                         }
                     }
@@ -108,8 +114,8 @@ impl App {
                 .padding([2, 8])
                 .height(Length::Fill)
                 .style(module_button_style(
-                    self.config.appearance.style,
-                    self.config.appearance.opacity,
+                    self.appearance().style,
+                    self.appearance().opacity,
                     false,
                     false
                 ));
@@ -130,7 +136,7 @@ impl App {
                     .height(Length::Fill)
                     .align_y(Alignment::Center);
 
-                match self.config.appearance.style {
+                match self.appearance().style {
                     AppearanceStyle::Solid | AppearanceStyle::Gradient => container.into(),
                     AppearanceStyle::Islands => container
                         .style(|theme| container::Style {
@@ -138,7 +144,7 @@ impl App {
                                 theme
                                     .palette()
                                     .background
-                                    .scale_alpha(self.config.appearance.opacity)
+                                    .scale_alpha(self.appearance().opacity)
                                     .into()
                             ),
                             border: Border {
@@ -182,8 +188,8 @@ impl App {
                                 .padding([2, 8])
                                 .height(Length::Fill)
                                 .style(module_button_style(
-                                    self.config.appearance.style,
-                                    self.config.appearance.opacity,
+                                    self.appearance().style,
+                                    self.appearance().opacity,
                                     true,
                                     false
                                 ));
@@ -210,7 +216,7 @@ impl App {
                         .collect::<Vec<_>>()
                 );
 
-                match self.config.appearance.style {
+                match self.appearance().style {
                     AppearanceStyle::Solid | AppearanceStyle::Gradient => group.into(),
                     AppearanceStyle::Islands => container(group)
                         .style(|theme| container::Style {
@@ -218,7 +224,7 @@ impl App {
                                 theme
                                     .palette()
                                     .background
-                                    .scale_alpha(self.config.appearance.opacity)
+                                    .scale_alpha(self.appearance().opacity)
                                     .into()
                             ),
                             border: Border {
@@ -260,8 +266,8 @@ impl App {
                 &self.outputs,
                 id,
                 &self.config.workspaces,
-                &self.config.appearance.workspace_colors,
-                self.config.appearance.special_workspace_colors.as_deref()
+                &self.appearance().workspace_colors,
+                self.appearance().special_workspace_colors.as_deref()
             )),
             ModuleName::WindowTitle => self.window_title.view(()),
             ModuleName::SystemInfo => self.system_info.view(&self.config.system),

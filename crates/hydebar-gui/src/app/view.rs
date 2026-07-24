@@ -25,7 +25,7 @@ impl App {
     }
 
     pub fn theme(&self, _id: Id) -> Theme {
-        hydebar_theme(&self.config.appearance)
+        hydebar_theme(&self.appearance())
     }
 
     pub fn style(&self, theme: &Theme) -> Style {
@@ -37,64 +37,57 @@ impl App {
     }
 
     pub fn scale_factor(&self, _id: Id) -> f64 {
-        self.config.appearance.scale_factor
+        self.appearance().scale_factor
     }
 
     pub fn view(&self, id: Id) -> Element<'_, Message> {
         match self.outputs.has(id) {
             Some(HasOutput::Main) => {
-                let left = self.modules_section(
-                    &self.config.modules.left,
-                    id,
-                    self.config.appearance.opacity
-                );
+                let left =
+                    self.modules_section(&self.config.modules.left, id, self.appearance().opacity);
                 let center = self.modules_section(
                     &self.config.modules.center,
                     id,
-                    self.config.appearance.opacity
+                    self.appearance().opacity
                 );
                 let right = self.modules_section(
                     &self.config.modules.right,
                     id,
-                    self.config.appearance.opacity
+                    self.appearance().opacity
                 );
 
                 let centerbox = centerbox::Centerbox::new([left, center, right])
                     .spacing(4)
                     .width(Length::Fill)
                     .align_items(Alignment::Center)
-                    .height(
-                        if self.config.appearance.style == AppearanceStyle::Islands {
-                            HEIGHT
-                        } else {
-                            HEIGHT - 8.
-                        } as f32
-                    )
-                    .padding(
-                        if self.config.appearance.style == AppearanceStyle::Islands {
-                            [4, 4]
-                        } else {
-                            [0, 0]
-                        }
-                    );
+                    .height(if self.appearance().style == AppearanceStyle::Islands {
+                        HEIGHT
+                    } else {
+                        HEIGHT - 8.
+                    } as f32)
+                    .padding(if self.appearance().style == AppearanceStyle::Islands {
+                        [4, 4]
+                    } else {
+                        [0, 0]
+                    });
 
                 container(centerbox)
                     .style(|t| container::Style {
-                        background: match self.config.appearance.style {
+                        background: match self.appearance().style {
                             AppearanceStyle::Gradient => Some({
                                 let start_color = t
                                     .palette()
                                     .background
-                                    .scale_alpha(self.config.appearance.opacity);
+                                    .scale_alpha(self.appearance().opacity);
 
                                 let start_color = if self.outputs.menu_is_open() {
-                                    darken_color(start_color, self.config.appearance.menu.backdrop)
+                                    darken_color(start_color, self.appearance().menu.backdrop)
                                 } else {
                                     start_color
                                 };
 
                                 let end_color = if self.outputs.menu_is_open() {
-                                    backdrop_color(self.config.appearance.menu.backdrop)
+                                    backdrop_color(self.appearance().menu.backdrop)
                                 } else {
                                     Color::TRANSPARENT
                                 };
@@ -122,9 +115,9 @@ impl App {
                                 let bg = t
                                     .palette()
                                     .background
-                                    .scale_alpha(self.config.appearance.opacity);
+                                    .scale_alpha(self.appearance().opacity);
                                 if self.outputs.menu_is_open() {
-                                    darken_color(bg, self.config.appearance.menu.backdrop)
+                                    darken_color(bg, self.appearance().menu.backdrop)
                                 } else {
                                     bg
                                 }
@@ -132,10 +125,7 @@ impl App {
                             }),
                             AppearanceStyle::Islands => {
                                 if self.outputs.menu_is_open() {
-                                    Some(
-                                        backdrop_color(self.config.appearance.menu.backdrop)
-                                            .into()
-                                    )
+                                    Some(backdrop_color(self.appearance().menu.backdrop).into())
                                 } else {
                                     None
                                 }
@@ -156,9 +146,9 @@ impl App {
                         MenuSize::Small,
                         *button_ui_ref,
                         self.config.position,
-                        self.config.appearance.style,
+                        self.appearance().style,
                         animated_opacity,
-                        self.config.appearance.menu.backdrop,
+                        self.appearance().menu.backdrop,
                         Message::None,
                         Message::CloseMenu(id)
                     ),
@@ -170,9 +160,9 @@ impl App {
                         MenuSize::Small,
                         *button_ui_ref,
                         self.config.position,
-                        self.config.appearance.style,
+                        self.appearance().style,
                         animated_opacity,
-                        self.config.appearance.menu.backdrop,
+                        self.appearance().menu.backdrop,
                         Message::None,
                         Message::CloseMenu(id)
                     ),
@@ -189,9 +179,9 @@ impl App {
                         MenuSize::Medium,
                         *button_ui_ref,
                         self.config.position,
-                        self.config.appearance.style,
+                        self.appearance().style,
                         animated_opacity,
-                        self.config.appearance.menu.backdrop,
+                        self.appearance().menu.backdrop,
                         Message::None,
                         Message::CloseMenu(id)
                     ),
@@ -203,9 +193,9 @@ impl App {
                         MenuSize::Large,
                         *button_ui_ref,
                         self.config.position,
-                        self.config.appearance.style,
+                        self.appearance().style,
                         animated_opacity,
-                        self.config.appearance.menu.backdrop,
+                        self.appearance().menu.backdrop,
                         Message::None,
                         Message::CloseMenu(id)
                     ),
@@ -215,9 +205,9 @@ impl App {
                         MenuSize::Medium,
                         *button_ui_ref,
                         self.config.position,
-                        self.config.appearance.style,
+                        self.appearance().style,
                         animated_opacity,
-                        self.config.appearance.menu.backdrop,
+                        self.appearance().menu.backdrop,
                         Message::None,
                         Message::CloseMenu(id)
                     ),
@@ -229,9 +219,9 @@ impl App {
                         MenuSize::Medium,
                         *button_ui_ref,
                         self.config.position,
-                        self.config.appearance.style,
+                        self.appearance().style,
                         animated_opacity,
-                        self.config.appearance.menu.backdrop,
+                        self.appearance().menu.backdrop,
                         Message::None,
                         Message::CloseMenu(id)
                     ),
@@ -243,9 +233,9 @@ impl App {
                         MenuSize::Small,
                         *button_ui_ref,
                         self.config.position,
-                        self.config.appearance.style,
+                        self.appearance().style,
                         animated_opacity,
-                        self.config.appearance.menu.backdrop,
+                        self.appearance().menu.backdrop,
                         Message::None,
                         Message::CloseMenu(id)
                     ),
@@ -255,9 +245,9 @@ impl App {
                         MenuSize::Medium,
                         *button_ui_ref,
                         self.config.position,
-                        self.config.appearance.style,
+                        self.appearance().style,
                         animated_opacity,
-                        self.config.appearance.menu.backdrop,
+                        self.appearance().menu.backdrop,
                         Message::None,
                         Message::CloseMenu(id)
                     ),

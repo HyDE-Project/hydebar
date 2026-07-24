@@ -9,6 +9,7 @@ chrono.workspace = true
 dirs.workspace = true
 freedesktop-icons.workspace = true
 futures.workspace = true
+hex_color.workspace = true
 hydebar-proto = { path = "../hydebar-proto" }
 hyprland.workspace = true
 iced.workspace = true
@@ -37,7 +38,6 @@ zbus.workspace = true
 
 [dev-dependencies]
 tempfile = "3"
-hex_color = "3"
 
 [features]
 # Enable test utilities for integration testing
