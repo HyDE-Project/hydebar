@@ -41,11 +41,12 @@ impl App {
                     .unwrap_or_default();
                 self.last_frame = Some(now);
 
-                let still_animating = self
+                let menus_animating = self
                     .outputs
                     .tick_menu_animations(&self.config.appearance.animations, elapsed);
+                let theme_animating = self.appearance_transition.advance(elapsed);
 
-                if !still_animating {
+                if !menus_animating && !theme_animating {
                     self.last_frame = None;
                 }
 
@@ -101,6 +102,10 @@ impl App {
                 }
 
                 self.config = config;
+
+                let blend_palette = self.config.appearance.animations.enabled;
+                self.appearance_transition
+                    .set_target(self.config.appearance.clone(), blend_palette);
 
                 self.register_modules();
 
@@ -410,7 +415,7 @@ impl App {
     /// panel stops asking the compositor for frame callbacks entirely instead
     /// of interpolating on a polling timer.
     fn frame_subscription(&self) -> Subscription<Message> {
-        if self.outputs.menu_is_animating() {
+        if self.outputs.menu_is_animating() || self.appearance_transition.is_animating() {
             window::wayland_frames().map(Message::Frame)
         } else {
             Subscription::none()
