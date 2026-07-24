@@ -1,4 +1,4 @@
-use std::time::Instant;
+use std::time::Duration;
 
 use iced::{
     self, Element, Length, Padding, Task,
@@ -11,6 +11,7 @@ use iced::{
 };
 
 use crate::{
+    animation::Spring,
     config::{AnimationConfig, AppearanceStyle, Position},
     position_button::ButtonUIRef,
     style::{menu_backdrop_style, menu_container_style}
@@ -30,11 +31,9 @@ pub enum MenuType {
 
 #[derive(Clone, Debug)]
 pub struct Menu {
-    pub id:              Id,
-    pub menu_info:       Option<(MenuType, ButtonUIRef)>,
-    pub current_opacity: f32,
-    pub target_opacity:  f32,
-    pub animation_start: Option<Instant>
+    pub id:        Id,
+    pub menu_info: Option<(MenuType, ButtonUIRef)>,
+    opacity:       Spring
 }
 
 impl Menu {
@@ -42,9 +41,7 @@ impl Menu {
         Self {
             id,
             menu_info: None,
-            current_opacity: 0.0,
-            target_opacity: 0.0,
-            animation_start: None
+            opacity: Spring::new(0.0)
         }
     }
 
@@ -56,14 +53,10 @@ impl Menu {
     ) -> Task<Message> {
         self.menu_info.replace((menu_type, button_ui_ref));
 
-        // Start fade-in animation
-        if config.appearance.animations.enabled {
-            self.target_opacity = config.appearance.menu.opacity;
-            self.animation_start = Some(Instant::now());
-        } else {
-            self.current_opacity = config.appearance.menu.opacity;
-            self.target_opacity = config.appearance.menu.opacity;
-        }
+        self.aim_opacity(
+            config.appearance.menu.opacity,
+            &config.appearance.animations
+        );
 
         let mut tasks = vec![set_layer(self.id, Layer::Overlay)];
 
@@ -81,14 +74,7 @@ impl Menu {
         if self.menu_info.is_some() {
             self.menu_info.take();
 
-            // Start fade-out animation
-            if config.appearance.animations.enabled {
-                self.target_opacity = 0.0;
-                self.animation_start = Some(Instant::now());
-            } else {
-                self.current_opacity = 0.0;
-                self.target_opacity = 0.0;
-            }
+            self.aim_opacity(0.0, &config.appearance.animations);
 
             let mut tasks = vec![set_layer(self.id, Layer::Background)];
 
@@ -154,36 +140,41 @@ impl Menu {
         }
     }
 
-    /// Update menu animation state. Returns true if animation is in progress.
-    pub fn tick_animation(&mut self, animation_config: &AnimationConfig) -> bool {
+    /// Points the opacity spring at `target`, or jumps to it when animations
+    /// are disabled.
+    fn aim_opacity(&mut self, target: f32, animation_config: &AnimationConfig) {
+        if animation_config.enabled {
+            self.opacity.set_response(Duration::from_millis(
+                animation_config.menu_fade_duration_ms
+            ));
+            self.opacity.set_target(target);
+        } else {
+            self.opacity.snap_to(target);
+        }
+    }
+
+    /// Advances the opacity spring by `elapsed` and reports whether the menu
+    /// still needs frames.
+    pub fn tick_animation(
+        &mut self,
+        animation_config: &AnimationConfig,
+        elapsed: Duration
+    ) -> bool {
         if !animation_config.enabled {
             return false;
         }
 
-        if let Some(start) = self.animation_start {
-            let elapsed = start.elapsed().as_millis() as u64;
-            let duration = animation_config.menu_fade_duration_ms;
+        self.opacity.advance(elapsed)
+    }
 
-            if elapsed >= duration {
-                // Animation complete
-                self.current_opacity = self.target_opacity;
-                self.animation_start = None;
-                false
-            } else {
-                // Interpolate opacity
-                let progress = elapsed as f32 / duration as f32;
-                let delta = self.target_opacity - self.current_opacity;
-                self.current_opacity += delta * progress;
-                true
-            }
-        } else {
-            false
-        }
+    /// Returns whether the menu has an unfinished opacity animation.
+    pub fn is_animating(&self) -> bool {
+        self.opacity.is_animating()
     }
 
     /// Get the current animated opacity for rendering
     pub fn get_opacity(&self) -> f32 {
-        self.current_opacity
+        self.opacity.value()
     }
 }
 
@@ -263,4 +254,84 @@ pub fn menu_wrapper<Message: Clone + 'static>(
     )
     .on_release(close_menu_message)
     .into()
+}
+
+#[cfg(test)]
+mod tests {
+    use iced::{Point, window::Id};
+
+    use super::*;
+    use crate::config::Config;
+
+    fn button_ref() -> ButtonUIRef {
+        ButtonUIRef {
+            position: Point::new(10.0, 10.0),
+            viewport: (1920.0, 1080.0)
+        }
+    }
+
+    fn drain_animation(menu: &mut Menu, config: &Config) {
+        let mut frames = 0;
+        while menu.tick_animation(&config.appearance.animations, Duration::from_millis(8)) {
+            frames += 1;
+            assert!(frames < 1000, "menu fade failed to settle");
+        }
+    }
+
+    #[test]
+    fn opening_a_menu_fades_in_over_frames() {
+        let config = Config::default();
+        let mut menu = Menu::new(Id::unique());
+
+        let _task: Task<()> = menu.open(MenuType::Calendar, button_ref(), &config);
+
+        assert!(menu.is_animating());
+        assert_eq!(menu.get_opacity(), 0.0);
+
+        drain_animation(&mut menu, &config);
+
+        assert!(!menu.is_animating());
+        assert_eq!(menu.get_opacity(), config.appearance.menu.opacity);
+    }
+
+    #[test]
+    fn closing_a_menu_fades_back_to_transparent() {
+        let config = Config::default();
+        let mut menu = Menu::new(Id::unique());
+        let _open: Task<()> = menu.open(MenuType::Calendar, button_ref(), &config);
+        drain_animation(&mut menu, &config);
+
+        let _close: Task<()> = menu.close(&config);
+        assert!(menu.is_animating());
+
+        drain_animation(&mut menu, &config);
+
+        assert_eq!(menu.get_opacity(), 0.0);
+    }
+
+    #[test]
+    fn disabled_animations_snap_to_the_target() {
+        let mut config = Config::default();
+        config.appearance.animations.enabled = false;
+        let mut menu = Menu::new(Id::unique());
+
+        let _task: Task<()> = menu.open(MenuType::Calendar, button_ref(), &config);
+
+        assert!(!menu.is_animating());
+        assert_eq!(menu.get_opacity(), config.appearance.menu.opacity);
+    }
+
+    #[test]
+    fn reopening_mid_fade_keeps_the_current_opacity() {
+        let config = Config::default();
+        let mut menu = Menu::new(Id::unique());
+        let _open: Task<()> = menu.open(MenuType::Calendar, button_ref(), &config);
+        let _ = menu.tick_animation(&config.appearance.animations, Duration::from_millis(40));
+
+        let mid_fade = menu.get_opacity();
+        let _close: Task<()> = menu.close(&config);
+
+        assert_eq!(menu.get_opacity(), mid_fade);
+        assert!(menu.is_animating());
+    }
 }
