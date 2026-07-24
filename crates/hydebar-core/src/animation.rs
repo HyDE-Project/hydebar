@@ -154,8 +154,7 @@ impl Spring {
 
         while remaining > 0.0 {
             let step = remaining.min(MAX_SUBSTEP);
-            let acceleration =
-                -stiffness * (self.value - self.target) - damping * self.velocity;
+            let acceleration = -stiffness * (self.value - self.target) - damping * self.velocity;
 
             self.velocity += acceleration * step;
             self.value += self.velocity * step;
