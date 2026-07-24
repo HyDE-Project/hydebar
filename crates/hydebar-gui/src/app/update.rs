@@ -21,12 +21,12 @@ use iced::{
         listen_with,
         wayland::{Event as WaylandEvent, OutputEvent}
     },
-    keyboard, time, window
+    keyboard, window
 };
 use log::{debug, error, info, warn};
 
 use super::{
-    bus::drain_bus,
+    bus,
     state::{App, Message}
 };
 use crate::get_log_spec;
@@ -34,10 +34,6 @@ use crate::get_log_spec;
 impl App {
     pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
-            Message::MicroTick => Task::perform(
-                drain_bus(Arc::clone(&self.bus_receiver)),
-                Message::BusFlushed
-            ),
             Message::Frame(now) => {
                 let elapsed = self
                     .last_frame
@@ -57,20 +53,12 @@ impl App {
             }
             Message::BusFlushed(outcome) => {
                 if outcome.had_error() {
-                    error!("failed to drain event bus, keeping fast cadence");
-                    self.micro_ticker.record_activity();
+                    error!("event bus reported a failure while delivering events");
                 }
 
                 if outcome.is_empty() {
-                    if !outcome.had_error() {
-                        self.micro_ticker.record_idle();
-                    }
                     Task::none()
                 } else {
-                    if !outcome.had_error() {
-                        self.micro_ticker.record_activity();
-                    }
-
                     let tasks: Vec<_> = outcome
                         .into_events()
                         .into_iter()
@@ -430,10 +418,8 @@ impl App {
     }
 
     pub fn subscription(&self) -> Subscription<Message> {
-        let timer = time::every(self.micro_ticker.interval()).map(|_| Message::MicroTick);
-
         let mut subscriptions = vec![
-            timer,
+            bus::subscription(self.bus_receiver.clone()).map(Message::BusFlushed),
             self.frame_subscription(),
             config::subscription(&self.config_path, Arc::clone(&self.config_manager)).map(
                 |event| match event {
