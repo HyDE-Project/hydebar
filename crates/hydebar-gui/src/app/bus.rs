@@ -1,6 +1,11 @@
-use std::sync::{Arc, Mutex};
+use std::{any::TypeId, hash::Hash};
 
 use hydebar_core::event_bus::{BusEvent, EventReceiver};
+use iced::{
+    Subscription,
+    advanced::subscription::{self, Recipe, from_recipe},
+    futures::stream::{BoxStream, StreamExt, unfold}
+};
 use log::error;
 
 #[derive(Debug, Clone)]
@@ -30,29 +35,42 @@ impl BusFlushOutcome {
     }
 }
 
-pub(super) async fn drain_bus(receiver: Arc<Mutex<EventReceiver>>) -> BusFlushOutcome {
-    let mut guard = match receiver.lock() {
-        Ok(guard) => guard,
-        Err(err) => {
-            error!("event bus receiver poisoned: {err}");
-            return BusFlushOutcome::with_events(Vec::new(), true);
-        }
-    };
+/// Subscription delivering module events as soon as a producer publishes them.
+///
+/// The stream parks on the bus instead of draining it on a timer, so an idle
+/// shell performs no wakeups until a source has something to report.
+pub(super) fn subscription(receiver: EventReceiver) -> Subscription<BusFlushOutcome> {
+    from_recipe(BusWatcher {
+        receiver
+    })
+}
 
-    let mut events = Vec::with_capacity(16);
-    let mut had_error = false;
+struct BusWatcher {
+    receiver: EventReceiver
+}
 
-    loop {
-        match guard.try_recv() {
-            Ok(Some(event)) => events.push(event),
-            Ok(None) => break,
-            Err(err) => {
-                error!("failed to read event bus payload: {err}");
-                had_error = true;
-                break;
-            }
-        }
+impl Recipe for BusWatcher {
+    type Output = BusFlushOutcome;
+
+    fn hash(&self, state: &mut subscription::Hasher) {
+        TypeId::of::<Self>().hash(state);
     }
 
-    BusFlushOutcome::with_events(events, had_error)
+    fn stream(
+        self: Box<Self>,
+        _input: subscription::EventStream
+    ) -> BoxStream<'static, Self::Output> {
+        unfold(Some(self.receiver), |state| async move {
+            let mut receiver = state?;
+
+            match receiver.recv().await {
+                Ok(events) => Some((BusFlushOutcome::with_events(events, false), Some(receiver))),
+                Err(err) => {
+                    error!("event bus is unusable, stopping the subscription: {err}");
+                    Some((BusFlushOutcome::with_events(Vec::new(), true), None))
+                }
+            }
+        })
+        .boxed()
+    }
 }

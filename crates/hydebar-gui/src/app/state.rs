@@ -1,9 +1,4 @@
-use std::{
-    collections::HashMap,
-    path::PathBuf,
-    sync::{Arc, Mutex},
-    time::Instant
-};
+use std::{collections::HashMap, path::PathBuf, sync::Arc, time::Instant};
 
 use flexi_logger::LoggerHandle;
 use hydebar_core::{
@@ -40,15 +35,14 @@ use iced::{Task, event::wayland::OutputEvent, window::Id};
 use tokio::runtime::Handle;
 use wayland_client::protocol::wl_output::WlOutput;
 
-use super::{bus::BusFlushOutcome, micro_ticker::MicroTicker};
+use super::bus::BusFlushOutcome;
 
 pub struct App {
     pub(super) config_path:    PathBuf,
     pub(super) logger:         LoggerHandle,
     pub(super) _hyprland:      Arc<dyn HyprlandPort>,
     pub(super) config_manager: Arc<ConfigManager>,
-    pub(super) bus_receiver:   Arc<Mutex<EventReceiver>>,
-    pub(super) micro_ticker:   MicroTicker,
+    pub(super) bus_receiver:   EventReceiver,
     pub(super) last_frame:     Option<Instant>,
     pub(super) module_context: ModuleContext,
     pub config:                Arc<Config>,
@@ -78,7 +72,6 @@ pub struct App {
 #[derive(Debug, Clone)]
 pub enum Message {
     None,
-    MicroTick,
     /// A compositor frame callback carrying the frame timestamp.
     Frame(Instant),
     BusFlushed(BusFlushOutcome),
@@ -212,8 +205,7 @@ impl App {
             logger,
             _hyprland: hyprland,
             config_manager,
-            bus_receiver: Arc::new(Mutex::new(bus_receiver)),
-            micro_ticker: MicroTicker::default(),
+            bus_receiver,
             last_frame: None,
             module_context,
             outputs,
