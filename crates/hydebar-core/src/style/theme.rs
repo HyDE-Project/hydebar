@@ -270,7 +270,7 @@ mod tests {
 
     #[test]
     fn text_input_style_transitions_states() {
-        let theme = Theme::default();
+        let theme = Theme::Dark;
 
         let active = text_input_style(&theme, text_input::Status::Active);
         assert_eq!(active.border.width, 2.0);

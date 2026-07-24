@@ -16,7 +16,7 @@ use tokio::process::Command;
 /// ```no_run
 /// use std::sync::Arc;
 ///
-/// use hydebar::utils::launcher::{LauncherError, run_shell_command_with_output};
+/// use hydebar_core::utils::launcher::{LauncherError, run_shell_command_with_output};
 ///
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let runtime = tokio::runtime::Runtime::new()?;
@@ -133,7 +133,7 @@ fn spawn_and_log(command: String, context: &'static str) {
 /// # Examples
 ///
 /// ```no_run
-/// use hydebar::utils::launcher;
+/// use hydebar_core::utils::launcher;
 ///
 /// launcher::execute_command("notify-send hydebar 'Hello'".to_owned());
 /// ```

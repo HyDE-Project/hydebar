@@ -12,7 +12,7 @@ use super::dbus::MprisPlayerProxy;
 /// # Examples
 ///
 /// ```
-/// use crate::services::mpris::PlaybackStatus;
+/// use hydebar_core::services::mpris::PlaybackStatus;
 ///
 /// assert_eq!(
 ///     PlaybackStatus::from(String::from("Playing")),
@@ -54,12 +54,15 @@ impl From<String> for PlaybackStatus {
 /// ```
 /// use std::collections::HashMap;
 ///
-/// use zbus::zvariant::OwnedValue;
+/// use zbus::zvariant::{OwnedValue, Value};
 ///
-/// use crate::services::mpris::MprisPlayerMetadata;
+/// use hydebar_core::services::mpris::MprisPlayerMetadata;
 ///
 /// let mut values = HashMap::new();
-/// values.insert("xesam:title".to_string(), OwnedValue::from("Example"));
+/// values.insert(
+///     "xesam:title".to_string(),
+///     OwnedValue::try_from(Value::from("Example")).unwrap()
+/// );
 ///
 /// let metadata = MprisPlayerMetadata::from(values);
 /// assert_eq!(metadata.title.as_deref(), Some("Example"));
