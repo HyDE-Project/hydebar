@@ -1,7 +1,7 @@
 //! Bar rendering for modules driven by an external command.
 
 use iced::{
-    Element, Length, Theme,
+    Color, Element, Length, Theme,
     mouse::Cursor,
     widget::{
         Stack, canvas,
@@ -42,11 +42,26 @@ impl<Message> Program<Message> for AlertIndicator {
     }
 }
 
+/// Resolves the color a module paints itself with for the state it reports.
+///
+/// The alternate state carries the bucket a listener assigns to its reading,
+/// so a temperature readout can shade itself from cold to critical the way the
+/// equivalent Waybar stylesheet does.
+pub(super) fn state_color(module: &Custom, config: &CustomModuleDef) -> Option<Color> {
+    let colors = config.colors.as_ref()?;
+
+    colors
+        .iter()
+        .find_map(|(pattern, color)| pattern.is_match(&module.data.alt).then(|| color.get_base()))
+}
+
 /// Builds the bar content for a custom module.
 pub(super) fn render<M>(module: &Custom, config: &CustomModuleDef) -> Element<'static, M>
 where
     M: 'static + Clone
 {
+    let state_color = state_color(module, config);
+
     let mut icon_element = config
         .icon
         .as_ref()
@@ -59,6 +74,10 @@ where
                 break;
             }
         }
+    }
+
+    if let Some(color) = state_color {
+        icon_element = icon_element.color(color);
     }
 
     let padded_icon_container = container(icon_element).padding([0, 1]);
@@ -104,6 +123,11 @@ where
             }
         })
     };
+
+    let maybe_text_element = maybe_text_element.map(|text_element| match state_color {
+        Some(color) => text_element.color(color),
+        None => text_element
+    });
 
     let row_content: Element<'static, M> = if let Some(text_element) = maybe_text_element {
         row![icon_with_alert, text_element].spacing(8).into()

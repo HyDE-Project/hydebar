@@ -132,6 +132,7 @@ async fn re_register_aborts_previous_listener() {
 '; sleep 0.1; done"#
         )),
         icons:      None,
+        colors:     None,
         alert:      None
     };
 
@@ -170,6 +171,7 @@ async fn re_register_aborts_previous_listener() {
 '; sleep 0.1; done"#
         )),
         icons:      None,
+        colors:     None,
         alert:      None
     };
 
@@ -204,4 +206,49 @@ async fn re_register_aborts_previous_listener() {
             .iter()
             .all(|(name, alt)| { name.as_ref() == "second" && alt == "second" })
     );
+}
+
+#[test]
+fn paints_the_module_with_the_color_matching_the_reported_state() {
+    use std::collections::HashMap;
+
+    use hydebar_proto::config::{AppearanceColor, RegexCfg};
+    use serde::{Deserialize, de::value::StrDeserializer};
+
+    let pattern = RegexCfg::deserialize(StrDeserializer::<serde::de::value::Error>::new(
+        r"^(6\d|7\d)$"
+    ))
+    .expect("pattern");
+    let color =
+        AppearanceColor::deserialize(StrDeserializer::<serde::de::value::Error>::new("#ffa500"))
+            .expect("color");
+
+    let mut colors = HashMap::new();
+    colors.insert(pattern, color);
+
+    let definition = CustomModuleDef {
+        name:       String::from("cpuinfo"),
+        command:    String::new(),
+        icon:       None,
+        listen_cmd: None,
+        icons:      None,
+        colors:     Some(colors),
+        alert:      None
+    };
+
+    let mut module = Custom::default();
+    module.update(Message::Event(ServiceEvent::Update(CustomListenData {
+        alt: String::from("65"),
+        ..CustomListenData::default()
+    })));
+
+    let painted = view::state_color(&module, &definition).expect("color for a hot reading");
+    assert_eq!(painted, iced::Color::from_rgb8(0xff, 0xa5, 0x00));
+
+    module.update(Message::Event(ServiceEvent::Update(CustomListenData {
+        alt: String::from("35"),
+        ..CustomListenData::default()
+    })));
+
+    assert!(view::state_color(&module, &definition).is_none());
 }

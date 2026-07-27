@@ -110,6 +110,7 @@ mod tests {
             icon:       None,
             listen_cmd: None,
             icons:      None,
+            colors:     None,
             alert:      None
         }
     }

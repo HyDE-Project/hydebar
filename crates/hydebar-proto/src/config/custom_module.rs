@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use serde::Deserialize;
 use serde_with::serde_as;
 
-use super::serde_helpers::RegexCfg;
+use super::{appearance::AppearanceColor, serde_helpers::RegexCfg};
 
 /// A module whose content is produced by an external command.
 #[serde_as]
@@ -20,6 +20,9 @@ pub struct CustomModuleDef {
     pub listen_cmd: Option<String>,
     /// Map of regex to icon.
     pub icons:      Option<HashMap<RegexCfg, String>>,
+    /// Map of regex to the color the module paints itself with, matched against
+    /// the alternate state the listener reports.
+    pub colors:     Option<HashMap<RegexCfg, AppearanceColor>>,
     /// Regex selecting output that raises an alert.
     pub alert:      Option<RegexCfg>
 }
