@@ -8,7 +8,7 @@ pub struct Keybindings {
     #[serde(default)]
     pub global:  GlobalKeybindings,
     #[serde(default)]
-    pub menu:    MenuKeybindings,
+    pub menu:    MenuKeybindings
 }
 
 impl Default for Keybindings {
@@ -16,7 +16,7 @@ impl Default for Keybindings {
         Self {
             enabled: default_enabled(),
             global:  GlobalKeybindings::default(),
-            menu:    MenuKeybindings::default(),
+            menu:    MenuKeybindings::default()
         }
     }
 }
@@ -29,13 +29,13 @@ fn default_enabled() -> bool {
 #[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct GlobalKeybindings {
     #[serde(default = "default_activate_navigation")]
-    pub activate_navigation: String,
+    pub activate_navigation: String
 }
 
 impl Default for GlobalKeybindings {
     fn default() -> Self {
         Self {
-            activate_navigation: default_activate_navigation(),
+            activate_navigation: default_activate_navigation()
         }
     }
 }
@@ -54,7 +54,7 @@ pub struct MenuKeybindings {
     #[serde(default = "default_left")]
     pub left:  String,
     #[serde(default = "default_right")]
-    pub right: String,
+    pub right: String
 }
 
 impl Default for MenuKeybindings {
@@ -63,7 +63,7 @@ impl Default for MenuKeybindings {
             up:    default_up(),
             down:  default_down(),
             left:  default_left(),
-            right: default_right(),
+            right: default_right()
         }
     }
 }
@@ -114,7 +114,7 @@ mod tests {
         let kb = Keybindings {
             enabled: false,
             global:  GlobalKeybindings::default(),
-            menu:    MenuKeybindings::default(),
+            menu:    MenuKeybindings::default()
         };
         assert!(!kb.enabled);
     }

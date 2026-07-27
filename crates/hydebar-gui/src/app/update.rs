@@ -199,11 +199,11 @@ impl App {
                     return Task::none();
                 }
 
-                if let Some(current) = self.focused_module_index {
-                    if current > 0 {
-                        self.focused_module_index = Some(current - 1);
-                        debug!("Navigate left: focus moved to module {}", current - 1);
-                    }
+                if let Some(current) = self.focused_module_index
+                    && current > 0
+                {
+                    self.focused_module_index = Some(current - 1);
+                    debug!("Navigate left: focus moved to module {}", current - 1);
                 }
                 Task::none()
             }

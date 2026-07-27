@@ -54,9 +54,8 @@ impl From<String> for PlaybackStatus {
 /// ```
 /// use std::collections::HashMap;
 ///
-/// use zbus::zvariant::{OwnedValue, Value};
-///
 /// use hydebar_core::services::mpris::MprisPlayerMetadata;
+/// use zbus::zvariant::{OwnedValue, Value};
 ///
 /// let mut values = HashMap::new();
 /// values.insert(

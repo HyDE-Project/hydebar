@@ -1,9 +1,11 @@
 use iced::{
     Task,
-    platform_specific::shell::wayland::commands::layer_surface::{
-        Anchor, KeyboardInteractivity, Layer, destroy_layer_surface, get_layer_surface
+    platform_specific::{
+        runtime::wayland::layer_surface::{IcedOutput, SctkLayerSurfaceSettings},
+        shell::wayland::commands::layer_surface::{
+            Anchor, KeyboardInteractivity, Layer, destroy_layer_surface, get_layer_surface
+        }
     },
-    platform_specific::runtime::wayland::layer_surface::{IcedOutput, SctkLayerSurfaceSettings},
     window::Id
 };
 use wayland_client::protocol::wl_output::WlOutput;

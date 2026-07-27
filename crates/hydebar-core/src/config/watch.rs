@@ -207,7 +207,7 @@ async fn send_degradation(
 }
 
 struct ConfigWatcher {
-    path: PathBuf,
+    path:    PathBuf,
     manager: Arc<ConfigManager>
 }
 

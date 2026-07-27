@@ -1,7 +1,7 @@
 use iced::{
     Alignment, Element, Length,
     alignment::Vertical,
-    widget::{button, column, row, text, text_input, Space},
+    widget::{Space, button, column, row, text, text_input},
     window::Id
 };
 

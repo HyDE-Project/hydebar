@@ -229,14 +229,7 @@ where
             .zip(layout.children())
             .for_each(|((child, state), layout)| {
                 child.as_widget_mut().update(
-                    state,
-                    event,
-                    layout,
-                    cursor,
-                    renderer,
-                    clipboard,
-                    shell,
-                    viewport
+                    state, event, layout, cursor, renderer, clipboard, shell, viewport
                 );
             });
     }
@@ -294,7 +287,14 @@ where
         viewport: &Rectangle,
         translation: Vector
     ) -> Option<overlay::Element<'b, Message, Theme, Renderer>> {
-        overlay::from_children(&mut self.children, tree, layout, renderer, viewport, translation)
+        overlay::from_children(
+            &mut self.children,
+            tree,
+            layout,
+            renderer,
+            viewport,
+            translation
+        )
     }
 }
 

@@ -196,7 +196,7 @@ where
     ) {
         self.content.as_widget_mut().update(
             &mut tree.children[0],
-            &event,
+            event,
             layout.children().next().unwrap(),
             cursor,
             renderer,

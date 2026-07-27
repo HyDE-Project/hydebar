@@ -4,7 +4,7 @@ use chrono::{Datelike, Local, Month, NaiveDate};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CalendarState {
     year:  i32,
-    month: u32,
+    month: u32
 }
 
 impl Default for CalendarState {
@@ -12,7 +12,7 @@ impl Default for CalendarState {
         let now = Local::now();
         Self {
             year:  now.year(),
-            month: now.month(),
+            month: now.month()
         }
     }
 }
@@ -30,9 +30,14 @@ impl CalendarState {
     /// Returns `CalendarError::InvalidMonth` if month is not in range 1-12.
     pub fn new(year: i32, month: u32) -> Result<Self, CalendarError> {
         if !(1..=12).contains(&month) {
-            return Err(CalendarError::InvalidMonth { month });
+            return Err(CalendarError::InvalidMonth {
+                month
+            });
         }
-        Ok(Self { year, month })
+        Ok(Self {
+            year,
+            month
+        })
     }
 
     /// Returns current year.
@@ -84,13 +89,13 @@ pub struct DayInfo {
     pub day:        u32,
     pub is_current: bool,
     pub is_today:   bool,
-    pub in_month:   bool,
+    pub in_month:   bool
 }
 
 /// Generated calendar data for rendering a month view.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CalendarData {
-    pub days: Vec<DayInfo>,
+    pub days: Vec<DayInfo>
 }
 
 impl CalendarData {
@@ -120,8 +125,8 @@ impl CalendarData {
             days.push(DayInfo {
                 day,
                 is_current: false,
-                is_today:   false,
-                in_month:   false,
+                is_today: false,
+                in_month: false
             });
         }
 
@@ -133,7 +138,7 @@ impl CalendarData {
                 day,
                 is_current: is_today,
                 is_today,
-                in_month:   true,
+                in_month: true
             });
         }
 
@@ -143,11 +148,13 @@ impl CalendarData {
                 day:        day as u32,
                 is_current: false,
                 is_today:   false,
-                in_month:   false,
+                in_month:   false
             });
         }
 
-        Self { days }
+        Self {
+            days
+        }
     }
 
     fn days_in_month(year: i32, month: u32) -> u32 {
@@ -168,13 +175,15 @@ impl CalendarData {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CalendarError {
     /// Month value is invalid (must be 1-12).
-    InvalidMonth { month: u32 },
+    InvalidMonth { month: u32 }
 }
 
 impl std::fmt::Display for CalendarError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            CalendarError::InvalidMonth { month } => {
+            CalendarError::InvalidMonth {
+                month
+            } => {
                 write!(f, "invalid month: {}, must be in range 1-12", month)
             }
         }

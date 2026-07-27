@@ -140,7 +140,7 @@ mod tests {
     fn validate_rejects_missing_custom_module_reference() {
         let config = Config {
             custom_modules: vec![custom_module("foo")],
-            modules:        Modules {
+            modules: Modules {
                 left: vec![ModuleDef::Single(ModuleName::Custom("bar".to_owned()))],
                 ..Default::default()
             },

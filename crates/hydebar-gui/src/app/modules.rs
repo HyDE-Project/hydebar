@@ -37,12 +37,11 @@ impl App {
                 };
 
                 for module_name in modules_in_def {
-                    if current_index == index {
-                        if let Some((_, action)) =
+                    if current_index == index
+                        && let Some((_, action)) =
                             self.get_module_view(module_name, window_id, 1.0)
-                        {
-                            return action;
-                        }
+                    {
+                        return action;
                     }
                     current_index += 1;
                 }

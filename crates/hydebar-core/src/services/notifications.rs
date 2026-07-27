@@ -328,28 +328,63 @@ impl ReadOnlyService for NotificationsService {
     fn subscribe() -> Subscription<ServiceEvent<Self>> {
         let id = std::any::TypeId::of::<NotificationsService>();
         Subscription::run_with(id, |&_id| {
-            stream::channel(100, |mut output: iced::futures::channel::mpsc::Sender<ServiceEvent<Self>>| async move {
-                // Initialize storage
-                let storage = Arc::new(std::sync::Mutex::new(NotificationStorage::default()));
-                let service = NotificationsService {
-                    storage: Arc::clone(&storage)
-                };
+            stream::channel(
+                100,
+                |mut output: iced::futures::channel::mpsc::Sender<ServiceEvent<Self>>| async move {
+                    // Initialize storage
+                    let storage = Arc::new(std::sync::Mutex::new(NotificationStorage::default()));
+                    let service = NotificationsService {
+                        storage: Arc::clone(&storage)
+                    };
 
-                // Send init event
-                if output
-                    .send(ServiceEvent::Init(service.clone()))
-                    .await
-                    .is_err()
-                {
-                    error!("Failed to send notifications service init event");
-                    return;
-                }
+                    // Send init event
+                    if output
+                        .send(ServiceEvent::Init(service.clone()))
+                        .await
+                        .is_err()
+                    {
+                        error!("Failed to send notifications service init event");
+                        return;
+                    }
 
-                // Connect to session bus
-                let connection = match Connection::session().await {
-                    Ok(conn) => conn,
-                    Err(err) => {
-                        error!("Failed to connect to D-Bus: {err}");
+                    // Connect to session bus
+                    let connection = match Connection::session().await {
+                        Ok(conn) => conn,
+                        Err(err) => {
+                            error!("Failed to connect to D-Bus: {err}");
+                            let _ = output
+                                .send(ServiceEvent::Error(NotificationsError::DBusConnection(
+                                    err.to_string()
+                                )))
+                                .await;
+                            return;
+                        }
+                    };
+
+                    // Create notifications server
+                    let server = NotificationsServer::new(Arc::clone(&storage));
+
+                    // Register D-Bus interface
+                    if let Err(err) = connection
+                        .object_server()
+                        .at("/org/freedesktop/Notifications", server)
+                        .await
+                    {
+                        error!("Failed to register D-Bus interface: {err}");
+                        let _ = output
+                            .send(ServiceEvent::Error(NotificationsError::DBusInterface(
+                                err.to_string()
+                            )))
+                            .await;
+                        return;
+                    }
+
+                    // Request well-known name
+                    if let Err(err) = connection
+                        .request_name("org.freedesktop.Notifications")
+                        .await
+                    {
+                        error!("Failed to request D-Bus name: {err}");
                         let _ = output
                             .send(ServiceEvent::Error(NotificationsError::DBusConnection(
                                 err.to_string()
@@ -357,47 +392,15 @@ impl ReadOnlyService for NotificationsService {
                             .await;
                         return;
                     }
-                };
 
-                // Create notifications server
-                let server = NotificationsServer::new(Arc::clone(&storage));
+                    debug!("Notifications D-Bus service registered");
 
-                // Register D-Bus interface
-                if let Err(err) = connection
-                    .object_server()
-                    .at("/org/freedesktop/Notifications", server)
-                    .await
-                {
-                    error!("Failed to register D-Bus interface: {err}");
-                    let _ = output
-                        .send(ServiceEvent::Error(NotificationsError::DBusInterface(
-                            err.to_string()
-                        )))
-                        .await;
-                    return;
+                    // Keep connection alive
+                    loop {
+                        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+                    }
                 }
-
-                // Request well-known name
-                if let Err(err) = connection
-                    .request_name("org.freedesktop.Notifications")
-                    .await
-                {
-                    error!("Failed to request D-Bus name: {err}");
-                    let _ = output
-                        .send(ServiceEvent::Error(NotificationsError::DBusConnection(
-                            err.to_string()
-                        )))
-                        .await;
-                    return;
-                }
-
-                debug!("Notifications D-Bus service registered");
-
-                // Keep connection alive
-                loop {
-                    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-                }
-            })
+            )
         })
     }
 }

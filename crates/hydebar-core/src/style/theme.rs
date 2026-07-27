@@ -22,7 +22,7 @@ pub fn hydebar_theme(appearance: &Appearance) -> Theme {
             text:       appearance.text_color.get_base(),
             primary:    appearance.primary_color.get_base(),
             success:    appearance.success_color.get_base(),
-            warning:     appearance.warning_color.get_base(),
+            warning:    appearance.warning_color.get_base(),
             danger:     appearance.danger_color.get_base()
         },
         |palette| build_extended_palette(appearance, palette)
@@ -61,29 +61,29 @@ fn build_extended_palette(appearance: &Appearance, palette: Palette) -> palette:
         appearance.danger_color.get_text().unwrap_or(palette.text)
     );
 
-        palette::Extended {
-            background: build_pair(
-                &appearance.background_color,
-                palette.text,
-                default_bg.base,
-                default_bg.weak,
-                default_bg.strong
-            ),
-            primary:    build_primary_pair(&appearance.primary_color, palette.text, default_primary),
-            secondary:  build_secondary_pair(
-                &appearance.secondary_color,
-                palette.text,
-                default_secondary
-            ),
-            success:    build_success_pair(&appearance.success_color, palette.text, default_success),
-            warning:    palette::Warning::generate(
-                appearance.warning_color.get_base(),
-                palette.background,
-                appearance.warning_color.get_text().unwrap_or(palette.text)
-            ),
-            danger:     build_danger_pair(&appearance.danger_color, palette.text, default_danger),
-            is_dark:    true
-        }
+    palette::Extended {
+        background: build_pair(
+            &appearance.background_color,
+            palette.text,
+            default_bg.base,
+            default_bg.weak,
+            default_bg.strong
+        ),
+        primary:    build_primary_pair(&appearance.primary_color, palette.text, default_primary),
+        secondary:  build_secondary_pair(
+            &appearance.secondary_color,
+            palette.text,
+            default_secondary
+        ),
+        success:    build_success_pair(&appearance.success_color, palette.text, default_success),
+        warning:    palette::Warning::generate(
+            appearance.warning_color.get_base(),
+            palette.background,
+            appearance.warning_color.get_text().unwrap_or(palette.text)
+        ),
+        danger:     build_danger_pair(&appearance.danger_color, palette.text, default_danger),
+        is_dark:    true
+    }
 }
 
 fn build_pair(
@@ -193,7 +193,10 @@ pub fn text_input_style(theme: &Theme, status: text_input::Status) -> text_input
     };
     match status {
         text_input::Status::Active => base,
-        text_input::Status::Focused { is_hovered: _ } | text_input::Status::Hovered => {
+        text_input::Status::Focused {
+            is_hovered: _
+        }
+        | text_input::Status::Hovered => {
             base.border.color = theme.extended_palette().background.strong.color;
             base
         }

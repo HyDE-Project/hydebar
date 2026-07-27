@@ -1,6 +1,6 @@
 use iced::{
     Alignment, Border, Color, Element, Length, Theme,
-    widget::{Column, Row, button, column, container, row, rule, text},
+    widget::{Column, Row, button, column, container, row, rule, text}
 };
 
 use super::{CalendarState, Message};
@@ -36,7 +36,7 @@ pub fn build_calendar_menu_view(state: &CalendarState) -> Element<'_, Message> {
                     .align_x(Alignment::Center)
                     .into()
             })
-            .collect::<Vec<_>>(),
+            .collect::<Vec<_>>()
     )
     .spacing(4);
 
@@ -64,37 +64,31 @@ pub fn build_calendar_menu_view(state: &CalendarState) -> Element<'_, Message> {
 
                     day_button.into()
                 })
-                .collect::<Vec<_>>(),
+                .collect::<Vec<_>>()
         )
         .spacing(4);
 
         week_rows.push(week_row.into());
     }
 
-    let calendar_grid = Column::with_children(week_rows)
-        .spacing(4);
+    let calendar_grid = Column::with_children(week_rows).spacing(4);
 
     let calendar_width = 7. * 36. + 6. * 4.;
 
-    column![
-        header,
-        rule::horizontal(1),
-        weekday_header,
-        calendar_grid
-    ]
-    .spacing(8)
-    .padding(4)
-    .width(Length::Fixed(calendar_width))
-    .into()
+    column![header, rule::horizontal(1), weekday_header, calendar_grid]
+        .spacing(8)
+        .padding(4)
+        .width(Length::Fixed(calendar_width))
+        .into()
 }
 
 fn nav_button_style(theme: &Theme, status: button::Status) -> button::Style {
     let mut base = button::Style {
         background: None,
-        border:     Border {
+        border: Border {
             width:  0.0,
             radius: 4.0.into(),
-            color:  Color::TRANSPARENT,
+            color:  Color::TRANSPARENT
         },
         text_color: theme.palette().text,
         ..button::Style::default()
@@ -102,17 +96,10 @@ fn nav_button_style(theme: &Theme, status: button::Status) -> button::Style {
 
     match status {
         button::Status::Hovered => {
-            base.background = Some(
-                theme
-                    .extended_palette()
-                    .background
-                    .weak
-                    .color
-                    .into()
-            );
+            base.background = Some(theme.extended_palette().background.weak.color.into());
             base
         }
-        _ => base,
+        _ => base
     }
 }
 
@@ -120,7 +107,7 @@ fn day_button_style(
     theme: &Theme,
     status: button::Status,
     in_month: bool,
-    is_today: bool,
+    is_today: bool
 ) -> button::Style {
     let base_color = if in_month {
         theme.extended_palette().background.base.color
@@ -138,13 +125,13 @@ fn day_button_style(
         Border {
             color:  theme.palette().primary,
             width:  2.0,
-            radius: 4.0.into(),
+            radius: 4.0.into()
         }
     } else {
         Border {
             width:  0.0,
             radius: 4.0.into(),
-            color:  Color::TRANSPARENT,
+            color:  Color::TRANSPARENT
         }
     };
 
@@ -161,7 +148,7 @@ fn day_button_style(
             base.text_color = theme.extended_palette().primary.weak.text;
             base
         }
-        _ => base,
+        _ => base
     }
 }
 

@@ -852,4 +852,3 @@ mod tests {
         assert_eq!(rx.try_recv().expect("signal level"), 42);
     }
 }
-

@@ -25,7 +25,7 @@ impl App {
     }
 
     pub fn theme(&self, _id: Id) -> Theme {
-        hydebar_theme(&self.appearance())
+        hydebar_theme(self.appearance())
     }
 
     pub fn style(&self, theme: &Theme) -> Style {
