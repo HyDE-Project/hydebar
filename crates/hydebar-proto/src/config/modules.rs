@@ -100,14 +100,23 @@ pub struct Modules {
 impl Default for Modules {
     fn default() -> Self {
         Self {
-            left:   vec![ModuleDef::Single(ModuleName::Workspaces)],
-            center: vec![ModuleDef::Single(ModuleName::WindowTitle)],
-            right:  vec![ModuleDef::Group(vec![
-                ModuleName::Clock,
-                ModuleName::Privacy,
-                ModuleName::Battery,
-                ModuleName::Settings,
-            ])]
+            left:   vec![
+                ModuleDef::Single(ModuleName::SystemInfo),
+                ModuleDef::Single(ModuleName::Clock),
+            ],
+            center: vec![ModuleDef::Group(vec![
+                ModuleName::Workspaces,
+                ModuleName::WindowTitle,
+            ])],
+            right:  vec![
+                ModuleDef::Group(vec![ModuleName::Updates, ModuleName::Settings]),
+                ModuleDef::Group(vec![
+                    ModuleName::Privacy,
+                    ModuleName::Tray,
+                    ModuleName::Battery,
+                ]),
+                ModuleDef::Group(vec![ModuleName::Clipboard, ModuleName::AppLauncher]),
+            ]
         }
     }
 }
@@ -148,9 +157,32 @@ mod tests {
     #[test]
     fn default_modules_match_expected_layout() {
         let modules = Modules::default();
-        assert_eq!(modules.left.len(), 1);
-        assert_eq!(modules.center.len(), 1);
-        assert_eq!(modules.right.len(), 1);
+        assert_eq!(
+            modules.left,
+            vec![
+                ModuleDef::Single(ModuleName::SystemInfo),
+                ModuleDef::Single(ModuleName::Clock),
+            ]
+        );
+        assert_eq!(
+            modules.center,
+            vec![ModuleDef::Group(vec![
+                ModuleName::Workspaces,
+                ModuleName::WindowTitle,
+            ])]
+        );
+        assert_eq!(
+            modules.right,
+            vec![
+                ModuleDef::Group(vec![ModuleName::Updates, ModuleName::Settings]),
+                ModuleDef::Group(vec![
+                    ModuleName::Privacy,
+                    ModuleName::Tray,
+                    ModuleName::Battery,
+                ]),
+                ModuleDef::Group(vec![ModuleName::Clipboard, ModuleName::AppLauncher]),
+            ]
+        );
     }
 
     #[test]
