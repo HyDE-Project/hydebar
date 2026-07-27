@@ -45,3 +45,38 @@ where
         None => None
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_the_waybar_payload_shape() {
+        let parsed: CustomListenData = serde_json::from_str(
+            r#"{"text":"42%","alt":"charging","tooltip":"Battery","class":"warning","percentage":42}"#
+        )
+        .expect("waybar payload");
+
+        assert_eq!(parsed.alt, "charging");
+        assert_eq!(parsed.text.as_deref(), Some("42%"));
+        assert_eq!(parsed.tooltip.as_deref(), Some("Battery"));
+        assert_eq!(parsed.class.as_deref(), Some("warning"));
+        assert_eq!(parsed.percentage, Some(42.0));
+    }
+
+    #[test]
+    fn accepts_a_class_list_and_keeps_the_first_entry() {
+        let parsed: CustomListenData =
+            serde_json::from_str(r#"{"text":"x","class":["urgent","blinking"]}"#)
+                .expect("class list");
+
+        assert_eq!(parsed.class.as_deref(), Some("urgent"));
+    }
+
+    #[test]
+    fn tolerates_a_payload_without_any_field() {
+        let parsed: CustomListenData = serde_json::from_str("{}").expect("empty payload");
+
+        assert_eq!(parsed, CustomListenData::default());
+    }
+}

@@ -1,15 +1,20 @@
-// TODO: Fix test type annotations after Module trait refactoring
-#![cfg(feature = "enable-broken-tests")]
-
 use std::{num::NonZeroUsize, sync::Arc, time::Duration};
 
 use tokio::{
-    io::{self, AsyncWriteExt, BufReader},
+    io::{self, AsyncBufReadExt, AsyncWriteExt, BufReader},
     time::{sleep, timeout}
 };
 
-use super::*;
-use crate::event_bus::{BusEvent, EventBus};
+use super::{
+    listener::{forward_custom_updates, send_event},
+    *
+};
+use crate::{
+    ModuleContext,
+    event_bus::{BusEvent, EventBus, ModuleEvent},
+    modules::ModuleError,
+    services::ServiceEvent
+};
 
 #[tokio::test]
 async fn send_event_propagates_module_errors() {
@@ -25,8 +30,8 @@ async fn send_event_propagates_module_errors() {
     });
 
     let data = CustomListenData {
-        alt:  String::from("alt"),
-        text: None
+        alt: String::from("alt"),
+        ..CustomListenData::default()
     };
 
     sender
