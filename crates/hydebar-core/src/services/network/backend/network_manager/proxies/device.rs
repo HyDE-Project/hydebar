@@ -97,4 +97,3 @@ pub trait WirelessDevice {
 
     fn request_scan(&self, options: HashMap<String, OwnedValue>) -> Result<()>;
 }
-

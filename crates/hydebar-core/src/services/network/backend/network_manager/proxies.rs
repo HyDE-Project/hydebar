@@ -4,8 +4,6 @@ mod device;
 mod manager;
 mod settings;
 
-pub use device::{
-    ActiveConnectionProxy, DeviceProxy, WiredDeviceProxy, WirelessDeviceProxy
-};
+pub use device::{ActiveConnectionProxy, DeviceProxy, WiredDeviceProxy, WirelessDeviceProxy};
 pub use manager::NetworkManagerProxy;
 pub use settings::{AccessPointProxy, ConnectionSettingsProxy, SettingsProxy};

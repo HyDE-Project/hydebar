@@ -11,11 +11,16 @@ use tokio::process::Command;
 use zbus::zvariant::{self, OwnedObjectPath, Value};
 
 mod proxies;
+mod settings_dbus;
+
+#[cfg(test)]
+mod tests;
 
 use proxies::{
-    AccessPointProxy, ConnectionSettingsProxy, ActiveConnectionProxy, DeviceProxy, NetworkManagerProxy, SettingsProxy,
-    WiredDeviceProxy, WirelessDeviceProxy
+    AccessPointProxy, ActiveConnectionProxy, ConnectionSettingsProxy, DeviceProxy,
+    NetworkManagerProxy, WiredDeviceProxy, WirelessDeviceProxy
 };
+pub use settings_dbus::NetworkSettingsDbus;
 
 use super::DeviceType;
 use crate::services::{
@@ -947,97 +952,5 @@ impl<'a> NetworkDbus<'a> {
         wireless_access_points.sort_by(|a, b| b.strength.cmp(&a.strength));
 
         Ok(wireless_access_points)
-    }
-}
-
-#[derive(Clone)]
-pub struct NetworkSettingsDbus<'a>(SettingsProxy<'a>);
-
-impl<'a> Deref for NetworkSettingsDbus<'a> {
-    type Target = SettingsProxy<'a>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl NetworkSettingsDbus<'_> {
-    pub async fn new(conn: &zbus::Connection) -> AppResult<Self> {
-        let settings = SettingsProxy::new(conn)
-            .await
-            .map_err(|e| AppError::internal(format!("Failed to create SettingsProxy: {}", e)))?;
-
-        Ok(Self(settings))
-    }
-
-    pub async fn know_connections(&self) -> AppResult<Vec<OwnedObjectPath>> {
-        self.list_connections()
-            .await
-            .map_err(|e| AppError::internal(format!("Failed to list connections: {}", e)))
-    }
-
-    pub async fn find_connection(&self, name: &str) -> AppResult<Option<OwnedObjectPath>> {
-        let connections = self
-            .list_connections()
-            .await
-            .map_err(|e| AppError::internal(format!("Failed to list connections: {}", e)))?;
-
-        for connection in connections {
-            let connection = ConnectionSettingsProxy::builder(self.inner().connection())
-                .path(connection)
-                .map_err(|e| {
-                    AppError::internal(format!(
-                        "Failed to set ConnectionSettingsProxy path: {}",
-                        e
-                    ))
-                })?
-                .build()
-                .await
-                .map_err(|e| {
-                    AppError::internal(format!("Failed to build ConnectionSettingsProxy: {}", e))
-                })?;
-
-            let s = connection.get_settings().await.map_err(|e| {
-                AppError::internal(format!("Failed to get connection settings: {}", e))
-            })?;
-            let id = s
-                .get("connection")
-                .unwrap()
-                .get("id")
-                .map(|v| match v.deref() {
-                    Value::Str(v) => v.to_string(),
-                    _ => "".to_string()
-                })
-                .unwrap();
-            if id == name {
-                return Ok(Some(connection.inner().path().to_owned().into()));
-            }
-        }
-
-        Ok(None)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::services::network::ConnectivityState;
-
-    #[test]
-    fn device_type_from_u32_maps_known_values() {
-        assert_eq!(DeviceType::from(2), DeviceType::Wifi);
-        assert_eq!(DeviceType::from(29), DeviceType::WireGuard);
-        assert_eq!(DeviceType::from(42), DeviceType::Unknown);
-    }
-
-    #[test]
-    fn connectivity_state_from_vec_prefers_highest_state() {
-        let states = vec![
-            ConnectivityState::Portal,
-            ConnectivityState::Loss,
-            ConnectivityState::Full,
-        ];
-
-        assert_eq!(ConnectivityState::from(states), ConnectivityState::Full);
     }
 }

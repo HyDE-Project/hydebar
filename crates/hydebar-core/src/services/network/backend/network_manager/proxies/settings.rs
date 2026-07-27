@@ -52,4 +52,3 @@ pub trait ConnectionSettings {
 
     fn get_settings(&self) -> Result<HashMap<String, HashMap<String, OwnedValue>>>;
 }
-
