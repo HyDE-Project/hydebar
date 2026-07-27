@@ -9,10 +9,16 @@ use iced::{
 use crate::config::AppearanceColor;
 
 /// Builds the workspace button style closure, handling optional colours.
+///
+/// Only the focused workspace is filled with its monitor colour; the remaining
+/// ones stay muted so the active one reads at a glance.
 pub fn workspace_button_style(
     is_empty: bool,
+    is_active: bool,
     colors: Option<Option<AppearanceColor>>
 ) -> impl Fn(&Theme, Status) -> button::Style {
+    let is_muted = is_empty || !is_active;
+
     move |theme: &Theme, status: Status| {
         let (bg_color, fg_color) = colors
             .map(|c| {
@@ -36,7 +42,7 @@ pub fn workspace_button_style(
                 theme.palette().text
             ));
         let mut base = button::Style {
-            background: Some(Background::Color(if is_empty {
+            background: Some(Background::Color(if is_muted {
                 theme.extended_palette().background.weak.color
             } else {
                 bg_color
@@ -46,7 +52,7 @@ pub fn workspace_button_style(
                 color:  bg_color,
                 radius: 16.0.into()
             },
-            text_color: if is_empty {
+            text_color: if is_muted {
                 theme.extended_palette().background.weak.text
             } else {
                 fg_color

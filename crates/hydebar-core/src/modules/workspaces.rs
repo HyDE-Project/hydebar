@@ -325,7 +325,7 @@ where
                                     .align_x(alignment::Horizontal::Center)
                                     .align_y(alignment::Vertical::Center)
                                 )
-                                .style(workspace_button_style(empty, color))
+                                .style(workspace_button_style(empty, w_active, color))
                                 .padding(if w_id < 0 {
                                     if w_active { [0, 16] } else { [0, 8] }
                                 } else {
