@@ -21,12 +21,12 @@ use iced::{
         listen_with,
         wayland::{Event as WaylandEvent, OutputEvent}
     },
-    keyboard, time
+    keyboard, window
 };
 use log::{debug, error, info, warn};
 
 use super::{
-    bus::drain_bus,
+    bus,
     state::{App, Message}
 };
 use crate::get_log_spec;
@@ -34,33 +34,32 @@ use crate::get_log_spec;
 impl App {
     pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
-            Message::MicroTick => {
-                if self.outputs.menu_is_open() {
-                    self.outputs
-                        .tick_menu_animations(&self.config.appearance.animations);
+            Message::Frame(now) => {
+                let elapsed = self
+                    .last_frame
+                    .map(|last| now.saturating_duration_since(last))
+                    .unwrap_or_default();
+                self.last_frame = Some(now);
+
+                let menus_animating = self
+                    .outputs
+                    .tick_menu_animations(&self.config.appearance.animations, elapsed);
+                let theme_animating = self.appearance_transition.advance(elapsed);
+
+                if !menus_animating && !theme_animating {
+                    self.last_frame = None;
                 }
 
-                Task::perform(
-                    drain_bus(Arc::clone(&self.bus_receiver)),
-                    Message::BusFlushed
-                )
+                Task::none()
             }
             Message::BusFlushed(outcome) => {
                 if outcome.had_error() {
-                    error!("failed to drain event bus, keeping fast cadence");
-                    self.micro_ticker.record_activity();
+                    error!("event bus reported a failure while delivering events");
                 }
 
                 if outcome.is_empty() {
-                    if !outcome.had_error() {
-                        self.micro_ticker.record_idle();
-                    }
                     Task::none()
                 } else {
-                    if !outcome.had_error() {
-                        self.micro_ticker.record_activity();
-                    }
-
                     let tasks: Vec<_> = outcome
                         .into_events()
                         .into_iter()
@@ -103,6 +102,10 @@ impl App {
                 }
 
                 self.config = config;
+
+                let blend_palette = self.config.appearance.animations.enabled;
+                self.appearance_transition
+                    .set_target(self.config.appearance.clone(), blend_palette);
 
                 self.register_modules();
 
@@ -238,14 +241,23 @@ impl App {
                             return self.update(*msg);
                         }
                         OnModulePress::ToggleMenu(menu_type) => {
-                            info!("Activating module at index {} - opening menu {:?}", index, menu_type);
+                            info!(
+                                "Activating module at index {} - opening menu {:?}",
+                                index, menu_type
+                            );
 
                             let center_button_ref = ButtonUIRef {
-                                position: iced::Point { x: 960.0, y: 20.0 },
-                                viewport: (1920.0, 1080.0),
+                                position: iced::Point {
+                                    x: 960.0, y: 20.0
+                                },
+                                viewport: (1920.0, 1080.0)
                             };
 
-                            return self.update(Message::ToggleMenu(menu_type, main_window_id, center_button_ref));
+                            return self.update(Message::ToggleMenu(
+                                menu_type,
+                                main_window_id,
+                                center_button_ref
+                            ));
                         }
                     }
                 }
@@ -397,11 +409,23 @@ impl App {
         }
     }
 
-    pub fn subscription(&self) -> Subscription<Message> {
-        let timer = time::every(self.micro_ticker.interval()).map(|_| Message::MicroTick);
+    /// Frame clock feeding the animators.
+    ///
+    /// The subscription exists only while something is animating, so an idle
+    /// panel stops asking the compositor for frame callbacks entirely instead
+    /// of interpolating on a polling timer.
+    fn frame_subscription(&self) -> Subscription<Message> {
+        if self.outputs.menu_is_animating() || self.appearance_transition.is_animating() {
+            window::wayland_frames().map(Message::Frame)
+        } else {
+            Subscription::none()
+        }
+    }
 
+    pub fn subscription(&self) -> Subscription<Message> {
         let mut subscriptions = vec![
-            timer,
+            bus::subscription(self.bus_receiver.clone()).map(Message::BusFlushed),
+            self.frame_subscription(),
             config::subscription(&self.config_path, Arc::clone(&self.config_manager)).map(
                 |event| match event {
                     ConfigEvent::Applied(config) => Message::ConfigChanged(config),

@@ -6,6 +6,7 @@ use std::time::Duration;
 ///
 /// ```no_run
 /// use hydebar_core::adapters::hyprland_client::{HyprlandClient, HyprlandClientConfig};
+/// use hydebar_proto::ports::hyprland::HyprlandPort;
 ///
 /// let client = HyprlandClient::with_config(HyprlandClientConfig::default());
 /// assert!(client.active_window().is_ok());

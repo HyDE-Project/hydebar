@@ -304,6 +304,7 @@ impl NetworkData {
             ))
             .max_height(200),
         )
+        .width(Length::Fill)
         .spacing(8);
 
         if show_more_button {
@@ -351,6 +352,7 @@ impl NetworkData {
                 })
                 .collect::<Vec<Element<NetworkMessage>>>(),
         )
+        .width(Length::Fill)
         .spacing(8);
 
         if show_more_button {

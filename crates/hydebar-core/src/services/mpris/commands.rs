@@ -15,7 +15,7 @@ pub(crate) fn module_error(context: &str, err: impl Display) -> ModuleError {
 /// # Examples
 ///
 /// ```
-/// use crate::services::mpris::{MprisPlayerCommand, PlayerCommand};
+/// use hydebar_core::services::mpris::{MprisPlayerCommand, PlayerCommand};
 ///
 /// let command =
 ///     MprisPlayerCommand::new("org.mpris.MediaPlayer2.Player".into(), PlayerCommand::Next);

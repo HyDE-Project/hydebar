@@ -1,8 +1,4 @@
-use std::{
-    collections::HashMap,
-    path::PathBuf,
-    sync::{Arc, Mutex}
-};
+use std::{collections::HashMap, path::PathBuf, sync::Arc, time::Instant};
 
 use flexi_logger::LoggerHandle;
 use hydebar_core::{
@@ -32,51 +28,57 @@ use hydebar_core::{
         workspaces::Workspaces
     },
     outputs::Outputs,
-    position_button::ButtonUIRef
+    position_button::ButtonUIRef,
+    style::AppearanceTransition
 };
-use hydebar_proto::{config::Config, ports::hyprland::HyprlandPort};
+use hydebar_proto::{
+    config::{Appearance, Config},
+    ports::hyprland::HyprlandPort
+};
 use iced::{Task, event::wayland::OutputEvent, window::Id};
 use tokio::runtime::Handle;
 use wayland_client::protocol::wl_output::WlOutput;
 
-use super::{bus::BusFlushOutcome, micro_ticker::MicroTicker};
+use super::bus::BusFlushOutcome;
 
 pub struct App {
-    pub(super) config_path:         PathBuf,
-    pub(super) logger:              LoggerHandle,
-    pub(super) _hyprland:           Arc<dyn HyprlandPort>,
-    pub(super) config_manager:      Arc<ConfigManager>,
-    pub(super) bus_receiver:        Arc<Mutex<EventReceiver>>,
-    pub(super) micro_ticker:        MicroTicker,
-    pub(super) module_context:      ModuleContext,
-    pub config:                     Arc<Config>,
-    pub outputs:                    Outputs,
-    pub navigation_mode:            bool,
-    pub focused_module_index:       Option<usize>,
-    pub app_launcher:               AppLauncher,
-    pub custom:                     HashMap<String, Custom>,
-    pub updates:                    Updates,
-    pub clipboard:                  Clipboard,
-    pub workspaces:                 Workspaces,
-    pub window_title:               WindowTitle,
-    pub system_info:                SystemInfo,
-    pub keyboard_layout:            KeyboardLayout,
-    pub keyboard_submap:            KeyboardSubmap,
-    pub tray:                       TrayModule,
-    pub clock:                      Clock,
-    pub battery:                    Battery,
-    pub privacy:                    Privacy,
-    pub settings:                   Settings,
-    pub media_player:               MediaPlayer,
-    pub notifications:              Notifications,
-    pub screenshot:                 Screenshot,
-    pub weather:                    Weather
+    pub(super) config_path: PathBuf,
+    pub(super) logger: LoggerHandle,
+    pub(super) _hyprland: Arc<dyn HyprlandPort>,
+    pub(super) config_manager: Arc<ConfigManager>,
+    pub(super) bus_receiver: EventReceiver,
+    pub(super) last_frame: Option<Instant>,
+    pub(super) appearance_transition: AppearanceTransition,
+    pub(super) module_context: ModuleContext,
+    pub config: Arc<Config>,
+    pub outputs: Outputs,
+    pub navigation_mode: bool,
+    pub focused_module_index: Option<usize>,
+    pub app_launcher: AppLauncher,
+    pub custom: HashMap<String, Custom>,
+    pub updates: Updates,
+    pub clipboard: Clipboard,
+    pub workspaces: Workspaces,
+    pub window_title: WindowTitle,
+    pub system_info: SystemInfo,
+    pub keyboard_layout: KeyboardLayout,
+    pub keyboard_submap: KeyboardSubmap,
+    pub tray: TrayModule,
+    pub clock: Clock,
+    pub battery: Battery,
+    pub privacy: Privacy,
+    pub settings: Settings,
+    pub media_player: MediaPlayer,
+    pub notifications: Notifications,
+    pub screenshot: Screenshot,
+    pub weather: Weather
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
     None,
-    MicroTick,
+    /// A compositor frame callback carrying the frame timestamp.
+    Frame(Instant),
     BusFlushed(BusFlushOutcome),
     ConfigChanged(ConfigApplied),
     ConfigDegraded(ConfigDegradation),
@@ -166,13 +168,22 @@ type AppDependencies = (
 );
 
 impl App {
+    /// Appearance to render with this frame.
+    ///
+    /// While a config reload is blending this differs from the configured
+    /// appearance: colours and opacities lag behind their targets until the
+    /// transition settles.
+    pub fn appearance(&self) -> &Appearance {
+        self.appearance_transition.current()
+    }
+
     pub fn get_all_modules_count(&self) -> usize {
         let count_modules = |modules_def: &[ModuleDef]| -> usize {
             modules_def
                 .iter()
                 .map(|def| match def {
                     ModuleDef::Single(_) => 1,
-                    ModuleDef::Group(group) => group.len(),
+                    ModuleDef::Group(group) => group.len()
                 })
                 .sum()
         };
@@ -208,8 +219,9 @@ impl App {
             logger,
             _hyprland: hyprland,
             config_manager,
-            bus_receiver: Arc::new(Mutex::new(bus_receiver)),
-            micro_ticker: MicroTicker::default(),
+            bus_receiver,
+            last_frame: None,
+            appearance_transition: AppearanceTransition::new(config.appearance.clone()),
             module_context,
             outputs,
             navigation_mode: false,

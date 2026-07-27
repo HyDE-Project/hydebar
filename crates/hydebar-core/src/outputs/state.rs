@@ -1,8 +1,7 @@
 use iced::{
     Task,
     platform_specific::shell::wayland::commands::layer_surface::{
-        Anchor, set_anchor,
-        set_size, set_exclusive_zone
+        Anchor, set_anchor, set_exclusive_zone, set_size
     },
     window::Id
 };
@@ -518,17 +517,28 @@ impl Outputs {
     /// Update menu animations. Returns true if any menu is currently animating.
     pub fn tick_menu_animations(
         &mut self,
-        animation_config: &crate::config::AnimationConfig
+        animation_config: &crate::config::AnimationConfig,
+        elapsed: std::time::Duration
     ) -> bool {
         let mut is_animating = false;
         for (_, shell_info, _) in &mut self.0 {
             if let Some(shell_info) = shell_info
-                && shell_info.menu.tick_animation(animation_config)
+                && shell_info.menu.tick_animation(animation_config, elapsed)
             {
                 is_animating = true;
             }
         }
         is_animating
+    }
+
+    /// Returns whether any menu still has an unfinished animation.
+    pub fn menu_is_animating(&self) -> bool {
+        self.0.iter().any(|(_, shell_info, _)| {
+            shell_info
+                .as_ref()
+                .map(|shell_info| shell_info.menu.is_animating())
+                .unwrap_or_default()
+        })
     }
 
     /// Toggle the menu associated with the provided surface identifier.

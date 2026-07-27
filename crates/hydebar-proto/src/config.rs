@@ -1,375 +1,53 @@
+//! Root configuration type assembled from the per module definitions.
+
 mod appearance;
+mod battery;
+mod clock;
+mod custom_module;
+mod keyboard_layout;
 mod keybindings;
+mod media_player;
 mod modules;
 mod serde_helpers;
+mod settings;
+mod system_info;
 mod themes;
+mod updates;
 mod validation;
+mod weather;
+mod window_title;
+mod workspaces;
 
 #[cfg(test)]
 mod themes_tests;
 
-use std::collections::HashMap;
-
 pub use appearance::{
     AnimationConfig, Appearance, AppearanceColor, AppearanceStyle, MenuAppearance
 };
+pub use battery::BatteryModuleConfig;
+pub use clock::ClockModuleConfig;
+pub use custom_module::CustomModuleDef;
+pub use keyboard_layout::KeyboardLayoutModuleConfig;
 pub use keybindings::{GlobalKeybindings, Keybindings, MenuKeybindings};
+pub use media_player::MediaPlayerModuleConfig;
 pub use modules::{ModuleDef, ModuleName, Modules, Outputs, Position};
 use serde::Deserialize;
 pub use serde_helpers::RegexCfg;
-use serde_with::serde_as;
+pub use settings::SettingsModuleConfig;
+pub use system_info::{
+    SystemIndicator, SystemInfoCpu, SystemInfoDisk, SystemInfoMemory, SystemInfoTemperature,
+    SystemModuleConfig
+};
 pub use themes::PresetTheme;
+pub use updates::UpdatesModuleConfig;
 pub use validation::ConfigValidationError;
+pub use weather::WeatherModuleConfig;
+pub use window_title::{WindowTitleConfig, WindowTitleMode};
+pub use workspaces::{WorkspaceVisibilityMode, WorkspacesModuleConfig};
 
 pub const DEFAULT_CONFIG_FILE_PATH: &str = "~/.config/hydebar/config.toml";
 
-#[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
-pub struct UpdatesModuleConfig {
-    pub check_cmd:  String,
-    pub update_cmd: String
-}
-
-#[derive(Deserialize, Clone, Default, PartialEq, Eq, Debug)]
-pub enum WorkspaceVisibilityMode {
-    #[default]
-    All,
-    MonitorSpecific
-}
-
-#[derive(Deserialize, Clone, Default, Debug, PartialEq, Eq)]
-pub struct WorkspacesModuleConfig {
-    #[serde(default)]
-    pub visibility_mode:          WorkspaceVisibilityMode,
-    #[serde(default)]
-    pub enable_workspace_filling: bool,
-    pub max_workspaces:           Option<u32>
-}
-
-#[derive(Deserialize, Clone, Default, PartialEq, Eq, Debug)]
-pub enum WindowTitleMode {
-    #[default]
-    Title,
-    Class
-}
-
-#[derive(Deserialize, Clone, Default, Debug, PartialEq, Eq)]
-pub struct WindowTitleConfig {
-    #[serde(default)]
-    pub mode: WindowTitleMode,
-    #[serde(default = "default_truncate_title_after_length")]
-    pub truncate_title_after_length: u32
-}
-
-#[derive(Deserialize, Clone, Default, Debug, PartialEq, Eq)]
-pub struct KeyboardLayoutModuleConfig {
-    #[serde(default)]
-    pub labels: HashMap<String, String>
-}
-
-#[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
-pub struct SystemInfoCpu {
-    #[serde(default = "default_cpu_warn_threshold")]
-    pub warn_threshold:  u32,
-    #[serde(default = "default_cpu_alert_threshold")]
-    pub alert_threshold: u32
-}
-
-impl Default for SystemInfoCpu {
-    fn default() -> Self {
-        Self {
-            warn_threshold:  default_cpu_warn_threshold(),
-            alert_threshold: default_cpu_alert_threshold()
-        }
-    }
-}
-
-#[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
-pub struct SystemInfoMemory {
-    #[serde(default = "default_mem_warn_threshold")]
-    pub warn_threshold:  u32,
-    #[serde(default = "default_mem_alert_threshold")]
-    pub alert_threshold: u32
-}
-
-impl Default for SystemInfoMemory {
-    fn default() -> Self {
-        Self {
-            warn_threshold:  default_mem_warn_threshold(),
-            alert_threshold: default_mem_alert_threshold()
-        }
-    }
-}
-
-#[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
-pub struct SystemInfoTemperature {
-    #[serde(default = "default_temp_warn_threshold")]
-    pub warn_threshold:  i32,
-    #[serde(default = "default_temp_alert_threshold")]
-    pub alert_threshold: i32
-}
-
-impl Default for SystemInfoTemperature {
-    fn default() -> Self {
-        Self {
-            warn_threshold:  default_temp_warn_threshold(),
-            alert_threshold: default_temp_alert_threshold()
-        }
-    }
-}
-
-#[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
-pub struct SystemInfoDisk {
-    #[serde(default = "default_disk_warn_threshold")]
-    pub warn_threshold:  u32,
-    #[serde(default = "default_disk_alert_threshold")]
-    pub alert_threshold: u32
-}
-
-impl Default for SystemInfoDisk {
-    fn default() -> Self {
-        Self {
-            warn_threshold:  default_disk_warn_threshold(),
-            alert_threshold: default_disk_alert_threshold()
-        }
-    }
-}
-
-#[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
-pub enum SystemIndicator {
-    Cpu,
-    Memory,
-    MemorySwap,
-    Temperature,
-    Disk(String),
-    IpAddress,
-    DownloadSpeed,
-    UploadSpeed
-}
-
-#[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
-pub struct SystemModuleConfig {
-    #[serde(default = "default_system_indicators")]
-    pub indicators:  Vec<SystemIndicator>,
-    #[serde(default)]
-    pub cpu:         SystemInfoCpu,
-    #[serde(default)]
-    pub memory:      SystemInfoMemory,
-    #[serde(default)]
-    pub temperature: SystemInfoTemperature,
-    #[serde(default)]
-    pub disk:        SystemInfoDisk
-}
-
-fn default_system_indicators() -> Vec<SystemIndicator> {
-    vec![
-        SystemIndicator::Cpu,
-        SystemIndicator::Memory,
-        SystemIndicator::Temperature,
-    ]
-}
-
-fn default_cpu_warn_threshold() -> u32 {
-    60
-}
-
-fn default_cpu_alert_threshold() -> u32 {
-    80
-}
-
-fn default_mem_warn_threshold() -> u32 {
-    70
-}
-
-fn default_mem_alert_threshold() -> u32 {
-    85
-}
-
-fn default_temp_warn_threshold() -> i32 {
-    60
-}
-
-fn default_temp_alert_threshold() -> i32 {
-    80
-}
-
-fn default_disk_warn_threshold() -> u32 {
-    80
-}
-
-fn default_disk_alert_threshold() -> u32 {
-    90
-}
-
-impl Default for SystemModuleConfig {
-    fn default() -> Self {
-        Self {
-            indicators:  default_system_indicators(),
-            cpu:         SystemInfoCpu::default(),
-            memory:      SystemInfoMemory::default(),
-            temperature: SystemInfoTemperature::default(),
-            disk:        SystemInfoDisk::default()
-        }
-    }
-}
-
-/// Configuration for the battery module.
-#[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
-pub struct BatteryModuleConfig {
-    #[serde(default = "default_show_percentage")]
-    pub show_percentage:        bool,
-    #[serde(default = "default_show_power_profile")]
-    pub show_power_profile:     bool,
-    #[serde(default = "default_open_settings_on_click")]
-    pub open_settings_on_click: bool,
-    #[serde(default)]
-    pub show_when_unavailable:  bool
-}
-
-impl Default for BatteryModuleConfig {
-    fn default() -> Self {
-        Self {
-            show_percentage:        default_show_percentage(),
-            show_power_profile:     default_show_power_profile(),
-            open_settings_on_click: default_open_settings_on_click(),
-            show_when_unavailable:  false
-        }
-    }
-}
-
-fn default_show_percentage() -> bool {
-    true
-}
-
-fn default_show_power_profile() -> bool {
-    true
-}
-
-fn default_open_settings_on_click() -> bool {
-    true
-}
-
-#[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
-pub struct ClockModuleConfig {
-    pub format:       String,
-    #[serde(default)]
-    pub show_weather: bool
-}
-
-impl Default for ClockModuleConfig {
-    fn default() -> Self {
-        Self {
-            format:       "%a %d %b %R".to_string(),
-            show_weather: false
-        }
-    }
-}
-
-#[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
-pub struct WeatherModuleConfig {
-    #[serde(default = "default_weather_location")]
-    pub location:                String,
-    pub api_key:                 Option<String>,
-    #[serde(default = "default_use_celsius")]
-    pub use_celsius:             bool,
-    #[serde(default = "default_weather_update_interval")]
-    pub update_interval_minutes: u64
-}
-
-impl Default for WeatherModuleConfig {
-    fn default() -> Self {
-        Self {
-            location:                default_weather_location(),
-            api_key:                 None,
-            use_celsius:             default_use_celsius(),
-            update_interval_minutes: default_weather_update_interval()
-        }
-    }
-}
-
-fn default_weather_location() -> String {
-    String::from("London")
-}
-
-fn default_use_celsius() -> bool {
-    true
-}
-
-fn default_weather_update_interval() -> u64 {
-    30
-}
-
-fn default_shutdown_cmd() -> String {
-    "shutdown now".to_string()
-}
-
-fn default_suspend_cmd() -> String {
-    "systemctl suspend".to_string()
-}
-
-fn default_reboot_cmd() -> String {
-    "systemctl reboot".to_string()
-}
-
-fn default_logout_cmd() -> String {
-    "loginctl kill-user $(whoami)".to_string()
-}
-
-#[derive(Deserialize, Default, Clone, Debug, PartialEq, Eq)]
-pub struct SettingsModuleConfig {
-    pub lock_cmd:               Option<String>,
-    #[serde(default = "default_shutdown_cmd")]
-    pub shutdown_cmd:           String,
-    #[serde(default = "default_suspend_cmd")]
-    pub suspend_cmd:            String,
-    #[serde(default = "default_reboot_cmd")]
-    pub reboot_cmd:             String,
-    #[serde(default = "default_logout_cmd")]
-    pub logout_cmd:             String,
-    pub audio_sinks_more_cmd:   Option<String>,
-    pub audio_sources_more_cmd: Option<String>,
-    pub wifi_more_cmd:          Option<String>,
-    pub vpn_more_cmd:           Option<String>,
-    pub bluetooth_more_cmd:     Option<String>,
-    #[serde(default)]
-    pub remove_airplane_btn:    bool,
-    #[serde(default)]
-    pub remove_idle_btn:        bool
-}
-
-#[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
-pub struct MediaPlayerModuleConfig {
-    #[serde(default = "default_media_player_max_title_length")]
-    pub max_title_length: u32
-}
-
-impl Default for MediaPlayerModuleConfig {
-    fn default() -> Self {
-        MediaPlayerModuleConfig {
-            max_title_length: default_media_player_max_title_length()
-        }
-    }
-}
-
-fn default_media_player_max_title_length() -> u32 {
-    100
-}
-
-#[serde_as]
-#[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
-pub struct CustomModuleDef {
-    pub name:    String,
-    pub command: String,
-    #[serde(default)]
-    pub icon:    Option<String>,
-
-    /// yields json lines containing text, alt, (pot tooltip)
-    pub listen_cmd: Option<String>,
-    /// map of regex -> icon
-    pub icons:      Option<HashMap<RegexCfg, String>>,
-    /// regex to show alert
-    pub alert:      Option<RegexCfg> // .. appearance etc
-}
-
+/// Complete bar configuration.
 #[derive(Deserialize, Clone, Debug, PartialEq)]
 pub struct Config {
     #[serde(default = "default_log_level")]
@@ -412,18 +90,6 @@ pub struct Config {
     pub weather:             WeatherModuleConfig
 }
 
-fn default_log_level() -> String {
-    "warn".to_owned()
-}
-
-fn default_menu_keyboard_focus() -> bool {
-    true
-}
-
-fn default_truncate_title_after_length() -> u32 {
-    150
-}
-
 impl Default for Config {
     fn default() -> Self {
         Self {
@@ -431,8 +97,8 @@ impl Default for Config {
             position:            Position::Top,
             outputs:             Outputs::default(),
             modules:             Modules::default(),
-            app_launcher_cmd:    None,
-            clipboard_cmd:       None,
+            app_launcher_cmd:    Some(default_app_launcher_cmd()),
+            clipboard_cmd:       Some(default_clipboard_cmd()),
             updates:             None,
             workspaces:          WorkspacesModuleConfig::default(),
             window_title:        WindowTitleConfig::default(),
@@ -449,4 +115,24 @@ impl Default for Config {
             weather:             WeatherModuleConfig::default()
         }
     }
+}
+
+fn default_log_level() -> String {
+    "warn".to_owned()
+}
+
+fn default_menu_keyboard_focus() -> bool {
+    true
+}
+
+/// Launcher invoked by the app launcher module when the user has not
+/// configured one.
+fn default_app_launcher_cmd() -> String {
+    "rofi -show drun".to_owned()
+}
+
+/// Clipboard history picker invoked by the clipboard module when the user has
+/// not configured one.
+fn default_clipboard_cmd() -> String {
+    "cliphist list | rofi -dmenu | cliphist decode | wl-copy".to_owned()
 }

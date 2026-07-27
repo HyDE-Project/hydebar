@@ -43,7 +43,7 @@ mod tests {
 
     #[test]
     fn menu_container_style_scales_opacity() {
-        let theme = Theme::default();
+        let theme = Theme::Dark;
         let style_fn = menu_container_style(0.3);
         let style = style_fn(&theme);
 
@@ -55,7 +55,7 @@ mod tests {
 
     #[test]
     fn menu_backdrop_style_uses_backdrop_color() {
-        let theme = Theme::default();
+        let theme = Theme::Dark;
         let style_fn = menu_backdrop_style(0.6);
         let style = style_fn(&theme);
 

@@ -3,15 +3,16 @@ mod view;
 
 use std::time::Duration;
 
+pub use calendar::{CalendarData, CalendarError, CalendarState, DayInfo};
 use chrono::{DateTime, Local};
 use iced::Element;
 use log::error;
 use tokio::{task::JoinHandle, time::interval};
 
-pub use calendar::{CalendarData, CalendarError, CalendarState, DayInfo};
-
 use crate::{
-    ModuleContext, ModuleEventSender, event_bus::ModuleEvent, menu::MenuType,
+    ModuleContext, ModuleEventSender,
+    event_bus::ModuleEvent,
+    menu::MenuType,
     modules::{Module, ModuleError, OnModulePress, weather::WeatherData}
 };
 
@@ -62,7 +63,7 @@ pub enum Message {
     Update,
     UpdateWeather(WeatherData),
     PreviousMonth,
-    NextMonth,
+    NextMonth
 }
 
 /// Clock module - business logic only, no GUI!
@@ -72,7 +73,7 @@ pub struct Clock {
     tick_interval:  Duration,
     sender:         Option<ModuleEventSender<ClockEvent>>,
     task:           Option<JoinHandle<()>>,
-    calendar_state: CalendarState,
+    calendar_state: CalendarState
 }
 
 impl Default for Clock {
@@ -82,7 +83,7 @@ impl Default for Clock {
             tick_interval:  Duration::from_secs(5),
             sender:         None,
             task:           None,
-            calendar_state: CalendarState::default(),
+            calendar_state: CalendarState::default()
         }
     }
 }
@@ -137,12 +138,6 @@ impl Clock {
         match message {
             Message::Update => {
                 self.data.update();
-
-                if let Some(sender) = &self.sender
-                    && let Err(e) = sender.try_send(ClockEvent::Tick(self.data.current_time))
-                {
-                    error!("Failed to emit clock event: {}", e);
-                }
             }
             Message::UpdateWeather(weather) => {
                 self.data.update_weather(weather);
@@ -178,7 +173,7 @@ impl Clock {
 
 impl<M> Module<M> for Clock
 where
-    M: 'static + Clone + From<Message>,
+    M: 'static + Clone + From<Message>
 {
     type ViewData<'a> = &'a str;
     type RegistrationData<'a> = &'a str;
@@ -186,7 +181,7 @@ where
     fn register(
         &mut self,
         ctx: &ModuleContext,
-        format: Self::RegistrationData<'_>,
+        format: Self::RegistrationData<'_>
     ) -> Result<(), ModuleError> {
         self.register(ctx, format);
         Ok(())
@@ -194,7 +189,7 @@ where
 
     fn view(
         &self,
-        format: Self::ViewData<'_>,
+        format: Self::ViewData<'_>
     ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
         use iced::widget::text;
 
