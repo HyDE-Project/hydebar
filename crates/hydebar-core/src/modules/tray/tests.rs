@@ -112,9 +112,9 @@ fn publishes_command_results_via_event_bus() {
     let listener_spawner: ListenerSpawner = Arc::new(|_, handle: Handle| handle.spawn(async {}));
     let command_factory: CommandFactory = Arc::new(|_, command| match command {
         TrayCommand::MenuSelected(name, _) => {
-            let layout = super::Layout(
+            let layout = crate::services::tray::dbus::Layout(
                 1,
-                super::LayoutProps {
+                crate::services::tray::dbus::LayoutProps {
                     children_display: None,
                     label:            Some("Updated".into()),
                     type_:            None,
