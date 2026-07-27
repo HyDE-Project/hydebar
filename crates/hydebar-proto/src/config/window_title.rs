@@ -1,0 +1,24 @@
+//! Configuration for the window title module.
+
+use serde::Deserialize;
+
+/// Whether the module renders the window title or its application class.
+#[derive(Deserialize, Clone, Default, PartialEq, Eq, Debug)]
+pub enum WindowTitleMode {
+    #[default]
+    Title,
+    Class
+}
+
+/// Window title module behaviour.
+#[derive(Deserialize, Clone, Default, Debug, PartialEq, Eq)]
+pub struct WindowTitleConfig {
+    #[serde(default)]
+    pub mode: WindowTitleMode,
+    #[serde(default = "default_truncate_title_after_length")]
+    pub truncate_title_after_length: u32
+}
+
+fn default_truncate_title_after_length() -> u32 {
+    150
+}
