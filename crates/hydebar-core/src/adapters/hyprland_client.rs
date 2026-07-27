@@ -155,7 +155,9 @@ impl HyprlandPort for HyprlandClient {
                 .map(|workspace| HyprlandWorkspaceInfo {
                     id:           workspace.id,
                     name:         workspace.name,
-                    monitor_id:   workspace.monitor.parse::<usize>().ok(),
+                    monitor_id:   workspace
+                        .monitor_id
+                        .and_then(|monitor_id| usize::try_from(monitor_id).ok()),
                     monitor_name: workspace.monitor,
                     window_count: workspace.windows
                 })
