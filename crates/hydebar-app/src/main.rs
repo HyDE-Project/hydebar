@@ -3,13 +3,15 @@
 #![allow(clippy::redundant_closure)]
 #![allow(clippy::double_ended_iterator_last)]
 
+mod error;
+
 use std::{backtrace::Backtrace, borrow::Cow, num::NonZeroUsize, panic, path::PathBuf, sync::Arc};
 
 use clap::Parser;
 use flexi_logger::{Age, Cleanup, Criterion, FileSpec, LogSpecBuilder, Logger, Naming};
 use hydebar_core::{
     adapters::hyprland_client::HyprlandClient,
-    config::{ConfigLoadError, ConfigManager, get_config},
+    config::{ConfigManager, get_config},
     event_bus::EventBus
 };
 use hydebar_gui::{App, get_log_spec};
@@ -17,6 +19,8 @@ use hydebar_proto::ports::hyprland::HyprlandPort;
 use iced::Font;
 use log::{debug, error};
 use tokio::runtime::Handle;
+
+use crate::error::MainError;
 
 const ICON_FONT: &[u8] = include_bytes!("../../../assets/SymbolsNerdFont-Regular.ttf");
 
@@ -27,60 +31,22 @@ struct Args {
     config_path: Option<PathBuf>
 }
 
-#[derive(Debug)]
-enum MainError {
-    Logger(flexi_logger::FlexiLoggerError),
-    Config(ConfigLoadError),
-    Iced(iced::Error),
-    BusCapacity
+/// Starts the async runtime and hands its handle to the bar.
+///
+/// The event loop must not run inside the runtime: the graphics layer blocks
+/// the calling thread while creating the compositor, and blocking a thread that
+/// is already driving tasks aborts the process.
+fn main() -> Result<(), MainError> {
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .map_err(MainError::Runtime)?;
+    let runtime_handle = runtime.handle().clone();
+
+    run(runtime_handle)
 }
 
-impl std::fmt::Display for MainError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Logger(err) => write!(f, "failed to initialize logger: {}", err),
-            Self::Config(err) => write!(f, "configuration error: {}", err),
-            Self::Iced(err) => write!(f, "iced runtime error: {}", err),
-            Self::BusCapacity => write!(f, "invalid event bus capacity")
-        }
-    }
-}
-
-impl std::error::Error for MainError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Self::Logger(err) => Some(err),
-            Self::Config(err) => Some(err),
-            Self::Iced(err) => Some(err),
-            Self::BusCapacity => None
-        }
-    }
-}
-
-impl From<flexi_logger::FlexiLoggerError> for MainError {
-    fn from(err: flexi_logger::FlexiLoggerError) -> Self {
-        Self::Logger(err)
-    }
-}
-
-impl From<ConfigLoadError> for MainError {
-    fn from(err: ConfigLoadError) -> Self {
-        Self::Config(err)
-    }
-}
-
-impl From<iced::Error> for MainError {
-    fn from(err: iced::Error) -> Self {
-        Self::Iced(err)
-    }
-}
-
-#[tokio::main]
-async fn main() -> Result<(), MainError> {
-    run().await
-}
-
-async fn run() -> Result<(), MainError> {
+fn run(runtime_handle: Handle) -> Result<(), MainError> {
     let args = Args::parse();
     debug!("args: {args:?}");
 
@@ -123,7 +89,6 @@ async fn run() -> Result<(), MainError> {
     let bus_capacity = NonZeroUsize::new(64).ok_or(MainError::BusCapacity)?;
     let event_bus = EventBus::new(bus_capacity);
     let event_sender = event_bus.sender();
-    let runtime_handle = Handle::current();
     let bus_receiver = event_bus.receiver();
 
     let boot = {
