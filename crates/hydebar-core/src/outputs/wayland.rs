@@ -12,8 +12,18 @@ use wayland_client::protocol::wl_output::WlOutput;
 
 use crate::{
     HEIGHT,
-    config::{AppearanceStyle, Position}
+    config::{AppearanceStyle, BarLayer, Position}
 };
+
+/// Maps the configured bar layer onto the compositor layer it is created on.
+fn surface_layer(layer: BarLayer) -> Layer {
+    match layer {
+        BarLayer::Background => Layer::Background,
+        BarLayer::Bottom => Layer::Bottom,
+        BarLayer::Top => Layer::Top,
+        BarLayer::Overlay => Layer::Overlay
+    }
+}
 
 pub(crate) struct LayerSurfaceCreation<Message> {
     pub(crate) main_id: Id,
@@ -35,7 +45,8 @@ pub(crate) fn create_layer_surfaces<Message: 'static>(
     wl_output: Option<WlOutput>,
     position: Position,
     menu_keyboard_focus: bool,
-    scale_factor: f64
+    scale_factor: f64,
+    layer: BarLayer
 ) -> LayerSurfaceCreation<Message> {
     let main_id = Id::unique();
     let height = layer_height(style, scale_factor);
@@ -44,7 +55,7 @@ pub(crate) fn create_layer_surfaces<Message: 'static>(
         id: main_id,
         namespace: "hydebar-main-layer".to_string(),
         size: Some((None, Some(height as u32))),
-        layer: Layer::Bottom,
+        layer: surface_layer(layer),
         keyboard_interactivity: if menu_keyboard_focus {
             KeyboardInteractivity::OnDemand
         } else {
@@ -86,4 +97,22 @@ pub(crate) fn destroy_layer_surfaces<Message: 'static>(main_id: Id, menu_id: Id)
         destroy_layer_surface(main_id),
         destroy_layer_surface(menu_id),
     ])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn maps_every_configured_layer_onto_its_compositor_counterpart() {
+        // a bar meant to be blurred has to leave the levels the blur source is
+        // composited from
+        assert!(matches!(
+            surface_layer(BarLayer::Background),
+            Layer::Background
+        ));
+        assert!(matches!(surface_layer(BarLayer::Bottom), Layer::Bottom));
+        assert!(matches!(surface_layer(BarLayer::Top), Layer::Top));
+        assert!(matches!(surface_layer(BarLayer::Overlay), Layer::Overlay));
+    }
 }

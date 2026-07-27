@@ -90,7 +90,8 @@ impl Outputs {
             None,
             position,
             config.menu_keyboard_focus,
-            config.appearance.scale_factor
+            config.appearance.scale_factor,
+            config.layer
         );
 
         (

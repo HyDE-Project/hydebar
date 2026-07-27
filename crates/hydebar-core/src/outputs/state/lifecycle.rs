@@ -53,7 +53,8 @@ impl Outputs {
                 Some(wl_output.clone()),
                 position,
                 config.menu_keyboard_focus,
-                config.appearance.scale_factor
+                config.appearance.scale_factor,
+                config.layer
             );
 
             let destroy_task = match self
@@ -157,7 +158,8 @@ impl Outputs {
                         None,
                         position,
                         config.menu_keyboard_focus,
-                        config.appearance.scale_factor
+                        config.appearance.scale_factor,
+                        config.layer
                     );
 
                     self.0.push((

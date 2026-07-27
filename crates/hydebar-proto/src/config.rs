@@ -4,8 +4,8 @@ mod appearance;
 mod battery;
 mod clock;
 mod custom_module;
-mod keyboard_layout;
 mod keybindings;
+mod keyboard_layout;
 mod media_player;
 mod modules;
 mod serde_helpers;
@@ -27,10 +27,10 @@ pub use appearance::{
 pub use battery::BatteryModuleConfig;
 pub use clock::ClockModuleConfig;
 pub use custom_module::CustomModuleDef;
-pub use keyboard_layout::KeyboardLayoutModuleConfig;
 pub use keybindings::{GlobalKeybindings, Keybindings, MenuKeybindings};
+pub use keyboard_layout::KeyboardLayoutModuleConfig;
 pub use media_player::MediaPlayerModuleConfig;
-pub use modules::{ModuleDef, ModuleName, Modules, Outputs, Position};
+pub use modules::{BarLayer, ModuleDef, ModuleName, Modules, Outputs, Position};
 use serde::Deserialize;
 pub use serde_helpers::RegexCfg;
 pub use settings::SettingsModuleConfig;
@@ -54,6 +54,8 @@ pub struct Config {
     pub log_level:           String,
     #[serde(default)]
     pub position:            Position,
+    #[serde(default)]
+    pub layer:               BarLayer,
     #[serde(default)]
     pub outputs:             Outputs,
     #[serde(default)]
@@ -95,6 +97,7 @@ impl Default for Config {
         Self {
             log_level:           default_log_level(),
             position:            Position::Top,
+            layer:               BarLayer::default(),
             outputs:             Outputs::default(),
             modules:             Modules::default(),
             app_launcher_cmd:    Some(default_app_launcher_cmd()),
