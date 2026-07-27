@@ -8,9 +8,13 @@ use itertools::Itertools;
 use log::{debug, warn};
 use masterror::{AppError, AppResult};
 use tokio::process::Command;
-use zbus::{
-    Result, proxy,
-    zvariant::{self, ObjectPath, OwnedObjectPath, OwnedValue, Value}
+use zbus::zvariant::{self, OwnedObjectPath, Value};
+
+mod proxies;
+
+use proxies::{
+    AccessPointProxy, ConnectionSettingsProxy, ActiveConnectionProxy, DeviceProxy, NetworkManagerProxy, SettingsProxy,
+    WiredDeviceProxy, WirelessDeviceProxy
 };
 
 use super::DeviceType;
@@ -601,7 +605,7 @@ impl<'a> NetworkDbus<'a> {
                 match device.device_type().await.map(DeviceType::from).ok() {
                     Some(DeviceType::Ethernet) => {
                         let wired_device = WiredDeviceProxy::builder(self.0.inner().connection())
-                            .path(device.0.path())
+                            .path(device.inner().path())
                             .map_err(|e| {
                                 AppError::internal(format!(
                                     "Failed to set WiredDeviceProxy path: {}",
@@ -635,7 +639,7 @@ impl<'a> NetworkDbus<'a> {
                     Some(DeviceType::Wifi) => {
                         let wireless_device =
                             WirelessDeviceProxy::builder(self.0.inner().connection())
-                                .path(device.0.path())
+                                .path(device.inner().path())
                                 .map_err(|e| {
                                     AppError::internal(format!(
                                         "Failed to set WirelessDeviceProxy path: {}",
@@ -918,7 +922,7 @@ impl<'a> NetworkDbus<'a> {
                             public,
                             working: false,
                             path: ap.inner().path().clone().into(),
-                            device_path: device.0.path().clone().into()
+                            device_path: device.inner().path().clone().into()
                         }
                     );
                 }
@@ -1012,181 +1016,6 @@ impl NetworkSettingsDbus<'_> {
 
         Ok(None)
     }
-}
-
-#[proxy(
-    interface = "org.freedesktop.NetworkManager",
-    default_service = "org.freedesktop.NetworkManager",
-    default_path = "/org/freedesktop/NetworkManager"
-)]
-pub trait NetworkManager {
-    fn activate_connection(
-        &self,
-        connection: OwnedObjectPath,
-        device: OwnedObjectPath,
-        specific_object: OwnedObjectPath
-    ) -> Result<OwnedObjectPath>;
-
-    fn add_and_activate_connection(
-        &self,
-        connection: HashMap<&str, HashMap<&str, Value<'_>>>,
-        device: &ObjectPath<'_>,
-        specific_object: &ObjectPath<'_>
-    ) -> Result<(OwnedObjectPath, OwnedObjectPath)>;
-
-    fn deactivate_connection(&self, connection: OwnedObjectPath) -> Result<()>;
-
-    #[zbus(property)]
-    fn active_connections(&self) -> Result<Vec<OwnedObjectPath>>;
-
-    #[zbus(property)]
-    fn devices(&self) -> Result<Vec<OwnedObjectPath>>;
-
-    #[zbus(property)]
-    fn wireless_enabled(&self) -> Result<bool>;
-
-    #[zbus(property)]
-    fn set_wireless_enabled(&self, value: bool) -> Result<()>;
-
-    #[zbus(property)]
-    fn connectivity(&self) -> Result<u32>;
-}
-
-#[proxy(
-    default_service = "org.freedesktop.NetworkManager",
-    default_path = "/org/freedesktop/NetworkManager/Connection/Active",
-    interface = "org.freedesktop.NetworkManager.Connection.Active"
-)]
-trait ActiveConnection {
-    #[zbus(property)]
-    fn id(&self) -> Result<String>;
-
-    #[zbus(property)]
-    fn uuid(&self) -> Result<String>;
-
-    #[zbus(property, name = "Type")]
-    fn connection_type(&self) -> Result<String>;
-
-    #[zbus(property)]
-    fn state(&self) -> Result<u32>;
-
-    #[zbus(property)]
-    fn vpn(&self) -> Result<bool>;
-
-    #[zbus(property)]
-    fn devices(&self) -> Result<Vec<OwnedObjectPath>>;
-}
-
-#[proxy(
-    default_service = "org.freedesktop.NetworkManager",
-    default_path = "/org/freedesktop/NetworkManager/Device",
-    interface = "org.freedesktop.NetworkManager.Device"
-)]
-pub trait Device {
-    #[zbus(property)]
-    fn device_type(&self) -> Result<u32>;
-
-    #[zbus(property)]
-    fn available_connections(&self) -> Result<Vec<OwnedObjectPath>>;
-
-    #[zbus(property)]
-    fn active_connection(&self) -> Result<OwnedObjectPath>;
-
-    #[zbus(property)]
-    fn state(&self) -> Result<u32>;
-}
-
-#[proxy(
-    interface = "org.freedesktop.NetworkManager.Device.Wired",
-    default_service = "org.freedesktop.NetworkManager"
-)]
-trait WiredDevice {
-    /// Carrier property
-    #[zbus(property)]
-    fn carrier(&self) -> zbus::Result<bool>;
-
-    /// HwAddress property
-    #[zbus(property)]
-    fn hw_address(&self) -> zbus::Result<String>;
-
-    /// PermHwAddress property
-    #[zbus(property)]
-    fn perm_hw_address(&self) -> zbus::Result<String>;
-
-    /// S390Subchannels property
-    #[zbus(property)]
-    fn s390subchannels(&self) -> zbus::Result<Vec<String>>;
-
-    /// Speed property
-    #[zbus(property)]
-    fn speed(&self) -> zbus::Result<u32>;
-}
-
-#[proxy(
-    default_service = "org.freedesktop.NetworkManager",
-    default_path = "/org/freedesktop/NetworkManager/Device/Wireless",
-    interface = "org.freedesktop.NetworkManager.Device.Wireless"
-)]
-pub trait WirelessDevice {
-    /// GetAccessPoints method
-    fn get_access_points(&self) -> zbus::Result<Vec<zbus::zvariant::OwnedObjectPath>>;
-
-    #[zbus(property)]
-    fn active_access_point(&self) -> Result<OwnedObjectPath>;
-
-    #[zbus(property)]
-    fn access_points(&self) -> Result<Vec<OwnedObjectPath>>;
-
-    #[zbus(property)]
-    fn last_scan(&self) -> zbus::Result<i64>;
-
-    fn request_scan(&self, options: HashMap<String, OwnedValue>) -> Result<()>;
-}
-
-#[proxy(
-    default_service = "org.freedesktop.NetworkManager",
-    default_path = "/org/freedesktop/NetworkManager/AccessPoint",
-    interface = "org.freedesktop.NetworkManager.AccessPoint"
-)]
-pub trait AccessPoint {
-    #[zbus(property)]
-    fn ssid(&self) -> Result<Vec<u8>>;
-
-    #[zbus(property)]
-    fn strength(&self) -> Result<u8>;
-
-    #[zbus(property)]
-    fn flags(&self) -> Result<u32>;
-}
-
-#[proxy(
-    default_service = "org.freedesktop.NetworkManager",
-    default_path = "/org/freedesktop/NetworkManager/Settings",
-    interface = "org.freedesktop.NetworkManager.Settings"
-)]
-pub trait Settings {
-    fn add_connection(
-        &self,
-        connection: HashMap<String, HashMap<String, OwnedValue>>
-    ) -> Result<OwnedObjectPath>;
-
-    #[zbus(property)]
-    fn connections(&self) -> Result<Vec<OwnedObjectPath>>;
-
-    fn load_connections(&self, filenames: &[&str]) -> Result<(bool, Vec<String>)>;
-
-    fn list_connections(&self) -> zbus::Result<Vec<OwnedObjectPath>>;
-}
-
-#[proxy(
-    default_service = "org.freedesktop.NetworkManager",
-    default_path = "/org/freedesktop/NetworkManager/Settings/Connection",
-    interface = "org.freedesktop.NetworkManager.Settings.Connection"
-)]
-trait ConnectionSettings {
-    fn update(&self, settings: HashMap<String, HashMap<String, OwnedValue>>) -> Result<()>;
-
-    fn get_settings(&self) -> Result<HashMap<String, HashMap<String, OwnedValue>>>;
 }
 
 #[cfg(test)]
