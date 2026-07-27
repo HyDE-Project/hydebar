@@ -1,6 +1,7 @@
 /// Module rendering implementation for App - GUI layer only
 use hydebar_core::{
-    config::{AppearanceStyle, ModuleDef, ModuleName},
+    config::{AppearanceStyle, CustomModuleDef, ModuleDef, ModuleName},
+    menu::MenuType,
     modules::OnModulePress,
     position_button::position_button,
     style::module_button_style
@@ -248,19 +249,43 @@ impl App {
         use hydebar_core::modules::Module;
 
         match module_name {
-            ModuleName::AppLauncher => self.app_launcher.view(&self.config.app_launcher_cmd),
-            ModuleName::Custom(name) => self
-                .config
-                .custom_modules
-                .iter()
-                .find(|m| &m.name == name)
-                .and_then(|mc| self.custom.get(name).map(|cm| cm.view(mc)))
-                .unwrap_or_else(|| {
+            ModuleName::AppLauncher => {
+                self.app_launcher
+                    .view(&self.config.app_launcher_cmd)
+                    .map(|(content, _)| {
+                        (
+                            content,
+                            Some(OnModulePress::Action(Box::new(Message::OpenLauncher)))
+                        )
+                    })
+            }
+            ModuleName::Custom(name) => {
+                let Some(definition) = self.config.custom_modules.iter().find(|m| &m.name == name)
+                else {
+                    error!("Custom module def `{name}` not found");
+                    return None;
+                };
+
+                let Some(module) = self.custom.get(name) else {
                     error!("Custom module `{name}` not found");
-                    None
-                }),
+                    return None;
+                };
+
+                module
+                    .view(definition)
+                    .map(|(content, _)| (content, custom_module_action(definition)))
+            }
             ModuleName::Updates => self.updates.view(&self.config.updates),
-            ModuleName::Clipboard => self.clipboard.view(&self.config.clipboard_cmd),
+            ModuleName::Clipboard => {
+                self.clipboard
+                    .view(&self.config.clipboard_cmd)
+                    .map(|(content, _)| {
+                        (
+                            content,
+                            Some(OnModulePress::Action(Box::new(Message::OpenClipboard)))
+                        )
+                    })
+            }
             ModuleName::Workspaces => self.workspaces.view((
                 &self.outputs,
                 id,
@@ -277,7 +302,10 @@ impl App {
             ModuleName::Battery => self.battery.data().map(|data| {
                 (
                     crate::views::battery::render_battery(data, &self.config.battery),
-                    None
+                    self.config
+                        .battery
+                        .open_settings_on_click
+                        .then(|| OnModulePress::ToggleMenu(MenuType::Settings))
                 )
             }),
             ModuleName::Privacy => self.privacy.view(()),
@@ -327,5 +355,56 @@ impl App {
             ModuleName::Notifications => self.notifications.subscription(),
             ModuleName::Screenshot => self.screenshot.subscription()
         }
+    }
+}
+
+/// Builds the press action running the command declared by a custom module.
+///
+/// Modules that leave the command empty stay inert so they render as plain
+/// indicators instead of unresponsive buttons.
+fn custom_module_action(definition: &CustomModuleDef) -> Option<OnModulePress<Message>> {
+    let command = definition.command.trim();
+
+    if command.is_empty() {
+        return None;
+    }
+
+    Some(OnModulePress::Action(Box::new(Message::LaunchCommand(
+        command.to_owned()
+    ))))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn definition(command: &str) -> CustomModuleDef {
+        CustomModuleDef {
+            name:       String::from("example"),
+            command:    String::from(command),
+            icon:       None,
+            listen_cmd: None,
+            icons:      None,
+            alert:      None
+        }
+    }
+
+    #[test]
+    fn builds_a_launch_action_for_a_configured_command() {
+        let action = custom_module_action(&definition("  notify-send hi  "));
+
+        // the command is trimmed so shell invocations stay predictable
+        match action {
+            Some(OnModulePress::Action(message)) => match *message {
+                Message::LaunchCommand(command) => assert_eq!(command, "notify-send hi"),
+                other => panic!("unexpected message: {other:?}")
+            },
+            _ => panic!("expected a launch action")
+        }
+    }
+
+    #[test]
+    fn leaves_a_module_without_a_command_inert() {
+        assert!(custom_module_action(&definition("   ")).is_none());
     }
 }
