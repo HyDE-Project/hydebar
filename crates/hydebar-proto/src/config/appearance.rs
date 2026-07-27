@@ -156,6 +156,16 @@ pub struct Appearance {
     pub style:                    AppearanceStyle,
     #[serde(deserialize_with = "opacity_deserializer", default = "default_opacity")]
     pub opacity:                  f32,
+    /// Opacity of the strip behind the whole bar.
+    ///
+    /// Island styles leave it fully transparent by default. A compositor skips
+    /// blurring fully transparent pixels, so a bar meant to be blurred edge to
+    /// edge needs a faint value here.
+    #[serde(
+        deserialize_with = "opacity_deserializer",
+        default = "default_bar_opacity"
+    )]
+    pub bar_opacity:              f32,
     #[serde(default)]
     pub menu:                     MenuAppearance,
     #[serde(default)]
@@ -196,6 +206,10 @@ where
     }
 
     Ok(value)
+}
+
+fn default_bar_opacity() -> f32 {
+    0.0
 }
 
 fn default_scale_factor() -> f64 {
@@ -286,6 +300,7 @@ impl Default for Appearance {
             scale_factor:             1.0,
             style:                    AppearanceStyle::default(),
             opacity:                  default_opacity(),
+            bar_opacity:              default_bar_opacity(),
             menu:                     MenuAppearance::default(),
             animations:               AnimationConfig::default(),
             background_color:         default_background_color(),

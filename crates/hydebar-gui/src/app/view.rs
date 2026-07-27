@@ -126,6 +126,13 @@ impl App {
                             AppearanceStyle::Islands => {
                                 if self.outputs.menu_is_open() {
                                     Some(backdrop_color(self.appearance().menu.backdrop).into())
+                                } else if self.appearance().bar_opacity > 0.0 {
+                                    Some(
+                                        t.palette()
+                                            .background
+                                            .scale_alpha(self.appearance().bar_opacity)
+                                            .into()
+                                    )
                                 } else {
                                     None
                                 }

@@ -45,6 +45,7 @@ fn catppuccin_mocha() -> Appearance {
         scale_factor:             1.0,
         style:                    AppearanceStyle::Islands,
         opacity:                  0.95,
+        bar_opacity:              0.0,
         menu:                     MenuAppearance {
             opacity:  0.95,
             backdrop: 0.3
@@ -81,6 +82,7 @@ fn catppuccin_macchiato() -> Appearance {
         scale_factor:             1.0,
         style:                    AppearanceStyle::Islands,
         opacity:                  0.95,
+        bar_opacity:              0.0,
         menu:                     MenuAppearance {
             opacity:  0.95,
             backdrop: 0.3
@@ -117,6 +119,7 @@ fn catppuccin_frappe() -> Appearance {
         scale_factor:             1.0,
         style:                    AppearanceStyle::Islands,
         opacity:                  0.95,
+        bar_opacity:              0.0,
         menu:                     MenuAppearance {
             opacity:  0.95,
             backdrop: 0.3
@@ -153,6 +156,7 @@ fn catppuccin_latte() -> Appearance {
         scale_factor:             1.0,
         style:                    AppearanceStyle::Islands,
         opacity:                  0.95,
+        bar_opacity:              0.0,
         menu:                     MenuAppearance {
             opacity:  0.95,
             backdrop: 0.3
@@ -187,6 +191,7 @@ fn dracula() -> Appearance {
         scale_factor:             1.0,
         style:                    AppearanceStyle::Islands,
         opacity:                  0.95,
+        bar_opacity:              0.0,
         menu:                     MenuAppearance {
             opacity:  0.95,
             backdrop: 0.3
@@ -217,6 +222,7 @@ fn nord() -> Appearance {
         scale_factor:             1.0,
         style:                    AppearanceStyle::Islands,
         opacity:                  0.95,
+        bar_opacity:              0.0,
         menu:                     MenuAppearance {
             opacity:  0.95,
             backdrop: 0.3
@@ -247,6 +253,7 @@ fn gruvbox_dark() -> Appearance {
         scale_factor:             1.0,
         style:                    AppearanceStyle::Islands,
         opacity:                  0.95,
+        bar_opacity:              0.0,
         menu:                     MenuAppearance {
             opacity:  0.95,
             backdrop: 0.3
@@ -277,6 +284,7 @@ fn gruvbox_light() -> Appearance {
         scale_factor:             1.0,
         style:                    AppearanceStyle::Islands,
         opacity:                  0.95,
+        bar_opacity:              0.0,
         menu:                     MenuAppearance {
             opacity:  0.95,
             backdrop: 0.3
@@ -307,6 +315,7 @@ fn tokyo_night() -> Appearance {
         scale_factor:             1.0,
         style:                    AppearanceStyle::Islands,
         opacity:                  0.95,
+        bar_opacity:              0.0,
         menu:                     MenuAppearance {
             opacity:  0.95,
             backdrop: 0.3
@@ -341,6 +350,7 @@ fn tokyo_night_storm() -> Appearance {
         scale_factor:             1.0,
         style:                    AppearanceStyle::Islands,
         opacity:                  0.95,
+        bar_opacity:              0.0,
         menu:                     MenuAppearance {
             opacity:  0.95,
             backdrop: 0.3
@@ -375,6 +385,7 @@ fn tokyo_night_light() -> Appearance {
         scale_factor:             1.0,
         style:                    AppearanceStyle::Islands,
         opacity:                  0.95,
+        bar_opacity:              0.0,
         menu:                     MenuAppearance {
             opacity:  0.95,
             backdrop: 0.3

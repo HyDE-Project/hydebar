@@ -109,6 +109,7 @@ fn blend_appearance(from: &Appearance, to: &Appearance, t: f32) -> Appearance {
         scale_factor:             to.scale_factor,
         style:                    to.style,
         opacity:                  blend_f32(from.opacity, to.opacity, t),
+        bar_opacity:              blend_f32(from.bar_opacity, to.bar_opacity, t),
         menu:                     MenuAppearance {
             opacity:  blend_f32(from.menu.opacity, to.menu.opacity, t),
             backdrop: blend_f32(from.menu.backdrop, to.menu.backdrop, t)
