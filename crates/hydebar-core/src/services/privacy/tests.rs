@@ -10,9 +10,12 @@ mod tests {
     use iced::futures::{StreamExt, channel::mpsc, future, stream};
     use tokio::{sync::mpsc::unbounded_channel, time::timeout};
 
-    use crate::services::privacy::{
-        ApplicationNode, Media, PrivacyEvent, PrivacyService, ServiceEvent, State,
-        error::PrivacyError, inotify::WebcamEventSource, pipewire::PipewireEventSource
+    use crate::services::{
+        ServiceEvent,
+        privacy::{
+            ApplicationNode, Media, PrivacyEvent, PrivacyService, State, error::PrivacyError,
+            inotify::WebcamEventSource, pipewire::PipewireEventSource
+        }
     };
 
     #[derive(Default)]
