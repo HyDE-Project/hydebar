@@ -2,6 +2,7 @@ use iced::{Element, window::Id};
 
 use super::state::{Message, Settings};
 use crate::{
+    components::icons::IconTheme,
     config::{Position, SettingsModuleConfig},
     modules::OnModulePress
 };
@@ -31,21 +32,22 @@ pub trait SettingsViewExt {
         id: Id,
         config: &SettingsModuleConfig,
         opacity: f32,
-        position: Position
+        position: Position,
+        icons: &IconTheme
     ) -> Element<'_, Message>;
 }
 
 impl SettingsViewExt for Settings {
-    type ViewData<'a> = ();
+    type ViewData<'a> = &'a IconTheme;
 
     fn settings_view<M>(
         &self,
-        _: Self::ViewData<'_>
+        icons: Self::ViewData<'_>
     ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)>
     where
         M: 'static + From<Message>
     {
-        self.render_bar()
+        self.render_bar(icons)
     }
 
     fn menu_view(
@@ -53,8 +55,9 @@ impl SettingsViewExt for Settings {
         id: Id,
         config: &SettingsModuleConfig,
         opacity: f32,
-        position: Position
+        position: Position,
+        icons: &IconTheme
     ) -> Element<'_, Message> {
-        self.render_menu(id, config, opacity, position)
+        self.render_menu(id, config, opacity, position, icons)
     }
 }

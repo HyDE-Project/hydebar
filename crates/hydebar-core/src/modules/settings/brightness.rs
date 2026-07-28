@@ -5,7 +5,7 @@ use iced::{
 
 use super::Message;
 use crate::{
-    components::icons::{Icons, icon},
+    components::icons::{IconTheme, Icons, icon},
     services::{
         ServiceEvent,
         brightness::{BrightnessData, BrightnessService}
@@ -19,9 +19,9 @@ pub enum BrightnessMessage {
 }
 
 impl BrightnessData {
-    pub fn brightness_slider(&self) -> Element<'_, Message> {
+    pub fn brightness_slider(&self, icons: &IconTheme) -> Element<'_, Message> {
         row!(
-            container(icon(Icons::Brightness)).padding([8, 11]),
+            container(icon(icons, Icons::Brightness)).padding([8, 11]),
             slider(0..=100, self.current * 100 / self.max, |v| {
                 Message::Brightness(BrightnessMessage::Change(v * self.max / 100))
             })

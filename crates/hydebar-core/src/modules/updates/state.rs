@@ -7,6 +7,7 @@ use tokio::{runtime::Handle, task::JoinHandle, time::sleep};
 use super::{commands, view};
 use crate::{
     ModuleContext, ModuleEventSender,
+    components::icons::IconTheme,
     config::UpdatesModuleConfig,
     event_bus::ModuleEvent,
     menu::MenuType,
@@ -167,8 +168,8 @@ impl Updates {
         }
     }
 
-    pub fn menu_view(&self, id: Id, opacity: f32) -> Element<'_, Message> {
-        view::menu_view(self, id, opacity)
+    pub fn menu_view(&self, id: Id, opacity: f32, icons: &IconTheme) -> Element<'_, Message> {
+        view::menu_view(self, id, opacity, icons)
     }
 
     pub(crate) fn updates(&self) -> &[Update] {
@@ -188,7 +189,7 @@ impl<M> Module<M> for Updates
 where
     M: 'static + Clone + From<Message>
 {
-    type ViewData<'a> = &'a Option<UpdatesModuleConfig>;
+    type ViewData<'a> = (&'a Option<UpdatesModuleConfig>, &'a IconTheme);
     type RegistrationData<'a> = Option<&'a UpdatesModuleConfig>;
 
     fn register(
@@ -240,11 +241,11 @@ where
 
     fn view(
         &self,
-        config: Self::ViewData<'_>
+        (config, icons): Self::ViewData<'_>
     ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
         if config.is_some() {
             Some((
-                view::icon(&self.state, self.updates.len()).map(M::from),
+                view::icon(&self.state, self.updates.len(), icons).map(M::from),
                 Some(OnModulePress::ToggleMenu(MenuType::Updates))
             ))
         } else {

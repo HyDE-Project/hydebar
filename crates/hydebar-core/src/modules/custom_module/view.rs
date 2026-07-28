@@ -12,8 +12,8 @@ use iced::{
 
 use super::Custom;
 use crate::{
-    components::icons::{Icons, icon, icon_raw},
-    config::CustomModuleDef
+    components::icons::{IconTheme, Icons, icon, icon_raw},
+    config::{Appearance, CustomModuleDef}
 };
 
 /// Small circle drawn over the icon while the module is in an alert state.
@@ -56,7 +56,15 @@ pub(super) fn state_color(module: &Custom, config: &CustomModuleDef) -> Option<C
 }
 
 /// Builds the bar content for a custom module.
-pub(super) fn render<M>(module: &Custom, config: &CustomModuleDef) -> Element<'static, M>
+///
+/// The gap between the icon and its text is derived from the themed font size
+/// carried by `appearance` instead of being fixed in pixels.
+pub(super) fn render<M>(
+    module: &Custom,
+    config: &CustomModuleDef,
+    appearance: &Appearance,
+    icons: &IconTheme
+) -> Element<'static, M>
 where
     M: 'static + Clone
 {
@@ -65,7 +73,7 @@ where
     let mut icon_element = config
         .icon
         .as_ref()
-        .map_or_else(|| icon(Icons::None), |text| icon_raw(text.clone()));
+        .map_or_else(|| icon(icons, Icons::None), |text| icon_raw(text.clone()));
 
     if let Some(icons_map) = &config.icons {
         for (re, icon_str) in icons_map {
@@ -130,7 +138,9 @@ where
     });
 
     let row_content: Element<'static, M> = if let Some(text_element) = maybe_text_element {
-        row![icon_with_alert, text_element].spacing(8).into()
+        row![icon_with_alert, text_element]
+            .spacing(appearance.icon_label_gap())
+            .into()
     } else {
         icon_with_alert
     };

@@ -3,7 +3,7 @@ use iced::Element;
 use super::{Module, ModuleError, OnModulePress};
 use crate::{
     ModuleContext,
-    components::icons::{Icons, icon}
+    components::icons::{IconTheme, Icons, icon}
 };
 
 #[derive(Default, Debug, Clone)]
@@ -13,7 +13,7 @@ impl<M> Module<M> for AppLauncher
 where
     M: 'static + Clone
 {
-    type ViewData<'a> = &'a Option<String>;
+    type ViewData<'a> = (&'a Option<String>, &'a IconTheme);
     type RegistrationData<'a> = ();
 
     fn register(
@@ -26,11 +26,11 @@ where
 
     fn view(
         &self,
-        config: Self::ViewData<'_>
+        (config, icons): Self::ViewData<'_>
     ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
         if config.is_some() {
             Some((
-                icon(Icons::AppLauncher).into(),
+                icon(icons, Icons::AppLauncher).into(),
                 None // Action handled in GUI layer
             ))
         } else {
@@ -44,7 +44,7 @@ mod tests {
     use std::num::NonZeroUsize;
 
     use super::*;
-    use crate::event_bus::EventBus;
+    use crate::{components::icons::IconTheme, event_bus::EventBus};
 
     #[test]
     fn default_creates_instance() {
@@ -75,7 +75,8 @@ mod tests {
         let launcher = AppLauncher::default();
         let config = Some("wofi".to_string());
 
-        let result = <AppLauncher as Module<()>>::view(&launcher, &config);
+        let result =
+            <AppLauncher as Module<()>>::view(&launcher, (&config, &IconTheme::default()));
         assert!(result.is_some());
 
         if let Some((_, action)) = result {
@@ -88,7 +89,8 @@ mod tests {
         let launcher = AppLauncher::default();
         let config = None;
 
-        let result = <AppLauncher as Module<()>>::view(&launcher, &config);
+        let result =
+            <AppLauncher as Module<()>>::view(&launcher, (&config, &IconTheme::default()));
         assert!(result.is_none());
     }
 }

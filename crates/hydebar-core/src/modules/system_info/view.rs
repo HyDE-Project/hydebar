@@ -5,15 +5,20 @@ use iced::{
 
 use super::{Message, data::SystemInfoData};
 use crate::{
-    components::icons::{Icons, icon},
-    config::{SystemIndicator, SystemModuleConfig},
+    components::icons::{IconTheme, Icons, icon},
+    config::{Appearance, SystemIndicator, SystemModuleConfig},
     menu::MenuType,
     modules::OnModulePress
 };
 
-fn info_element<'a>(info_icon: Icons, label: &'a str, value: String) -> Element<'a, Message> {
+fn info_element<'a>(
+    icons: &IconTheme,
+    info_icon: Icons,
+    label: &'a str,
+    value: String
+) -> Element<'a, Message> {
     row!(
-        container(icon(info_icon).size(22)).center_x(Length::Fixed(32.)),
+        container(icon(icons, info_icon).size(22)).center_x(Length::Fixed(32.)),
         text(label).width(Length::Fill),
         text(value)
     )
@@ -24,25 +29,27 @@ fn info_element<'a>(info_icon: Icons, label: &'a str, value: String) -> Element<
 }
 
 fn indicator_info_element<V>(
+    icons: &IconTheme,
     info_icon: Icons,
     value: V,
     unit: &str,
     threshold: Option<(V, V)>,
-    prefix: Option<String>
+    prefix: Option<String>,
+    icon_label_gap: f32
 ) -> Element<'static, Message>
 where
     V: std::fmt::Display + PartialOrd + Copy + 'static
 {
     let content = container(
         row!(
-            icon(info_icon),
+            icon(icons, info_icon),
             if let Some(prefix) = prefix {
                 text(format!("{prefix} {value}{unit}"))
             } else {
                 text(format!("{value}{unit}"))
             }
         )
-        .spacing(4)
+        .spacing(icon_label_gap)
     );
 
     if let Some((warn_threshold, alert_threshold)) = threshold {
@@ -72,39 +79,40 @@ fn format_speed(speed: u32) -> (u32, &'static str) {
 }
 
 /// Render the module menu displaying detailed system metrics.
-pub fn build_menu_view(data: &SystemInfoData) -> Element<'_, Message> {
+pub fn build_menu_view<'a>(data: &'a SystemInfoData, icons: &IconTheme) -> Element<'a, Message> {
     column![
         text("System Info").size(20),
         rule::horizontal(1),
         Column::new()
             .width(Length::Fill)
             .push(info_element(
+                icons,
                 Icons::Cpu,
                 "CPU Usage",
                 format!("{}%", data.cpu_usage)
             ))
             .push(info_element(
+                icons,
                 Icons::Mem,
                 "Memory Usage",
                 format!("{}%", data.memory_usage)
             ))
             .push(info_element(
+                icons,
                 Icons::Mem,
                 "Swap memory Usage",
                 format!("{}%", data.memory_swap_usage),
             ))
-            .push_maybe(
-                data.temperature.map(|temp| {
-                    info_element(Icons::Temp, "Temperature", format!("{temp}°C"))
-                })
-            )
+            .push_maybe(data.temperature.map(|temp| {
+                info_element(icons, Icons::Temp, "Temperature", format!("{temp}°C"))
+            }))
             .push(
                 Column::with_children(
                     data.disks
                         .iter()
                         .map(|(mount_point, usage)| {
                             row!(
-                                container(icon(Icons::Drive).size(22))
+                                container(icon(icons, Icons::Drive).size(22))
                                     .center_x(Length::Fixed(32.)),
                                 text(format!("Disk Usage {mount_point}")).width(Length::Fill),
                                 text(format!("{usage}%"))
@@ -122,13 +130,15 @@ pub fn build_menu_view(data: &SystemInfoData) -> Element<'_, Message> {
                 let (upload_value, upload_unit) = format_speed(network.upload_speed);
 
                 Column::with_children(vec![
-                    info_element(Icons::IpAddress, "IP Address", network.ip.clone()),
+                    info_element(icons, Icons::IpAddress, "IP Address", network.ip.clone()),
                     info_element(
+                        icons,
                         Icons::DownloadSpeed,
                         "Download Speed",
                         format!("{download_value} {download_unit}")
                     ),
                     info_element(
+                        icons,
                         Icons::UploadSpeed,
                         "Upload Speed",
                         format!("{upload_value} {upload_unit}")
@@ -143,41 +153,55 @@ pub fn build_menu_view(data: &SystemInfoData) -> Element<'_, Message> {
 }
 
 /// Build the indicator widgets representing the configured subset of metrics.
+///
+/// The gaps inside every indicator come from the themed font size carried by
+/// `appearance`, so the bar row keeps its proportions across themes.
 pub fn indicator_elements<M>(
     data: SystemInfoData,
-    config: &SystemModuleConfig
+    config: &SystemModuleConfig,
+    appearance: &Appearance,
+    icons: &IconTheme
 ) -> Vec<Element<'static, M>>
 where
     M: 'static + From<Message>
 {
+    let icon_label_gap = appearance.icon_label_gap();
+
     config
         .indicators
         .iter()
         .filter_map(|indicator| -> Option<Element<'static, Message>> {
             match indicator {
                 SystemIndicator::Cpu => Some(indicator_info_element(
+                    icons,
                     Icons::Cpu,
                     data.cpu_usage,
                     "%",
                     Some((config.cpu.warn_threshold, config.cpu.alert_threshold)),
-                    None
+                    None,
+                    icon_label_gap
                 )),
                 SystemIndicator::Memory => Some(indicator_info_element(
+                    icons,
                     Icons::Mem,
                     data.memory_usage,
                     "%",
                     Some((config.memory.warn_threshold, config.memory.alert_threshold)),
-                    None
+                    None,
+                    icon_label_gap
                 )),
                 SystemIndicator::MemorySwap => Some(indicator_info_element(
+                    icons,
                     Icons::Mem,
                     data.memory_swap_usage,
                     "%",
                     Some((config.memory.warn_threshold, config.memory.alert_threshold)),
-                    Some("swap".to_string())
+                    Some("swap".to_string()),
+                    icon_label_gap
                 )),
                 SystemIndicator::Temperature => data.temperature.map(|temperature| {
                     indicator_info_element(
+                        icons,
                         Icons::Temp,
                         temperature,
                         "°C",
@@ -185,18 +209,21 @@ where
                             config.temperature.warn_threshold,
                             config.temperature.alert_threshold
                         )),
-                        None
+                        None,
+                        icon_label_gap
                     )
                 }),
                 SystemIndicator::Disk(mount) => {
                     data.disks.iter().find_map(|(disk_mount, disk)| {
                         if disk_mount == mount {
                             Some(indicator_info_element(
+                                icons,
                                 Icons::Drive,
                                 *disk,
                                 "%",
                                 Some((config.disk.warn_threshold, config.disk.alert_threshold)),
-                                Some(disk_mount.clone())
+                                Some(disk_mount.clone()),
+                                icon_label_gap
                             ))
                         } else {
                             None
@@ -205,15 +232,34 @@ where
                 }
                 SystemIndicator::IpAddress => data.network.as_ref().map(|network| {
                     let ip = network.ip.clone();
-                    container(row!(icon(Icons::IpAddress), text(ip)).spacing(4)).into()
+                    container(
+                        row!(icon(icons, Icons::IpAddress), text(ip)).spacing(icon_label_gap)
+                    )
+                    .into()
                 }),
                 SystemIndicator::DownloadSpeed => data.network.as_ref().map(|network| {
                     let (value, unit) = format_speed(network.download_speed);
-                    indicator_info_element(Icons::DownloadSpeed, value, unit, None, None)
+                    indicator_info_element(
+                        icons,
+                        Icons::DownloadSpeed,
+                        value,
+                        unit,
+                        None,
+                        None,
+                        icon_label_gap
+                    )
                 }),
                 SystemIndicator::UploadSpeed => data.network.as_ref().map(|network| {
                     let (value, unit) = format_speed(network.upload_speed);
-                    indicator_info_element(Icons::UploadSpeed, value, unit, None, None)
+                    indicator_info_element(
+                        icons,
+                        Icons::UploadSpeed,
+                        value,
+                        unit,
+                        None,
+                        None,
+                        icon_label_gap
+                    )
                 })
             }
         })
@@ -224,17 +270,19 @@ where
 /// Construct the condensed indicator row shown in the module section.
 pub fn build_indicator_view<M>(
     data: &SystemInfoData,
-    config: &SystemModuleConfig
+    config: &SystemModuleConfig,
+    appearance: &Appearance,
+    icons: &IconTheme
 ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)>
 where
     M: 'static + From<Message>
 {
-    let indicators = indicator_elements(data.clone(), config);
+    let indicators = indicator_elements(data.clone(), config, appearance, icons);
 
     Some((
         Row::with_children(indicators)
             .align_y(Alignment::Center)
-            .spacing(4)
+            .spacing(appearance.module_gap())
             .into(),
         Some(OnModulePress::ToggleMenu(MenuType::SystemInfo))
     ))
@@ -274,7 +322,8 @@ mod tests {
             disk:        Default::default()
         };
 
-        let indicators: Vec<Element<'_, Message>> = indicator_elements(data, &config);
+        let indicators: Vec<Element<'_, Message>> =
+            indicator_elements(data, &config, &Appearance::default());
         assert_eq!(indicators.len(), 2);
     }
 
@@ -293,7 +342,8 @@ mod tests {
             ..SystemModuleConfig::default()
         };
 
-        let indicators: Vec<Element<'_, Message>> = indicator_elements(data, &config);
+        let indicators: Vec<Element<'_, Message>> =
+            indicator_elements(data, &config, &Appearance::default());
         assert_eq!(indicators.len(), 2);
     }
 

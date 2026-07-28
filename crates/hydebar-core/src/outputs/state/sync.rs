@@ -121,7 +121,8 @@ impl Outputs {
         for shell_info in self.0.iter_mut().filter_map(|(_, shell_info, _)| {
             if let Some(shell_info) = shell_info
                 && (shell_info.style != style
-                    || shell_info.scale_factor != config.appearance.scale_factor)
+                    || shell_info.scale_factor != config.appearance.scale_factor
+                    || shell_info.height != config.appearance.height)
             {
                 Some(shell_info)
             } else {
@@ -129,12 +130,17 @@ impl Outputs {
             }
         }) {
             debug!(
-                "Change style or scale_factor for output: {:?}, new style {:?}, new scale_factor {:?}",
-                shell_info.id, style, config.appearance.scale_factor
+                "Change style, scale_factor or height for output: {:?}, new style {:?}, new scale_factor {:?}, new height {:?}",
+                shell_info.id, style, config.appearance.scale_factor, config.appearance.height
             );
             shell_info.style = style;
             shell_info.scale_factor = config.appearance.scale_factor;
-            let height = layer_height(style, config.appearance.scale_factor);
+            shell_info.height = config.appearance.height;
+            let height = layer_height(
+                style,
+                config.appearance.scale_factor,
+                config.appearance.height
+            );
             tasks.push(Task::batch(vec![
                 set_size(shell_info.id, None, Some(height as u32)),
                 set_exclusive_zone(shell_info.id, height as i32),

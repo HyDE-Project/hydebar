@@ -18,13 +18,17 @@ pub use self::{
     state::{Custom, CustomCommandService, Message}
 };
 use super::{Module, ModuleError, OnModulePress};
-use crate::{ModuleContext, config::CustomModuleDef};
+use crate::{
+    ModuleContext,
+    components::icons::IconTheme,
+    config::{Appearance, CustomModuleDef}
+};
 
 impl<M> Module<M> for Custom
 where
     M: 'static + Clone
 {
-    type ViewData<'a> = &'a CustomModuleDef;
+    type ViewData<'a> = (&'a CustomModuleDef, &'a Appearance, &'a IconTheme);
     type RegistrationData<'a> = Option<&'a CustomModuleDef>;
 
     fn register(
@@ -37,9 +41,9 @@ where
 
     fn view(
         &self,
-        config: Self::ViewData<'_>
+        (config, appearance, icons): Self::ViewData<'_>
     ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
-        Some((view::render(self, config), None))
+        Some((view::render(self, config, appearance, icons), None))
     }
 }
 

@@ -7,7 +7,7 @@ use log::error;
 use super::{Module, ModuleError, OnModulePress};
 use crate::{
     ModuleContext, ModuleEventSender,
-    components::icons::{Icons, icon},
+    components::icons::{IconTheme, Icons, icon},
     event_bus::ModuleEvent,
     menu::MenuType,
     services::{
@@ -68,7 +68,11 @@ impl Notifications {
     }
 
     /// Render notification center menu popup.
-    pub fn menu_view(&self, _opacity: f32) -> Element<'_, NotificationsMessage> {
+    pub fn menu_view(
+        &self,
+        _opacity: f32,
+        icons: &IconTheme
+    ) -> Element<'_, NotificationsMessage> {
         let Some(service) = self.service.as_ref() else {
             return text("Loading notifications...").into();
         };
@@ -98,7 +102,7 @@ impl Notifications {
             let mut list = Column::new().spacing(4);
 
             for notification in notifications {
-                list = list.push(notification_item(notification));
+                list = list.push(notification_item(notification, icons));
             }
 
             content = content.push(scrollable(list).height(300));
@@ -171,7 +175,7 @@ where
 }
 
 /// Render a single notification item.
-fn notification_item<M>(notification: Notification) -> Element<'static, M>
+fn notification_item<M>(notification: Notification, icons: &IconTheme) -> Element<'static, M>
 where
     M: 'static + Clone + From<NotificationsMessage>
 {
@@ -183,7 +187,7 @@ where
             Row::new()
                 .push(summary)
                 .push(
-                    button(icon(Icons::Close))
+                    button(icon(icons, Icons::Close))
                         .on_press(NotificationsMessage::Dismiss(notification.id).into())
                 )
                 .spacing(8)

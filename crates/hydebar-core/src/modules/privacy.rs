@@ -17,7 +17,7 @@ use super::{Module, ModuleError, OnModulePress};
 use crate::event_bus::BusEvent;
 use crate::{
     ModuleContext, ModuleEventSender,
-    components::icons::{Icons, icon},
+    components::icons::{IconTheme, Icons, icon},
     event_bus::ModuleEvent,
     services::{
         ReadOnlyService, ServiceEvent,
@@ -66,7 +66,7 @@ impl<M> Module<M> for Privacy
 where
     M: 'static + Clone
 {
-    type ViewData<'a> = ();
+    type ViewData<'a> = &'a IconTheme;
     type RegistrationData<'a> = ();
 
     fn register(
@@ -113,7 +113,7 @@ where
     /// Render the privacy indicator when data is available.
     fn view(
         &self,
-        _: Self::ViewData<'_>
+        icons: Self::ViewData<'_>
     ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
         if let Some(service) = self.service.as_ref() {
             if !service.no_access() {
@@ -123,10 +123,16 @@ where
                             .push_maybe(
                                 service
                                     .screenshare_access()
-                                    .then(|| icon(Icons::ScreenShare))
+                                    .then(|| icon(icons, Icons::ScreenShare))
                             )
-                            .push_maybe(service.webcam_access().then(|| icon(Icons::Webcam)))
-                            .push_maybe(service.microphone_access().then(|| icon(Icons::Mic1)))
+                            .push_maybe(
+                                service.webcam_access().then(|| icon(icons, Icons::Webcam))
+                            )
+                            .push_maybe(
+                                service
+                                    .microphone_access()
+                                    .then(|| icon(icons, Icons::Mic1))
+                            )
                             .align_y(Alignment::Center)
                             .spacing(8)
                     )

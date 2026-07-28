@@ -19,13 +19,6 @@ use iced::{
 use super::state::{App, Message};
 use crate::centerbox;
 
-/// Outer margin kept around the island pills, as `[vertical, horizontal]`
-/// pixels.
-///
-/// Mirrors the `0.3em 1em` module margin of the reference waybar theme at a
-/// `10px` bar font size.
-const ISLAND_BAR_PADDING: [f32; 2] = [3.0, 10.0];
-
 impl App {
     pub fn title(&self, _id: Id) -> String {
         String::from("hydebar")
@@ -63,17 +56,19 @@ impl App {
                     self.appearance().opacity
                 );
 
+                let bar_height = self.appearance().height.unwrap_or(HEIGHT as f32);
+
                 let centerbox = centerbox::Centerbox::new([left, center, right])
-                    .spacing(4)
+                    .spacing(self.appearance().group_gap())
                     .width(Length::Fill)
                     .align_items(Alignment::Center)
                     .height(if self.appearance().style == AppearanceStyle::Islands {
-                        HEIGHT
+                        bar_height
                     } else {
-                        HEIGHT - 8.
-                    } as f32)
+                        bar_height - 8.
+                    })
                     .padding(if self.appearance().style == AppearanceStyle::Islands {
-                        ISLAND_BAR_PADDING
+                        self.appearance().bar_padding()
                     } else {
                         [0.0, 0.0]
                     });
@@ -155,7 +150,7 @@ impl App {
                     Some((MenuType::Updates, button_ui_ref)) => menu_wrapper(
                         id,
                         self.updates
-                            .menu_view(id, animated_opacity)
+                            .menu_view(id, animated_opacity, self.icons())
                             .map(Message::Updates),
                         MenuSize::Small,
                         *button_ui_ref,
@@ -169,7 +164,7 @@ impl App {
                     Some((MenuType::Tray(name), button_ui_ref)) => menu_wrapper(
                         id,
                         self.tray
-                            .menu_view(name, animated_opacity)
+                            .menu_view(name, animated_opacity, self.icons())
                             .map(Message::Tray),
                         MenuSize::Small,
                         *button_ui_ref,
@@ -187,7 +182,8 @@ impl App {
                                 id,
                                 &self.config.settings,
                                 animated_opacity,
-                                self.config.position
+                                self.config.position,
+                                self.icons()
                             )
                             .map(Message::Settings),
                         MenuSize::Medium,
@@ -202,7 +198,7 @@ impl App {
                     Some((MenuType::MediaPlayer, button_ui_ref)) => menu_wrapper(
                         id,
                         self.media_player
-                            .menu_view(&self.config.media_player, animated_opacity)
+                            .menu_view(&self.config.media_player, animated_opacity, self.icons())
                             .map(Message::MediaPlayer),
                         MenuSize::Large,
                         *button_ui_ref,
@@ -215,7 +211,9 @@ impl App {
                     ),
                     Some((MenuType::SystemInfo, button_ui_ref)) => menu_wrapper(
                         id,
-                        self.system_info.menu_view().map(Message::SystemInfo),
+                        self.system_info
+                            .menu_view(self.icons())
+                            .map(Message::SystemInfo),
                         MenuSize::Medium,
                         *button_ui_ref,
                         self.config.position,
@@ -228,7 +226,7 @@ impl App {
                     Some((MenuType::Notifications, button_ui_ref)) => menu_wrapper(
                         id,
                         self.notifications
-                            .menu_view(animated_opacity)
+                            .menu_view(animated_opacity, self.icons())
                             .map(Message::Notifications),
                         MenuSize::Medium,
                         *button_ui_ref,
@@ -255,7 +253,7 @@ impl App {
                     ),
                     Some((MenuType::Calendar, button_ui_ref)) => menu_wrapper(
                         id,
-                        self.clock.menu_view().map(Message::Clock),
+                        self.clock.menu_view(self.icons()).map(Message::Clock),
                         MenuSize::Medium,
                         *button_ui_ref,
                         self.config.position,

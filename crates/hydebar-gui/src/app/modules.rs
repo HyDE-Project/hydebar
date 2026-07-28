@@ -15,14 +15,12 @@ use log::error;
 
 use super::state::{App, Message};
 
-/// Inner padding of a module pill, as `[vertical, horizontal]` pixels.
-///
-/// Mirrors the reference waybar theme where a pill pads its content by
-/// `0em 1em` and the module label adds `0.2em` on every side, at a `10px`
-/// bar font size.
-const MODULE_PADDING: [f32; 2] = [2.0, 12.0];
-
 impl App {
+    /// Padding of a single module, derived from the themed font size.
+    fn module_padding(&self) -> [f32; 2] {
+        self.appearance().module_padding()
+    }
+
     pub fn get_module_at_index(
         &self,
         index: usize,
@@ -68,7 +66,7 @@ impl App {
         let mut row = row!()
             .height(Length::Shrink)
             .align_y(Alignment::Center)
-            .spacing(4);
+            .spacing(self.appearance().module_gap());
 
         for module_def in modules_def {
             row = row.push_maybe(match module_def {
@@ -118,7 +116,7 @@ impl App {
                         .align_y(Alignment::Center)
                         .height(Length::Fill)
                 )
-                .padding(MODULE_PADDING)
+                .padding(self.module_padding())
                 .height(Length::Fill)
                 .style(module_button_style(
                     self.appearance().style,
@@ -140,7 +138,7 @@ impl App {
             }
             _ => {
                 let container = container(content)
-                    .padding(MODULE_PADDING)
+                    .padding(self.module_padding())
                     .height(Length::Fill)
                     .align_y(Alignment::Center);
 
@@ -193,7 +191,7 @@ impl App {
                                         .align_y(Alignment::Center)
                                         .height(Length::Fill)
                                 )
-                                .padding(MODULE_PADDING)
+                                .padding(self.module_padding())
                                 .height(Length::Fill)
                                 .style(module_button_style(
                                     self.appearance().style,
@@ -217,7 +215,7 @@ impl App {
                                 .into()
                             }
                             _ => container(content)
-                                .padding(MODULE_PADDING)
+                                .padding(self.module_padding())
                                 .height(Length::Fill)
                                 .align_y(Alignment::Center)
                                 .into()
@@ -258,16 +256,15 @@ impl App {
         use hydebar_core::modules::Module;
 
         match module_name {
-            ModuleName::AppLauncher => {
-                self.app_launcher
-                    .view(&self.config.app_launcher_cmd)
-                    .map(|(content, _)| {
-                        (
-                            content,
-                            Some(OnModulePress::Action(Box::new(Message::OpenLauncher)))
-                        )
-                    })
-            }
+            ModuleName::AppLauncher => self
+                .app_launcher
+                .view((&self.config.app_launcher_cmd, self.icons()))
+                .map(|(content, _)| {
+                    (
+                        content,
+                        Some(OnModulePress::Action(Box::new(Message::OpenLauncher)))
+                    )
+                }),
             ModuleName::Custom(name) => {
                 let Some(definition) = self.config.custom_modules.iter().find(|m| &m.name == name)
                 else {
@@ -281,47 +278,54 @@ impl App {
                 };
 
                 module
-                    .view(definition)
+                    .view((definition, self.appearance(), self.icons()))
                     .map(|(content, _)| (content, custom_module_action(definition)))
             }
-            ModuleName::Updates => self.updates.view(&self.config.updates),
-            ModuleName::Clipboard => {
-                self.clipboard
-                    .view(&self.config.clipboard_cmd)
-                    .map(|(content, _)| {
-                        (
-                            content,
-                            Some(OnModulePress::Action(Box::new(Message::OpenClipboard)))
-                        )
-                    })
-            }
+            ModuleName::Updates => self.updates.view((&self.config.updates, self.icons())),
+            ModuleName::Clipboard => self
+                .clipboard
+                .view((&self.config.clipboard_cmd, self.icons()))
+                .map(|(content, _)| {
+                    (
+                        content,
+                        Some(OnModulePress::Action(Box::new(Message::OpenClipboard)))
+                    )
+                }),
             ModuleName::Workspaces => self.workspaces.view((
                 &self.outputs,
                 id,
                 &self.config.workspaces,
-                &self.appearance().workspace_colors,
-                self.appearance().special_workspace_colors.as_deref()
+                self.appearance()
             )),
             ModuleName::WindowTitle => self.window_title.view(()),
-            ModuleName::SystemInfo => self.system_info.view(&self.config.system),
+            ModuleName::SystemInfo => {
+                self.system_info
+                    .view((&self.config.system, self.appearance(), self.icons()))
+            }
             ModuleName::KeyboardLayout => self.keyboard_layout.view(&self.config.keyboard_layout),
             ModuleName::KeyboardSubmap => self.keyboard_submap.view(()),
             ModuleName::Tray => self.tray.view((id, opacity)),
             ModuleName::Clock => self.clock.view(&self.config.clock.format),
             ModuleName::Battery => self.battery.data().map(|data| {
                 (
-                    crate::views::battery::render_battery(data, &self.config.battery),
+                    crate::views::battery::render_battery(
+                        data,
+                        &self.config.battery,
+                        self.icons()
+                    ),
                     self.config
                         .battery
                         .open_settings_on_click
                         .then(|| OnModulePress::ToggleMenu(MenuType::Settings))
                 )
             }),
-            ModuleName::Privacy => self.privacy.view(()),
-            ModuleName::Settings => self.settings.view(()),
-            ModuleName::MediaPlayer => self.media_player.view(&self.config.media_player),
+            ModuleName::Privacy => self.privacy.view(self.icons()),
+            ModuleName::Settings => self.settings.view(self.icons()),
+            ModuleName::MediaPlayer => self
+                .media_player
+                .view((&self.config.media_player, self.icons())),
             ModuleName::Notifications => self.notifications.view(()),
-            ModuleName::Screenshot => self.screenshot.view(())
+            ModuleName::Screenshot => self.screenshot.view(self.icons())
         }
     }
 

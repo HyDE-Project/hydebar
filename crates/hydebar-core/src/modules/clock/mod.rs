@@ -11,6 +11,7 @@ use tokio::{task::JoinHandle, time::interval};
 
 use crate::{
     ModuleContext, ModuleEventSender,
+    components::icons::IconTheme,
     event_bus::ModuleEvent,
     menu::MenuType,
     modules::{Module, ModuleError, OnModulePress, weather::WeatherData}
@@ -152,8 +153,8 @@ impl Clock {
     }
 
     /// Renders the calendar menu view.
-    pub fn menu_view(&self) -> Element<'_, Message> {
-        view::build_calendar_menu_view(&self.calendar_state)
+    pub fn menu_view(&self, icons: &IconTheme) -> Element<'_, Message> {
+        view::build_calendar_menu_view(&self.calendar_state, icons)
     }
 
     /// Determine tick interval based on format string

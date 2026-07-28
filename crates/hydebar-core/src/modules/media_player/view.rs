@@ -8,7 +8,7 @@ use iced::{
 
 use super::{MediaPlayer, Message};
 use crate::{
-    components::icons::{Icons, icon},
+    components::icons::{IconTheme, Icons, icon},
     config::MediaPlayerModuleConfig,
     services::mpris::PlaybackStatus,
     style::settings_button_style
@@ -18,7 +18,8 @@ impl MediaPlayer {
     pub fn menu_view(
         &self,
         config: &MediaPlayerModuleConfig,
-        opacity: f32
+        opacity: f32,
+        icons: &IconTheme
     ) -> Element<'_, Message> {
         match &self.service {
             None => text("Not connected to MPRIS service").into(),
@@ -36,14 +37,14 @@ impl MediaPlayer {
                     };
 
                     let buttons = row![
-                        button(icon(Icons::SkipPrevious))
+                        button(icon(icons, Icons::SkipPrevious))
                             .on_press(Message::Prev(d.service.clone()))
                             .padding([5, 12])
                             .style(settings_button_style(opacity)),
-                        button(icon(play_pause_icon))
+                        button(icon(icons, play_pause_icon))
                             .on_press(Message::PlayPause(d.service.clone()))
                             .style(settings_button_style(opacity)),
-                        button(icon(Icons::SkipNext))
+                        button(icon(icons, Icons::SkipNext))
                             .on_press(Message::Next(d.service.clone()))
                             .padding([5, 12])
                             .style(settings_button_style(opacity)),

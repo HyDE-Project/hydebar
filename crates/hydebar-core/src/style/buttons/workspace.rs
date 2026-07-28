@@ -15,6 +15,7 @@ use crate::config::AppearanceColor;
 pub fn workspace_button_style(
     is_empty: bool,
     is_active: bool,
+    radius: f32,
     colors: Option<Option<AppearanceColor>>
 ) -> impl Fn(&Theme, Status) -> button::Style {
     let is_muted = is_empty || !is_active;
@@ -42,15 +43,15 @@ pub fn workspace_button_style(
                 theme.palette().text
             ));
         let mut base = button::Style {
-            background: Some(Background::Color(if is_muted {
-                theme.extended_palette().background.weak.color
+            background: if is_muted {
+                None
             } else {
-                bg_color
-            })),
+                Some(Background::Color(bg_color))
+            },
             border: Border {
                 width:  if is_empty { 1.0 } else { 0.0 },
                 color:  bg_color,
-                radius: 16.0.into()
+                radius: radius.into()
             },
             text_color: if is_muted {
                 theme.extended_palette().background.weak.text

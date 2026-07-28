@@ -23,7 +23,9 @@ struct ShellInfo {
     position:     Position,
     style:        AppearanceStyle,
     menu:         Menu,
-    scale_factor: f64
+    scale_factor: f64,
+    /// Bar height the surface was created with, as named by the configuration.
+    height:       Option<f32>
 }
 
 /// Collection of Wayland outputs currently tracked by the bar.
@@ -91,6 +93,7 @@ impl Outputs {
             position,
             config.menu_keyboard_focus,
             config.appearance.scale_factor,
+            config.appearance.height,
             config.layer
         );
 
@@ -102,7 +105,8 @@ impl Outputs {
                     menu: Menu::new(menu_id),
                     position,
                     style,
-                    scale_factor: config.appearance.scale_factor
+                    scale_factor: config.appearance.scale_factor,
+                    height: config.appearance.height
                 }),
                 None
             )]),

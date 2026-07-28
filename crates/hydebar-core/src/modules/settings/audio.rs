@@ -6,7 +6,7 @@ use iced::{
 
 use super::{Message, SubMenu};
 use crate::{
-    components::icons::{Icons, icon},
+    components::icons::{IconTheme, Icons, icon},
     services::{
         ServiceEvent,
         audio::{AudioData, AudioService, DeviceType, Sinks}
@@ -28,11 +28,14 @@ pub enum AudioMessage {
 }
 
 impl AudioData {
-    pub fn sink_indicator<Message: 'static>(&self) -> Option<Element<'static, Message>> {
+    pub fn sink_indicator<Message: 'static>(
+        &self,
+        icons: &IconTheme
+    ) -> Option<Element<'static, Message>> {
         if !self.sinks.is_empty() {
             let icon_type = self.sinks.get_icon(&self.server_info.default_sink);
 
-            Some(icon(icon_type).into())
+            Some(icon(icons, icon_type).into())
         } else {
             None
         }
@@ -41,7 +44,8 @@ impl AudioData {
     pub fn audio_sliders(
         &self,
         sub_menu: Option<SubMenu>,
-        opacity: f32
+        opacity: f32,
+        icons: &IconTheme
     ) -> (Option<Element<'_, Message>>, Option<Element<'_, Message>>) {
         let active_sink = self
             .sinks
@@ -50,6 +54,7 @@ impl AudioData {
 
         let sink_slider = active_sink.map(|s| {
             audio_slider(
+                icons,
                 SliderType::Sink,
                 s.is_mute,
                 Message::Audio(AudioMessage::ToggleSinkMute),
@@ -72,6 +77,7 @@ impl AudioData {
 
             let source_slider = active_source.map(|s| {
                 audio_slider(
+                    icons,
                     SliderType::Source,
                     s.is_mute,
                     Message::Audio(AudioMessage::ToggleSourceMute),
@@ -92,8 +98,15 @@ impl AudioData {
         }
     }
 
-    pub fn sinks_submenu(&self, id: Id, show_more: bool, opacity: f32) -> Element<'_, Message> {
+    pub fn sinks_submenu(
+        &self,
+        id: Id,
+        show_more: bool,
+        opacity: f32,
+        icons: &IconTheme
+    ) -> Element<'_, Message> {
         audio_submenu(
+            icons,
             self.sinks
                 .iter()
                 .flat_map(|s| {
@@ -117,8 +130,15 @@ impl AudioData {
         )
     }
 
-    pub fn sources_submenu(&self, id: Id, show_more: bool, opacity: f32) -> Element<'_, Message> {
+    pub fn sources_submenu(
+        &self,
+        id: Id,
+        show_more: bool,
+        opacity: f32,
+        icons: &IconTheme
+    ) -> Element<'_, Message> {
         audio_submenu(
+            icons,
             self.sources
                 .iter()
                 .flat_map(|s| {
@@ -149,6 +169,7 @@ pub enum SliderType {
 }
 
 pub fn audio_slider<'a, Message: 'a + Clone>(
+    icons: &IconTheme,
     slider_type: SliderType,
     is_mute: bool,
     toggle_mute: Message,
@@ -159,17 +180,20 @@ pub fn audio_slider<'a, Message: 'a + Clone>(
 ) -> Element<'a, Message> {
     Row::new()
         .push(
-            button(icon(if is_mute {
-                match slider_type {
-                    SliderType::Sink => Icons::Speaker0,
-                    SliderType::Source => Icons::Mic0
+            button(icon(
+                icons,
+                if is_mute {
+                    match slider_type {
+                        SliderType::Sink => Icons::Speaker0,
+                        SliderType::Source => Icons::Mic0
+                    }
+                } else {
+                    match slider_type {
+                        SliderType::Sink => Icons::Speaker3,
+                        SliderType::Source => Icons::Mic1
+                    }
                 }
-            } else {
-                match slider_type {
-                    SliderType::Sink => Icons::Speaker3,
-                    SliderType::Source => Icons::Mic1
-                }
-            }))
+            ))
             .padding([
                 8,
                 match slider_type {
@@ -186,11 +210,14 @@ pub fn audio_slider<'a, Message: 'a + Clone>(
                 .width(Length::Fill)
         )
         .push_maybe(with_submenu.map(|(submenu, msg)| {
-            button(icon(match (slider_type, submenu) {
-                (SliderType::Sink, Some(SubMenu::Sinks)) => Icons::Close,
-                (SliderType::Source, Some(SubMenu::Sources)) => Icons::Close,
-                _ => Icons::RightArrow
-            }))
+            button(icon(
+                icons,
+                match (slider_type, submenu) {
+                    (SliderType::Sink, Some(SubMenu::Sinks)) => Icons::Close,
+                    (SliderType::Source, Some(SubMenu::Sources)) => Icons::Close,
+                    _ => Icons::RightArrow
+                }
+            ))
             .padding([8, 13])
             .on_press(msg)
             .style(settings_button_style(opacity))
@@ -208,6 +235,7 @@ pub struct SubmenuEntry<Message> {
 }
 
 pub fn audio_submenu<'a, Message: 'a + Clone>(
+    icons: &IconTheme,
     entries: Vec<SubmenuEntry<Message>>,
     more_msg: Option<Message>,
     opacity: f32
@@ -218,7 +246,7 @@ pub fn audio_submenu<'a, Message: 'a + Clone>(
             .map(|e| {
                 if e.active {
                     container(
-                        row!(icon(e.device.get_icon()), text(e.name))
+                        row!(icon(icons, e.device.get_icon()), text(e.name))
                             .align_y(Alignment::Center)
                             .spacing(16)
                             .padding([4, 12])
@@ -230,7 +258,7 @@ pub fn audio_submenu<'a, Message: 'a + Clone>(
                     .into()
                 } else {
                     button(
-                        row!(icon(e.device.get_icon()), text(e.name))
+                        row!(icon(icons, e.device.get_icon()), text(e.name))
                             .spacing(16)
                             .align_y(Alignment::Center)
                     )

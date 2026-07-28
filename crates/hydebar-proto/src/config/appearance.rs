@@ -167,6 +167,12 @@ pub struct Appearance {
     /// reference waybar theme.
     #[serde(default)]
     pub radius:                   Option<f32>,
+    /// Height of the bar, in pixels.
+    ///
+    /// Left unset the bar keeps its built-in height. Set it to match another
+    /// bar, for example `38.0` for the height the HyDE waybar theme reserves.
+    #[serde(default)]
+    pub height:                   Option<f32>,
     /// Whether the appearance follows the theme published by the HyDE Project.
     ///
     /// Enabled by default: every field the user did not set explicitly is taken
@@ -220,11 +226,124 @@ static PRIMARY: HexColor = HexColor::rgb(250, 179, 135);
 /// resolves to `4px` at the default `96dpi` scale.
 pub const DEFAULT_RADIUS: f32 = 4.0;
 
+/// Text size used when neither the configuration nor the HyDE theme names one,
+/// in pixels.
+///
+/// Mirrors the renderer default so a bar without a theme keeps the proportions
+/// it renders text at.
+pub const DEFAULT_FONT_SIZE: f32 = 14.0;
+
+/// Padding a module label reserves on each side along the bar, in `em`.
+///
+/// The reference waybar theme pads a bar label by `0.2em` and margins it by
+/// another `0.2em`, so neighbouring modules keep `0.4em` of breathing room that
+/// scales with the themed font instead of being fixed in pixels.
+pub const MODULE_SIDE_PADDING_EM: f32 = 0.4;
+
+/// Padding a module label reserves above and below its text, in `em`.
+///
+/// Matches the `0.2em` vertical label padding of the reference waybar theme.
+pub const MODULE_VERTICAL_PADDING_EM: f32 = 0.2;
+
+/// Gap between a module icon and the label rendered next to it, in `em`.
+pub const ICON_LABEL_GAP_EM: f32 = 0.4;
+
+/// Gap between neighbouring modules of the same bar section, in `em`.
+pub const MODULE_GAP_EM: f32 = 0.4;
+
+/// Gap between the left, center and right groups of the bar, in `em`.
+pub const GROUP_GAP_EM: f32 = 0.4;
+
+/// Outer margin kept around the island pills, in `em`, as
+/// `[vertical, horizontal]`.
+///
+/// Mirrors the `0.3em 1em` module margin of the reference waybar theme.
+pub const BAR_PADDING_EM: [f32; 2] = [0.3, 1.0];
+
+/// Horizontal padding of an idle workspace indicator, in `em`.
+///
+/// Mirrors the `0.3em` side padding every `#workspaces button` of the
+/// reference waybar theme reserves around its label.
+pub const WORKSPACE_PADDING_EM: f32 = 0.3;
+
+/// Horizontal padding of the focused workspace indicator, in `em`.
+///
+/// The reference waybar theme widens the focused button to `1.2em` of side
+/// padding, which is what turns it into a rounded rectangle instead of a
+/// label-sized square.
+pub const WORKSPACE_ACTIVE_PADDING_EM: f32 = 1.2;
+
+/// Margin kept on both sides of the focused workspace indicator, in `em`.
+///
+/// Matches the `0.3em` horizontal margin the reference waybar theme adds to
+/// the focused button so it never touches its neighbours.
+pub const WORKSPACE_ACTIVE_MARGIN_EM: f32 = 0.3;
+
+/// Gap between neighbouring workspace indicators, in `em`.
+pub const WORKSPACE_GAP_EM: f32 = 0.3;
+
 impl Appearance {
     /// Returns the pill corner radius to render with.
     #[must_use]
     pub fn pill_radius(&self) -> f32 {
         self.radius.unwrap_or(DEFAULT_RADIUS)
+    }
+
+    /// Returns the text size the bar renders with, in pixels.
+    ///
+    /// Falls back to [`DEFAULT_FONT_SIZE`] whenever neither the configuration
+    /// nor the HyDE theme names one, which is exactly the size the renderer
+    /// would pick on its own.
+    #[must_use]
+    pub fn font_size_px(&self) -> f32 {
+        self.font_size.unwrap_or(DEFAULT_FONT_SIZE)
+    }
+
+    /// Converts a spacing expressed in `em` into pixels of the themed font.
+    ///
+    /// Every gap of the bar row is stated as a factor of the text size, so a
+    /// theme raising or lowering its font moves the whole layout with it.
+    #[must_use]
+    pub fn spacing(&self, em: f32) -> f32 {
+        self.font_size_px() * em
+    }
+
+    /// Returns the padding of a single module, as `[vertical, horizontal]`
+    /// pixels.
+    #[must_use]
+    pub fn module_padding(&self) -> [f32; 2] {
+        [
+            self.spacing(MODULE_VERTICAL_PADDING_EM),
+            self.spacing(MODULE_SIDE_PADDING_EM)
+        ]
+    }
+
+    /// Returns the outer margin around the island pills, as
+    /// `[vertical, horizontal]` pixels.
+    #[must_use]
+    pub fn bar_padding(&self) -> [f32; 2] {
+        [
+            self.spacing(BAR_PADDING_EM[0]),
+            self.spacing(BAR_PADDING_EM[1])
+        ]
+    }
+
+    /// Returns the gap between a module icon and its label, in pixels.
+    #[must_use]
+    pub fn icon_label_gap(&self) -> f32 {
+        self.spacing(ICON_LABEL_GAP_EM)
+    }
+
+    /// Returns the gap between neighbouring modules, in pixels.
+    #[must_use]
+    pub fn module_gap(&self) -> f32 {
+        self.spacing(MODULE_GAP_EM)
+    }
+
+    /// Returns the gap between the groups of the bar, in pixels.
+    #[must_use]
+    pub fn group_gap(&self) -> f32 {
+        self.spacing(GROUP_GAP_EM)
     }
 
     /// Fills every field the user left at its default with the HyDE theme.
@@ -288,6 +407,17 @@ impl Appearance {
                     .map(opaque_hex)
                     .or_else(|| text_hex(default_primary_color()))
             };
+        }
+
+        if let Some(active_background) = theme.active_background
+            && self.workspace_colors == default_workspace_colors()
+        {
+            self.workspace_colors = vec![AppearanceColor::Complete {
+                base:   opaque_hex(active_background),
+                strong: None,
+                weak:   None,
+                text:   theme.active_text.map(opaque_hex)
+            }];
         }
     }
 }
@@ -420,6 +550,7 @@ impl Default for Appearance {
             font_name:                None,
             font_size:                None,
             radius:                   None,
+            height:                   None,
             follow_hyde:              default_follow_hyde(),
             scale_factor:             1.0,
             style:                    AppearanceStyle::default(),
@@ -514,6 +645,19 @@ mod tests {
         assert_eq!(with_font_size.font_size, Some(10.0));
     }
 
+    #[test]
+    fn height_defaults_to_none_and_deserializes() {
+        assert!(Appearance::default().height.is_none());
+
+        let without_height: Appearance =
+            toml::from_str("").expect("empty appearance table should deserialize");
+        assert!(without_height.height.is_none());
+
+        let with_height: Appearance =
+            toml::from_str("height = 38.0").expect("height should deserialize");
+        assert_eq!(with_height.height, Some(38.0));
+    }
+
     fn hyde_theme() -> HydeTheme {
         HydeTheme {
             bar_background:    Some(Rgba::rgba(1, 2, 3, 0.25)),
@@ -578,6 +722,7 @@ mod tests {
             background_color: AppearanceColor::Simple(HexColor::rgb(1, 1, 1)),
             text_color: AppearanceColor::Simple(HexColor::rgb(2, 2, 2)),
             primary_color: AppearanceColor::Simple(HexColor::rgb(3, 3, 3)),
+            workspace_colors: vec![AppearanceColor::Simple(HexColor::rgb(4, 4, 4))],
             ..Appearance::default()
         };
 
@@ -606,6 +751,61 @@ mod tests {
             toml::from_str("follow_hyde = false").expect("follow_hyde should deserialize");
         assert!(!disabled.follow_hyde);
         assert!(disabled.radius.is_none());
+    }
+
+    #[test]
+    fn font_size_px_falls_back_to_the_renderer_default() {
+        assert_eq!(Appearance::default().font_size_px(), DEFAULT_FONT_SIZE);
+
+        let themed = Appearance {
+            font_size: Some(10.0),
+            ..Appearance::default()
+        };
+        assert_eq!(themed.font_size_px(), 10.0);
+    }
+
+    #[test]
+    fn spacing_scales_an_em_factor_by_the_font_size() {
+        let fallback = Appearance::default();
+        assert_eq!(fallback.spacing(0.0), 0.0);
+        assert_eq!(fallback.spacing(1.0), DEFAULT_FONT_SIZE);
+        assert_eq!(fallback.spacing(0.5), DEFAULT_FONT_SIZE * 0.5);
+
+        let themed = Appearance {
+            font_size: Some(10.0),
+            ..Appearance::default()
+        };
+        assert_eq!(themed.spacing(0.4), 4.0);
+        assert_eq!(themed.spacing(0.2), 2.0);
+    }
+
+    #[test]
+    fn derived_spacing_matches_the_reference_theme() {
+        let themed = Appearance {
+            font_size: Some(10.0),
+            ..Appearance::default()
+        };
+
+        assert_eq!(themed.module_padding(), [2.0, 4.0]);
+        assert_eq!(themed.bar_padding(), [3.0, 10.0]);
+        assert_eq!(themed.module_gap(), 4.0);
+        assert_eq!(themed.group_gap(), 4.0);
+        assert_eq!(themed.icon_label_gap(), 4.0);
+    }
+
+    #[test]
+    fn a_themed_font_size_changes_the_derived_spacing() {
+        let mut appearance = Appearance::default();
+        let fallback_gap = appearance.module_gap();
+        let fallback_padding = appearance.module_padding();
+
+        appearance.apply_hyde_theme(&hyde_theme());
+
+        assert_eq!(appearance.font_size, Some(10.0));
+        assert_ne!(appearance.module_gap(), fallback_gap);
+        assert_ne!(appearance.module_padding(), fallback_padding);
+        assert_eq!(appearance.module_gap(), 10.0 * MODULE_GAP_EM);
+        assert_eq!(appearance.bar_padding(), [3.0, 10.0]);
     }
 
     #[test]

@@ -108,6 +108,7 @@ fn blend_appearance(from: &Appearance, to: &Appearance, t: f32) -> Appearance {
         font_name:                to.font_name.clone(),
         font_size:                to.font_size,
         radius:                   to.radius,
+        height:                   to.height,
         follow_hyde:              to.follow_hyde,
         scale_factor:             to.scale_factor,
         style:                    to.style,
@@ -333,6 +334,21 @@ mod tests {
         transition.set_target(target, true);
 
         assert_eq!(transition.current().scale_factor, 1.5);
+    }
+
+    #[test]
+    fn the_bar_height_switches_immediately() {
+        let mut transition = AppearanceTransition::new(Appearance::default());
+        let target = Appearance {
+            height: Some(38.0),
+            background_color: AppearanceColor::Simple(hex(200)),
+            ..Appearance::default()
+        };
+
+        transition.set_target(target, true);
+
+        assert!(transition.is_animating());
+        assert_eq!(transition.current().height, Some(38.0));
     }
 
     #[test]

@@ -5,7 +5,7 @@ use hydebar_proto::ports::hyprland::{
     HyprlandWorkspaceSnapshot
 };
 use iced::{
-    Element, Length, alignment,
+    Element, Length, Padding, alignment,
     widget::{Row, button, container, text},
     window::Id
 };
@@ -17,7 +17,11 @@ use tokio_stream::StreamExt;
 use super::{Module, ModuleError, OnModulePress};
 use crate::{
     ModuleContext, ModuleEventSender,
-    config::{AppearanceColor, WorkspaceVisibilityMode, WorkspacesModuleConfig},
+    config::{
+        Appearance, MODULE_VERTICAL_PADDING_EM, WORKSPACE_ACTIVE_MARGIN_EM,
+        WORKSPACE_ACTIVE_PADDING_EM, WORKSPACE_GAP_EM, WORKSPACE_PADDING_EM,
+        WorkspaceVisibilityMode, WorkspacesModuleConfig
+    },
     event_bus::ModuleEvent,
     outputs::Outputs,
     style::workspace_button_style
@@ -209,13 +213,7 @@ impl<M> Module<M> for Workspaces
 where
     M: 'static + Clone + From<Message>
 {
-    type ViewData<'a> = (
-        &'a Outputs,
-        Id,
-        &'a WorkspacesModuleConfig,
-        &'a [AppearanceColor],
-        Option<&'a [AppearanceColor]>
-    );
+    type ViewData<'a> = (&'a Outputs, Id, &'a WorkspacesModuleConfig, &'a Appearance);
     type RegistrationData<'a> = &'a WorkspacesModuleConfig;
 
     fn register(
@@ -285,9 +283,18 @@ where
 
     fn view(
         &self,
-        (outputs, id, config, workspace_colors, special_workspace_colors): Self::ViewData<'_>
+        (outputs, id, config, appearance): Self::ViewData<'_>
     ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
         let monitor_name = outputs.get_monitor_name(id).map(|s| s.to_string());
+
+        let radius = appearance.pill_radius();
+        let font_size = appearance.font_size_px();
+        let vertical_padding = appearance.spacing(MODULE_VERTICAL_PADDING_EM);
+        let idle_padding = appearance.spacing(WORKSPACE_PADDING_EM);
+        let active_padding = appearance.spacing(WORKSPACE_ACTIVE_PADDING_EM);
+        let active_margin = appearance.spacing(WORKSPACE_ACTIVE_MARGIN_EM);
+        let workspace_colors = appearance.workspace_colors.as_slice();
+        let special_workspace_colors = appearance.special_workspace_colors.as_deref();
 
         Some((
             Row::with_children(
@@ -317,35 +324,39 @@ where
                             let w_name = w.name.clone();
                             let w_active = w.active;
 
-                            Some(
-                                button(
-                                    container(
-                                        if w_id < 0 { text(w_name) } else { text(w_id) }.size(10)
-                                    )
-                                    .align_x(alignment::Horizontal::Center)
-                                    .align_y(alignment::Vertical::Center)
+                            let side_padding = if w_active {
+                                active_padding
+                            } else {
+                                idle_padding
+                            };
+
+                            let indicator = button(
+                                container(
+                                    if w_id < 0 { text(w_name) } else { text(w_id) }
+                                        .size(font_size)
                                 )
-                                .style(workspace_button_style(empty, w_active, color))
-                                .padding(if w_id < 0 {
-                                    if w_active { [0, 16] } else { [0, 8] }
-                                } else {
-                                    [0, 0]
-                                })
-                                .on_press(if w_id > 0 {
-                                    Message::ChangeWorkspace(w_id)
-                                } else {
-                                    Message::ToggleSpecialWorkspace(w_id)
-                                })
-                                .width(if w_id < 0 {
-                                    Length::Shrink
-                                } else if w_active {
-                                    Length::Fixed(32.)
-                                } else {
-                                    Length::Fixed(16.)
-                                })
-                                .height(16)
-                                .into()
+                                .align_x(alignment::Horizontal::Center)
+                                .align_y(alignment::Vertical::Center)
                             )
+                            .style(workspace_button_style(empty, w_active, radius, color))
+                            .padding([vertical_padding, side_padding])
+                            .on_press(if w_id > 0 {
+                                Message::ChangeWorkspace(w_id)
+                            } else {
+                                Message::ToggleSpecialWorkspace(w_id)
+                            })
+                            .width(Length::Shrink)
+                            .height(Length::Shrink);
+
+                            Some(if w_active {
+                                container(indicator)
+                                    .padding(
+                                        Padding::ZERO.left(active_margin).right(active_margin)
+                                    )
+                                    .into()
+                            } else {
+                                Element::from(indicator)
+                            })
                         } else {
                             None
                         }
@@ -353,8 +364,7 @@ where
                     .map(|elem: Element<'_, Message>| elem.map(M::from))
                     .collect::<Vec<Element<'_, M, _, _>>>()
             )
-            .padding([2, 0])
-            .spacing(4)
+            .spacing(appearance.spacing(WORKSPACE_GAP_EM))
             .into(),
             None
         ))

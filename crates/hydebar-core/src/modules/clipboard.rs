@@ -3,7 +3,7 @@ use iced::Element;
 use super::{Module, ModuleError, OnModulePress};
 use crate::{
     ModuleContext,
-    components::icons::{Icons, icon}
+    components::icons::{IconTheme, Icons, icon}
 };
 
 #[derive(Default, Debug, Clone)]
@@ -13,7 +13,7 @@ impl<M> Module<M> for Clipboard
 where
     M: 'static + Clone
 {
-    type ViewData<'a> = &'a Option<String>;
+    type ViewData<'a> = (&'a Option<String>, &'a IconTheme);
     type RegistrationData<'a> = ();
 
     fn register(
@@ -26,11 +26,11 @@ where
 
     fn view(
         &self,
-        config: Self::ViewData<'_>
+        (config, icons): Self::ViewData<'_>
     ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
         if config.is_some() {
             Some((
-                icon(Icons::Clipboard).into(),
+                icon(icons, Icons::Clipboard).into(),
                 None // Action handled in GUI layer
             ))
         } else {
@@ -44,7 +44,7 @@ mod tests {
     use std::num::NonZeroUsize;
 
     use super::*;
-    use crate::event_bus::EventBus;
+    use crate::{components::icons::IconTheme, event_bus::EventBus};
 
     #[test]
     fn default_creates_instance() {
@@ -75,7 +75,7 @@ mod tests {
         let clipboard = Clipboard::default();
         let config = Some("cliphist".to_string());
 
-        let result = <Clipboard as Module<()>>::view(&clipboard, &config);
+        let result = <Clipboard as Module<()>>::view(&clipboard, (&config, &IconTheme::default()));
         assert!(result.is_some());
 
         if let Some((_, action)) = result {
@@ -88,7 +88,7 @@ mod tests {
         let clipboard = Clipboard::default();
         let config = None;
 
-        let result = <Clipboard as Module<()>>::view(&clipboard, &config);
+        let result = <Clipboard as Module<()>>::view(&clipboard, (&config, &IconTheme::default()));
         assert!(result.is_none());
     }
 }

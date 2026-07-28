@@ -3,6 +3,7 @@ use std::{collections::HashMap, path::PathBuf, sync::Arc, time::Instant};
 use flexi_logger::LoggerHandle;
 use hydebar_core::{
     ModuleContext,
+    components::icons::IconTheme,
     config::{ConfigApplied, ConfigDegradation, ConfigManager, ModuleDef},
     event_bus::{EventReceiver, EventSender},
     menu::MenuType,
@@ -50,6 +51,7 @@ pub struct App {
     pub(super) last_frame: Option<Instant>,
     pub(super) appearance_transition: AppearanceTransition,
     pub(super) module_context: ModuleContext,
+    pub(super) icons: IconTheme,
     pub config: Arc<Config>,
     pub outputs: Outputs,
     pub navigation_mode: bool,
@@ -177,6 +179,14 @@ impl App {
         self.appearance_transition.current()
     }
 
+    /// Glyph table to render module icons with this frame.
+    ///
+    /// Rebuilt whenever the configuration changes so `[icons]` overrides take
+    /// effect on a hot reload.
+    pub fn icons(&self) -> &IconTheme {
+        &self.icons
+    }
+
     pub fn get_all_modules_count(&self) -> usize {
         let count_modules = |modules_def: &[ModuleDef]| -> usize {
             modules_def
@@ -223,6 +233,7 @@ impl App {
             last_frame: None,
             appearance_transition: AppearanceTransition::new(config.appearance.clone()),
             module_context,
+            icons: IconTheme::from_config(&config.icons),
             outputs,
             navigation_mode: false,
             focused_module_index: None,

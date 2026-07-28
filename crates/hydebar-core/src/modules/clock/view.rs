@@ -4,22 +4,25 @@ use iced::{
 };
 
 use super::{CalendarState, Message};
-use crate::components::icons::{Icons, icon};
+use crate::components::icons::{IconTheme, Icons, icon};
 
 const WEEKDAYS: [&str; 7] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 /// Renders the calendar menu view with month navigation and day grid.
-pub fn build_calendar_menu_view(state: &CalendarState) -> Element<'_, Message> {
+pub fn build_calendar_menu_view<'a>(
+    state: &'a CalendarState,
+    icons: &IconTheme
+) -> Element<'a, Message> {
     let calendar_data = state.generate_calendar();
 
     let header = row![
-        button(icon(Icons::LeftChevron))
+        button(icon(icons, Icons::LeftChevron))
             .on_press(Message::PreviousMonth)
             .style(nav_button_style),
         container(text(format!("{} {}", state.month_name(), state.year())).size(18))
             .width(Length::Fill)
             .align_x(Alignment::Center),
-        button(icon(Icons::RightChevron))
+        button(icon(icons, Icons::RightChevron))
             .on_press(Message::NextMonth)
             .style(nav_button_style),
     ]

@@ -6,7 +6,7 @@ use iced::{
 
 use super::{Message, SubMenu, quick_setting_button};
 use crate::{
-    components::icons::{Icons, icon},
+    components::icons::{IconTheme, Icons, icon},
     services::{
         ServiceEvent,
         bluetooth::{BluetoothData, BluetoothService, BluetoothState}
@@ -29,10 +29,12 @@ impl BluetoothData {
         id: Id,
         sub_menu: Option<SubMenu>,
         show_more_button: bool,
-        opacity: f32
+        opacity: f32,
+        icons: &IconTheme
     ) -> Option<(Element<'_, Message>, Option<Element<'_, Message>>)> {
         Some((
             quick_setting_button(
+                icons,
                 Icons::Bluetooth,
                 "Bluetooth".to_owned(),
                 None,
@@ -48,7 +50,7 @@ impl BluetoothData {
             ),
             sub_menu
                 .filter(|menu_type| *menu_type == SubMenu::Bluetooth)
-                .map(|_| self.bluetooth_menu(id, show_more_button, opacity))
+                .map(|_| self.bluetooth_menu(id, show_more_button, opacity, icons))
         ))
     }
 
@@ -56,7 +58,8 @@ impl BluetoothData {
         &self,
         id: Id,
         show_more_button: bool,
-        opacity: f32
+        opacity: f32,
+        icons: &IconTheme
     ) -> Element<'_, Message> {
         let main = if self.devices.is_empty() {
             container(text("No paired devices"))
@@ -69,7 +72,9 @@ impl BluetoothData {
                     .map(|d| {
                         Row::new()
                             .push(text(d.name.to_string()).width(Length::Fill))
-                            .push_maybe(d.battery.map(Self::battery_level))
+                            .push_maybe(
+                                d.battery.map(|battery| Self::battery_level(battery, icons))
+                            )
                             .push(
                                 button(text(if d.connected { "Disconnect" } else { "Connect" }))
                                     .padding([4, 12])
@@ -108,16 +113,19 @@ impl BluetoothData {
         }
     }
 
-    fn battery_level<'a>(battery: u8) -> Element<'a, Message> {
+    fn battery_level<'a>(battery: u8, icons: &IconTheme) -> Element<'a, Message> {
         container(
             row!(
-                icon(match battery {
-                    0..=20 => Icons::Battery0,
-                    21..=40 => Icons::Battery1,
-                    41..=60 => Icons::Battery2,
-                    61..=80 => Icons::Battery3,
-                    _ => Icons::Battery4
-                }),
+                icon(
+                    icons,
+                    match battery {
+                        0..=20 => Icons::Battery0,
+                        21..=40 => Icons::Battery1,
+                        41..=60 => Icons::Battery2,
+                        61..=80 => Icons::Battery3,
+                        _ => Icons::Battery4
+                    }
+                ),
                 text(format!("{battery}%"))
             )
             .spacing(8)

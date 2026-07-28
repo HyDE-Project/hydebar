@@ -9,33 +9,42 @@ use iced::{
 
 use super::state::{CheckState, Message, Updates};
 use crate::{
-    components::icons::{Icons, icon as icon_component},
+    components::icons::{IconTheme, Icons, icon as icon_component},
     style::ghost_button_style
 };
 
-pub(super) fn menu_view(updates: &Updates, id: Id, opacity: f32) -> Element<'_, Message> {
+pub(super) fn menu_view<'a>(
+    updates: &'a Updates,
+    id: Id,
+    opacity: f32,
+    icons: &IconTheme
+) -> Element<'a, Message> {
     column!(
         if updates.updates().is_empty() {
             container(text("Up to date ;)")).padding([8, 8]).into()
         } else {
-            build_updates_list(updates, opacity)
+            build_updates_list(updates, opacity, icons)
         },
         rule::horizontal(1),
         action_button("Update", Message::Update(id), opacity),
-        check_now_button(updates, opacity),
+        check_now_button(updates, opacity, icons),
     )
     .spacing(4)
     .into()
 }
 
-pub(super) fn icon(state: &CheckState, update_count: usize) -> Element<'static, Message> {
+pub(super) fn icon(
+    state: &CheckState,
+    update_count: usize,
+    icons: &IconTheme
+) -> Element<'static, Message> {
     let icon = match state {
         CheckState::Checking => Icons::Refresh,
         CheckState::Ready if update_count == 0 => Icons::NoUpdatesAvailable,
         _ => Icons::UpdatesAvailable
     };
 
-    let mut content = row!(container(icon_component(icon)))
+    let mut content = row!(container(icon_component(icons, icon)))
         .align_y(Alignment::Center)
         .spacing(4);
 
@@ -46,15 +55,22 @@ pub(super) fn icon(state: &CheckState, update_count: usize) -> Element<'static, 
     content.into()
 }
 
-fn build_updates_list(updates: &Updates, opacity: f32) -> Element<'_, Message> {
+fn build_updates_list<'a>(
+    updates: &'a Updates,
+    opacity: f32,
+    icons: &IconTheme
+) -> Element<'a, Message> {
     let mut elements = column!(
         button(row!(
             text(format!("{} Updates available", updates.updates().len())).width(Length::Fill),
-            icon_component(if updates.is_updates_list_open() {
-                Icons::MenuClosed
-            } else {
-                Icons::MenuOpen
-            })
+            icon_component(
+                icons,
+                if updates.is_updates_list_open() {
+                    Icons::MenuClosed
+                } else {
+                    Icons::MenuOpen
+                }
+            )
         ))
         .style(ghost_button_style(opacity))
         .padding([8, 8])
@@ -110,11 +126,15 @@ fn action_button<'a>(
         .width(Length::Fill)
 }
 
-fn check_now_button(updates: &Updates, opacity: f32) -> iced::widget::Button<'static, Message> {
+fn check_now_button(
+    updates: &Updates,
+    opacity: f32,
+    icons: &IconTheme
+) -> iced::widget::Button<'static, Message> {
     let mut content = row!(text("Check now").width(Length::Fill));
 
     if matches!(updates.state(), CheckState::Checking) {
-        content = content.push(icon_component(Icons::Refresh));
+        content = content.push(icon_component(icons, Icons::Refresh));
     }
 
     button(content)

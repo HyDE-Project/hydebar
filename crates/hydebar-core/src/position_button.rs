@@ -7,7 +7,8 @@ use iced::{
         widget::{Operation, Tree, tree}
     },
     id::Id,
-    widget::button::{Catalog, Status, Style, StyleFn}
+    widget::button::{Catalog, Status, Style, StyleFn},
+    window
 };
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -121,7 +122,28 @@ where
 struct State {
     is_hovered: bool,
     is_pressed: bool,
-    is_focused: bool
+    is_focused: bool,
+    /// Status the last painted frame was drawn with.
+    ///
+    /// The runtime only produces a frame when a widget asks for one, so the
+    /// button has to compare the status it would paint now against the one the
+    /// visible frame carries and request a redraw whenever the two drift apart.
+    painted:    Option<Status>
+}
+
+/// Resolves the status a button paints itself with for the given cursor.
+fn resolve_status(is_pressable: bool, is_mouse_over: bool, is_pressed: bool) -> Status {
+    if !is_pressable {
+        Status::Disabled
+    } else if is_mouse_over {
+        if is_pressed {
+            Status::Pressed
+        } else {
+            Status::Hovered
+        }
+    } else {
+        Status::Active
+    }
 }
 
 impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
@@ -289,6 +311,21 @@ where
             }
             _ => {}
         }
+
+        let state = tree.state.downcast_mut::<State>();
+        state.is_hovered = cursor.is_over(layout.bounds());
+
+        let current_status =
+            resolve_status(self.on_press.is_some(), state.is_hovered, state.is_pressed);
+
+        if matches!(event, Event::Window(window::Event::RedrawRequested(_))) {
+            state.painted = Some(current_status);
+        } else if state
+            .painted
+            .is_some_and(|painted| painted != current_status)
+        {
+            shell.request_redraw();
+        }
     }
 
     fn draw(
@@ -303,21 +340,13 @@ where
     ) {
         let bounds = layout.bounds();
         let content_layout = layout.children().next().unwrap();
-        let is_mouse_over = cursor.is_over(bounds);
+        let state = tree.state.downcast_ref::<State>();
 
-        let status = if self.on_press.is_none() {
-            Status::Disabled
-        } else if is_mouse_over {
-            let state = tree.state.downcast_ref::<State>();
-
-            if state.is_pressed {
-                Status::Pressed
-            } else {
-                Status::Hovered
-            }
-        } else {
-            Status::Active
-        };
+        let status = resolve_status(
+            self.on_press.is_some(),
+            cursor.is_over(bounds),
+            state.is_pressed
+        );
 
         let style = theme.style(&self.class, status);
 
@@ -428,3 +457,150 @@ pub(crate) const DEFAULT_PADDING: Padding = Padding {
     right:  10.0,
     left:   10.0
 };
+
+#[cfg(test)]
+mod tests {
+    use std::time::Instant;
+
+    use iced::{
+        Theme,
+        core::{clipboard, layout::Limits, window::RedrawRequest},
+        widget::Space
+    };
+
+    use super::*;
+
+    type TestRenderer = ();
+
+    const BOUNDS: Rectangle = Rectangle {
+        x:      0.0,
+        y:      0.0,
+        width:  36.0,
+        height: 26.0
+    };
+
+    struct Harness<'a> {
+        button: PositionButton<'a, (), Theme, TestRenderer>,
+        tree:   Tree,
+        node:   layout::Node
+    }
+
+    fn button<'a>(pressable: bool) -> PositionButton<'a, (), Theme, TestRenderer> {
+        let button = position_button(Space::new().width(16.0).height(16.0));
+
+        if pressable {
+            button.on_press(())
+        } else {
+            button
+        }
+    }
+
+    fn harness<'a>(pressable: bool) -> Harness<'a> {
+        let mut tree = Tree::new(&Element::<(), Theme, TestRenderer>::new(button(pressable)));
+        let mut button = button(pressable);
+
+        let node = button.layout(
+            &mut tree,
+            &(),
+            &Limits::new(Size::ZERO, Size::new(200.0, 26.0))
+        );
+
+        Harness {
+            button,
+            tree,
+            node
+        }
+    }
+
+    fn feed(harness: &mut Harness<'_>, event: &Event, cursor: mouse::Cursor) -> RedrawRequest {
+        let mut messages = Vec::new();
+        let mut shell = Shell::new(&mut messages);
+        let mut clipboard = clipboard::Null;
+
+        harness.button.update(
+            &mut harness.tree,
+            event,
+            Layout::new(&harness.node),
+            cursor,
+            &(),
+            &mut clipboard,
+            &mut shell,
+            &BOUNDS
+        );
+
+        shell.redraw_request()
+    }
+
+    fn redraw_event() -> Event {
+        Event::Window(iced::window::Event::RedrawRequested(Instant::now()))
+    }
+
+    fn moved_to(x: f32) -> Event {
+        Event::Mouse(mouse::Event::CursorMoved {
+            position: Point::new(x, 10.0)
+        })
+    }
+
+    fn cursor_at(x: f32) -> mouse::Cursor {
+        mouse::Cursor::Available(Point::new(x, 10.0))
+    }
+
+    #[test]
+    fn entering_the_button_asks_the_runtime_for_a_frame() {
+        let mut harness = harness(true);
+
+        // the painted frame knows the cursor sitting outside the button
+        feed(&mut harness, &redraw_event(), cursor_at(500.0));
+
+        assert_eq!(
+            feed(&mut harness, &moved_to(10.0), cursor_at(10.0)),
+            RedrawRequest::NextFrame,
+            "a hover the painted frame does not show has to schedule a redraw"
+        );
+    }
+
+    #[test]
+    fn leaving_the_button_asks_the_runtime_for_a_frame() {
+        let mut harness = harness(true);
+
+        feed(&mut harness, &redraw_event(), cursor_at(10.0));
+
+        assert_eq!(
+            feed(&mut harness, &moved_to(500.0), cursor_at(500.0)),
+            RedrawRequest::NextFrame
+        );
+    }
+
+    #[test]
+    fn moving_inside_the_button_does_not_ask_for_a_frame() {
+        let mut harness = harness(true);
+
+        feed(&mut harness, &redraw_event(), cursor_at(10.0));
+
+        assert_eq!(
+            feed(&mut harness, &moved_to(20.0), cursor_at(20.0)),
+            RedrawRequest::Wait,
+            "the painted frame already shows the hover"
+        );
+    }
+
+    #[test]
+    fn an_inert_button_never_asks_for_a_frame() {
+        let mut harness = harness(false);
+
+        feed(&mut harness, &redraw_event(), cursor_at(500.0));
+
+        assert_eq!(
+            feed(&mut harness, &moved_to(10.0), cursor_at(10.0)),
+            RedrawRequest::Wait
+        );
+    }
+
+    #[test]
+    fn resolves_the_status_the_style_is_picked_from() {
+        assert_eq!(resolve_status(false, true, false), Status::Disabled);
+        assert_eq!(resolve_status(true, false, false), Status::Active);
+        assert_eq!(resolve_status(true, true, false), Status::Hovered);
+        assert_eq!(resolve_status(true, true, true), Status::Pressed);
+    }
+}

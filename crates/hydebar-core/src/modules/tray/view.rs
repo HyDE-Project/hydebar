@@ -7,13 +7,18 @@ use iced::{
 
 use super::super::tray::{TrayMessage, TrayModule};
 use crate::{
-    components::icons::{Icons, icon},
+    components::icons::{IconTheme, Icons, icon},
     services::tray::dbus::{Layout, LayoutProps},
     style::ghost_button_style
 };
 
 impl TrayModule {
-    pub fn menu_view(&self, name: &'_ str, opacity: f32) -> Element<'_, TrayMessage> {
+    pub fn menu_view(
+        &self,
+        name: &'_ str,
+        opacity: f32,
+        icons: &IconTheme
+    ) -> Element<'_, TrayMessage> {
         match self
             .service
             .as_ref()
@@ -23,7 +28,7 @@ impl TrayModule {
                 item.menu
                     .2
                     .iter()
-                    .map(|menu| self.menu_voice(name, menu, opacity))
+                    .map(|menu| self.menu_voice(name, menu, opacity, icons))
             )
             .spacing(8)
             .into(),
@@ -35,7 +40,8 @@ impl TrayModule {
         &self,
         name: &str,
         layout: &Layout,
-        opacity: f32
+        opacity: f32,
+        icons: &IconTheme
     ) -> Element<'_, TrayMessage> {
         match &layout.1 {
             LayoutProps {
@@ -63,11 +69,14 @@ impl TrayModule {
                     .push(
                         button(row!(
                             text(label.replace("_", "").to_owned()).width(Length::Fill),
-                            icon(if is_open {
-                                Icons::MenuOpen
-                            } else {
-                                Icons::MenuClosed
-                            })
+                            icon(
+                                icons,
+                                if is_open {
+                                    Icons::MenuOpen
+                                } else {
+                                    Icons::MenuClosed
+                                }
+                            )
                         ))
                         .style(ghost_button_style(opacity))
                         .padding([8, 8])
@@ -80,7 +89,7 @@ impl TrayModule {
                                 layout
                                     .2
                                     .iter()
-                                    .map(|menu| self.menu_voice(name, menu, opacity))
+                                    .map(|menu| self.menu_voice(name, menu, opacity, icons))
                                     .collect::<Vec<_>>()
                             )
                             .padding([0, 0, 0, 16])

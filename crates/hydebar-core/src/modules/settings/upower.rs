@@ -5,7 +5,7 @@ use iced::{
 
 use super::{Message, quick_setting_button};
 use crate::{
-    components::icons::{Icons, icon},
+    components::icons::{IconTheme, Icons, icon},
     services::{
         ServiceEvent,
         upower::{BatteryData, BatteryStatus, PowerProfile, UPowerService}
@@ -20,12 +20,12 @@ pub enum UPowerMessage {
 }
 
 impl BatteryData {
-    pub fn indicator<Message: 'static>(&self) -> Element<'static, Message> {
+    pub fn indicator<Message: 'static>(&self, icons: &IconTheme) -> Element<'static, Message> {
         let icon_type = self.get_icon();
         let state = self.get_indicator_state();
 
         container(
-            row!(icon(icon_type), text(format!("{}%", self.capacity)))
+            row!(icon(icons, icon_type), text(format!("{}%", self.capacity)))
                 .spacing(4)
                 .align_y(Alignment::Center)
         )
@@ -40,12 +40,19 @@ impl BatteryData {
         .into()
     }
 
-    pub fn settings_indicator<'a, Message: 'static>(&self) -> Container<'a, Message> {
+    pub fn settings_indicator<'a, Message: 'static>(
+        &self,
+        icons: &IconTheme
+    ) -> Container<'a, Message> {
         let state = self.get_indicator_state();
 
         container({
             let battery_info = container(
-                row!(icon(self.get_icon()), text(format!("{}%", self.capacity))).spacing(4)
+                row!(
+                    icon(icons, self.get_icon()),
+                    text(format!("{}%", self.capacity))
+                )
+                .spacing(4)
             )
             .style(move |theme: &Theme| container::Style {
                 text_color: Some(match state {
@@ -75,11 +82,14 @@ impl BatteryData {
 }
 
 impl PowerProfile {
-    pub fn indicator<Message: 'static>(&self) -> Option<Element<'static, Message>> {
+    pub fn indicator<Message: 'static>(
+        &self,
+        icons: &IconTheme
+    ) -> Option<Element<'static, Message>> {
         match self {
             PowerProfile::Balanced => None,
             PowerProfile::Performance => Some(
-                container(icon(Icons::Performance))
+                container(icon(icons, Icons::Performance))
                     .style(|theme: &Theme| container::Style {
                         text_color: Some(theme.palette().danger),
                         ..Default::default()
@@ -87,7 +97,7 @@ impl PowerProfile {
                     .into()
             ),
             PowerProfile::PowerSaver => Some(
-                container(icon(Icons::PowerSaver))
+                container(icon(icons, Icons::PowerSaver))
                     .style(|theme: &Theme| container::Style {
                         text_color: Some(theme.palette().success),
                         ..Default::default()
@@ -100,11 +110,13 @@ impl PowerProfile {
 
     pub fn get_quick_setting_button(
         &self,
-        opacity: f32
+        opacity: f32,
+        icons: &IconTheme
     ) -> Option<(Element<'_, Message>, Option<Element<'_, Message>>)> {
         if !matches!(self, PowerProfile::Unknown) {
             Some((
                 quick_setting_button(
+                    icons,
                     (*self).into(),
                     match self {
                         PowerProfile::Balanced => "Balanced",

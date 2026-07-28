@@ -11,7 +11,7 @@ use tokio::task::yield_now;
 use super::{MediaPlayer, MediaPlayerPublisher};
 use crate::{
     ModuleContext,
-    components::icons::{Icons, icon},
+    components::icons::{IconTheme, Icons, icon},
     config::MediaPlayerModuleConfig,
     event_bus::ModuleEvent,
     menu::MenuType,
@@ -26,7 +26,7 @@ impl<M> Module<M> for MediaPlayer
 where
     M: 'static + Clone
 {
-    type ViewData<'a> = &'a MediaPlayerModuleConfig;
+    type ViewData<'a> = (&'a MediaPlayerModuleConfig, &'a IconTheme);
     type RegistrationData<'a> = ();
 
     fn register(
@@ -77,13 +77,13 @@ where
 
     fn view(
         &self,
-        config: Self::ViewData<'_>
+        (config, icons): Self::ViewData<'_>
     ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
         self.service.as_ref().and_then(|s| match s.len() {
             0 => None,
             _ => Some((
                 row![
-                    icon(Icons::MusicNote),
+                    icon(icons, Icons::MusicNote),
                     text(Self::get_title(&s[0], config))
                         .wrapping(text::Wrapping::WordOrGlyph)
                         .size(12)

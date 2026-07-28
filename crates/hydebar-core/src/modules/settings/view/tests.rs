@@ -10,7 +10,7 @@ use super::{
     quick_setting_button
 };
 use crate::{
-    components::icons::Icons,
+    components::icons::{IconTheme, Icons},
     modules::settings::state::{Message, SubMenu}
 };
 
@@ -42,7 +42,9 @@ fn quick_settings_section_renders_menu_when_present() {
 
 #[test]
 fn quick_setting_button_can_render_submenu_toggle() {
+    let icons = IconTheme::default();
     let element: Element<'_, Message> = quick_setting_button(
+        &icons,
         Icons::Power,
         "Test".into(),
         None,

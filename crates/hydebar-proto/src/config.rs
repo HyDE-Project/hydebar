@@ -4,6 +4,7 @@ mod appearance;
 mod battery;
 mod clock;
 mod custom_module;
+mod icons;
 mod keybindings;
 mod keyboard_layout;
 mod media_player;
@@ -22,11 +23,16 @@ mod workspaces;
 mod themes_tests;
 
 pub use appearance::{
-    AnimationConfig, Appearance, AppearanceColor, AppearanceStyle, DEFAULT_RADIUS, MenuAppearance
+    AnimationConfig, Appearance, AppearanceColor, AppearanceStyle, BAR_PADDING_EM,
+    DEFAULT_FONT_SIZE, DEFAULT_RADIUS, GROUP_GAP_EM, ICON_LABEL_GAP_EM, MODULE_GAP_EM,
+    MODULE_SIDE_PADDING_EM, MODULE_VERTICAL_PADDING_EM, MenuAppearance,
+    WORKSPACE_ACTIVE_MARGIN_EM, WORKSPACE_ACTIVE_PADDING_EM, WORKSPACE_GAP_EM,
+    WORKSPACE_PADDING_EM
 };
 pub use battery::BatteryModuleConfig;
 pub use clock::ClockModuleConfig;
 pub use custom_module::CustomModuleDef;
+pub use icons::IconsConfig;
 pub use keybindings::{GlobalKeybindings, Keybindings, MenuKeybindings};
 pub use keyboard_layout::KeyboardLayoutModuleConfig;
 pub use media_player::MediaPlayerModuleConfig;
@@ -89,7 +95,9 @@ pub struct Config {
     #[serde(default)]
     pub keybindings:         Keybindings,
     #[serde(default)]
-    pub weather:             WeatherModuleConfig
+    pub weather:             WeatherModuleConfig,
+    #[serde(default)]
+    pub icons:               IconsConfig
 }
 
 impl Default for Config {
@@ -115,7 +123,8 @@ impl Default for Config {
             custom_modules:      vec![],
             menu_keyboard_focus: default_menu_keyboard_focus(),
             keybindings:         Keybindings::default(),
-            weather:             WeatherModuleConfig::default()
+            weather:             WeatherModuleConfig::default(),
+            icons:               IconsConfig::default()
         }
     }
 }

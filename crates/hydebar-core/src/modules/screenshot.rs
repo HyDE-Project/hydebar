@@ -9,7 +9,7 @@ use log::{debug, error};
 use super::{Module, ModuleError, OnModulePress};
 use crate::{
     ModuleContext,
-    components::icons::{Icons, icon},
+    components::icons::{IconTheme, Icons, icon},
     menu::MenuType
 };
 
@@ -244,7 +244,7 @@ impl<M> Module<M> for Screenshot
 where
     M: 'static + Clone + From<ScreenshotMessage>
 {
-    type ViewData<'a> = ();
+    type ViewData<'a> = &'a IconTheme;
     type RegistrationData<'a> = ();
 
     fn register(
@@ -258,11 +258,11 @@ where
     /// Render camera icon with recording indicator.
     fn view(
         &self,
-        _: Self::ViewData<'_>
+        icons: Self::ViewData<'_>
     ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
         let content = if self.is_recording {
             Row::new()
-                .push(icon(Icons::Point)) // Red dot for recording
+                .push(icon(icons, Icons::Point))
                 .push(text("📷"))
                 .spacing(4)
                 .align_y(Alignment::Center)

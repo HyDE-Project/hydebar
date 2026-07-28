@@ -31,8 +31,20 @@ pub(crate) struct LayerSurfaceCreation<Message> {
     pub(crate) task:    Task<Message>
 }
 
-pub(crate) fn layer_height(style: AppearanceStyle, scale_factor: f64) -> f64 {
-    (HEIGHT
+/// Returns the height the bar layer-surface is created with, in physical
+/// pixels.
+///
+/// `configured_height` is the height named by the configuration; left unset the
+/// built-in [`HEIGHT`] is used instead. Either way the solid and gradient
+/// styles trim the island margin and the result is scaled by `scale_factor`.
+pub(crate) fn layer_height(
+    style: AppearanceStyle,
+    scale_factor: f64,
+    configured_height: Option<f32>
+) -> f64 {
+    let base = configured_height.map_or(HEIGHT, f64::from);
+
+    (base
         - match style {
             AppearanceStyle::Solid | AppearanceStyle::Gradient => 8.,
             AppearanceStyle::Islands => 0.
@@ -46,10 +58,11 @@ pub(crate) fn create_layer_surfaces<Message: 'static>(
     position: Position,
     menu_keyboard_focus: bool,
     scale_factor: f64,
+    configured_height: Option<f32>,
     layer: BarLayer
 ) -> LayerSurfaceCreation<Message> {
     let main_id = Id::unique();
-    let height = layer_height(style, scale_factor);
+    let height = layer_height(style, scale_factor, configured_height);
 
     let main_task = get_layer_surface(SctkLayerSurfaceSettings {
         id: main_id,
@@ -114,5 +127,41 @@ mod tests {
         assert!(matches!(surface_layer(BarLayer::Bottom), Layer::Bottom));
         assert!(matches!(surface_layer(BarLayer::Top), Layer::Top));
         assert!(matches!(surface_layer(BarLayer::Overlay), Layer::Overlay));
+    }
+
+    #[test]
+    fn an_unset_height_keeps_the_built_in_one() {
+        assert_eq!(layer_height(AppearanceStyle::Islands, 1.0, None), HEIGHT);
+        assert_eq!(layer_height(AppearanceStyle::Solid, 1.0, None), HEIGHT - 8.);
+        assert_eq!(
+            layer_height(AppearanceStyle::Gradient, 1.0, None),
+            HEIGHT - 8.
+        );
+        assert_eq!(
+            layer_height(AppearanceStyle::Islands, 1.5, None),
+            HEIGHT * 1.5
+        );
+    }
+
+    #[test]
+    fn a_configured_height_replaces_the_built_in_one() {
+        assert_eq!(
+            layer_height(AppearanceStyle::Islands, 1.0, Some(38.0)),
+            38.0
+        );
+        assert_eq!(layer_height(AppearanceStyle::Solid, 1.0, Some(38.0)), 30.0);
+        assert_eq!(
+            layer_height(AppearanceStyle::Gradient, 1.0, Some(38.0)),
+            30.0
+        );
+    }
+
+    #[test]
+    fn a_configured_height_is_still_scaled() {
+        assert_eq!(
+            layer_height(AppearanceStyle::Islands, 2.0, Some(38.0)),
+            76.0
+        );
+        assert_eq!(layer_height(AppearanceStyle::Solid, 0.5, Some(38.0)), 15.0);
     }
 }

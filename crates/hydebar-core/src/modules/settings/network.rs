@@ -6,7 +6,7 @@ use iced::{
 
 use super::{Message, SubMenu, quick_setting_button};
 use crate::{
-    components::icons::{Icons, icon},
+    components::icons::{IconTheme, Icons, icon},
     services::{
         ServiceEvent,
         network::{
@@ -82,7 +82,10 @@ impl ActiveConnectionInfo {
 }
 
 impl NetworkData {
-    pub fn get_connection_indicator<Message: 'static>(&self) -> Option<Element<'static, Message>> {
+    pub fn get_connection_indicator<Message: 'static>(
+        &self,
+        icons: &IconTheme
+    ) -> Option<Element<'static, Message>> {
         if self.airplane_mode || !self.wifi_present {
             None
         } else {
@@ -94,12 +97,12 @@ impl NetworkData {
                             || matches!(c, ActiveConnectionInfo::Wired { .. })
                     })
                     .map_or_else(
-                        || icon(Icons::Wifi0).into(),
+                        || icon(icons, Icons::Wifi0).into(),
                         |a| {
                             let icon_type = a.get_icon();
                             let state = (self.connectivity, a.get_indicator_state());
 
-                            container(icon(icon_type))
+                            container(icon(icons, icon_type))
                                 .style(move |theme: &Theme| container::Style {
                                     text_color: match state {
                                         (ConnectivityState::Full, IndicatorState::Warning) => {
@@ -117,14 +120,17 @@ impl NetworkData {
         }
     }
 
-    pub fn get_vpn_indicator<Message: 'static>(&self) -> Option<Element<'static, Message>> {
+    pub fn get_vpn_indicator<Message: 'static>(
+        &self,
+        icons: &IconTheme
+    ) -> Option<Element<'static, Message>> {
         self.active_connections
             .iter()
             .find(|c| matches!(c, ActiveConnectionInfo::Vpn { .. }))
             .map(|a| {
                 let icon_type = a.get_icon();
 
-                container(icon(icon_type))
+                container(icon(icons, icon_type))
                     .style(|theme: &Theme| container::Style {
                         text_color: Some(theme.extended_palette().danger.weak.color),
                         ..Default::default()
@@ -138,7 +144,8 @@ impl NetworkData {
         id: Id,
         sub_menu: Option<SubMenu>,
         show_more_button: bool,
-        opacity: f32
+        opacity: f32,
+        icons: &IconTheme
     ) -> Option<(Element<'_, Message>, Option<Element<'_, Message>>)> {
         if self.wifi_present {
             let active_connection = self.active_connections.iter().find_map(|c| match c {
@@ -152,6 +159,7 @@ impl NetworkData {
 
             Some((
                 quick_setting_button(
+                    icons,
                     active_connection.map_or_else(|| Icons::Wifi0, |(_, _, icon)| icon),
                     "Wi-Fi".to_string(),
                     active_connection
@@ -173,7 +181,8 @@ impl NetworkData {
                             id,
                             active_connection.map(|(name, strengh, _)| (name.as_str(), *strengh)),
                             show_more_button,
-                            opacity
+                            opacity,
+                            icons
                         )
                         .map(Message::Network)
                     })
@@ -188,7 +197,8 @@ impl NetworkData {
         id: Id,
         sub_menu: Option<SubMenu>,
         show_more_button: bool,
-        opacity: f32
+        opacity: f32,
+        icons: &IconTheme
     ) -> Option<(Element<'_, Message>, Option<Element<'_, Message>>)> {
         self.known_connections
             .iter()
@@ -196,6 +206,7 @@ impl NetworkData {
             .then(|| {
                 (
                     quick_setting_button(
+                        icons,
                         Icons::Vpn,
                         "Vpn".to_string(),
                         None,
@@ -221,7 +232,8 @@ impl NetworkData {
         id: Id,
         active_connection: Option<(&str, u8)>,
         show_more_button: bool,
-        opacity: f32
+        opacity: f32,
+        icons: &IconTheme
     ) -> Element<'_, NetworkMessage> {
         let main = column!(
             row!(
@@ -232,7 +244,7 @@ impl NetworkData {
                     ""
                 })
                 .size(12),
-                button(icon(Icons::Refresh))
+                button(icon(icons, Icons::Refresh))
                     .padding([4, 10])
                     .style(settings_button_style(opacity))
                     .on_press(NetworkMessage::ScanNearByWiFi),
@@ -261,7 +273,7 @@ impl NetworkData {
                             button(
                                 container(
                                     row!(
-                                        icon(if ac.public {
+                                        icon(icons, if ac.public {
                                             ActiveConnectionInfo::get_wifi_icon(ac.strength)
                                         } else {
                                             ActiveConnectionInfo::get_wifi_lock_icon(ac.strength)
@@ -374,10 +386,12 @@ impl NetworkData {
 
     pub fn get_airplane_mode_quick_setting_button(
         &self,
-        opacity: f32
+        opacity: f32,
+        icons: &IconTheme
     ) -> (Element<'_, Message>, Option<Element<'_, Message>>) {
         (
             quick_setting_button(
+                icons,
                 Icons::Airplane,
                 "Airplane Mode".to_string(),
                 None,

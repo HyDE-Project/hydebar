@@ -6,7 +6,7 @@ use iced::{
 };
 
 use crate::{
-    components::icons::{Icons, icon},
+    components::icons::{IconTheme, Icons, icon},
     style::{confirm_button_style, outline_button_style, text_input_style}
 };
 
@@ -21,11 +21,12 @@ pub fn view<'a>(
     id: Id,
     wifi_ssid: &str,
     current_password: &str,
-    opacity: f32
+    opacity: f32,
+    icons: &IconTheme
 ) -> Element<'a, Message> {
     column!(
         row!(
-            icon(Icons::WifiLock4).size(32),
+            icon(icons, Icons::WifiLock4).size(32),
             text("Authentication required").size(22),
         )
         .spacing(16)

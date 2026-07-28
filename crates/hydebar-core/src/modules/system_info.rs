@@ -3,13 +3,13 @@ mod runtime;
 mod view;
 
 pub use data::{NetworkData, SystemInfoData, SystemInfoSampler};
-use hydebar_proto::config::SystemModuleConfig;
+use hydebar_proto::config::{Appearance, SystemModuleConfig};
 use iced::Element;
 pub use runtime::REFRESH_INTERVAL;
 pub use view::{build_indicator_view, build_menu_view, indicator_elements};
 
 use super::{Module, ModuleError, OnModulePress};
-use crate::{ModuleContext, event_bus::ModuleEvent};
+use crate::{ModuleContext, components::icons::IconTheme, event_bus::ModuleEvent};
 
 /// Messages published by the system information module.
 #[derive(Debug, Clone)]
@@ -48,8 +48,8 @@ impl SystemInfo {
     }
 
     /// Render the menu entry exposing detailed system information.
-    pub fn menu_view(&self) -> Element<'_, Message> {
-        view::build_menu_view(&self.data)
+    pub fn menu_view(&self, icons: &IconTheme) -> Element<'_, Message> {
+        view::build_menu_view(&self.data, icons)
     }
 }
 
@@ -57,7 +57,7 @@ impl<M> Module<M> for SystemInfo
 where
     M: 'static + Clone + From<Message>
 {
-    type ViewData<'a> = &'a SystemModuleConfig;
+    type ViewData<'a> = (&'a SystemModuleConfig, &'a Appearance, &'a IconTheme);
     type RegistrationData<'a> = ();
 
     fn register(
@@ -73,8 +73,8 @@ where
 
     fn view(
         &self,
-        config: Self::ViewData<'_>
+        (config, appearance, icons): Self::ViewData<'_>
     ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
-        view::build_indicator_view(&self.data, config)
+        view::build_indicator_view(&self.data, config, appearance, icons)
     }
 }

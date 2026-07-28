@@ -6,7 +6,7 @@ use iced::{
 };
 
 use crate::{
-    components::icons::{Icons, icon},
+    components::icons::{IconTheme, Icons, icon},
     menu::MenuType,
     modules::{
         OnModulePress,
@@ -15,7 +15,10 @@ use crate::{
 };
 
 impl Settings {
-    pub(super) fn render_bar<M>(&self) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)>
+    pub(super) fn render_bar<M>(
+        &self,
+        icons: &IconTheme
+    ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)>
     where
         M: 'static + From<Message>
     {
@@ -27,28 +30,33 @@ impl Settings {
         let power_profile_indicator = self
             .upower
             .as_ref()
-            .and_then(|p| p.power_profile.indicator());
-        let sink_indicator = self.audio.as_ref().and_then(|a| a.sink_indicator());
+            .and_then(|p| p.power_profile.indicator(icons));
+        let sink_indicator = self.audio.as_ref().and_then(|a| a.sink_indicator(icons));
         let connection_indicator = self
             .network
             .as_ref()
-            .and_then(|n| n.get_connection_indicator());
-        let vpn_indicator = self.network.as_ref().and_then(|n| n.get_vpn_indicator());
+            .and_then(|n| n.get_connection_indicator(icons));
+        let vpn_indicator = self
+            .network
+            .as_ref()
+            .and_then(|n| n.get_vpn_indicator(icons));
         let battery_indicator = self
             .upower
             .as_ref()
             .and_then(|upower| upower.battery)
-            .map(|battery| battery.indicator());
+            .map(|battery| battery.indicator(icons));
 
         Some((
             Row::new()
                 .push_maybe(if idle_inhibited {
-                    Some(container(icon(Icons::EyeOpened)).style(|theme: &Theme| {
-                        container::Style {
-                            text_color: Some(theme.palette().danger),
-                            ..Default::default()
-                        }
-                    }))
+                    Some(
+                        container(icon(icons, Icons::EyeOpened)).style(|theme: &Theme| {
+                            container::Style {
+                                text_color: Some(theme.palette().danger),
+                                ..Default::default()
+                            }
+                        })
+                    )
                 } else {
                     None
                 })

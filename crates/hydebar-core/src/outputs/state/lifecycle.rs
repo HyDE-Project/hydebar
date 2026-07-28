@@ -54,6 +54,7 @@ impl Outputs {
                 position,
                 config.menu_keyboard_focus,
                 config.appearance.scale_factor,
+                config.appearance.height,
                 config.layer
             );
 
@@ -82,7 +83,8 @@ impl Outputs {
                     menu: Menu::new(menu_id),
                     position,
                     style,
-                    scale_factor: config.appearance.scale_factor
+                    scale_factor: config.appearance.scale_factor,
+                    height: config.appearance.height
                 }),
                 Some(wl_output)
             ));
@@ -159,6 +161,7 @@ impl Outputs {
                         position,
                         config.menu_keyboard_focus,
                         config.appearance.scale_factor,
+                        config.appearance.height,
                         config.layer
                     );
 
@@ -169,7 +172,8 @@ impl Outputs {
                             menu: Menu::new(menu_id),
                             position,
                             style,
-                            scale_factor: config.appearance.scale_factor
+                            scale_factor: config.appearance.scale_factor,
+                            height: config.appearance.height
                         }),
                         None
                     ));
