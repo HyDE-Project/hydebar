@@ -11,7 +11,8 @@ impl App {
             Message::Frame(_)
             | Message::BusFlushed(_)
             | Message::ConfigChanged(_)
-            | Message::ConfigDegraded(_) => self.update_lifecycle(message),
+            | Message::ConfigDegraded(_)
+            | Message::Shutdown(_) => self.update_lifecycle(message),
             Message::ToggleMenu(..)
             | Message::ModuleTooltip(..)
             | Message::CloseMenu(_)

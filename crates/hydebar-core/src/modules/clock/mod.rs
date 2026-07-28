@@ -12,7 +12,9 @@ use tokio::{task::JoinHandle, time::interval};
 use crate::{
     ModuleContext, ModuleEventSender,
     components::icons::IconTheme,
+    config::ClockModuleConfig,
     event_bus::ModuleEvent,
+    format_cycle::FormatCycle,
     menu::MenuType,
     modules::{Module, ModuleError, OnModulePress, weather::WeatherData}
 };
@@ -64,7 +66,9 @@ pub enum Message {
     Update,
     UpdateWeather(WeatherData),
     PreviousMonth,
-    NextMonth
+    NextMonth,
+    /// Switch to the next configured format, wrapping after the last one.
+    NextFormat
 }
 
 /// Clock module - business logic only, no GUI!
@@ -74,7 +78,8 @@ pub struct Clock {
     tick_interval:  Duration,
     sender:         Option<ModuleEventSender<ClockEvent>>,
     task:           Option<JoinHandle<()>>,
-    calendar_state: CalendarState
+    calendar_state: CalendarState,
+    format:         FormatCycle
 }
 
 impl Default for Clock {
@@ -84,7 +89,8 @@ impl Default for Clock {
             tick_interval:  Duration::from_secs(5),
             sender:         None,
             task:           None,
-            calendar_state: CalendarState::default()
+            calendar_state: CalendarState::default(),
+            format:         FormatCycle::new()
         }
     }
 }
@@ -104,9 +110,14 @@ impl Clock {
         &self.calendar_state
     }
 
-    /// Initialize with module context and time format
-    pub fn register(&mut self, ctx: &ModuleContext, format: &str) {
-        self.tick_interval = Self::determine_interval(format);
+    /// Format string the active index selects.
+    pub fn active_format<'a>(&self, config: &'a ClockModuleConfig) -> &'a str {
+        self.format.resolve(&config.format, &config.format_alt)
+    }
+
+    /// Initialize with module context and clock configuration
+    pub fn register(&mut self, ctx: &ModuleContext, config: &ClockModuleConfig) {
+        self.tick_interval = Self::determine_interval(config);
         self.data.update();
         self.sender =
             Some(ctx.module_sender(|_event: ClockEvent| ModuleEvent::Clock(Message::Update)));
@@ -135,7 +146,7 @@ impl Clock {
     }
 
     /// Update clock state from GUI message
-    pub fn update(&mut self, message: Message) {
+    pub fn update(&mut self, message: Message, config: &ClockModuleConfig) {
         match message {
             Message::Update => {
                 self.data.update();
@@ -149,6 +160,9 @@ impl Clock {
             Message::NextMonth => {
                 self.calendar_state.next_month();
             }
+            Message::NextFormat => {
+                self.format.advance(&config.format_alt);
+            }
         }
     }
 
@@ -157,18 +171,25 @@ impl Clock {
         view::build_calendar_menu_view(&self.calendar_state, icons)
     }
 
-    /// Determine tick interval based on format string
-    fn determine_interval(format: &str) -> Duration {
-        const SECOND_SPECIFIERS: [&str; 6] = ["%S", "%T", "%X", "%r", "%:z", "%s"];
-
-        if SECOND_SPECIFIERS
-            .iter()
-            .any(|specifier| format.contains(specifier))
-        {
+    /// Determine tick interval from every format the module can render.
+    ///
+    /// The fastest format wins so switching to an alternative never leaves the
+    /// clock ticking too slowly for the seconds it displays.
+    fn determine_interval(config: &ClockModuleConfig) -> Duration {
+        if config.formats().any(Self::format_shows_seconds) {
             Duration::from_secs(1)
         } else {
             Duration::from_secs(5)
         }
+    }
+
+    /// Reports whether a `chrono` format string renders seconds.
+    fn format_shows_seconds(format: &str) -> bool {
+        const SECOND_SPECIFIERS: [&str; 6] = ["%S", "%T", "%X", "%r", "%:z", "%s"];
+
+        SECOND_SPECIFIERS
+            .iter()
+            .any(|specifier| format.contains(specifier))
     }
 }
 
@@ -176,28 +197,36 @@ impl<M> Module<M> for Clock
 where
     M: 'static + Clone + From<Message>
 {
-    type ViewData<'a> = &'a str;
-    type RegistrationData<'a> = &'a str;
+    type ViewData<'a> = &'a ClockModuleConfig;
+    type RegistrationData<'a> = &'a ClockModuleConfig;
 
     fn register(
         &mut self,
         ctx: &ModuleContext,
-        format: Self::RegistrationData<'_>
+        config: Self::RegistrationData<'_>
     ) -> Result<(), ModuleError> {
-        self.register(ctx, format);
+        self.register(ctx, config);
         Ok(())
     }
 
+    /// Renders the clock in its active format.
+    ///
+    /// A clock declaring alternatives cycles them on the left button and moves
+    /// the calendar to the right button, the way waybar binds `format-alt`.
     fn view(
         &self,
-        format: Self::ViewData<'_>
+        config: Self::ViewData<'_>
     ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
         use iced::widget::text;
 
-        let clock_text = text(self.data.format(format)).into();
-        let on_press = Some(OnModulePress::ToggleMenu(MenuType::Calendar));
+        let clock_text = text(self.data.format(self.active_format(config))).into();
+        let on_press = if config.has_alternatives() {
+            OnModulePress::Action(Box::new(M::from(Message::NextFormat)))
+        } else {
+            OnModulePress::ToggleMenu(MenuType::Calendar)
+        };
 
-        Some((clock_text, on_press))
+        Some((clock_text, Some(on_press)))
     }
 }
 
@@ -213,15 +242,69 @@ mod tests {
         assert_eq!(formatted.len(), 5);
     }
 
+    fn config(format: &str, alternatives: &[&str]) -> ClockModuleConfig {
+        ClockModuleConfig {
+            format:       format.to_string(),
+            format_alt:   alternatives.iter().map(|alt| alt.to_string()).collect(),
+            show_weather: false
+        }
+    }
+
     #[test]
     fn determine_interval_with_seconds() {
-        let interval = Clock::determine_interval("%H:%M:%S");
+        let interval = Clock::determine_interval(&config("%H:%M:%S", &[]));
         assert_eq!(interval, Duration::from_secs(1));
     }
 
     #[test]
     fn determine_interval_without_seconds() {
-        let interval = Clock::determine_interval("%H:%M");
+        let interval = Clock::determine_interval(&config("%H:%M", &[]));
         assert_eq!(interval, Duration::from_secs(5));
+    }
+
+    #[test]
+    fn determine_interval_follows_the_fastest_alternative() {
+        let interval = Clock::determine_interval(&config("%H:%M", &["%H:%M:%S"]));
+        assert_eq!(interval, Duration::from_secs(1));
+    }
+
+    #[test]
+    fn a_press_walks_the_configured_formats_and_wraps_around() {
+        let config = config("%H:%M", &["%d.%m.%y", "%A"]);
+        let mut clock = Clock::new();
+
+        assert_eq!(clock.active_format(&config), "%H:%M");
+
+        clock.update(Message::NextFormat, &config);
+        assert_eq!(clock.active_format(&config), "%d.%m.%y");
+
+        clock.update(Message::NextFormat, &config);
+        assert_eq!(clock.active_format(&config), "%A");
+
+        clock.update(Message::NextFormat, &config);
+        assert_eq!(clock.active_format(&config), "%H:%M");
+    }
+
+    #[test]
+    fn a_clock_without_alternatives_keeps_its_format() {
+        let config = config("%H:%M", &[]);
+        let mut clock = Clock::new();
+
+        clock.update(Message::NextFormat, &config);
+
+        assert_eq!(clock.active_format(&config), "%H:%M");
+    }
+
+    #[test]
+    fn the_rendered_text_follows_the_active_format() {
+        let config = config("%H", &["%M"]);
+        let mut clock = Clock::new();
+
+        let hours = clock.data().format(clock.active_format(&config));
+        clock.update(Message::NextFormat, &config);
+        let minutes = clock.data().format(clock.active_format(&config));
+
+        assert_eq!(hours, clock.data().current_time.format("%H").to_string());
+        assert_eq!(minutes, clock.data().current_time.format("%M").to_string());
     }
 }

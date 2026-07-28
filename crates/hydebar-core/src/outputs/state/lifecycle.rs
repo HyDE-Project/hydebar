@@ -200,4 +200,32 @@ impl Outputs {
             _ => Task::none()
         }
     }
+
+    /// Remove every surface the bar currently owns.
+    ///
+    /// Used on the way out: the compositor drops the surfaces when the client
+    /// disconnects anyway, but a bar that is being replaced has to leave the
+    /// screen before the process goes away, otherwise the successor draws over
+    /// a bar that is still visible.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// let task = outputs.destroy_all();
+    /// spawn(task);
+    /// ```
+    pub fn destroy_all<Message: 'static>(&mut self) -> Task<Message> {
+        let tasks = self
+            .0
+            .iter_mut()
+            .filter_map(|(_, shell_info, _)| shell_info.take())
+            .map(|shell_info| {
+                destroy_layer_surfaces(shell_info.id, shell_info.menu.id, shell_info.tooltip_id)
+            })
+            .collect::<Vec<_>>();
+
+        debug!("Destroying {} output surface groups", tasks.len());
+
+        Task::batch(tasks)
+    }
 }

@@ -32,7 +32,7 @@ pub use appearance::{
 };
 pub use battery::BatteryModuleConfig;
 pub use clock::ClockModuleConfig;
-pub use custom_module::{CustomModuleDef, CustomModuleSource};
+pub use custom_module::{CustomMenuEntry, CustomModuleDef, CustomModuleSource};
 pub use icons::IconsConfig;
 pub use keybindings::{GlobalKeybindings, Keybindings, MenuKeybindings};
 pub use keyboard_layout::KeyboardLayoutModuleConfig;
@@ -42,8 +42,8 @@ use serde::Deserialize;
 pub use serde_helpers::RegexCfg;
 pub use settings::SettingsModuleConfig;
 pub use system_info::{
-    SystemIndicator, SystemInfoCpu, SystemInfoDisk, SystemInfoMemory, SystemInfoTemperature,
-    SystemModuleConfig
+    MemoryFormat, SystemIndicator, SystemInfoCpu, SystemInfoDisk, SystemInfoMemory,
+    SystemInfoTemperature, SystemModuleConfig
 };
 pub use themes::PresetTheme;
 pub use updates::UpdatesModuleConfig;

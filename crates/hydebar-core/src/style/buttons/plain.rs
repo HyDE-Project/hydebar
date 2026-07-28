@@ -37,6 +37,27 @@ pub fn ghost_button_style(opacity: f32) -> impl Fn(&Theme, Status) -> button::St
     }
 }
 
+/// Builds the style of a context menu entry.
+///
+/// It is the ghost style of the other menu rows, rounded with the pill radius
+/// the bar is themed with so an entry echoes the module it was opened from.
+pub fn menu_entry_button_style(
+    opacity: f32,
+    radius: f32
+) -> impl Fn(&Theme, Status) -> button::Style {
+    move |theme, status| {
+        let base = ghost_button_style(opacity)(theme, status);
+
+        button::Style {
+            border: Border {
+                radius: radius.into(),
+                ..base.border
+            },
+            ..base
+        }
+    }
+}
+
 /// Builds an outline button style closure that highlights borders on hover.
 pub fn outline_button_style(opacity: f32) -> impl Fn(&Theme, Status) -> button::Style {
     move |theme, status| {

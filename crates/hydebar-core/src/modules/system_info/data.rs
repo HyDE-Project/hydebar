@@ -34,7 +34,11 @@ impl NetworkData {
 pub struct SystemInfoData {
     pub cpu_usage:         u32,
     pub memory_usage:      u32,
+    /// Memory in use, in bytes, behind [`Self::memory_usage`].
+    pub memory_used:       u64,
     pub memory_swap_usage: u32,
+    /// Swap in use, in bytes, behind [`Self::memory_swap_usage`].
+    pub memory_swap_used:  u64,
     pub temperature:       Option<i32>,
     pub disks:             Vec<(String, u32)>,
     pub network:           Option<NetworkData>
@@ -167,18 +171,10 @@ impl SystemInfoSampler {
         self.system.refresh_memory();
 
         let cpu_usage = self.system.global_cpu_usage().floor() as u32;
-        let memory_usage = percentage(
-            self.system
-                .total_memory()
-                .saturating_sub(self.system.available_memory()),
-            self.system.total_memory()
-        );
-        let memory_swap_usage = percentage(
-            self.system
-                .total_swap()
-                .saturating_sub(self.system.free_swap()),
-            self.system.total_swap()
-        );
+        let (memory_usage, memory_used) =
+            memory_share(self.system.total_memory(), self.system.available_memory());
+        let (memory_swap_usage, memory_swap_used) =
+            memory_share(self.system.total_swap(), self.system.free_swap());
 
         let temperature = None;
 
@@ -189,7 +185,9 @@ impl SystemInfoSampler {
         SystemInfoData {
             cpu_usage,
             memory_usage,
+            memory_used,
             memory_swap_usage,
+            memory_swap_used,
             temperature,
             disks,
             network
@@ -226,18 +224,10 @@ impl SystemInfoSampler {
         self.last_network = observation;
 
         let cpu_usage = self.system.global_cpu_usage().floor() as u32;
-        let memory_usage = percentage(
-            self.system
-                .total_memory()
-                .saturating_sub(self.system.available_memory()),
-            self.system.total_memory()
-        );
-        let memory_swap_usage = percentage(
-            self.system
-                .total_swap()
-                .saturating_sub(self.system.free_swap()),
-            self.system.total_swap()
-        );
+        let (memory_usage, memory_used) =
+            memory_share(self.system.total_memory(), self.system.available_memory());
+        let (memory_swap_usage, memory_swap_used) =
+            memory_share(self.system.total_swap(), self.system.free_swap());
 
         let temperature = self.components.as_ref().and_then(|components| {
             components
@@ -270,7 +260,9 @@ impl SystemInfoSampler {
         SystemInfoData {
             cpu_usage,
             memory_usage,
+            memory_used,
             memory_swap_usage,
+            memory_swap_used,
             temperature,
             disks,
             network
@@ -284,6 +276,13 @@ fn percentage(used: u64, total: u64) -> u32 {
     }
 
     ((used as f32 / total as f32) * 100.) as u32
+}
+
+/// Share and absolute amount of a memory pool in use.
+fn memory_share(total: u64, unused: u64) -> (u32, u64) {
+    let used = total.saturating_sub(unused);
+
+    (percentage(used, total), used)
 }
 
 #[cfg(test)]
@@ -314,6 +313,16 @@ mod tests {
     #[test]
     fn percentage_handles_zero_total() {
         assert_eq!(percentage(5, 0), 0);
+    }
+
+    #[test]
+    fn memory_share_reports_percentage_and_bytes() {
+        assert_eq!(memory_share(1000, 250), (75, 750));
+    }
+
+    #[test]
+    fn memory_share_handles_an_absent_pool() {
+        assert_eq!(memory_share(0, 0), (0, 0));
     }
 
     #[test]

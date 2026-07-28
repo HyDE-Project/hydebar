@@ -28,7 +28,7 @@ impl App {
             "clipboard",
             modules::Module::<Message>::register(&mut self.clipboard, ctx, ())
         );
-        self.clock.register(ctx, &self.config.clock.format);
+        self.clock.register(ctx, &self.config.clock);
         self.weather.register(ctx);
         register(
             "updates",

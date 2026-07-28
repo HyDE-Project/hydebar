@@ -6,7 +6,7 @@ use iced::{
 use super::{Message, data::SystemInfoData};
 use crate::{
     components::icons::{IconTheme, Icons, icon},
-    config::{Appearance, SystemIndicator, SystemModuleConfig},
+    config::{Appearance, MemoryFormat, SystemIndicator, SystemModuleConfig},
     menu::MenuType,
     modules::OnModulePress
 };
@@ -28,36 +28,66 @@ fn info_element<'a>(
     .into()
 }
 
+/// Value of an indicator paired with the thresholds coloring it.
+#[derive(Debug, Clone, Copy)]
+struct Thresholds<V> {
+    value: V,
+    warn:  V,
+    alert: V
+}
+
+impl<V> Thresholds<V> {
+    fn new(value: V, warn: V, alert: V) -> Self {
+        Self {
+            value,
+            warn,
+            alert
+        }
+    }
+}
+
+/// Builds the text of an indicator out of an optional prefix, a value and its
+/// unit.
+fn indicator_label(prefix: Option<&str>, value: impl std::fmt::Display, unit: &str) -> String {
+    match prefix {
+        Some(prefix) => format!("{prefix} {value}{unit}"),
+        None => format!("{value}{unit}")
+    }
+}
+
+/// Amount of bytes rendered as gibibytes with a single decimal.
+fn gigabytes(bytes: u64) -> String {
+    format!("{:.1}", bytes as f64 / (1024.0 * 1024.0 * 1024.0))
+}
+
+/// Renders a memory readout in the format the active index selects.
+fn memory_label(format: MemoryFormat, prefix: Option<&str>, usage: u32, used: u64) -> String {
+    match format {
+        MemoryFormat::Percentage => indicator_label(prefix, usage, "%"),
+        MemoryFormat::Bytes => indicator_label(prefix, gigabytes(used), "GB")
+    }
+}
+
 fn indicator_info_element<V>(
     icons: &IconTheme,
     info_icon: Icons,
-    value: V,
-    unit: &str,
-    threshold: Option<(V, V)>,
-    prefix: Option<String>,
+    label: String,
+    thresholds: Option<Thresholds<V>>,
     icon_label_gap: f32
 ) -> Element<'static, Message>
 where
-    V: std::fmt::Display + PartialOrd + Copy + 'static
+    V: PartialOrd + Copy + 'static
 {
-    let content = container(
-        row!(
-            icon(icons, info_icon),
-            if let Some(prefix) = prefix {
-                text(format!("{prefix} {value}{unit}"))
-            } else {
-                text(format!("{value}{unit}"))
-            }
-        )
-        .spacing(icon_label_gap)
-    );
+    let content = container(row!(icon(icons, info_icon), text(label)).spacing(icon_label_gap));
 
-    if let Some((warn_threshold, alert_threshold)) = threshold {
+    if let Some(thresholds) = thresholds {
         content
             .style(move |theme: &Theme| container::Style {
-                text_color: if value > warn_threshold && value < alert_threshold {
+                text_color: if thresholds.value > thresholds.warn
+                    && thresholds.value < thresholds.alert
+                {
                     Some(theme.extended_palette().danger.weak.color)
-                } else if value >= alert_threshold {
+                } else if thresholds.value >= thresholds.alert {
                     Some(theme.palette().danger)
                 } else {
                     None
@@ -159,6 +189,7 @@ pub fn build_menu_view<'a>(data: &'a SystemInfoData, icons: &IconTheme) -> Eleme
 pub fn indicator_elements<M>(
     data: SystemInfoData,
     config: &SystemModuleConfig,
+    memory_format: MemoryFormat,
     appearance: &Appearance,
     icons: &IconTheme
 ) -> Vec<Element<'static, M>>
@@ -175,41 +206,51 @@ where
                 SystemIndicator::Cpu => Some(indicator_info_element(
                     icons,
                     Icons::Cpu,
-                    data.cpu_usage,
-                    "%",
-                    Some((config.cpu.warn_threshold, config.cpu.alert_threshold)),
-                    None,
+                    indicator_label(None, data.cpu_usage, "%"),
+                    Some(Thresholds::new(
+                        data.cpu_usage,
+                        config.cpu.warn_threshold,
+                        config.cpu.alert_threshold
+                    )),
                     icon_label_gap
                 )),
                 SystemIndicator::Memory => Some(indicator_info_element(
                     icons,
                     Icons::Mem,
-                    data.memory_usage,
-                    "%",
-                    Some((config.memory.warn_threshold, config.memory.alert_threshold)),
-                    None,
+                    memory_label(memory_format, None, data.memory_usage, data.memory_used),
+                    Some(Thresholds::new(
+                        data.memory_usage,
+                        config.memory.warn_threshold,
+                        config.memory.alert_threshold
+                    )),
                     icon_label_gap
                 )),
                 SystemIndicator::MemorySwap => Some(indicator_info_element(
                     icons,
                     Icons::Mem,
-                    data.memory_swap_usage,
-                    "%",
-                    Some((config.memory.warn_threshold, config.memory.alert_threshold)),
-                    Some("swap".to_string()),
+                    memory_label(
+                        memory_format,
+                        Some("swap"),
+                        data.memory_swap_usage,
+                        data.memory_swap_used
+                    ),
+                    Some(Thresholds::new(
+                        data.memory_swap_usage,
+                        config.memory.warn_threshold,
+                        config.memory.alert_threshold
+                    )),
                     icon_label_gap
                 )),
                 SystemIndicator::Temperature => data.temperature.map(|temperature| {
                     indicator_info_element(
                         icons,
                         Icons::Temp,
-                        temperature,
-                        "°C",
-                        Some((
+                        indicator_label(None, temperature, "°C"),
+                        Some(Thresholds::new(
+                            temperature,
                             config.temperature.warn_threshold,
                             config.temperature.alert_threshold
                         )),
-                        None,
                         icon_label_gap
                     )
                 }),
@@ -219,10 +260,12 @@ where
                             Some(indicator_info_element(
                                 icons,
                                 Icons::Drive,
-                                *disk,
-                                "%",
-                                Some((config.disk.warn_threshold, config.disk.alert_threshold)),
-                                Some(disk_mount.clone()),
+                                indicator_label(Some(disk_mount), *disk, "%"),
+                                Some(Thresholds::new(
+                                    *disk,
+                                    config.disk.warn_threshold,
+                                    config.disk.alert_threshold
+                                )),
                                 icon_label_gap
                             ))
                         } else {
@@ -239,24 +282,20 @@ where
                 }),
                 SystemIndicator::DownloadSpeed => data.network.as_ref().map(|network| {
                     let (value, unit) = format_speed(network.download_speed);
-                    indicator_info_element(
+                    indicator_info_element::<u32>(
                         icons,
                         Icons::DownloadSpeed,
-                        value,
-                        unit,
-                        None,
+                        indicator_label(None, value, unit),
                         None,
                         icon_label_gap
                     )
                 }),
                 SystemIndicator::UploadSpeed => data.network.as_ref().map(|network| {
                     let (value, unit) = format_speed(network.upload_speed);
-                    indicator_info_element(
+                    indicator_info_element::<u32>(
                         icons,
                         Icons::UploadSpeed,
-                        value,
-                        unit,
-                        None,
+                        indicator_label(None, value, unit),
                         None,
                         icon_label_gap
                     )
@@ -268,37 +307,46 @@ where
 }
 
 /// Construct the condensed indicator row shown in the module section.
+/// A module declaring alternative readouts cycles them on the left button and
+/// moves the menu to the right button, the way waybar binds `format-alt`.
 pub fn build_indicator_view<M>(
     data: &SystemInfoData,
     config: &SystemModuleConfig,
+    memory_format: MemoryFormat,
     appearance: &Appearance,
     icons: &IconTheme
 ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)>
 where
     M: 'static + From<Message>
 {
-    let indicators = indicator_elements(data.clone(), config, appearance, icons);
+    let indicators = indicator_elements(data.clone(), config, memory_format, appearance, icons);
+
+    let on_press = if config.has_alternatives() {
+        OnModulePress::Action(Box::new(M::from(Message::NextFormat)))
+    } else {
+        OnModulePress::ToggleMenu(MenuType::SystemInfo)
+    };
 
     Some((
         Row::with_children(indicators)
             .align_y(Alignment::Center)
             .spacing(appearance.module_gap())
             .into(),
-        Some(OnModulePress::ToggleMenu(MenuType::SystemInfo))
+        Some(on_press)
     ))
 }
 
-// TODO: Fix test imports after config refactoring
-#[cfg(all(test, feature = "enable-broken-tests"))]
+#[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::{SystemInfoDisk, SystemInfoMemory, SystemInfoTemperature};
 
     fn data_fixture() -> SystemInfoData {
         SystemInfoData {
             cpu_usage:         25,
             memory_usage:      50,
+            memory_used:       8 * 1024 * 1024 * 1024,
             memory_swap_usage: 10,
+            memory_swap_used:  1024 * 1024 * 1024,
             temperature:       Some(42),
             disks:             vec![("/".to_string(), 60)],
             network:           None
@@ -307,23 +355,18 @@ mod tests {
 
     #[test]
     fn indicator_row_contains_configured_entries() {
-        let data = data_fixture();
         let config = SystemModuleConfig {
-            indicators:  vec![SystemIndicator::Cpu, SystemIndicator::Memory],
-            cpu:         Default::default(),
-            memory:      SystemInfoMemory {
-                warn_threshold:  70,
-                alert_threshold: 90
-            },
-            temperature: SystemInfoTemperature {
-                warn_threshold:  70,
-                alert_threshold: 90
-            },
-            disk:        Default::default()
+            indicators: vec![SystemIndicator::Cpu, SystemIndicator::Memory],
+            ..SystemModuleConfig::default()
         };
 
-        let indicators: Vec<Element<'_, Message>> =
-            indicator_elements(data, &config, &Appearance::default());
+        let indicators: Vec<Element<'_, Message>> = indicator_elements(
+            data_fixture(),
+            &config,
+            MemoryFormat::Percentage,
+            &Appearance::default(),
+            &IconTheme::default()
+        );
         assert_eq!(indicators.len(), 2);
     }
 
@@ -342,8 +385,13 @@ mod tests {
             ..SystemModuleConfig::default()
         };
 
-        let indicators: Vec<Element<'_, Message>> =
-            indicator_elements(data, &config, &Appearance::default());
+        let indicators: Vec<Element<'_, Message>> = indicator_elements(
+            data,
+            &config,
+            MemoryFormat::Percentage,
+            &Appearance::default(),
+            &IconTheme::default()
+        );
         assert_eq!(indicators.len(), 2);
     }
 
@@ -351,5 +399,52 @@ mod tests {
     fn format_speed_converts_large_values_to_megabytes() {
         let (value, unit) = format_speed(2048);
         assert_eq!((value, unit), (2, "MB/s"));
+    }
+
+    #[test]
+    fn the_memory_readout_follows_the_active_format() {
+        let data = data_fixture();
+
+        assert_eq!(
+            memory_label(
+                MemoryFormat::Percentage,
+                None,
+                data.memory_usage,
+                data.memory_used
+            ),
+            "50%"
+        );
+        assert_eq!(
+            memory_label(
+                MemoryFormat::Bytes,
+                None,
+                data.memory_usage,
+                data.memory_used
+            ),
+            "8.0GB"
+        );
+    }
+
+    #[test]
+    fn a_prefixed_memory_readout_keeps_its_prefix_in_both_formats() {
+        assert_eq!(
+            memory_label(
+                MemoryFormat::Percentage,
+                Some("swap"),
+                10,
+                1024 * 1024 * 1024
+            ),
+            "swap 10%"
+        );
+        assert_eq!(
+            memory_label(MemoryFormat::Bytes, Some("swap"), 10, 1024 * 1024 * 1024),
+            "swap 1.0GB"
+        );
+    }
+
+    #[test]
+    fn gigabytes_round_to_a_single_decimal() {
+        assert_eq!(gigabytes(0), "0.0");
+        assert_eq!(gigabytes(1024 * 1024 * 1024 * 3 / 2), "1.5");
     }
 }

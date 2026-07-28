@@ -11,6 +11,7 @@ hydebar-core = { path = "../hydebar-core" }
 hydebar-gui = { path = "../hydebar-gui" }
 hydebar-proto = { path = "../hydebar-proto" }
 iced.workspace = true
+libc.workspace = true
 log.workspace = true
 masterror.workspace = true
 tokio.workspace = true

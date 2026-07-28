@@ -66,7 +66,7 @@ impl App {
             ModuleName::KeyboardLayout => self.keyboard_layout.view(&self.config.keyboard_layout),
             ModuleName::KeyboardSubmap => self.keyboard_submap.view(()),
             ModuleName::Tray => self.tray.view((id, opacity)),
-            ModuleName::Clock => self.clock.view(&self.config.clock.format),
+            ModuleName::Clock => self.clock.view(&self.config.clock),
             ModuleName::Battery => self.battery.data().map(|data| {
                 (
                     crate::views::battery::render_battery(

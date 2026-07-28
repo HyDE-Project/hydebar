@@ -2312,6 +2312,7 @@ dependencies = [
  "hydebar-gui",
  "hydebar-proto",
  "iced",
+ "libc",
  "log",
  "masterror",
  "tokio",

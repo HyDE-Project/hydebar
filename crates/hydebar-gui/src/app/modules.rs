@@ -1,6 +1,6 @@
 //! Module rendering implementation for App - GUI layer only
 
-mod actions;
+pub(super) mod actions;
 mod dispatch;
 mod element;
 mod section;
@@ -14,8 +14,12 @@ use super::state::Message;
 pub struct ModuleActions {
     /// Action bound to the left mouse button.
     left:   Option<OnModulePress<Message>>,
-    /// Message published on a right press.
-    right:  Option<Message>,
+    /// Action bound to the right mouse button.
+    ///
+    /// It carries an [`OnModulePress`] rather than a bare message because a
+    /// custom module declaring a context menu opens it from here, and a menu
+    /// has to be anchored under the module it belongs to.
+    right:  Option<OnModulePress<Message>>,
     /// Message published on a middle press.
     middle: Option<Message>
 }

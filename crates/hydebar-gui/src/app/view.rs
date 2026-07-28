@@ -3,7 +3,7 @@ use std::f32::consts::PI;
 use hydebar_core::{
     HEIGHT,
     menu::{MenuSize, MenuType, menu_wrapper},
-    modules::settings::SettingsViewExt,
+    modules::{custom_module, settings::SettingsViewExt},
     outputs::HasOutput,
     style::{backdrop_color, darken_color, hydebar_theme},
     tooltip::tooltip_wrapper
@@ -17,7 +17,10 @@ use iced::{
     window::Id
 };
 
-use super::state::{App, Message};
+use super::{
+    modules::actions::custom_menu_message,
+    state::{App, Message}
+};
 use crate::centerbox;
 
 impl App {
@@ -264,6 +267,33 @@ impl App {
                         Message::None,
                         Message::CloseMenu(id)
                     ),
+                    Some((MenuType::Custom(name), button_ui_ref)) => {
+                        match self
+                            .config
+                            .custom_modules
+                            .iter()
+                            .find(|definition| &definition.name == name)
+                        {
+                            Some(definition) => menu_wrapper(
+                                id,
+                                custom_module::menu_view(
+                                    definition,
+                                    self.appearance(),
+                                    animated_opacity,
+                                    move |entry| custom_menu_message(id, entry)
+                                ),
+                                MenuSize::Small,
+                                *button_ui_ref,
+                                self.config.position,
+                                self.appearance().style,
+                                animated_opacity,
+                                self.appearance().menu.backdrop,
+                                Message::None,
+                                Message::CloseMenu(id)
+                            ),
+                            None => Row::new().into()
+                        }
+                    }
                     None => Row::new().into()
                 }
             }

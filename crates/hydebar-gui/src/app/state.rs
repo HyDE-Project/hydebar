@@ -42,7 +42,7 @@ use iced::{Task, event::wayland::OutputEvent, window::Id};
 use tokio::runtime::Handle;
 use wayland_client::protocol::wl_output::WlOutput;
 
-use super::bus::BusFlushOutcome;
+use super::{bus::BusFlushOutcome, shutdown::ShutdownSignal};
 
 pub struct App {
     pub(super) config_path: PathBuf,
@@ -87,6 +87,11 @@ pub enum Message {
     BusFlushed(BusFlushOutcome),
     ConfigChanged(ConfigApplied),
     ConfigDegraded(ConfigDegradation),
+    /// The process was asked to quit, by a takeover or by the session.
+    ///
+    /// Handled by taking every surface off the screen before the runtime is
+    /// stopped, so a bar that is being replaced leaves nothing behind.
+    Shutdown(ShutdownSignal),
     ToggleMenu(MenuType, Id, ButtonUIRef),
     /// A module of the bar surface was entered or left by the pointer.
     ///
@@ -121,6 +126,11 @@ pub enum Message {
     Weather(modules::weather::Message),
     OutputEvent((OutputEvent, WlOutput)),
     LaunchCommand(String),
+    /// An entry of the context menu of a custom module was selected.
+    ///
+    /// Carries the surface the menu was opened from so it can be dismissed
+    /// once the command is on its way.
+    CustomMenuAction(Id, String),
     CustomUpdate(String, modules::custom_module::Message)
 }
 

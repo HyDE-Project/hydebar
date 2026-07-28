@@ -7,6 +7,7 @@ pub mod components;
 pub mod config;
 /// Event bus primitives for communicating UI updates across the core.
 pub mod event_bus;
+pub mod format_cycle;
 pub mod menu;
 pub mod module_context;
 pub mod modules;

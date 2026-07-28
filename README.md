@@ -199,6 +199,33 @@ signal = 20
 registers `SIGRTMIN+20`, so `pkill -RTMIN+20 hydebar` refreshes the module
 immediately — the same contract Waybar scripts use.
 
+#### Context Menus
+
+A module can open a menu on a right press instead of running a command. Each
+entry carries a label, the command it runs and optionally a glyph:
+
+```toml
+[[CustomModule]]
+name = "power"
+icon = ""
+command = "hyde-shell logoutlaunch 1"
+
+[[CustomModule.menu]]
+label = "Lock"
+icon = "󰍁"
+command = "hyde-shell lockscreen.sh"
+
+[[CustomModule.menu]]
+label = "Shutdown"
+icon = "󰚦"
+command = "systemctl poweroff"
+```
+
+The menu is anchored under the module, and selecting an entry runs its command
+and closes the menu. Declaring at least one entry takes precedence over
+`command_right`, which is then ignored: one press cannot both open a menu and
+run a command.
+
 ### System Information
 
 ```toml
@@ -271,6 +298,20 @@ WGPU_BACKEND=gl hydebar
 ```
 
 This forces OpenGL instead of Vulkan.
+
+### Only One Bar Per User
+
+Starting hydebar while another copy is running does not add a second bar: the
+new process asks the running one to quit, waits for it to take its surfaces off
+the screen and then takes over. If the running bar does not go away within two
+seconds the newcomer prints an error and exits without drawing anything.
+
+Ownership is recorded in `$XDG_RUNTIME_DIR/hydebar/instance.lock`, or in
+`/tmp/hydebar-$UID/instance.lock` when the session exports no runtime
+directory. The identity is the user, not the configuration file, because a bar
+claims the surfaces of every requested output; `--config-path` therefore selects
+which configuration the single instance reads rather than starting a second bar.
+A lock file left behind by a crashed bar never blocks a restart.
 
 ### Hyprland-Only Features
 

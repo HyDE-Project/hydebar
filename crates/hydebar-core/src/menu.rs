@@ -26,7 +26,9 @@ pub enum MenuType {
     SystemInfo,
     Notifications,
     Screenshot,
-    Calendar
+    Calendar,
+    /// Context menu of the custom module carrying the given name.
+    Custom(String)
 }
 
 #[derive(Clone, Debug)]

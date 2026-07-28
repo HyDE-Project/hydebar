@@ -11,7 +11,7 @@ use iced::{
 use log::debug;
 
 use super::super::{
-    bus,
+    bus, shutdown,
     state::{App, Message}
 };
 
@@ -28,6 +28,7 @@ impl App {
     pub fn subscription(&self) -> Subscription<Message> {
         let mut subscriptions = vec![
             bus::subscription(self.bus_receiver.clone()).map(Message::BusFlushed),
+            shutdown::subscription().map(Message::Shutdown),
             self.frame_subscription(),
             config::subscription(&self.config_path, Arc::clone(&self.config_manager)).map(
                 |event| match event {

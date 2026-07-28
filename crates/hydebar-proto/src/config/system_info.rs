@@ -20,20 +20,41 @@ impl Default for SystemInfoCpu {
     }
 }
 
+/// Readout rendered by the memory indicators.
+#[derive(Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum MemoryFormat {
+    /// Share of the total memory in use, for instance `50%`.
+    #[default]
+    Percentage,
+    /// Amount of memory in use, for instance `7.8GB`.
+    Bytes
+}
+
 /// Warning and alert thresholds for memory usage, in percent.
 #[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct SystemInfoMemory {
     #[serde(default = "default_mem_warn_threshold")]
     pub warn_threshold:  u32,
     #[serde(default = "default_mem_alert_threshold")]
-    pub alert_threshold: u32
+    pub alert_threshold: u32,
+    /// Readout the memory indicators show by default.
+    #[serde(default)]
+    pub format:          MemoryFormat,
+    /// Readouts a left click cycles through.
+    ///
+    /// Leaving the list empty pins the indicators to [`Self::format`], so a
+    /// configuration written before alternatives existed behaves as before.
+    #[serde(default, alias = "format-alt")]
+    pub format_alt:      Vec<MemoryFormat>
 }
 
 impl Default for SystemInfoMemory {
     fn default() -> Self {
         Self {
             warn_threshold:  default_mem_warn_threshold(),
-            alert_threshold: default_mem_alert_threshold()
+            alert_threshold: default_mem_alert_threshold(),
+            format:          MemoryFormat::default(),
+            format_alt:      Vec::new()
         }
     }
 }
@@ -102,6 +123,13 @@ pub struct SystemModuleConfig {
     pub disk:        SystemInfoDisk
 }
 
+impl SystemModuleConfig {
+    /// Reports whether a left click has another readout to switch to.
+    pub fn has_alternatives(&self) -> bool {
+        !self.memory.format_alt.is_empty()
+    }
+}
+
 impl Default for SystemModuleConfig {
     fn default() -> Self {
         Self {
@@ -152,4 +180,35 @@ fn default_disk_warn_threshold() -> u32 {
 
 fn default_disk_alert_threshold() -> u32 {
     90
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn memory_defaults_to_the_percentage_readout_without_alternatives() {
+        let config = SystemModuleConfig::default();
+
+        assert!(!config.has_alternatives());
+        assert_eq!(config.memory.format, MemoryFormat::Percentage);
+        assert!(config.memory.format_alt.is_empty());
+    }
+
+    #[test]
+    fn memory_alternatives_are_read_from_the_configuration() {
+        let config: SystemModuleConfig = toml::from_str(
+            r#"
+            [memory]
+            format = "Bytes"
+            format-alt = ["Percentage"]
+            "#
+        )
+        .expect("system config");
+
+        assert!(config.has_alternatives());
+        assert_eq!(config.memory.format, MemoryFormat::Bytes);
+        assert_eq!(config.memory.format_alt, vec![MemoryFormat::Percentage]);
+        assert_eq!(config.memory.warn_threshold, default_mem_warn_threshold());
+    }
 }

@@ -7,6 +7,7 @@
 mod data;
 mod error;
 mod listener;
+mod menu;
 mod poller;
 mod state;
 mod view;
@@ -16,6 +17,7 @@ use iced::Element;
 pub use self::{
     data::CustomListenData,
     error::CustomCommandError,
+    menu::menu_view,
     state::{Custom, CustomCommandService, Message}
 };
 use super::{Module, ModuleError, OnModulePress};

@@ -32,6 +32,10 @@ impl App {
                 utils::launcher::execute_command(command);
                 Task::none()
             }
+            Message::CustomMenuAction(id, command) => {
+                utils::launcher::execute_command(command);
+                self.outputs.close_menu(id, &self.config)
+            }
             Message::CustomUpdate(name, message) => {
                 match self.custom.get_mut(&name) {
                     Some(c) => c.update(message),
@@ -55,7 +59,7 @@ impl App {
                 Task::none()
             }
             Message::SystemInfo(message) => {
-                self.system_info.update(message);
+                self.system_info.update(message, &self.config.system);
                 Task::none()
             }
             Message::KeyboardLayout(message) => {
@@ -84,7 +88,7 @@ impl App {
                 close_tray
             }
             Message::Clock(message) => {
-                self.clock.update(message);
+                self.clock.update(message, &self.config.clock);
                 Task::none()
             }
             Message::Weather(message) => {
@@ -94,8 +98,10 @@ impl App {
                 if self.config.clock.show_weather
                     && let modules::weather::Message::Update(weather_data) = message
                 {
-                    self.clock
-                        .update(modules::clock::Message::UpdateWeather(weather_data));
+                    self.clock.update(
+                        modules::clock::Message::UpdateWeather(weather_data),
+                        &self.config.clock
+                    );
                 }
 
                 Task::none()

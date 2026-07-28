@@ -22,6 +22,13 @@ use crate::{
 /// otherwise fire for every hover.
 const TOOLTIP_NAMESPACE: &str = "hydebar-tooltip-layer";
 
+/// Namespace of the full screen surface the menus are drawn on.
+///
+/// Kept apart from the bar for the same reason as the tooltips: a compositor
+/// blur rule matching the bar would otherwise blur the whole desktop as soon
+/// as a menu surface covers it.
+const MENU_NAMESPACE: &str = "hydebar-menu-layer";
+
 /// Maps the configured bar layer onto the compositor layer it is created on.
 fn surface_layer(layer: BarLayer) -> Layer {
     match layer {
@@ -97,7 +104,7 @@ pub(crate) fn create_layer_surfaces<Message: 'static>(
     let menu_id = Id::unique();
     let menu_task = get_layer_surface(SctkLayerSurfaceSettings {
         id: menu_id,
-        namespace: "hydebar-main-layer".to_string(),
+        namespace: MENU_NAMESPACE.to_string(),
         size: Some((None, None)),
         layer: Layer::Background,
         keyboard_interactivity: KeyboardInteractivity::None,

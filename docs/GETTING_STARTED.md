@@ -153,6 +153,33 @@ indicators = ["Cpu", "Memory", "Temperature", "DownloadSpeed"]
 format = "%a %d %b %H:%M"
 ```
 
+## Alternative Formats
+
+Like waybar's `format-alt`, a module can carry a list of alternative formats and
+cycle through them on a left click, wrapping back to the primary format after
+the last alternative. A module that declares no alternative keeps working
+exactly as before.
+
+A module that opens a menu keeps it on the left click while it has no
+alternative; as soon as one is declared, the left click cycles the format and
+the menu moves to the right click.
+
+```toml
+# Clock: time, then date, then back to time
+[clock]
+format = "%I:%M %p"
+format-alt = ["%R %d·%m·%y"]
+
+# System info: gigabytes in use, then percentage, then back to gigabytes
+[system.memory]
+format = "Bytes"
+format-alt = ["Percentage"]
+```
+
+The memory readout applies to the `Memory` and `MemorySwap` indicators;
+`Percentage` shows `50%` and `Bytes` shows `7.8GB`. Both keys also accept their
+snake_case spelling (`format_alt`).
+
 ### Custom Colors
 
 Instead of a preset theme, you can customize every color:

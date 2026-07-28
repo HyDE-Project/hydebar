@@ -4,8 +4,12 @@
 #![allow(clippy::double_ended_iterator_last)]
 
 mod error;
+mod instance;
 
-use std::{backtrace::Backtrace, borrow::Cow, num::NonZeroUsize, panic, path::PathBuf, sync::Arc};
+use std::{
+    backtrace::Backtrace, borrow::Cow, num::NonZeroUsize, panic, path::PathBuf, process::ExitCode,
+    sync::Arc
+};
 
 use clap::Parser;
 use flexi_logger::{Age, Cleanup, Criterion, FileSpec, LogSpecBuilder, Logger, Naming};
@@ -36,7 +40,20 @@ struct Args {
 /// The event loop must not run inside the runtime: the graphics layer blocks
 /// the calling thread while creating the compositor, and blocking a thread that
 /// is already driving tasks aborts the process.
-fn main() -> Result<(), MainError> {
+fn main() -> ExitCode {
+    match start() {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(err) => {
+            error!("{err}");
+            eprintln!("hydebar: {err}");
+
+            ExitCode::FAILURE
+        }
+    }
+}
+
+/// Builds the runtime and runs the bar on it.
+fn start() -> Result<(), MainError> {
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
@@ -74,6 +91,10 @@ fn run(runtime_handle: Handle) -> Result<(), MainError> {
     }));
 
     let (raw_config, config_path) = get_config(args.config_path)?;
+
+    let instance_lock = instance::acquire()?;
+    debug!("instance lock held at {:?}", instance_lock.path());
+
     let config = Arc::new(raw_config);
     let config_manager = Arc::new(ConfigManager::new((*config).clone()));
 
@@ -117,7 +138,7 @@ fn run(runtime_handle: Handle) -> Result<(), MainError> {
         }
     };
 
-    iced::daemon(boot, App::update, App::view)
+    let outcome = iced::daemon(boot, App::update, App::view)
         .settings(settings)
         .subscription(App::subscription)
         .theme(App::theme)
@@ -126,5 +147,9 @@ fn run(runtime_handle: Handle) -> Result<(), MainError> {
         .font(Cow::from(ICON_FONT))
         .default_font(font)
         .run()
-        .map_err(MainError::from)
+        .map_err(MainError::from);
+
+    drop(instance_lock);
+
+    outcome
 }

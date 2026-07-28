@@ -4,7 +4,10 @@ use hydebar_core::components::icons::IconTheme;
 use iced::Task;
 use log::{debug, error, info, warn};
 
-use super::super::state::{App, Message};
+use super::super::{
+    shutdown,
+    state::{App, Message}
+};
 use crate::get_log_spec;
 
 impl App {
@@ -93,6 +96,12 @@ impl App {
                 }
 
                 Task::batch(tasks)
+            }
+            Message::Shutdown(signal) => {
+                info!("shutting down on {signal:?}, removing every surface");
+                shutdown::exit_after_flush();
+
+                self.outputs.destroy_all()
             }
             Message::ConfigDegraded(degradation) => {
                 warn!("Configuration degradation reported: {}", degradation.reason);
