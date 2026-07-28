@@ -14,23 +14,30 @@ use std::time::Duration;
 #[derive(Clone, Debug)]
 pub struct HyprlandClientConfig {
     /// Maximum duration to wait for a synchronous Hyprland request to complete.
-    pub request_timeout:  Duration,
-    /// Maximum time to wait for the Hyprland event listener to yield before
-    /// treating it as hung.
-    pub listener_timeout: Duration,
+    pub request_timeout:           Duration,
+    /// How long an event listener must stay connected before it counts as
+    /// healthy.
+    ///
+    /// A listener is silent whenever the compositor is idle, so silence is not
+    /// a failure and carries no deadline. What the supervisor measures instead
+    /// is how long a connection survived: one that outlived this window resets
+    /// the reconnect backoff, while a connection that keeps dying immediately
+    /// keeps escalating it.
+    pub listener_stability_window: Duration,
     /// Total number of retry attempts for synchronous Hyprland requests.
-    pub retry_attempts:   u8,
-    /// Base delay between retry attempts for synchronous Hyprland requests.
-    pub retry_backoff:    Duration
+    pub retry_attempts:            u8,
+    /// Base delay between retry attempts, and before the first listener
+    /// reconnect.
+    pub retry_backoff:             Duration
 }
 
 impl Default for HyprlandClientConfig {
     fn default() -> Self {
         Self {
-            request_timeout:  Duration::from_secs(2),
-            listener_timeout: Duration::from_secs(60),
-            retry_attempts:   3,
-            retry_backoff:    Duration::from_millis(250)
+            request_timeout:           Duration::from_secs(2),
+            listener_stability_window: Duration::from_secs(60),
+            retry_attempts:            3,
+            retry_backoff:             Duration::from_millis(250)
         }
     }
 }
@@ -46,7 +53,7 @@ mod tests {
         let config = HyprlandClientConfig::default();
 
         assert_eq!(config.request_timeout, Duration::from_secs(2));
-        assert_eq!(config.listener_timeout, Duration::from_secs(60));
+        assert_eq!(config.listener_stability_window, Duration::from_secs(60));
         assert_eq!(config.retry_attempts, 3);
         assert_eq!(config.retry_backoff, Duration::from_millis(250));
     }

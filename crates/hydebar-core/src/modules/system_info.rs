@@ -16,14 +16,14 @@ use crate::{
 /// Messages published by the system information module.
 #[derive(Debug, Clone)]
 pub enum Message {
-    Update,
+    /// Readouts that differ from the ones currently on screen.
+    Sampled(SystemInfoData),
     /// Switch to the next configured readout, wrapping after the last one.
     NextFormat
 }
 
 /// Module responsible for sampling and presenting local system metrics.
 pub struct SystemInfo {
-    sampler: SystemInfoSampler,
     data:    SystemInfoData,
     polling: runtime::PollingTask,
     format:  FormatCycle
@@ -31,14 +31,10 @@ pub struct SystemInfo {
 
 impl Default for SystemInfo {
     fn default() -> Self {
-        let mut sampler = SystemInfoSampler::new();
-        let data = sampler.sample_with_extras();
-
         Self {
-            sampler,
-            data,
+            data:    SystemInfoSampler::new().sample_with_extras(),
             polling: runtime::PollingTask::new(),
-            format: FormatCycle::new()
+            format:  FormatCycle::new()
         }
     }
 }
@@ -47,8 +43,8 @@ impl SystemInfo {
     /// React to module messages by updating cached metrics when necessary.
     pub fn update(&mut self, message: Message, config: &SystemModuleConfig) {
         match message {
-            Message::Update => {
-                self.data = self.sampler.sample_with_extras();
+            Message::Sampled(data) => {
+                self.data = data;
             }
             Message::NextFormat => {
                 self.format.advance(&config.memory.format_alt);

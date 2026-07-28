@@ -88,10 +88,10 @@ mod tests {
 
     fn base_config() -> HyprlandClientConfig {
         HyprlandClientConfig {
-            request_timeout:  Duration::from_millis(50),
-            listener_timeout: Duration::from_secs(1),
-            retry_attempts:   3,
-            retry_backoff:    Duration::ZERO
+            request_timeout:           Duration::from_millis(50),
+            listener_stability_window: Duration::from_secs(1),
+            retry_attempts:            3,
+            retry_backoff:             Duration::ZERO
         }
     }
 

@@ -275,7 +275,6 @@ where
                                     }
                                     Err(err) => {
                                         error!("workspace event stream error: {err}");
-                                        break;
                                     }
                                 }
                             }

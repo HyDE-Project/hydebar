@@ -190,11 +190,11 @@ async fn re_register_aborts_previous_listener() {
                     message
                 }) = event
                 {
+                    // the listener suppresses repeats, so the replacement
+                    // publishes its payload once and then stays quiet
                     if let Message::Event(ServiceEvent::Update(data)) = message {
                         alts.push((name, data.alt));
-                        if alts.len() >= 3 {
-                            break alts;
-                        }
+                        break alts;
                     }
                 }
             }

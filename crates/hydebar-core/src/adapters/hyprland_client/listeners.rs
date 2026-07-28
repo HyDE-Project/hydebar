@@ -1,6 +1,7 @@
 //! Background listeners bridging compositor events onto streams.
 
 mod keyboard;
+mod supervisor;
 mod window;
 mod workspace;
 

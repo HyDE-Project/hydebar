@@ -83,10 +83,15 @@ async fn next_refresh(refresh: Option<&mut Signal>) {
 /// The whole standard output is parsed as a single JSON object, matching the
 /// non-continuous Waybar `exec` contract. A failing run reports an error event
 /// so the module can render an alert without tearing the poller down.
+///
+/// `published` carries the payload the bar is already showing. A run that
+/// reprints it publishes nothing, since the repaint every event triggers would
+/// produce an identical frame.
 async fn run_once(
     module_name: &str,
     command: &str,
-    sender: &ModuleEventSender<Message>
+    sender: &ModuleEventSender<Message>,
+    published: &mut Option<CustomListenData>
 ) -> Result<(), CustomListenerError> {
     let output = Command::new("bash")
         .arg("-c")
@@ -104,6 +109,7 @@ async fn run_once(
                 status: output.status.code()
             };
             error!("Custom module '{module_name}' command failed: {failure:?}");
+            *published = None;
 
             return send_event(sender, ServiceEvent::Error(failure))
                 .map_err(CustomListenerError::Module);
@@ -114,11 +120,18 @@ async fn run_once(
 
     match serde_json::from_str::<CustomListenData>(payload) {
         Ok(data) => {
+            if published.as_ref() == Some(&data) {
+                return Ok(());
+            }
+
+            *published = Some(data.clone());
+
             send_event(sender, ServiceEvent::Update(data)).map_err(CustomListenerError::Module)
         }
         Err(err) => {
             let parse_error = CustomCommandError::Parse(truncate_snippet(payload), Arc::new(err));
             error!("Custom module '{module_name}' failed to parse JSON output: {parse_error:?}");
+            *published = None;
 
             send_event(sender, ServiceEvent::Error(parse_error))
                 .map_err(CustomListenerError::Module)
@@ -140,8 +153,15 @@ pub(super) async fn run_custom_poller(
 ) -> Result<(), CustomListenerError> {
     let mut refresh = open_refresh_signal(signal_offset)?;
     let mut ticker = open_ticker(period);
+    let mut published = None;
 
-    run_once(module_name.as_ref(), command.as_ref(), &sender).await?;
+    run_once(
+        module_name.as_ref(),
+        command.as_ref(),
+        &sender,
+        &mut published
+    )
+    .await?;
 
     if ticker.is_none() && refresh.is_none() {
         return Ok(());
@@ -153,6 +173,12 @@ pub(super) async fn run_custom_poller(
             () = next_refresh(refresh.as_mut()) => {}
         }
 
-        run_once(module_name.as_ref(), command.as_ref(), &sender).await?;
+        run_once(
+            module_name.as_ref(),
+            command.as_ref(),
+            &sender,
+            &mut published
+        )
+        .await?;
     }
 }

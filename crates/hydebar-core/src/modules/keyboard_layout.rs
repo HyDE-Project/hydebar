@@ -141,7 +141,6 @@ where
                                     Ok(HyprlandKeyboardEvent::SubmapChanged(_)) => {}
                                     Err(err) => {
                                         error!("keyboard event stream error: {err}");
-                                        break;
                                     }
                                 }
                             }

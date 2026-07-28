@@ -44,6 +44,35 @@ pub struct SystemInfoData {
     pub network:           Option<NetworkData>
 }
 
+impl SystemInfoData {
+    /// Reports whether two samples would paint the same readouts.
+    ///
+    /// [`NetworkData::last_check`] records when a sample was taken rather than
+    /// anything the bar draws, and it moves on every tick, so plain equality
+    /// would never hold. Excluding it lets an idle machine skip the repaint the
+    /// sample would otherwise force.
+    pub fn renders_same_as(&self, other: &Self) -> bool {
+        let network_matches = match (self.network.as_ref(), other.network.as_ref()) {
+            (Some(left), Some(right)) => {
+                left.ip == right.ip
+                    && left.download_speed == right.download_speed
+                    && left.upload_speed == right.upload_speed
+            }
+            (None, None) => true,
+            _ => false
+        };
+
+        network_matches
+            && self.cpu_usage == other.cpu_usage
+            && self.memory_usage == other.memory_usage
+            && self.memory_used == other.memory_used
+            && self.memory_swap_usage == other.memory_swap_usage
+            && self.memory_swap_used == other.memory_swap_used
+            && self.temperature == other.temperature
+            && self.disks == other.disks
+    }
+}
+
 #[derive(Debug, Clone)]
 struct NetworkSnapshot {
     ip:                Option<String>,

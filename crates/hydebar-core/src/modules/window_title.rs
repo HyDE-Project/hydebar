@@ -150,7 +150,6 @@ where
                                     }
                                     Err(err) => {
                                         error!("window event stream error: {err}");
-                                        break;
                                     }
                                 }
                             }

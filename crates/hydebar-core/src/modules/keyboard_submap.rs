@@ -96,7 +96,6 @@ where
                                     Ok(_) => {}
                                     Err(err) => {
                                         error!("keyboard submap stream error: {err}");
-                                        break;
                                     }
                                 }
                             }

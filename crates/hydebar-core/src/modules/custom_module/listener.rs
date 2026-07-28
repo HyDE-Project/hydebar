@@ -24,6 +24,13 @@ pub(super) fn send_event(
         .map_err(ModuleError::from)
 }
 
+/// Publishes every line the process prints, skipping repeats.
+///
+/// A `listen_cmd` written as a `while :; do …; sleep N; done` loop reprints the
+/// same payload whenever the value it reports has not moved. Forwarding those
+/// repeats costs a full window repaint each time, so an unchanged payload stops
+/// here. A parse failure clears the memo, because the module state it leaves
+/// behind differs from the one the repeated payload described.
 pub(super) async fn forward_custom_updates<R>(
     reader: &mut Lines<R>,
     module_name: &str,
@@ -32,6 +39,8 @@ pub(super) async fn forward_custom_updates<R>(
 where
     R: AsyncBufRead + Unpin
 {
+    let mut published: Option<CustomListenData> = None;
+
     while let Some(line) = reader
         .next_line()
         .await
@@ -39,10 +48,17 @@ where
     {
         match serde_json::from_str::<CustomListenData>(&line) {
             Ok(event) => {
+                if published.as_ref() == Some(&event) {
+                    continue;
+                }
+
+                published = Some(event.clone());
+
                 send_event(sender, ServiceEvent::Update(event))
                     .map_err(CustomListenerError::Module)?;
             }
             Err(err) => {
+                published = None;
                 let parse_error =
                     CustomCommandError::Parse(truncate_snippet(&line), Arc::new(err));
                 error!(

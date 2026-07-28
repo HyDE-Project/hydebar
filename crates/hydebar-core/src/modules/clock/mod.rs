@@ -71,6 +71,20 @@ pub enum Message {
     NextFormat
 }
 
+/// Renders `now` through every format the module can be switched to.
+///
+/// The tick loop compares these strings instead of the timestamp: a bar showing
+/// `%H:%M` gains nothing from waking eleven times a minute, and the whole
+/// window repaints on every event the module publishes. Rendering every
+/// configured format, not just the active one, keeps the comparison correct
+/// across a press that cycles to an alternative.
+fn render_all(formats: &[String], now: DateTime<Local>) -> Vec<String> {
+    formats
+        .iter()
+        .map(|format| now.format(format).to_string())
+        .collect()
+}
+
 /// Clock module - business logic only, no GUI!
 #[derive(Debug)]
 pub struct Clock {
@@ -129,13 +143,22 @@ impl Clock {
         if let Some(sender) = self.sender.clone() {
             let interval_duration = self.tick_interval;
             let update_sender = sender.clone();
+            let formats: Vec<String> = config.formats().map(str::to_owned).collect();
 
             self.task = Some(ctx.runtime_handle().spawn(async move {
                 let mut ticker = interval(interval_duration);
+                let mut rendered: Option<Vec<String>> = None;
 
                 loop {
                     ticker.tick().await;
                     let now = Local::now();
+                    let next = render_all(&formats, now);
+
+                    if rendered.as_ref() == Some(&next) {
+                        continue;
+                    }
+
+                    rendered = Some(next);
 
                     if let Err(err) = update_sender.try_send(ClockEvent::Tick(now)) {
                         error!("Failed to publish clock tick: {err}");
