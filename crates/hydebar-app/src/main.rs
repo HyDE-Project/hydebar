@@ -16,7 +16,7 @@ use hydebar_core::{
 };
 use hydebar_gui::{App, get_log_spec};
 use hydebar_proto::ports::hyprland::HyprlandPort;
-use iced::Font;
+use iced::{Font, Pixels, Settings};
 use log::{debug, error};
 use tokio::runtime::Handle;
 
@@ -84,6 +84,14 @@ fn run(runtime_handle: Handle) -> Result<(), MainError> {
         None => Font::DEFAULT
     };
 
+    let settings = Settings {
+        default_text_size: config
+            .appearance
+            .font_size
+            .map_or_else(|| Settings::default().default_text_size, Pixels::from),
+        ..Settings::default()
+    };
+
     let hyprland: Arc<dyn HyprlandPort> = Arc::new(HyprlandClient::new());
 
     let bus_capacity = NonZeroUsize::new(64).ok_or(MainError::BusCapacity)?;
@@ -110,6 +118,7 @@ fn run(runtime_handle: Handle) -> Result<(), MainError> {
     };
 
     iced::daemon(boot, App::update, App::view)
+        .settings(settings)
         .subscription(App::subscription)
         .theme(App::theme)
         .style(App::style)

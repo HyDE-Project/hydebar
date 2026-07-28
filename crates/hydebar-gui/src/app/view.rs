@@ -19,6 +19,13 @@ use iced::{
 use super::state::{App, Message};
 use crate::centerbox;
 
+/// Outer margin kept around the island pills, as `[vertical, horizontal]`
+/// pixels.
+///
+/// Mirrors the `0.3em 1em` module margin of the reference waybar theme at a
+/// `10px` bar font size.
+const ISLAND_BAR_PADDING: [f32; 2] = [3.0, 10.0];
+
 impl App {
     pub fn title(&self, _id: Id) -> String {
         String::from("hydebar")
@@ -66,9 +73,9 @@ impl App {
                         HEIGHT - 8.
                     } as f32)
                     .padding(if self.appearance().style == AppearanceStyle::Islands {
-                        [4, 4]
+                        ISLAND_BAR_PADDING
                     } else {
-                        [0, 0]
+                        [0.0, 0.0]
                     });
 
                 container(centerbox)

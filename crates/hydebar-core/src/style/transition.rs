@@ -106,6 +106,9 @@ impl AppearanceTransition {
 fn blend_appearance(from: &Appearance, to: &Appearance, t: f32) -> Appearance {
     Appearance {
         font_name:                to.font_name.clone(),
+        font_size:                to.font_size,
+        radius:                   to.radius,
+        follow_hyde:              to.follow_hyde,
         scale_factor:             to.scale_factor,
         style:                    to.style,
         opacity:                  blend_f32(from.opacity, to.opacity, t),

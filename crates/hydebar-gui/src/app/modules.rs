@@ -15,6 +15,13 @@ use log::error;
 
 use super::state::{App, Message};
 
+/// Inner padding of a module pill, as `[vertical, horizontal]` pixels.
+///
+/// Mirrors the reference waybar theme where a pill pads its content by
+/// `0em 1em` and the module label adds `0.2em` on every side, at a `10px`
+/// bar font size.
+const MODULE_PADDING: [f32; 2] = [2.0, 12.0];
+
 impl App {
     pub fn get_module_at_index(
         &self,
@@ -111,11 +118,12 @@ impl App {
                         .align_y(Alignment::Center)
                         .height(Length::Fill)
                 )
-                .padding([2, 8])
+                .padding(MODULE_PADDING)
                 .height(Length::Fill)
                 .style(module_button_style(
                     self.appearance().style,
                     self.appearance().opacity,
+                    self.appearance().pill_radius(),
                     false,
                     false
                 ));
@@ -132,7 +140,7 @@ impl App {
             }
             _ => {
                 let container = container(content)
-                    .padding([2, 8])
+                    .padding(MODULE_PADDING)
                     .height(Length::Fill)
                     .align_y(Alignment::Center);
 
@@ -149,7 +157,7 @@ impl App {
                             ),
                             border: Border {
                                 width:  0.0,
-                                radius: 12.0.into(),
+                                radius: self.appearance().pill_radius().into(),
                                 color:  Color::TRANSPARENT
                             },
                             ..container::Style::default()
@@ -185,11 +193,12 @@ impl App {
                                         .align_y(Alignment::Center)
                                         .height(Length::Fill)
                                 )
-                                .padding([2, 8])
+                                .padding(MODULE_PADDING)
                                 .height(Length::Fill)
                                 .style(module_button_style(
                                     self.appearance().style,
                                     self.appearance().opacity,
+                                    self.appearance().pill_radius(),
                                     true,
                                     false
                                 ));
@@ -208,7 +217,7 @@ impl App {
                                 .into()
                             }
                             _ => container(content)
-                                .padding([2, 8])
+                                .padding(MODULE_PADDING)
                                 .height(Length::Fill)
                                 .align_y(Alignment::Center)
                                 .into()
@@ -229,7 +238,7 @@ impl App {
                             ),
                             border: Border {
                                 width:  0.0,
-                                radius: 12.0.into(),
+                                radius: self.appearance().pill_radius().into(),
                                 color:  Color::TRANSPARENT
                             },
                             ..container::Style::default()

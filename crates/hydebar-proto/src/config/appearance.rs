@@ -2,6 +2,8 @@ use hex_color::HexColor;
 use iced::{Color, theme::palette};
 use serde::{Deserialize, Deserializer, de::Error as _};
 
+use crate::theme_source::{HydeTheme, Rgba};
+
 /// Color palette configuration used to render UI elements.
 #[derive(Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(untagged)]
@@ -147,11 +149,31 @@ fn default_hover_duration_ms() -> u64 {
 pub struct Appearance {
     #[serde(default)]
     pub font_name:                Option<String>,
+    /// Default text size, in pixels, applied to every widget that does not set
+    /// its own.
+    ///
+    /// Left unset the renderer default is used; set it to match another bar,
+    /// for example `10.0` for waybar's default font size.
+    #[serde(default)]
+    pub font_size:                Option<f32>,
     #[serde(
         deserialize_with = "scale_factor_deserializer",
         default = "default_scale_factor"
     )]
     pub scale_factor:             f64,
+    /// Corner radius of the island pills, in pixels.
+    ///
+    /// Left unset the bar falls back to [`DEFAULT_RADIUS`], the radius of the
+    /// reference waybar theme.
+    #[serde(default)]
+    pub radius:                   Option<f32>,
+    /// Whether the appearance follows the theme published by the HyDE Project.
+    ///
+    /// Enabled by default: every field the user did not set explicitly is taken
+    /// from the HyDE theme, so the bar changes along with the rest of the
+    /// desktop. Fields present in the configuration always win.
+    #[serde(default = "default_follow_hyde")]
+    pub follow_hyde:              bool,
     #[serde(default)]
     pub style:                    AppearanceStyle,
     #[serde(deserialize_with = "opacity_deserializer", default = "default_opacity")]
@@ -190,6 +212,105 @@ pub struct Appearance {
 }
 
 static PRIMARY: HexColor = HexColor::rgb(250, 179, 135);
+
+/// Corner radius used when neither the configuration nor the HyDE theme names
+/// one, in pixels.
+///
+/// Mirrors the `3pt` border radius of the reference waybar theme, which
+/// resolves to `4px` at the default `96dpi` scale.
+pub const DEFAULT_RADIUS: f32 = 4.0;
+
+impl Appearance {
+    /// Returns the pill corner radius to render with.
+    #[must_use]
+    pub fn pill_radius(&self) -> f32 {
+        self.radius.unwrap_or(DEFAULT_RADIUS)
+    }
+
+    /// Fills every field the user left at its default with the HyDE theme.
+    ///
+    /// Explicit configuration always wins: a field is only overlaid when it
+    /// still holds the value it would have without a configuration file. Values
+    /// the theme does not provide are left untouched.
+    ///
+    /// The alpha channel of the HyDE colors carries the transparency: the
+    /// module background feeds [`Appearance::opacity`] and the bar background
+    /// feeds [`Appearance::bar_opacity`].
+    pub fn apply_hyde_theme(&mut self, theme: &HydeTheme) {
+        if self.font_name.is_none() {
+            self.font_name.clone_from(&theme.font_family);
+        }
+
+        if self.font_size.is_none() {
+            self.font_size = theme.font_size_px;
+        }
+
+        if self.radius.is_none() {
+            self.radius = theme.radius_px;
+        }
+
+        if let Some(module_background) = theme.module_background {
+            if self.background_color == default_background_color() {
+                self.background_color = AppearanceColor::Complete {
+                    base:   opaque_hex(module_background),
+                    strong: None,
+                    weak:   theme.hover_background.map(opaque_hex),
+                    text:   None
+                };
+            }
+
+            if self.opacity == default_opacity() {
+                self.opacity = module_background.a;
+            }
+        }
+
+        if let Some(bar_background) = theme.bar_background
+            && self.bar_opacity == default_bar_opacity()
+        {
+            self.bar_opacity = bar_background.a;
+        }
+
+        if let Some(text) = theme.text
+            && self.text_color == default_text_color()
+        {
+            self.text_color = AppearanceColor::Simple(opaque_hex(text));
+        }
+
+        if let Some(active_background) = theme.active_background
+            && self.primary_color == default_primary_color()
+        {
+            self.primary_color = AppearanceColor::Complete {
+                base:   opaque_hex(active_background),
+                strong: None,
+                weak:   None,
+                text:   theme
+                    .active_text
+                    .map(opaque_hex)
+                    .or_else(|| text_hex(default_primary_color()))
+            };
+        }
+    }
+}
+
+/// Drops the alpha channel of a HyDE color, which the opacity fields carry
+/// instead.
+fn opaque_hex(color: Rgba) -> HexColor {
+    HexColor::rgb(color.r, color.g, color.b)
+}
+
+/// Returns the text shade of a palette entry, if it declares one.
+fn text_hex(color: AppearanceColor) -> Option<HexColor> {
+    match color {
+        AppearanceColor::Simple(_) => None,
+        AppearanceColor::Complete {
+            text, ..
+        } => text
+    }
+}
+
+fn default_follow_hyde() -> bool {
+    true
+}
 
 fn scale_factor_deserializer<'de, D>(deserializer: D) -> Result<f64, D::Error>
 where
@@ -297,6 +418,9 @@ impl Default for Appearance {
     fn default() -> Self {
         Self {
             font_name:                None,
+            font_size:                None,
+            radius:                   None,
+            follow_hyde:              default_follow_hyde(),
             scale_factor:             1.0,
             style:                    AppearanceStyle::default(),
             opacity:                  default_opacity(),
@@ -375,6 +499,113 @@ mod tests {
         assert!(config.enabled);
         assert_eq!(config.menu_fade_duration_ms, 200);
         assert_eq!(config.hover_duration_ms, 100);
+    }
+
+    #[test]
+    fn font_size_defaults_to_none_and_deserializes() {
+        assert!(Appearance::default().font_size.is_none());
+
+        let without_font_size: Appearance =
+            toml::from_str("").expect("empty appearance table should deserialize");
+        assert!(without_font_size.font_size.is_none());
+
+        let with_font_size: Appearance =
+            toml::from_str("font_size = 10.0").expect("font_size should deserialize");
+        assert_eq!(with_font_size.font_size, Some(10.0));
+    }
+
+    fn hyde_theme() -> HydeTheme {
+        HydeTheme {
+            bar_background:    Some(Rgba::rgba(1, 2, 3, 0.25)),
+            module_background: Some(Rgba::rgba(27, 29, 28, 0.8)),
+            text:              Some(Rgba::rgb(170, 240, 205)),
+            active_background: Some(Rgba::rgb(195, 172, 118)),
+            active_text:       Some(Rgba::rgb(255, 240, 204)),
+            hover_background:  Some(Rgba::rgba(125, 108, 75, 0.4)),
+            hover_text:        None,
+            font_family:       Some(String::from("JetBrainsMono Nerd Font")),
+            font_size_px:      Some(10.0),
+            radius_px:         Some(4.0)
+        }
+    }
+
+    #[test]
+    fn hyde_theme_fills_unset_values() {
+        let mut appearance = Appearance::default();
+        appearance.apply_hyde_theme(&hyde_theme());
+
+        assert_eq!(
+            appearance.font_name.as_deref(),
+            Some("JetBrainsMono Nerd Font")
+        );
+        assert_eq!(appearance.font_size, Some(10.0));
+        assert_eq!(appearance.radius, Some(4.0));
+        assert_eq!(appearance.pill_radius(), 4.0);
+        assert_eq!(appearance.opacity, 0.8);
+        assert_eq!(appearance.bar_opacity, 0.25);
+        assert_eq!(
+            appearance.background_color,
+            AppearanceColor::Complete {
+                base:   HexColor::rgb(27, 29, 28),
+                strong: None,
+                weak:   Some(HexColor::rgb(125, 108, 75)),
+                text:   None
+            }
+        );
+        assert_eq!(
+            appearance.text_color,
+            AppearanceColor::Simple(HexColor::rgb(170, 240, 205))
+        );
+        assert_eq!(
+            appearance.primary_color,
+            AppearanceColor::Complete {
+                base:   HexColor::rgb(195, 172, 118),
+                strong: None,
+                weak:   None,
+                text:   Some(HexColor::rgb(255, 240, 204))
+            }
+        );
+    }
+
+    #[test]
+    fn hyde_theme_leaves_user_set_values_untouched() {
+        let configured = Appearance {
+            font_name: Some(String::from("Fira Sans")),
+            font_size: Some(14.0),
+            radius: Some(0.0),
+            opacity: 0.5,
+            bar_opacity: 0.9,
+            background_color: AppearanceColor::Simple(HexColor::rgb(1, 1, 1)),
+            text_color: AppearanceColor::Simple(HexColor::rgb(2, 2, 2)),
+            primary_color: AppearanceColor::Simple(HexColor::rgb(3, 3, 3)),
+            ..Appearance::default()
+        };
+
+        let mut appearance = configured.clone();
+        appearance.apply_hyde_theme(&hyde_theme());
+
+        assert_eq!(appearance, configured);
+    }
+
+    #[test]
+    fn an_empty_hyde_theme_changes_nothing() {
+        let mut appearance = Appearance::default();
+        appearance.apply_hyde_theme(&HydeTheme::default());
+
+        assert_eq!(appearance, Appearance::default());
+    }
+
+    #[test]
+    fn follow_hyde_is_enabled_unless_disabled_explicitly() {
+        assert!(Appearance::default().follow_hyde);
+
+        let implicit: Appearance = toml::from_str("").expect("empty appearance table");
+        assert!(implicit.follow_hyde);
+
+        let disabled: Appearance =
+            toml::from_str("follow_hyde = false").expect("follow_hyde should deserialize");
+        assert!(!disabled.follow_hyde);
+        assert!(disabled.radius.is_none());
     }
 
     #[test]

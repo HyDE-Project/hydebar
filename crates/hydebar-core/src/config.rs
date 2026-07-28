@@ -5,6 +5,7 @@ use std::{
 };
 
 pub use hydebar_proto::config::*;
+use hydebar_proto::theme_source;
 
 pub mod manager;
 pub mod watch;
@@ -204,10 +205,25 @@ pub(crate) fn read_config(path: &Path) -> Result<Config, ConfigReadError> {
             source
         })?;
 
-    toml::from_str(&content).map_err(|source| ConfigReadError::Parse {
-        path: path.to_path_buf(),
-        source
-    })
+    toml::from_str(&content)
+        .map(follow_hyde_theme)
+        .map_err(|source| ConfigReadError::Parse {
+            path: path.to_path_buf(),
+            source
+        })
+}
+
+/// Overlays the HyDE theme onto a freshly parsed configuration.
+///
+/// Runs on every read, so a hot reload picks up a theme switch that happened
+/// while the bar was running. Opting out with `appearance.follow_hyde = false`
+/// skips reading the theme entirely.
+fn follow_hyde_theme(mut config: Config) -> Config {
+    if config.appearance.follow_hyde {
+        config.appearance.apply_hyde_theme(&theme_source::load());
+    }
+
+    config
 }
 
 fn load_config_or_default(path: &Path) -> Config {

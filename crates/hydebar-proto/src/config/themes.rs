@@ -42,6 +42,9 @@ impl PresetTheme {
 fn catppuccin_mocha() -> Appearance {
     Appearance {
         font_name:                None,
+        font_size:                None,
+        radius:                   None,
+        follow_hyde:              true,
         scale_factor:             1.0,
         style:                    AppearanceStyle::Islands,
         opacity:                  0.95,
@@ -79,6 +82,9 @@ fn catppuccin_mocha() -> Appearance {
 fn catppuccin_macchiato() -> Appearance {
     Appearance {
         font_name:                None,
+        font_size:                None,
+        radius:                   None,
+        follow_hyde:              true,
         scale_factor:             1.0,
         style:                    AppearanceStyle::Islands,
         opacity:                  0.95,
@@ -116,6 +122,9 @@ fn catppuccin_macchiato() -> Appearance {
 fn catppuccin_frappe() -> Appearance {
     Appearance {
         font_name:                None,
+        font_size:                None,
+        radius:                   None,
+        follow_hyde:              true,
         scale_factor:             1.0,
         style:                    AppearanceStyle::Islands,
         opacity:                  0.95,
@@ -153,6 +162,9 @@ fn catppuccin_frappe() -> Appearance {
 fn catppuccin_latte() -> Appearance {
     Appearance {
         font_name:                None,
+        font_size:                None,
+        radius:                   None,
+        follow_hyde:              true,
         scale_factor:             1.0,
         style:                    AppearanceStyle::Islands,
         opacity:                  0.95,
@@ -188,6 +200,9 @@ fn catppuccin_latte() -> Appearance {
 fn dracula() -> Appearance {
     Appearance {
         font_name:                None,
+        font_size:                None,
+        radius:                   None,
+        follow_hyde:              true,
         scale_factor:             1.0,
         style:                    AppearanceStyle::Islands,
         opacity:                  0.95,
@@ -219,6 +234,9 @@ fn dracula() -> Appearance {
 fn nord() -> Appearance {
     Appearance {
         font_name:                None,
+        font_size:                None,
+        radius:                   None,
+        follow_hyde:              true,
         scale_factor:             1.0,
         style:                    AppearanceStyle::Islands,
         opacity:                  0.95,
@@ -250,6 +268,9 @@ fn nord() -> Appearance {
 fn gruvbox_dark() -> Appearance {
     Appearance {
         font_name:                None,
+        font_size:                None,
+        radius:                   None,
+        follow_hyde:              true,
         scale_factor:             1.0,
         style:                    AppearanceStyle::Islands,
         opacity:                  0.95,
@@ -281,6 +302,9 @@ fn gruvbox_dark() -> Appearance {
 fn gruvbox_light() -> Appearance {
     Appearance {
         font_name:                None,
+        font_size:                None,
+        radius:                   None,
+        follow_hyde:              true,
         scale_factor:             1.0,
         style:                    AppearanceStyle::Islands,
         opacity:                  0.95,
@@ -312,6 +336,9 @@ fn gruvbox_light() -> Appearance {
 fn tokyo_night() -> Appearance {
     Appearance {
         font_name:                None,
+        font_size:                None,
+        radius:                   None,
+        follow_hyde:              true,
         scale_factor:             1.0,
         style:                    AppearanceStyle::Islands,
         opacity:                  0.95,
@@ -347,6 +374,9 @@ fn tokyo_night() -> Appearance {
 fn tokyo_night_storm() -> Appearance {
     Appearance {
         font_name:                None,
+        font_size:                None,
+        radius:                   None,
+        follow_hyde:              true,
         scale_factor:             1.0,
         style:                    AppearanceStyle::Islands,
         opacity:                  0.95,
@@ -382,6 +412,9 @@ fn tokyo_night_storm() -> Appearance {
 fn tokyo_night_light() -> Appearance {
     Appearance {
         font_name:                None,
+        font_size:                None,
+        radius:                   None,
+        follow_hyde:              true,
         scale_factor:             1.0,
         style:                    AppearanceStyle::Islands,
         opacity:                  0.95,

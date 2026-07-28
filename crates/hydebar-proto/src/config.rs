@@ -22,7 +22,7 @@ mod workspaces;
 mod themes_tests;
 
 pub use appearance::{
-    AnimationConfig, Appearance, AppearanceColor, AppearanceStyle, MenuAppearance
+    AnimationConfig, Appearance, AppearanceColor, AppearanceStyle, DEFAULT_RADIUS, MenuAppearance
 };
 pub use battery::BatteryModuleConfig;
 pub use clock::ClockModuleConfig;

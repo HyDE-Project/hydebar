@@ -14,4 +14,5 @@ serde_with.workspace = true
 tokio-stream.workspace = true
 
 [dev-dependencies]
+tempfile = "3"
 toml.workspace = true
