@@ -1,13 +1,62 @@
 version: 2
+
 updates:
-  # Rust (Cargo)
   - package-ecosystem: cargo
-    directory: "/" 
+    directory: "/"
     schedule:
       interval: weekly
-      
-  # GitHub Actions
+      day: monday
+      time: "04:00"
+      timezone: Asia/Ho_Chi_Minh
+    open-pull-requests-limit: 3
+    rebase-strategy: auto
+    labels:
+      - dependencies
+      - rust
+    commit-message:
+      prefix: chore
+    groups:
+      # One pull request a week for everything that cannot break a build.
+      cargo-compatible:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+      # Breaking bumps are grouped as well, but kept apart, so a red build
+      # points at the majors instead of at a mixed pull request.
+      cargo-major:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - major
+      cargo-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+    ignore:
+      # The vendored fork is pinned by hand; its commit bumps are not a weekly
+      # dependency review.
+      - dependency-name: iced
+      - dependency-name: iced_*
+
   - package-ecosystem: github-actions
-    directory: "/" 
+    directory: "/"
     schedule:
       interval: weekly
+      day: monday
+      time: "04:00"
+      timezone: Asia/Ho_Chi_Minh
+    open-pull-requests-limit: 1
+    rebase-strategy: auto
+    labels:
+      - dependencies
+      - ci
+    commit-message:
+      prefix: ci
+    groups:
+      actions:
+        patterns:
+          - "*"
