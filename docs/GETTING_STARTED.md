@@ -113,6 +113,7 @@ Available modules:
 - `Privacy` - Camera/mic/screenshare indicators
 - `Notifications` - Notification center with DND mode
 - `Screenshot` - Screenshot and screen recording
+- `IdleInhibitor` - Toggle keeping the session awake (caffeine)
 - `Settings` - Comprehensive settings panel
 - Custom modules (see Advanced section)
 

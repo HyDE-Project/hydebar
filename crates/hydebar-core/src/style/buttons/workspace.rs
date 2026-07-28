@@ -11,7 +11,9 @@ use crate::config::AppearanceColor;
 /// Builds the workspace button style closure, handling optional colours.
 ///
 /// Only the focused workspace is filled with its monitor colour; the remaining
-/// ones stay muted so the active one reads at a glance.
+/// ones stay muted so the active one reads at a glance. A muted indicator
+/// keeps the bar text colour, which is what the reference waybar theme paints
+/// an idle `#workspaces button` with.
 pub fn workspace_button_style(
     is_empty: bool,
     is_active: bool,
@@ -54,7 +56,7 @@ pub fn workspace_button_style(
                 radius: radius.into()
             },
             text_color: if is_muted {
-                theme.extended_palette().background.weak.text
+                theme.palette().text
             } else {
                 fg_color
             },
@@ -91,7 +93,7 @@ pub fn workspace_button_style(
                     bg_color
                 }));
                 base.text_color = if is_empty {
-                    theme.extended_palette().background.weak.text
+                    theme.palette().text
                 } else {
                     fg_color
                 };

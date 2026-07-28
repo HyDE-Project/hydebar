@@ -87,6 +87,10 @@ impl App {
             "screenshot",
             modules::Module::<Message>::register(&mut self.screenshot, ctx, ())
         );
+        register(
+            "idle-inhibitor",
+            modules::Module::<Message>::register(&mut self.idle_inhibitor, ctx, ())
+        );
 
         for definition in &self.config.custom_modules {
             match self.custom.get_mut(&definition.name) {

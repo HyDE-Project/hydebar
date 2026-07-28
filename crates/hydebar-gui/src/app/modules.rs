@@ -66,7 +66,7 @@ impl App {
         let mut row = row!()
             .height(Length::Shrink)
             .align_y(Alignment::Center)
-            .spacing(self.appearance().module_gap());
+            .spacing(self.appearance().island_gap());
 
         for module_def in modules_def {
             row = row.push_maybe(match module_def {
@@ -137,8 +137,13 @@ impl App {
                 .into()
             }
             _ => {
+                let padding = match self.appearance().style {
+                    AppearanceStyle::Islands => self.appearance().island_padding(),
+                    _ => self.module_padding()
+                };
+
                 let container = container(content)
-                    .padding(self.module_padding())
+                    .padding(padding)
                     .height(Length::Fill)
                     .align_y(Alignment::Center);
 
@@ -226,6 +231,7 @@ impl App {
                 match self.appearance().style {
                     AppearanceStyle::Solid | AppearanceStyle::Gradient => group.into(),
                     AppearanceStyle::Islands => container(group)
+                        .padding(self.appearance().island_padding())
                         .style(|theme| container::Style {
                             background: Some(
                                 theme
@@ -325,7 +331,10 @@ impl App {
                 .media_player
                 .view((&self.config.media_player, self.icons())),
             ModuleName::Notifications => self.notifications.view(()),
-            ModuleName::Screenshot => self.screenshot.view(self.icons())
+            ModuleName::Screenshot => self.screenshot.view(self.icons()),
+            ModuleName::IdleInhibitor => self
+                .idle_inhibitor
+                .view((self.settings.is_idle_inhibited(), self.icons()))
         }
     }
 
@@ -366,7 +375,8 @@ impl App {
             ModuleName::Settings => self.settings.subscription(),
             ModuleName::MediaPlayer => self.media_player.subscription(),
             ModuleName::Notifications => self.notifications.subscription(),
-            ModuleName::Screenshot => self.screenshot.subscription()
+            ModuleName::Screenshot => self.screenshot.subscription(),
+            ModuleName::IdleInhibitor => Module::<Message>::subscription(&self.idle_inhibitor)
         }
     }
 }

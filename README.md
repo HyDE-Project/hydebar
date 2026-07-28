@@ -36,6 +36,7 @@
 - 🚀 **App Launcher** - Quick app launcher button
 - 🔔 **Notifications** - Notification center with D-Bus integration, DND mode
 - 📸 **Screenshot** - Screenshot and screen recording (grim/slurp/wf-recorder)
+- ☕ **Idle Inhibitor** - One click toggle keeping the session awake
 - ⚙️ **Settings Panel** - Comprehensive settings menu
 
 ### Visual Features

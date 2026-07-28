@@ -10,6 +10,7 @@ pub mod battery;
 pub mod clipboard;
 pub mod clock;
 pub mod custom_module;
+pub mod idle_inhibitor;
 pub mod keyboard_layout;
 pub mod keyboard_submap;
 pub mod media_player;

@@ -82,12 +82,14 @@ pub enum Icons {
     IpAddress,
     DownloadSpeed,
     UploadSpeed,
-    Copy
+    Copy,
+    IdleInhibitorActive,
+    IdleInhibitorInactive
 }
 
 impl Icons {
     /// Every icon that can be overridden from the configuration.
-    pub const ALL: [Icons; 71] = [
+    pub const ALL: [Icons; 73] = [
         Icons::None,
         Icons::AppLauncher,
         Icons::Clipboard,
@@ -158,7 +160,9 @@ impl Icons {
         Icons::IpAddress,
         Icons::DownloadSpeed,
         Icons::UploadSpeed,
-        Icons::Copy
+        Icons::Copy,
+        Icons::IdleInhibitorActive,
+        Icons::IdleInhibitorInactive
     ];
 
     /// Key used to address the icon inside the `[icons]` configuration table.
@@ -235,7 +239,9 @@ impl Icons {
             Icons::IpAddress => "ip_address",
             Icons::DownloadSpeed => "download_speed",
             Icons::UploadSpeed => "upload_speed",
-            Icons::Copy => "copy"
+            Icons::Copy => "copy",
+            Icons::IdleInhibitorActive => "idle_inhibitor_active",
+            Icons::IdleInhibitorInactive => "idle_inhibitor_inactive"
         }
     }
 
@@ -319,7 +325,9 @@ impl Icons {
             Icons::IpAddress => "󰩠",
             Icons::DownloadSpeed => "󰛴",
             Icons::UploadSpeed => "󰛶",
-            Icons::Copy => "󰆏"
+            Icons::Copy => "󰆏",
+            Icons::IdleInhibitorActive => "\u{f0576}",
+            Icons::IdleInhibitorInactive => "\u{f06ca}"
         }
     }
 }

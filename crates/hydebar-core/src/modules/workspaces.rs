@@ -19,7 +19,8 @@ use crate::{
     ModuleContext, ModuleEventSender,
     config::{
         Appearance, MODULE_VERTICAL_PADDING_EM, WORKSPACE_ACTIVE_MARGIN_EM,
-        WORKSPACE_ACTIVE_PADDING_EM, WORKSPACE_GAP_EM, WORKSPACE_PADDING_EM,
+        WORKSPACE_ACTIVE_PADDING_EM, WORKSPACE_GAP_EM, WORKSPACE_GLYPH_ADVANCE_EM,
+        WORKSPACE_MIN_HEIGHT_EM, WORKSPACE_MIN_WIDTH_EM, WORKSPACE_PADDING_EM,
         WorkspaceVisibilityMode, WorkspacesModuleConfig
     },
     event_bus::ModuleEvent,
@@ -131,6 +132,23 @@ fn map_snapshot_to_workspaces(
 
     result.sort_by_key(|w| w.id);
     result
+}
+
+/// Returns the width the label box of a workspace indicator reserves.
+///
+/// The reference waybar theme never lets a workspace button shrink below the
+/// minimum width its GTK stylesheet reserves for a button, so a short label
+/// sits in a fixed box and the indicators keep the same rhythm whatever they
+/// read. A label already wider than that minimum sizes itself instead, which
+/// keeps a long special workspace name from being squeezed.
+fn label_box_width(label: &str, glyph_advance: f32, min_width: f32) -> Length {
+    let natural = glyph_advance * label.chars().count() as f32;
+
+    if natural < min_width {
+        Length::Fixed(min_width)
+    } else {
+        Length::Shrink
+    }
 }
 
 pub struct Workspaces {
@@ -293,6 +311,9 @@ where
         let idle_padding = appearance.spacing(WORKSPACE_PADDING_EM);
         let active_padding = appearance.spacing(WORKSPACE_ACTIVE_PADDING_EM);
         let active_margin = appearance.spacing(WORKSPACE_ACTIVE_MARGIN_EM);
+        let min_label_width = appearance.spacing(WORKSPACE_MIN_WIDTH_EM);
+        let min_height = appearance.spacing(WORKSPACE_MIN_HEIGHT_EM);
+        let glyph_advance = appearance.spacing(WORKSPACE_GLYPH_ADVANCE_EM);
         let workspace_colors = appearance.workspace_colors.as_slice();
         let special_workspace_colors = appearance.special_workspace_colors.as_deref();
 
@@ -330,13 +351,15 @@ where
                                 idle_padding
                             };
 
+                            let label = if w_id < 0 { w_name } else { w_id.to_string() };
+                            let label_width =
+                                label_box_width(&label, glyph_advance, min_label_width);
+
                             let indicator = button(
-                                container(
-                                    if w_id < 0 { text(w_name) } else { text(w_id) }
-                                        .size(font_size)
-                                )
-                                .align_x(alignment::Horizontal::Center)
-                                .align_y(alignment::Vertical::Center)
+                                container(text(label).size(font_size))
+                                    .width(label_width)
+                                    .align_x(alignment::Horizontal::Center)
+                                    .align_y(alignment::Vertical::Center)
                             )
                             .style(workspace_button_style(empty, w_active, radius, color))
                             .padding([vertical_padding, side_padding])
@@ -346,7 +369,7 @@ where
                                 Message::ToggleSpecialWorkspace(w_id)
                             })
                             .width(Length::Shrink)
-                            .height(Length::Shrink);
+                            .height(Length::Fixed(min_height));
 
                             Some(if w_active {
                                 container(indicator)
@@ -401,5 +424,14 @@ mod tests {
         module.update(Message::ChangeWorkspace(2), &config);
 
         assert_eq!(port.workspace_calls(), 1);
+    }
+
+    #[test]
+    fn short_labels_fill_the_minimum_box() {
+        // The reference theme resolves to a 6px glyph advance and a 16px minimum.
+        assert_eq!(label_box_width("1", 6.0, 16.0), Length::Fixed(16.0));
+        assert_eq!(label_box_width("10", 6.0, 16.0), Length::Fixed(16.0));
+        assert_eq!(label_box_width("100", 6.0, 16.0), Length::Shrink);
+        assert_eq!(label_box_width("scratch", 6.0, 16.0), Length::Shrink);
     }
 }

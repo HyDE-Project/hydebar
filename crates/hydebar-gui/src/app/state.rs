@@ -14,6 +14,7 @@ use hydebar_core::{
         clipboard::Clipboard,
         clock::Clock,
         custom_module::Custom,
+        idle_inhibitor::IdleInhibitor,
         keyboard_layout::KeyboardLayout,
         keyboard_submap::KeyboardSubmap,
         media_player::MediaPlayer,
@@ -73,6 +74,7 @@ pub struct App {
     pub media_player: MediaPlayer,
     pub notifications: Notifications,
     pub screenshot: Screenshot,
+    pub idle_inhibitor: IdleInhibitor,
     pub weather: Weather
 }
 
@@ -254,6 +256,7 @@ impl App {
             media_player: MediaPlayer::default(),
             notifications: Notifications::default(),
             screenshot: Screenshot::default(),
+            idle_inhibitor: IdleInhibitor,
             weather: Weather::new(
                 config.weather.location.clone(),
                 config.weather.api_key.clone(),

@@ -22,6 +22,19 @@ pub struct Settings {
     pub(super) tasks:           Vec<JoinHandle<()>>
 }
 
+impl Settings {
+    /// Whether the shared idle inhibitor currently keeps the session awake.
+    ///
+    /// Returns `false` when the compositor refused the inhibitor protocol, so
+    /// callers render the idle state instead of failing.
+    #[must_use]
+    pub fn is_idle_inhibited(&self) -> bool {
+        self.idle_inhibitor
+            .as_ref()
+            .is_some_and(IdleInhibitorManager::is_inhibited)
+    }
+}
+
 impl Default for Settings {
     fn default() -> Self {
         let idle_inhibitor = match IdleInhibitorManager::new() {

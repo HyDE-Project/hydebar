@@ -51,6 +51,7 @@ pub enum ModuleName {
     MediaPlayer,
     Notifications,
     Screenshot,
+    IdleInhibitor,
     Custom(String)
 }
 
@@ -89,6 +90,7 @@ impl<'de> Deserialize<'de> for ModuleName {
                     "MediaPlayer" => ModuleName::MediaPlayer,
                     "Notifications" => ModuleName::Notifications,
                     "Screenshot" => ModuleName::Screenshot,
+                    "IdleInhibitor" => ModuleName::IdleInhibitor,
                     other => ModuleName::Custom(other.to_string())
                 })
             }
@@ -212,6 +214,13 @@ mod tests {
         ))
         .expect_err("empty list should fail");
         assert!(error.to_string().contains("non-empty"));
+    }
+
+    #[test]
+    fn module_name_deserializes_idle_inhibitor() {
+        let name = ModuleName::deserialize(StrDeserializer::<DeError>::new("IdleInhibitor"))
+            .expect("known variant");
+        assert_eq!(name, ModuleName::IdleInhibitor);
     }
 
     #[test]

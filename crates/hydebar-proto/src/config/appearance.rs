@@ -238,7 +238,7 @@ pub const DEFAULT_FONT_SIZE: f32 = 14.0;
 /// The reference waybar theme pads a bar label by `0.2em` and margins it by
 /// another `0.2em`, so neighbouring modules keep `0.4em` of breathing room that
 /// scales with the themed font instead of being fixed in pixels.
-pub const MODULE_SIDE_PADDING_EM: f32 = 0.4;
+pub const MODULE_SIDE_PADDING_EM: f32 = 0.25;
 
 /// Padding a module label reserves above and below its text, in `em`.
 ///
@@ -251,14 +251,26 @@ pub const ICON_LABEL_GAP_EM: f32 = 0.4;
 /// Gap between neighbouring modules of the same bar section, in `em`.
 pub const MODULE_GAP_EM: f32 = 0.4;
 
+/// Inner padding an island keeps around its modules, in `em`.
+///
+/// Mirrors the `0em 1em` padding the reference theme gives every island.
+pub const ISLAND_PADDING_EM: [f32; 2] = [0.0, 1.0];
+
+/// Gap between neighbouring islands of the same bar section, in `em`.
+///
+/// The reference theme gives every island a `1em` margin on both sides, so
+/// two adjacent islands are separated by twice that.
+pub const ISLAND_GAP_EM: f32 = 2.0;
+
 /// Gap between the left, center and right groups of the bar, in `em`.
-pub const GROUP_GAP_EM: f32 = 0.4;
+pub const GROUP_GAP_EM: f32 = 2.0;
 
 /// Outer margin kept around the island pills, in `em`, as
 /// `[vertical, horizontal]`.
 ///
-/// Mirrors the `0.3em 1em` module margin of the reference waybar theme.
-pub const BAR_PADDING_EM: [f32; 2] = [0.3, 1.0];
+/// Mirrors the `0.3em 1em` island margin of the reference waybar theme plus
+/// the `0.3em` margin its module sections add on the outer edges.
+pub const BAR_PADDING_EM: [f32; 2] = [0.3, 1.6];
 
 /// Horizontal padding of an idle workspace indicator, in `em`.
 ///
@@ -280,7 +292,36 @@ pub const WORKSPACE_ACTIVE_PADDING_EM: f32 = 1.2;
 pub const WORKSPACE_ACTIVE_MARGIN_EM: f32 = 0.3;
 
 /// Gap between neighbouring workspace indicators, in `em`.
-pub const WORKSPACE_GAP_EM: f32 = 0.3;
+///
+/// The reference waybar theme leaves `#workspaces button` without a horizontal
+/// margin, so two idle indicators sit flush against each other and only the
+/// focused one pushes its neighbours away through
+/// [`WORKSPACE_ACTIVE_MARGIN_EM`].
+pub const WORKSPACE_GAP_EM: f32 = 0.0;
+
+/// Minimum width the label box of a workspace indicator reserves, in `em`.
+///
+/// A `#workspaces button` never shrinks below the `16px` minimum width the GTK
+/// stylesheet behind waybar reserves for every button, so a single glyph label
+/// still occupies a fixed box instead of collapsing onto its glyph. Against the
+/// `10px` font the reference theme ships that is `1.6em`, and it is what keeps
+/// the indicators as far apart as waybar draws them.
+pub const WORKSPACE_MIN_WIDTH_EM: f32 = 1.6;
+
+/// Minimum height a workspace indicator reserves, in `em`.
+///
+/// The same GTK minimum keeps a `#workspaces button` `24px` tall whatever its
+/// label measures, which is what gives the focused indicator its rounded
+/// rectangle instead of a box tight around the glyph. Against the `10px` font
+/// the reference theme ships that is `2.4em`.
+pub const WORKSPACE_MIN_HEIGHT_EM: f32 = 2.4;
+
+/// Advance width of a single workspace label glyph, in `em`.
+///
+/// Only used to tell whether a label already fills [`WORKSPACE_MIN_WIDTH_EM`]
+/// on its own; the monospace font the reference theme ships advances by
+/// `0.6em` per glyph.
+pub const WORKSPACE_GLYPH_ADVANCE_EM: f32 = 0.6;
 
 impl Appearance {
     /// Returns the pill corner radius to render with.
@@ -340,6 +381,21 @@ impl Appearance {
         self.spacing(MODULE_GAP_EM)
     }
 
+    /// Returns the inner padding of an island, in pixels.
+    #[must_use]
+    pub fn island_padding(&self) -> [f32; 2] {
+        [
+            self.spacing(ISLAND_PADDING_EM[0]),
+            self.spacing(ISLAND_PADDING_EM[1])
+        ]
+    }
+
+    /// Returns the gap between neighbouring islands of a section, in pixels.
+    #[must_use]
+    pub fn island_gap(&self) -> f32 {
+        self.spacing(ISLAND_GAP_EM)
+    }
+
     /// Returns the gap between the groups of the bar, in pixels.
     #[must_use]
     pub fn group_gap(&self) -> f32 {
@@ -354,7 +410,9 @@ impl Appearance {
     ///
     /// The alpha channel of the HyDE colors carries the transparency: the
     /// module background feeds [`Appearance::opacity`] and the bar background
-    /// feeds [`Appearance::bar_opacity`].
+    /// feeds [`Appearance::bar_opacity`]. Every other color is translucent over
+    /// the island it is painted on, so it is composited over the island
+    /// background instead of losing its alpha.
     pub fn apply_hyde_theme(&mut self, theme: &HydeTheme) {
         if self.font_name.is_none() {
             self.font_name.clone_from(&theme.font_family);
@@ -370,10 +428,12 @@ impl Appearance {
 
         if let Some(module_background) = theme.module_background {
             if self.background_color == default_background_color() {
+                let island = hex_to_color(opaque_hex(module_background));
+
                 self.background_color = AppearanceColor::Complete {
                     base:   opaque_hex(module_background),
                     strong: None,
-                    weak:   theme.hover_background.map(opaque_hex),
+                    weak:   theme.hover_background.map(|hover| blend_hex(hover, island)),
                     text:   None
                 };
             }
@@ -382,6 +442,8 @@ impl Appearance {
                 self.opacity = module_background.a;
             }
         }
+
+        let island = self.background_color.get_base();
 
         if let Some(bar_background) = theme.bar_background
             && self.bar_opacity == default_bar_opacity()
@@ -392,19 +454,19 @@ impl Appearance {
         if let Some(text) = theme.text
             && self.text_color == default_text_color()
         {
-            self.text_color = AppearanceColor::Simple(opaque_hex(text));
+            self.text_color = AppearanceColor::Simple(blend_hex(text, island));
         }
 
         if let Some(active_background) = theme.active_background
             && self.primary_color == default_primary_color()
         {
             self.primary_color = AppearanceColor::Complete {
-                base:   opaque_hex(active_background),
+                base:   blend_hex(active_background, island),
                 strong: None,
                 weak:   None,
                 text:   theme
                     .active_text
-                    .map(opaque_hex)
+                    .map(|text| blend_hex(text, island))
                     .or_else(|| text_hex(default_primary_color()))
             };
         }
@@ -413,10 +475,10 @@ impl Appearance {
             && self.workspace_colors == default_workspace_colors()
         {
             self.workspace_colors = vec![AppearanceColor::Complete {
-                base:   opaque_hex(active_background),
+                base:   blend_hex(active_background, island),
                 strong: None,
                 weak:   None,
-                text:   theme.active_text.map(opaque_hex)
+                text:   theme.active_text.map(|text| blend_hex(text, island))
             }];
         }
     }
@@ -426,6 +488,36 @@ impl Appearance {
 /// instead.
 fn opaque_hex(color: Rgba) -> HexColor {
     HexColor::rgb(color.r, color.g, color.b)
+}
+
+/// Reads a palette entry back as a [`Color`].
+fn hex_to_color(color: HexColor) -> Color {
+    Color::from_rgb8(color.r, color.g, color.b)
+}
+
+/// Composites a translucent HyDE color over the surface it is painted on.
+///
+/// The stylesheets state their accents with an alpha channel: the focused
+/// workspace is `rgba(195,172,118,0.4)`, a muted tint of the island rather than
+/// the saturated color its channels name. Dropping the alpha the way
+/// [`opaque_hex`] does would repaint the bar with that saturated shade, so the
+/// value is blended over `backdrop` first, which is the island the widget sits
+/// on. The island keeps its own translucency through [`Appearance::opacity`];
+/// only the tint is resolved here.
+fn blend_hex(color: Rgba, backdrop: Color) -> HexColor {
+    let alpha = color.a.clamp(0.0, 1.0);
+    let mix = |channel: u8, under: f32| -> u8 {
+        let over = f32::from(channel) / 255.0;
+        let blended = over.mul_add(alpha, under * (1.0 - alpha));
+
+        (blended * 255.0).round().clamp(0.0, 255.0) as u8
+    };
+
+    HexColor::rgb(
+        mix(color.r, backdrop.r),
+        mix(color.g, backdrop.g),
+        mix(color.b, backdrop.b)
+    )
 }
 
 /// Returns the text shade of a palette entry, if it declares one.
@@ -692,7 +784,7 @@ mod tests {
             AppearanceColor::Complete {
                 base:   HexColor::rgb(27, 29, 28),
                 strong: None,
-                weak:   Some(HexColor::rgb(125, 108, 75)),
+                weak:   Some(HexColor::rgb(66, 61, 47)),
                 text:   None
             }
         );
@@ -709,6 +801,84 @@ mod tests {
                 text:   Some(HexColor::rgb(255, 240, 204))
             }
         );
+    }
+
+    /// Mirrors the colors the HyDE stylesheets ship, alpha channels included.
+    fn translucent_hyde_theme() -> HydeTheme {
+        HydeTheme {
+            module_background: Some(Rgba::rgba(27, 29, 28, 0.8)),
+            text: Some(Rgba::rgba(170, 240, 205, 0.8)),
+            active_background: Some(Rgba::rgba(195, 172, 118, 0.4)),
+            active_text: Some(Rgba::rgba(255, 240, 204, 1.0)),
+            hover_background: Some(Rgba::rgba(125, 108, 75, 0.4)),
+            ..hyde_theme()
+        }
+    }
+
+    #[test]
+    fn translucent_theme_colors_are_composited_over_the_island() {
+        let mut appearance = Appearance::default();
+        appearance.apply_hyde_theme(&translucent_hyde_theme());
+
+        assert_eq!(appearance.opacity, 0.8);
+        assert_eq!(
+            appearance.text_color,
+            AppearanceColor::Simple(HexColor::rgb(141, 198, 170))
+        );
+        assert_eq!(
+            appearance.primary_color,
+            AppearanceColor::Complete {
+                base:   HexColor::rgb(94, 86, 64),
+                strong: None,
+                weak:   None,
+                text:   Some(HexColor::rgb(255, 240, 204))
+            }
+        );
+        assert_eq!(
+            appearance.workspace_colors,
+            vec![AppearanceColor::Complete {
+                base:   HexColor::rgb(94, 86, 64),
+                strong: None,
+                weak:   None,
+                text:   Some(HexColor::rgb(255, 240, 204))
+            }]
+        );
+        assert_eq!(
+            appearance.background_color,
+            AppearanceColor::Complete {
+                base:   HexColor::rgb(27, 29, 28),
+                strong: None,
+                weak:   Some(HexColor::rgb(66, 61, 47)),
+                text:   None
+            }
+        );
+    }
+
+    #[test]
+    fn an_opaque_theme_color_survives_compositing_unchanged() {
+        assert_eq!(
+            blend_hex(Rgba::rgb(195, 172, 118), Color::from_rgb8(27, 29, 28)),
+            HexColor::rgb(195, 172, 118)
+        );
+        assert_eq!(
+            blend_hex(Rgba::rgba(195, 172, 118, 0.0), Color::from_rgb8(27, 29, 28)),
+            HexColor::rgb(27, 29, 28)
+        );
+    }
+
+    #[test]
+    fn workspace_spacing_matches_the_reference_theme() {
+        let themed = Appearance {
+            font_size: Some(10.0),
+            ..Appearance::default()
+        };
+
+        assert_eq!(themed.spacing(WORKSPACE_PADDING_EM), 3.0);
+        assert_eq!(themed.spacing(WORKSPACE_ACTIVE_PADDING_EM), 12.0);
+        assert_eq!(themed.spacing(WORKSPACE_ACTIVE_MARGIN_EM), 3.0);
+        assert_eq!(themed.spacing(WORKSPACE_GAP_EM), 0.0);
+        assert_eq!(themed.spacing(WORKSPACE_MIN_WIDTH_EM), 16.0);
+        assert_eq!(themed.spacing(WORKSPACE_MIN_HEIGHT_EM), 24.0);
     }
 
     #[test]
@@ -786,10 +956,10 @@ mod tests {
             ..Appearance::default()
         };
 
-        assert_eq!(themed.module_padding(), [2.0, 4.0]);
-        assert_eq!(themed.bar_padding(), [3.0, 10.0]);
+        assert_eq!(themed.module_padding(), [2.0, 2.5]);
+        assert_eq!(themed.bar_padding(), [3.0, 16.0]);
         assert_eq!(themed.module_gap(), 4.0);
-        assert_eq!(themed.group_gap(), 4.0);
+        assert_eq!(themed.group_gap(), 20.0);
         assert_eq!(themed.icon_label_gap(), 4.0);
     }
 
@@ -805,7 +975,7 @@ mod tests {
         assert_ne!(appearance.module_gap(), fallback_gap);
         assert_ne!(appearance.module_padding(), fallback_padding);
         assert_eq!(appearance.module_gap(), 10.0 * MODULE_GAP_EM);
-        assert_eq!(appearance.bar_padding(), [3.0, 10.0]);
+        assert_eq!(appearance.bar_padding(), [3.0, 16.0]);
     }
 
     #[test]
