@@ -5,6 +5,7 @@ mod battery;
 mod clock;
 mod custom_module;
 mod icons;
+mod idle_inhibitor;
 mod keybindings;
 mod keyboard_layout;
 mod media_player;
@@ -34,6 +35,7 @@ pub use battery::BatteryModuleConfig;
 pub use clock::ClockModuleConfig;
 pub use custom_module::{CustomMenuEntry, CustomModuleDef, CustomModuleSource};
 pub use icons::IconsConfig;
+pub use idle_inhibitor::IdleInhibitorModuleConfig;
 pub use keybindings::{GlobalKeybindings, Keybindings, MenuKeybindings};
 pub use keyboard_layout::KeyboardLayoutModuleConfig;
 pub use media_player::MediaPlayerModuleConfig;
@@ -83,6 +85,8 @@ pub struct Config {
     pub battery:             BatteryModuleConfig,
     #[serde(default)]
     pub clock:               ClockModuleConfig,
+    #[serde(default, alias = "idle_inhibitor")]
+    pub idle_inhibitor:      IdleInhibitorModuleConfig,
     #[serde(default)]
     pub settings:            SettingsModuleConfig,
     #[serde(default, deserialize_with = "themes::deserialize_theme_or_appearance")]
@@ -117,6 +121,7 @@ impl Default for Config {
             system:              SystemModuleConfig::default(),
             battery:             BatteryModuleConfig::default(),
             clock:               ClockModuleConfig::default(),
+            idle_inhibitor:      IdleInhibitorModuleConfig::default(),
             settings:            SettingsModuleConfig::default(),
             appearance:          Appearance::default(),
             media_player:        MediaPlayerModuleConfig::default(),

@@ -15,6 +15,8 @@ pub enum Message {
     Audio(AudioMessage),
     Brightness(BrightnessMessage),
     ToggleInhibitIdle,
+    /// Releases the inhibitor the configured timeout has outlived.
+    ReleaseInhibitIdle,
     Lock,
     Power(PowerMessage),
     ToggleSubMenu(SubMenu),

@@ -122,26 +122,39 @@ impl App {
         }
     }
 
+    /// Hint a module publishes while the pointer rests on it.
+    ///
+    /// The outer [`Option`] separates a module that never shows a hint, and is
+    /// left unwrapped, from one that shows a hint only in some of its states.
+    fn module_tooltip(&self, module_name: &ModuleName) -> Option<Option<String>> {
+        match module_name {
+            ModuleName::Custom(name) => self
+                .custom
+                .get(name)
+                .map(|custom| custom.tooltip().map(str::to_owned)),
+            ModuleName::IdleInhibitor => Some(
+                self.config
+                    .idle_inhibitor
+                    .tooltip(self.settings.is_idle_inhibited())
+                    .map(str::to_owned)
+            ),
+            _ => None
+        }
+    }
+
     /// Wraps a module in the anchor its tooltip is published from.
     ///
-    /// Only custom modules carry a hint today. They stay wrapped even while
-    /// their hint is empty, so leaving one always clears whatever the tooltip
-    /// surface is showing.
+    /// A module that publishes hints stays wrapped even while its own hint is
+    /// empty, so leaving one always clears whatever the tooltip surface shows.
     fn with_tooltip<'a>(
         &self,
         module_name: &ModuleName,
         module: Element<'a, Message>,
         id: Id
     ) -> Element<'a, Message> {
-        let ModuleName::Custom(name) = module_name else {
+        let Some(hint) = self.module_tooltip(module_name) else {
             return module;
         };
-
-        let Some(hint) = self.custom.get(name).map(|custom| custom.tooltip()) else {
-            return module;
-        };
-
-        let hint = hint.map(str::to_owned);
 
         tooltip_anchor(module, move |anchor| {
             Message::ModuleTooltip(

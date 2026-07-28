@@ -284,6 +284,10 @@ impl App {
 
         app.register_modules();
 
+        if app.config.idle_inhibitor.start_activated {
+            app.settings.set_idle_inhibited(true);
+        }
+
         (app, task)
     }
 }

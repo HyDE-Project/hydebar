@@ -1,6 +1,6 @@
 //! Handling of settings menu messages.
 
-use log::info;
+use log::{info, warn};
 use tokio::runtime::Handle;
 
 use super::super::{
@@ -31,6 +31,25 @@ impl Settings {
 
     pub(crate) fn sender(&self) -> Option<ModuleEventSender<Message>> {
         self.sender.as_ref().cloned()
+    }
+
+    /// Schedules the release of an activation that outlives `delay`.
+    ///
+    /// Without a delay the inhibitor stays until it is toggled off, which is
+    /// what a configuration naming no timeout asks for.
+    fn arm_idle_release(&mut self, delay: Option<std::time::Duration>) {
+        let (Some(delay), Some(runtime), Some(sender)) = (delay, self.runtime(), self.sender())
+        else {
+            return;
+        };
+
+        self.idle_release = Some(runtime.spawn(async move {
+            tokio::time::sleep(delay).await;
+
+            if let Err(err) = sender.try_send(Message::ReleaseInhibitIdle) {
+                warn!("failed to release the idle inhibitor after its timeout: {err}");
+            }
+        }));
     }
 
     pub fn update(
@@ -254,9 +273,15 @@ impl Settings {
                 }
             }
             Message::ToggleInhibitIdle => {
-                if let Some(idle_inhibitor) = &mut self.idle_inhibitor {
-                    idle_inhibitor.toggle();
+                let inhibited = self.is_idle_inhibited();
+                self.set_idle_inhibited(!inhibited);
+
+                if self.is_idle_inhibited() {
+                    self.arm_idle_release(main_config.idle_inhibitor.release_after());
                 }
+            }
+            Message::ReleaseInhibitIdle => {
+                self.set_idle_inhibited(false);
             }
             Message::Lock => {
                 if let Some(lock_cmd) = &config.lock_cmd {
