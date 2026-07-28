@@ -1,7 +1,8 @@
 //! Runtime state and listener wiring for a custom module.
 
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
+use hydebar_proto::config::CustomModuleSource;
 use iced::Subscription;
 use log::error;
 use tokio::task::JoinHandle;
@@ -9,7 +10,8 @@ use tokio::task::JoinHandle;
 use super::{
     data::CustomListenData,
     error::{CustomCommandError, CustomListenerError},
-    listener::{run_custom_listener, send_event}
+    listener::{run_custom_listener, send_event},
+    poller::run_custom_poller
 };
 use crate::{
     ModuleContext, ModuleEventSender, config::CustomModuleDef, event_bus::ModuleEvent,
@@ -28,8 +30,42 @@ pub struct Custom {
 
 #[derive(Debug, Clone)]
 struct CustomRegistration {
-    name:           Arc<str>,
-    listen_command: Arc<str>
+    name:   Arc<str>,
+    source: RegistrationSource
+}
+
+/// Producing command of a registered module, together with its schedule.
+#[derive(Debug, Clone)]
+enum RegistrationSource {
+    /// One long lived process streaming json lines.
+    Stream { command: Arc<str> },
+    /// A command re-run on a schedule or when a real time signal arrives.
+    Poll {
+        command: Arc<str>,
+        period:  Option<Duration>,
+        signal:  Option<u8>
+    }
+}
+
+impl RegistrationSource {
+    fn from_config(source: CustomModuleSource<'_>) -> Self {
+        match source {
+            CustomModuleSource::Stream {
+                command
+            } => Self::Stream {
+                command: Arc::from(command)
+            },
+            CustomModuleSource::Poll {
+                command,
+                interval,
+                signal
+            } => Self::Poll {
+                command: Arc::from(command),
+                period: interval.map(Duration::from_secs),
+                signal
+            }
+        }
+    }
 }
 
 impl Custom {
@@ -52,7 +88,12 @@ impl Custom {
         }
     }
 
-    /// Restarts the listener process described by the given configuration.
+    /// Restarts the task feeding the module from the given configuration.
+    ///
+    /// A definition without a schedule keeps the streaming listener, while an
+    /// `interval` or a `signal` switches to the poller. Because the whole task
+    /// is torn down first, a configuration reload that only changes the
+    /// interval or the signal number restarts the module on the new schedule.
     pub(super) fn start_listener(
         &mut self,
         ctx: &ModuleContext,
@@ -62,13 +103,10 @@ impl Custom {
         self.sender = None;
         self.last_error = None;
         self.registration = config.and_then(|definition| {
-            definition
-                .listen_cmd
-                .as_ref()
-                .map(|command| CustomRegistration {
-                    name:           Arc::from(definition.name.as_str()),
-                    listen_command: Arc::from(command.as_str())
-                })
+            definition.source().map(|source| CustomRegistration {
+                name:   Arc::from(definition.name.as_str()),
+                source: RegistrationSource::from_config(source)
+            })
         });
 
         let Some(registration) = self.registration.clone() else {
@@ -83,15 +121,25 @@ impl Custom {
 
         self.sender = Some(sender.clone());
         let module_name = Arc::clone(&registration.name);
-        let listen_command = Arc::clone(&registration.listen_command);
+        let source = registration.source.clone();
         let error_sender = sender.clone();
 
         self.listener_task = Some(ctx.runtime_handle().spawn(async move {
-            report_listener_outcome(
-                run_custom_listener(module_name.clone(), listen_command, sender).await,
-                &module_name,
-                &error_sender
-            );
+            let outcome = match source {
+                RegistrationSource::Stream {
+                    command
+                } => run_custom_listener(Arc::clone(&module_name), command, sender).await,
+                RegistrationSource::Poll {
+                    command,
+                    period,
+                    signal
+                } => {
+                    run_custom_poller(Arc::clone(&module_name), command, period, signal, sender)
+                        .await
+                }
+            };
+
+            report_listener_outcome(outcome, &module_name, &error_sender);
         }));
 
         Ok(())

@@ -173,6 +173,16 @@ icon = "🔔"
 command = "notify-send 'Clicked!'"
 ```
 
+To refresh a module on a timer, add `exec` and `interval` (seconds); add
+`signal = N` to also refresh it on demand with `pkill -RTMIN+N hydebar`:
+```toml
+[[CustomModule]]
+name = "cpuinfo"
+command = ""
+exec = "hyde-shell cpuinfo"
+interval = 5
+```
+
 Advanced custom modules can update dynamically. See [README.md](../README.md#custom-modules).
 
 ---

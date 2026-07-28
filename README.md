@@ -169,10 +169,35 @@ appearance = "tokyo-night-light"
 name = "CustomNotifications"
 icon = ""
 command = "swaync-client -t -sw"
+command_right = "swaync-client -d -sw"
+command_middle = "swaync-client -C"
 listen_cmd = "swaync-client -swb"
 icons.'dnd.*' = ""
 alert = ".*notification"
 ```
+
+`listen_cmd` keeps a process alive and reads one JSON object per line. When the
+data comes from a command that exits instead, use `exec` together with
+`interval` (seconds) and, optionally, `signal`:
+
+```toml
+[[CustomModule]]
+name = "cpuinfo"
+command = ""
+exec = "hyde-shell cpuinfo"
+interval = 5
+
+[[CustomModule]]
+name = "updates"
+command = "hyde-shell app system.update.sh up"
+exec = "hyde-shell system.update"
+interval = 86400
+signal = 20
+```
+
+`exec` runs once at startup and again on every `interval` tick. `signal = 20`
+registers `SIGRTMIN+20`, so `pkill -RTMIN+20 hydebar` refreshes the module
+immediately — the same contract Waybar scripts use.
 
 ### System Information
 

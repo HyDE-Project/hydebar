@@ -2331,6 +2331,7 @@ dependencies = [
  "iced",
  "inotify",
  "itertools 0.15.0",
+ "libc",
  "libpulse-binding",
  "linicon-theme",
  "log",

@@ -32,7 +32,7 @@ pub use appearance::{
 };
 pub use battery::BatteryModuleConfig;
 pub use clock::ClockModuleConfig;
-pub use custom_module::CustomModuleDef;
+pub use custom_module::{CustomModuleDef, CustomModuleSource};
 pub use icons::IconsConfig;
 pub use keybindings::{GlobalKeybindings, Keybindings, MenuKeybindings};
 pub use keyboard_layout::KeyboardLayoutModuleConfig;

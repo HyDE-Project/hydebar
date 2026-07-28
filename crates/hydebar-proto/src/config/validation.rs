@@ -105,13 +105,9 @@ mod tests {
 
     fn custom_module(name: &str) -> CustomModuleDef {
         CustomModuleDef {
-            name:       name.to_owned(),
-            command:    String::from("true"),
-            icon:       None,
-            listen_cmd: None,
-            icons:      None,
-            colors:     None,
-            alert:      None
+            name: name.to_owned(),
+            command: String::from("true"),
+            ..CustomModuleDef::default()
         }
     }
 

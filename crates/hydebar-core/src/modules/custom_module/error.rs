@@ -13,6 +13,8 @@ pub enum CustomCommandError {
     Parse(String, Arc<serde_json::Error>),
     Wait(Arc<std::io::Error>),
     NonZeroExit { status: Option<i32> },
+    Signal(u8, Arc<std::io::Error>),
+    UnsupportedSignal(u8),
     ChannelClosed
 }
 
@@ -41,6 +43,16 @@ impl std::fmt::Display for CustomCommandError {
                 "custom module process exited unsuccessfully ({:?})",
                 status
             ),
+            Self::Signal(offset, err) => write!(
+                f,
+                "failed to listen for the custom module refresh signal SIGRTMIN+{}: {}",
+                offset, err
+            ),
+            Self::UnsupportedSignal(offset) => write!(
+                f,
+                "custom module refresh signal SIGRTMIN+{} is outside the real time range",
+                offset
+            ),
             Self::ChannelClosed => write!(f, "custom module updates channel closed")
         }
     }
@@ -53,6 +65,7 @@ impl std::error::Error for CustomCommandError {
             Self::Read(err) => Some(err.as_ref()),
             Self::Parse(_, err) => Some(err.as_ref()),
             Self::Wait(err) => Some(err.as_ref()),
+            Self::Signal(_, err) => Some(err.as_ref()),
             _ => None
         }
     }
@@ -69,6 +82,8 @@ impl CustomCommandError {
                 Some(code) => format!("Listener exited with status {code}"),
                 None => String::from("Listener exited due to signal")
             },
+            Self::Signal(offset, _) => format!("Cannot watch SIGRTMIN+{offset}"),
+            Self::UnsupportedSignal(offset) => format!("Signal SIGRTMIN+{offset} out of range"),
             Self::ChannelClosed => String::from("Listener updates queue closed"),
             Self::MissingStdout => String::from("Listener stdout unavailable"),
             Self::Spawn(_) | Self::Read(_) | Self::Wait(_) => String::from("Listener IO failure")
