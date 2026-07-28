@@ -808,4 +808,115 @@ mod tests {
         assert_eq!(resolve_status(true, true, false), Status::Hovered);
         assert_eq!(resolve_status(true, true, true), Status::Pressed);
     }
+
+    /// Renderer keeping every quad the button paints.
+    #[derive(Default)]
+    struct QuadRecorder {
+        quads: Vec<renderer::Quad>
+    }
+
+    impl iced::core::Renderer for QuadRecorder {
+        fn start_layer(&mut self, _bounds: Rectangle) {}
+
+        fn end_layer(&mut self) {}
+
+        fn start_transformation(&mut self, _transformation: iced::Transformation) {}
+
+        fn end_transformation(&mut self) {}
+
+        fn reset(&mut self, _new_bounds: Rectangle) {}
+
+        fn fill_quad(&mut self, quad: renderer::Quad, _background: impl Into<Background>) {
+            self.quads.push(quad);
+        }
+
+        fn allocate_image(
+            &mut self,
+            _handle: &iced::core::image::Handle,
+            _callback: impl FnOnce(Result<iced::core::image::Allocation, iced::core::image::Error>)
+            + Send
+            + 'static
+        ) {
+            unreachable!("a button never draws an image")
+        }
+    }
+
+    const PILL_RADIUS: f32 = 4.0;
+
+    /// Paints a hovered module button and reports the quads it filled together
+    /// with the bounds it was laid out with.
+    fn painted_hover(padding: Padding) -> (Vec<renderer::Quad>, Rectangle) {
+        let style = || {
+            crate::style::module_button_style(
+                crate::config::AppearanceStyle::Islands,
+                1.0,
+                PILL_RADIUS,
+                false,
+                false
+            )
+        };
+
+        let content = || Space::new().width(16.0).height(16.0);
+
+        let mut tree = Tree::new(&Element::<(), Theme, QuadRecorder>::new(
+            position_button(content()).padding(padding).style(style())
+        ));
+
+        let mut button: PositionButton<'_, (), Theme, QuadRecorder> = position_button(content())
+            .padding(padding)
+            .style(style())
+            .on_press(());
+
+        let node = button.layout(
+            &mut tree,
+            &QuadRecorder::default(),
+            &Limits::new(Size::ZERO, Size::new(200.0, 26.0))
+        );
+
+        let mut renderer = QuadRecorder::default();
+
+        button.draw(
+            &tree,
+            &mut renderer,
+            &Theme::Dark,
+            &renderer::Style::default(),
+            Layout::new(&node),
+            cursor_at(10.0),
+            &BOUNDS
+        );
+
+        (renderer.quads, Layout::new(&node).bounds())
+    }
+
+    #[test]
+    fn the_hover_background_covers_the_button_bounds_and_nothing_more() {
+        let padding = Padding {
+            top:    2.0,
+            bottom: 2.0,
+            right:  3.0,
+            left:   3.0
+        };
+
+        let (quads, bounds) = painted_hover(padding);
+
+        assert_eq!(quads.len(), 1, "the hover paints a single background quad");
+        assert_eq!(
+            quads[0].bounds, bounds,
+            "the hover background has to match the box the button was laid out \
+             with, so it never spills over the padding of the island hosting it"
+        );
+        assert_eq!(
+            bounds.size(),
+            Size::new(
+                16.0 + padding.left + padding.right,
+                16.0 + padding.top + padding.bottom
+            ),
+            "the button box is its content grown by the module padding"
+        );
+        assert_eq!(
+            quads[0].border.radius,
+            PILL_RADIUS.into(),
+            "the hover pill is rounded like the island it is drawn in"
+        );
+    }
 }

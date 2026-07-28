@@ -20,6 +20,24 @@ pub fn menu_container_style(opacity: f32) -> impl Fn(&Theme) -> Style {
     }
 }
 
+/// Builds the tooltip container style closure used for the hover popups.
+///
+/// A tooltip is a small box next to the bar rather than a panel, so it borrows
+/// the menu colors but keeps the corner radius of the bar pills.
+pub fn tooltip_container_style(opacity: f32, radius: f32) -> impl Fn(&Theme) -> Style {
+    move |theme: &Theme| {
+        let base = menu_container_style(opacity)(theme);
+
+        Style {
+            border: Border {
+                radius: radius.into(),
+                ..base.border
+            },
+            ..base
+        }
+    }
+}
+
 /// Builds the menu backdrop style closure that applies the configured opacity.
 pub fn menu_backdrop_style(backdrop: f32) -> impl Fn(&Theme) -> Style {
     move |_| Style {

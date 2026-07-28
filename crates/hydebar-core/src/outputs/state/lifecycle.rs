@@ -47,6 +47,7 @@ impl Outputs {
             let LayerSurfaceCreation {
                 main_id,
                 menu_id,
+                tooltip_id,
                 task
             } = create_layer_surfaces(
                 style,
@@ -67,9 +68,11 @@ impl Outputs {
                     let old_output = self.0.swap_remove(index);
 
                     match old_output.1 {
-                        Some(shell_info) => {
-                            destroy_layer_surfaces(shell_info.id, shell_info.menu.id)
-                        }
+                        Some(shell_info) => destroy_layer_surfaces(
+                            shell_info.id,
+                            shell_info.menu.id,
+                            shell_info.tooltip_id
+                        ),
                         _ => Task::none()
                     }
                 }
@@ -84,7 +87,9 @@ impl Outputs {
                     position,
                     style,
                     scale_factor: config.appearance.scale_factor,
-                    height: config.appearance.height
+                    height: config.appearance.height,
+                    tooltip_id,
+                    tooltip: None
                 }),
                 Some(wl_output)
             ));
@@ -94,9 +99,11 @@ impl Outputs {
                     let old_output = self.0.swap_remove(index);
 
                     match old_output.1 {
-                        Some(shell_info) => {
-                            destroy_layer_surfaces(shell_info.id, shell_info.menu.id)
-                        }
+                        Some(shell_info) => destroy_layer_surfaces(
+                            shell_info.id,
+                            shell_info.menu.id,
+                            shell_info.tooltip_id
+                        ),
                         _ => Task::none()
                     }
                 }
@@ -141,7 +148,11 @@ impl Outputs {
                 let (name, shell_info, wl_output) = self.0.swap_remove(index_to_remove);
 
                 let destroy_task = if let Some(shell_info) = shell_info {
-                    destroy_layer_surfaces(shell_info.id, shell_info.menu.id)
+                    destroy_layer_surfaces(
+                        shell_info.id,
+                        shell_info.menu.id,
+                        shell_info.tooltip_id
+                    )
                 } else {
                     Task::none()
                 };
@@ -154,6 +165,7 @@ impl Outputs {
                     let LayerSurfaceCreation {
                         main_id,
                         menu_id,
+                        tooltip_id,
                         task
                     } = create_layer_surfaces(
                         style,
@@ -173,7 +185,9 @@ impl Outputs {
                             position,
                             style,
                             scale_factor: config.appearance.scale_factor,
-                            height: config.appearance.height
+                            height: config.appearance.height,
+                            tooltip_id,
+                            tooltip: None
                         }),
                         None
                     ));

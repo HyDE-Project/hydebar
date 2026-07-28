@@ -31,7 +31,8 @@ use hydebar_core::{
     },
     outputs::Outputs,
     position_button::ButtonUIRef,
-    style::AppearanceTransition
+    style::AppearanceTransition,
+    tooltip::TooltipInfo
 };
 use hydebar_proto::{
     config::{Appearance, Config},
@@ -87,6 +88,11 @@ pub enum Message {
     ConfigChanged(ConfigApplied),
     ConfigDegraded(ConfigDegradation),
     ToggleMenu(MenuType, Id, ButtonUIRef),
+    /// A module of the bar surface was entered or left by the pointer.
+    ///
+    /// Carries the hint to show and the placement of the module it belongs to,
+    /// or nothing at all once the pointer moves away.
+    ModuleTooltip(Id, Option<TooltipInfo>),
     CloseMenu(Id),
     CloseAllMenus,
     ActivateNavigationMode,

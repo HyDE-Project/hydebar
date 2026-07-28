@@ -3,6 +3,7 @@ mod lifecycle;
 mod lookup;
 mod menus;
 mod sync;
+mod tooltips;
 
 #[cfg(all(test, feature = "enable-broken-tests"))]
 mod tests;
@@ -14,7 +15,8 @@ use super::wayland::{LayerSurfaceCreation, create_layer_surfaces};
 use crate::{
     config::{AppearanceStyle, Position},
     menu::{Menu, MenuType},
-    position_button::ButtonUIRef
+    position_button::ButtonUIRef,
+    tooltip::TooltipInfo
 };
 
 #[derive(Debug, Clone)]
@@ -25,7 +27,18 @@ struct ShellInfo {
     menu:         Menu,
     scale_factor: f64,
     /// Bar height the surface was created with, as named by the configuration.
-    height:       Option<f32>
+    height:       Option<f32>,
+    /// Surface the tooltips of this output are drawn on.
+    tooltip_id:   Id,
+    /// Tooltip that surface is showing, if any.
+    tooltip:      Option<TooltipInfo>
+}
+
+impl ShellInfo {
+    /// Reports whether `id` names one of the surfaces of this output.
+    fn owns(&self, id: Id) -> bool {
+        self.id == id || self.menu.id == id || self.tooltip_id == id
+    }
 }
 
 /// Collection of Wayland outputs currently tracked by the bar.
@@ -57,7 +70,11 @@ pub enum HasOutput<'a> {
     Main,
     /// The identifier refers to the menu surface along with its optional
     /// metadata about the menu currently shown.
-    Menu(Option<&'a (MenuType, ButtonUIRef)>)
+    Menu(Option<&'a (MenuType, ButtonUIRef)>),
+    /// The identifier refers to the surface the tooltips are drawn on.
+    ///
+    /// What it shows is read back with [`Outputs::tooltip`].
+    Tooltip
 }
 
 impl Outputs {
@@ -86,6 +103,7 @@ impl Outputs {
         let LayerSurfaceCreation {
             main_id,
             menu_id,
+            tooltip_id,
             task
         } = create_layer_surfaces(
             style,
@@ -106,7 +124,9 @@ impl Outputs {
                     position,
                     style,
                     scale_factor: config.appearance.scale_factor,
-                    height: config.appearance.height
+                    height: config.appearance.height,
+                    tooltip_id,
+                    tooltip: None
                 }),
                 None
             )]),

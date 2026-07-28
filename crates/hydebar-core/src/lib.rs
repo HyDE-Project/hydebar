@@ -15,6 +15,7 @@ pub mod password_dialog;
 pub mod position_button;
 pub mod services;
 pub mod style;
+pub mod tooltip;
 // Make test_utils available for both internal tests and cross-crate testing
 #[cfg(any(test, feature = "test-utils"))]
 pub mod test_utils;

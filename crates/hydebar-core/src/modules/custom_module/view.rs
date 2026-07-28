@@ -6,7 +6,7 @@ use iced::{
     widget::{
         Stack, canvas,
         canvas::{Cache, Geometry, Path, Program},
-        container, row, text, tooltip
+        container, row, text
     }
 };
 
@@ -145,13 +145,20 @@ where
         icon_with_alert
     };
 
-    match module.data.tooltip.as_ref() {
-        Some(hint) if !hint.is_empty() && module.last_error.is_none() => tooltip(
-            row_content,
-            container(text(hint.clone())).padding([4, 8]),
-            tooltip::Position::Bottom
-        )
-        .into(),
-        _ => row_content
+    row_content
+}
+
+impl Custom {
+    /// Text the module asks the bar to show while the pointer rests on it.
+    ///
+    /// The bar surface is only as tall as the bar, so the hint cannot be drawn
+    /// as an overlay next to the module without covering it. It is handed to
+    /// the tooltip surface instead, which the compositor lays out beside the
+    /// bar.
+    pub fn tooltip(&self) -> Option<&str> {
+        match self.data.tooltip.as_deref() {
+            Some(hint) if !hint.is_empty() && self.last_error.is_none() => Some(hint),
+            _ => None
+        }
     }
 }

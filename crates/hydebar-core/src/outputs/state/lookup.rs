@@ -27,6 +27,8 @@ impl Outputs {
                     Some(HasOutput::Main)
                 } else if info.menu.id == id {
                     Some(HasOutput::Menu(info.menu.menu_info.as_ref()))
+                } else if info.tooltip_id == id {
+                    Some(HasOutput::Tooltip)
                 } else {
                     None
                 }

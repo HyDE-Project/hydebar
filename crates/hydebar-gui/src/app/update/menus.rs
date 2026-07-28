@@ -52,6 +52,8 @@ impl App {
 
                 Task::batch(cmd)
             }
+            Message::ModuleTooltip(id, Some(info)) => self.outputs.show_tooltip(id, info),
+            Message::ModuleTooltip(id, None) => self.outputs.hide_tooltip(id),
             Message::CloseMenu(id) => self.outputs.close_menu(id, &self.config),
             Message::CloseAllMenus => {
                 if self.outputs.menu_is_open() {

@@ -12,9 +12,10 @@ impl App {
             | Message::BusFlushed(_)
             | Message::ConfigChanged(_)
             | Message::ConfigDegraded(_) => self.update_lifecycle(message),
-            Message::ToggleMenu(..) | Message::CloseMenu(_) | Message::CloseAllMenus => {
-                self.update_menus(message)
-            }
+            Message::ToggleMenu(..)
+            | Message::ModuleTooltip(..)
+            | Message::CloseMenu(_)
+            | Message::CloseAllMenus => self.update_menus(message),
             Message::ActivateNavigationMode
             | Message::DeactivateNavigationMode
             | Message::NavigateUp

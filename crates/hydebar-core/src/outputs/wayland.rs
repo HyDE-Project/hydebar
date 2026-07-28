@@ -15,6 +15,13 @@ use crate::{
     config::{AppearanceStyle, BarLayer, Position}
 };
 
+/// Namespace of the surface the tooltips are drawn on.
+///
+/// It is deliberately not the namespace of the bar and its menus: compositor
+/// rules attached to those, a blur behind the menu backdrop above all, would
+/// otherwise fire for every hover.
+const TOOLTIP_NAMESPACE: &str = "hydebar-tooltip-layer";
+
 /// Maps the configured bar layer onto the compositor layer it is created on.
 fn surface_layer(layer: BarLayer) -> Layer {
     match layer {
@@ -26,9 +33,10 @@ fn surface_layer(layer: BarLayer) -> Layer {
 }
 
 pub(crate) struct LayerSurfaceCreation<Message> {
-    pub(crate) main_id: Id,
-    pub(crate) menu_id: Id,
-    pub(crate) task:    Task<Message>
+    pub(crate) main_id:    Id,
+    pub(crate) menu_id:    Id,
+    pub(crate) tooltip_id: Id,
+    pub(crate) task:       Task<Message>
 }
 
 /// Returns the height the bar layer-surface is created with, in physical
@@ -93,6 +101,20 @@ pub(crate) fn create_layer_surfaces<Message: 'static>(
         size: Some((None, None)),
         layer: Layer::Background,
         keyboard_interactivity: KeyboardInteractivity::None,
+        output: wl_output
+            .clone()
+            .map_or(IcedOutput::Active, IcedOutput::Output),
+        anchor: Anchor::TOP | Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT,
+        ..Default::default()
+    });
+
+    let tooltip_id = Id::unique();
+    let tooltip_task = get_layer_surface(SctkLayerSurfaceSettings {
+        id: tooltip_id,
+        namespace: TOOLTIP_NAMESPACE.to_string(),
+        size: Some((None, None)),
+        layer: Layer::Background,
+        keyboard_interactivity: KeyboardInteractivity::None,
         output: wl_output.map_or(IcedOutput::Active, IcedOutput::Output),
         anchor: Anchor::TOP | Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT,
         ..Default::default()
@@ -101,14 +123,20 @@ pub(crate) fn create_layer_surfaces<Message: 'static>(
     LayerSurfaceCreation {
         main_id,
         menu_id,
-        task: Task::batch(vec![main_task, menu_task])
+        tooltip_id,
+        task: Task::batch(vec![main_task, menu_task, tooltip_task])
     }
 }
 
-pub(crate) fn destroy_layer_surfaces<Message: 'static>(main_id: Id, menu_id: Id) -> Task<Message> {
+pub(crate) fn destroy_layer_surfaces<Message: 'static>(
+    main_id: Id,
+    menu_id: Id,
+    tooltip_id: Id
+) -> Task<Message> {
     Task::batch(vec![
         destroy_layer_surface(main_id),
         destroy_layer_surface(menu_id),
+        destroy_layer_surface(tooltip_id),
     ])
 }
 

@@ -84,6 +84,8 @@ impl Outputs {
         button_ui_ref: ButtonUIRef,
         config: &crate::config::Config
     ) -> Task<Message> {
+        let hide_tooltip = self.hide_tooltip(id);
+
         match self.0.iter_mut().find(|(_, shell_info, _)| {
             shell_info.as_ref().map(|shell_info| shell_info.id) == Some(id)
                 || shell_info.as_ref().map(|shell_info| shell_info.menu.id) == Some(id)
@@ -106,9 +108,10 @@ impl Outputs {
                     })
                     .collect::<Vec<_>>();
                 tasks.push(toggle_task);
+                tasks.push(hide_tooltip);
                 Task::batch(tasks)
             }
-            _ => Task::none()
+            _ => hide_tooltip
         }
     }
 

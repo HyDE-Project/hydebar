@@ -5,7 +5,8 @@ use hydebar_core::{
     menu::{MenuSize, MenuType, menu_wrapper},
     modules::settings::SettingsViewExt,
     outputs::HasOutput,
-    style::{backdrop_color, darken_color, hydebar_theme}
+    style::{backdrop_color, darken_color, hydebar_theme},
+    tooltip::tooltip_wrapper
 };
 use hydebar_proto::config::{AppearanceStyle, Position};
 use iced::{
@@ -266,6 +267,10 @@ impl App {
                     None => Row::new().into()
                 }
             }
+            Some(HasOutput::Tooltip) => match self.outputs.tooltip(id) {
+                Some(info) => tooltip_wrapper(info, self.config.position, self.appearance()),
+                None => Row::new().into()
+            },
             None => Row::new().into()
         }
     }
