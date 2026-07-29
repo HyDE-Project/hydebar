@@ -15,6 +15,12 @@ use crate::{
     config::{AppearanceStyle, BarLayer, Position}
 };
 
+/// Namespace of the surface the bar itself is drawn on.
+///
+/// It is what compositor rules are attached to, the blur behind the bar above
+/// all, so it is stated once and read by everything that names it.
+pub(crate) const MAIN_NAMESPACE: &str = "hydebar-main-layer";
+
 /// Namespace of the surface the tooltips are drawn on.
 ///
 /// It is deliberately not the namespace of the bar and its menus: compositor
@@ -41,6 +47,22 @@ const NOTIFICATIONS_NAMESPACE: &str = "hydebar-notifications-layer";
 /// screen: a full screen surface on a layer above the desktop swallows every
 /// click meant for the windows underneath it.
 pub(crate) const NOTIFICATIONS_WIDTH: u32 = 520;
+
+/// Input region of a surface that only ever draws.
+///
+/// A layer surface that states no region at all takes pointer input over every
+/// pixel it covers. The tooltip surface spans the whole screen the bar leaves
+/// free, so that a hint can be drawn beside any module, and it rises to the
+/// overlay for as long as one is shown: with the region unstated it takes every
+/// press aimed at the desktop underneath it while the pointer merely rests on a
+/// module. The notification surface does the same over the corner its popups
+/// occupy.
+///
+/// An empty region states the opposite: the surface is painted and nothing
+/// else, so presses keep reaching whatever sits below it.
+fn draw_only() -> Option<Vec<iced::Rectangle>> {
+    Some(Vec::new())
+}
 
 /// Maps the configured bar layer onto the compositor layer it is created on.
 fn surface_layer(layer: BarLayer) -> Layer {
@@ -81,6 +103,99 @@ pub(crate) fn layer_height(
         * scale_factor
 }
 
+/// Resolves the output a surface is created on.
+fn on_output(wl_output: Option<WlOutput>) -> IcedOutput {
+    wl_output.map_or(IcedOutput::Active, IcedOutput::Output)
+}
+
+/// Settings of the surface the bar itself is drawn on.
+pub(crate) fn main_settings(
+    id: Id,
+    style: AppearanceStyle,
+    wl_output: Option<WlOutput>,
+    position: Position,
+    menu_keyboard_focus: bool,
+    scale_factor: f64,
+    configured_height: Option<f32>,
+    layer: BarLayer
+) -> SctkLayerSurfaceSettings {
+    let height = layer_height(style, scale_factor, configured_height);
+
+    SctkLayerSurfaceSettings {
+        id,
+        namespace: "hydebar-main-layer".to_string(),
+        size: Some((None, Some(height as u32))),
+        layer: surface_layer(layer),
+        keyboard_interactivity: if menu_keyboard_focus {
+            KeyboardInteractivity::OnDemand
+        } else {
+            KeyboardInteractivity::None
+        },
+        exclusive_zone: height as i32,
+        output: on_output(wl_output),
+        anchor: match position {
+            Position::Top => Anchor::TOP,
+            Position::Bottom => Anchor::BOTTOM
+        } | Anchor::LEFT
+            | Anchor::RIGHT,
+        ..Default::default()
+    }
+}
+
+/// Settings of the surface the menus are drawn on.
+///
+/// It states no input region on purpose: the menu is dismissed by pressing
+/// beside it, which only reaches the bar while the surface takes the press.
+pub(crate) fn menu_settings(id: Id, wl_output: Option<WlOutput>) -> SctkLayerSurfaceSettings {
+    SctkLayerSurfaceSettings {
+        id,
+        namespace: MENU_NAMESPACE.to_string(),
+        size: Some((None, None)),
+        layer: Layer::Background,
+        keyboard_interactivity: KeyboardInteractivity::None,
+        output: on_output(wl_output),
+        anchor: Anchor::TOP | Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT,
+        ..Default::default()
+    }
+}
+
+/// Settings of the surface the tooltips are drawn on.
+pub(crate) fn tooltip_settings(id: Id, wl_output: Option<WlOutput>) -> SctkLayerSurfaceSettings {
+    SctkLayerSurfaceSettings {
+        id,
+        namespace: TOOLTIP_NAMESPACE.to_string(),
+        size: Some((None, None)),
+        layer: Layer::Background,
+        keyboard_interactivity: KeyboardInteractivity::None,
+        input_zone: draw_only(),
+        output: on_output(wl_output),
+        anchor: Anchor::TOP | Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT,
+        ..Default::default()
+    }
+}
+
+/// Settings of the surface the notification popups are drawn on.
+pub(crate) fn notifications_settings(
+    id: Id,
+    wl_output: Option<WlOutput>,
+    position: Position
+) -> SctkLayerSurfaceSettings {
+    SctkLayerSurfaceSettings {
+        id,
+        namespace: NOTIFICATIONS_NAMESPACE.to_string(),
+        size: Some((Some(NOTIFICATIONS_WIDTH), None)),
+        layer: Layer::Top,
+        keyboard_interactivity: KeyboardInteractivity::None,
+        input_zone: draw_only(),
+        output: on_output(wl_output),
+        anchor: match position {
+            Position::Top => Anchor::TOP,
+            Position::Bottom => Anchor::BOTTOM
+        } | Anchor::RIGHT,
+        ..Default::default()
+    }
+}
+
 pub(crate) fn create_layer_surfaces<Message: 'static>(
     style: AppearanceStyle,
     wl_output: Option<WlOutput>,
@@ -91,72 +206,27 @@ pub(crate) fn create_layer_surfaces<Message: 'static>(
     layer: BarLayer
 ) -> LayerSurfaceCreation<Message> {
     let main_id = Id::unique();
-    let height = layer_height(style, scale_factor, configured_height);
-
-    let main_task = get_layer_surface(SctkLayerSurfaceSettings {
-        id: main_id,
-        namespace: "hydebar-main-layer".to_string(),
-        size: Some((None, Some(height as u32))),
-        layer: surface_layer(layer),
-        keyboard_interactivity: if menu_keyboard_focus {
-            KeyboardInteractivity::OnDemand
-        } else {
-            KeyboardInteractivity::None
-        },
-        exclusive_zone: height as i32,
-        output: wl_output
-            .clone()
-            .map_or(IcedOutput::Active, IcedOutput::Output),
-        anchor: match position {
-            Position::Top => Anchor::TOP,
-            Position::Bottom => Anchor::BOTTOM
-        } | Anchor::LEFT
-            | Anchor::RIGHT,
-        ..Default::default()
-    });
-
     let menu_id = Id::unique();
-    let menu_task = get_layer_surface(SctkLayerSurfaceSettings {
-        id: menu_id,
-        namespace: MENU_NAMESPACE.to_string(),
-        size: Some((None, None)),
-        layer: Layer::Background,
-        keyboard_interactivity: KeyboardInteractivity::None,
-        output: wl_output
-            .clone()
-            .map_or(IcedOutput::Active, IcedOutput::Output),
-        anchor: Anchor::TOP | Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT,
-        ..Default::default()
-    });
-
     let tooltip_id = Id::unique();
-    let tooltip_task = get_layer_surface(SctkLayerSurfaceSettings {
-        id: tooltip_id,
-        namespace: TOOLTIP_NAMESPACE.to_string(),
-        size: Some((None, None)),
-        layer: Layer::Background,
-        keyboard_interactivity: KeyboardInteractivity::None,
-        output: wl_output
-            .clone()
-            .map_or(IcedOutput::Active, IcedOutput::Output),
-        anchor: Anchor::TOP | Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT,
-        ..Default::default()
-    });
-
     let notifications_id = Id::unique();
-    let notifications_task = get_layer_surface(SctkLayerSurfaceSettings {
-        id: notifications_id,
-        namespace: NOTIFICATIONS_NAMESPACE.to_string(),
-        size: Some((Some(NOTIFICATIONS_WIDTH), None)),
-        layer: Layer::Top,
-        keyboard_interactivity: KeyboardInteractivity::None,
-        output: wl_output.map_or(IcedOutput::Active, IcedOutput::Output),
-        anchor: match position {
-            Position::Top => Anchor::TOP,
-            Position::Bottom => Anchor::BOTTOM
-        } | Anchor::RIGHT,
-        ..Default::default()
-    });
+
+    let main_task = get_layer_surface(main_settings(
+        main_id,
+        style,
+        wl_output.clone(),
+        position,
+        menu_keyboard_focus,
+        scale_factor,
+        configured_height,
+        layer
+    ));
+    let menu_task = get_layer_surface(menu_settings(menu_id, wl_output.clone()));
+    let tooltip_task = get_layer_surface(tooltip_settings(tooltip_id, wl_output.clone()));
+    let notifications_task = get_layer_surface(notifications_settings(
+        notifications_id,
+        wl_output,
+        position
+    ));
 
     LayerSurfaceCreation {
         main_id,
@@ -184,6 +254,46 @@ pub(crate) fn destroy_layer_surfaces<Message: 'static>(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_tooltip_surface_takes_no_pointer_input() {
+        // it spans the screen and rises above the windows while a hint is up,
+        // so an unstated region would take every press meant for the bar
+        assert_eq!(
+            tooltip_settings(Id::unique(), None).input_zone,
+            Some(Vec::new())
+        );
+    }
+
+    #[test]
+    fn the_notification_surface_takes_no_pointer_input() {
+        assert_eq!(
+            notifications_settings(Id::unique(), None, Position::Top).input_zone,
+            Some(Vec::new())
+        );
+    }
+
+    #[test]
+    fn the_menu_surface_keeps_taking_pointer_input() {
+        // pressing beside an open menu is what closes it
+        assert!(menu_settings(Id::unique(), None).input_zone.is_none());
+    }
+
+    #[test]
+    fn the_bar_surface_keeps_taking_pointer_input() {
+        let settings = main_settings(
+            Id::unique(),
+            AppearanceStyle::Islands,
+            None,
+            Position::Top,
+            false,
+            1.0,
+            None,
+            BarLayer::Top
+        );
+
+        assert!(settings.input_zone.is_none());
+    }
 
     #[test]
     fn maps_every_configured_layer_onto_its_compositor_counterpart() {
