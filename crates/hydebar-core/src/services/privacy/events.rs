@@ -2,7 +2,7 @@
 
 use std::{any::TypeId, fs, path::Path};
 
-use iced::{Subscription, futures::StreamExt, stream::channel};
+use iced::{Subscription, stream::channel};
 use log::{debug, warn};
 
 use super::{PrivacyEvent, PrivacyService, State, error::PrivacyError};

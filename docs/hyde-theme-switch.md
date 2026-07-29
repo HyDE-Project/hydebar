@@ -9,7 +9,7 @@ records the exact sequence, what each step costs, which outputs hydebar actually
 and which files hydebar must watch in order to recolour without a restart.
 
 Command entry point used by the bar today:
-`crates/hydebar-core/src/modules/settings/hyde_shell.rs` → `scripts/theme-switch '<theme>'`,
+`crates/hydebar-core/src/utils/hyde_shell.rs` → `scripts/theme-switch '<theme>'`,
 which runs the sequence below with waybar's wallbash template excluded — see §6.
 
 ---
@@ -296,7 +296,7 @@ running, and it is one `sed` render (~3 ms) on the wallbash side.
 ### Stage 5 — perform the switch from the bar
 
 Replace the single `hyde-shell theme.switch -s <name>` shell-out
-(`modules/settings/hyde_shell.rs:19`) with a split:
+(`utils/hyde_shell.rs:19`) with a split:
 
 1. natively write `HYDE_THEME="<name>"` into `~/.local/state/hyde/staterc`
    (the `set_conf` semantics of `globalcontrol.sh:258-267`: replace the line if the key
@@ -408,7 +408,7 @@ HyDE's own order. It resolves HyDE through `hyde-shell` — `PATH` first, then
 `~/.local/bin`, `/usr/local/bin`, `/usr/bin` — and derives `theme.switch.sh` from there, so
 no path of a particular machine is baked in.
 
-**Where the bar finds it.** `modules/settings/theme_script.rs` searches, in order:
+**Where the bar finds it.** `utils/hyde_shell/theme_script.rs` searches, in order:
 `$HYDEBAR_THEME_SWITCH`, `<binary directory>/hydebar-theme-switch`,
 `<binary directory>/../share/hydebar/scripts/theme-switch`,
 `$XDG_DATA_HOME/hydebar/scripts/theme-switch`, the same path under `/usr/local/share` and

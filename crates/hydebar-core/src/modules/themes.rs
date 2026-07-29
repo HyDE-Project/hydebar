@@ -68,14 +68,7 @@ pub enum Message {
     /// otherwise: the bar has no other reason to redraw itself while it waits
     /// on a desktop script, and a wait nobody can see reads as a press that was
     /// never taken.
-    Tick,
-    /// Ask HyDE for the next wallpaper of the theme in force.
-    NextWallpaper,
-    /// Report that the wallpaper change has ended.
-    WallpaperChanged {
-        /// Why the change failed, when it did.
-        failure: Option<String>
-    }
+    Tick
 }
 
 /// What a press on a theme chip leads to.
@@ -243,21 +236,6 @@ impl Themes {
             Message::Tick => {
                 if self.switching.is_some() {
                     self.spinner.advance();
-                }
-            }
-            Message::NextWallpaper => {
-                return Task::perform(hyde_shell::run(hyde_shell::next_wallpaper()), |failure| {
-                    Message::WallpaperChanged {
-                        failure
-                    }
-                });
-            }
-            Message::WallpaperChanged {
-                failure
-            } => {
-                if let Some(reason) = failure {
-                    error!("the wallpaper could not be changed: {reason}");
-                    report(config, "the desktop refused to change the wallpaper");
                 }
             }
         }
@@ -489,43 +467,6 @@ mod tests {
 
         assert_eq!(themes.switching(), Some("Gruvbox Retro"));
         assert_eq!(themes.spinner(), Spinner::default());
-    }
-
-    /// The wallpaper action and the theme switch are two different desktop
-    /// commands, and only the switch is the one the module refuses to run twice
-    /// over; asking for a wallpaper must therefore neither start a wait nor end
-    /// one that is running.
-    #[test]
-    fn asking_for_the_next_wallpaper_does_not_disturb_a_running_switch() {
-        let mut themes = waiting_on("Tokyo Night");
-
-        let _ = themes.update(Message::NextWallpaper, &Config::default());
-
-        assert_eq!(themes.switching(), Some("Tokyo Night"));
-        assert!(themes.is_waiting());
-    }
-
-    #[test]
-    fn asking_for_the_next_wallpaper_starts_no_wait_of_its_own() {
-        let mut themes = Themes::default();
-
-        let _ = themes.update(Message::NextWallpaper, &Config::default());
-
-        assert!(!themes.is_waiting());
-    }
-
-    #[test]
-    fn a_refused_wallpaper_change_leaves_the_module_as_it_found_it() {
-        let mut themes = waiting_on("Tokyo Night");
-
-        let _ = themes.update(
-            Message::WallpaperChanged {
-                failure: Some("the script died".to_owned())
-            },
-            &Config::default()
-        );
-
-        assert_eq!(themes.switching(), Some("Tokyo Night"));
     }
 
     #[test]

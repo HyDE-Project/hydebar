@@ -121,6 +121,10 @@ impl GroupRegistry {
     }
 
     /// Reports whether the group led by `pid` is recorded.
+    ///
+    /// Only the tests observe the registry this way; live code either records
+    /// or ends groups and never has to ask.
+    #[cfg(test)]
     fn contains(&self, pid: u32) -> bool {
         self.slots
             .iter()
@@ -592,7 +596,6 @@ impl Drop for GroupGuard {
 #[cfg(test)]
 mod tests {
     use std::{
-        os::unix::process::CommandExt,
         process::Stdio,
         sync::atomic::AtomicUsize,
         time::{Duration, Instant}

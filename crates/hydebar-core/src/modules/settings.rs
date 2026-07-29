@@ -79,10 +79,6 @@ pub enum Message {
     SetFontSize(f32),
     /// Set the opacity of the module pills.
     SetOpacity(f32),
-    /// Follow the theme published by the HyDE Project, or stop following it.
-    SetFollowHyde(bool),
-    /// Take the text size and the bar height from the screen, or stop.
-    SetAutoScale(bool),
     /// Choose who draws the notification popups.
     SetNotificationSource(NotificationSource),
     /// Show another page of the window.
@@ -131,8 +127,6 @@ impl Message {
             Self::SetSidePadding(_) => &["appearance", "side_padding"],
             Self::SetFontSize(_) => &["appearance", "font_size"],
             Self::SetOpacity(_) => &["appearance", "opacity"],
-            Self::SetFollowHyde(_) => &["appearance", "follow_hyde"],
-            Self::SetAutoScale(_) => &["appearance", "auto_scale"],
             Self::SetNotificationSource(_) => &["notifications", "source"],
             Self::SelectTab(_)
             | Self::EditLayout(_)
@@ -163,8 +157,6 @@ impl Message {
             Self::SetSidePadding(padding) => (*padding).into(),
             Self::SetFontSize(size) => (*size).into(),
             Self::SetOpacity(opacity) => (*opacity).into(),
-            Self::SetFollowHyde(follow) => (*follow).into(),
-            Self::SetAutoScale(auto) => (*auto).into(),
             Self::SetNotificationSource(source) => match source {
                 NotificationSource::Builtin => "Builtin".into(),
                 NotificationSource::Compositor => "Compositor".into(),
@@ -324,31 +316,6 @@ impl Settings {
         Task::none()
     }
 
-    /// Announces the notification source the user just picked, through that
-    /// very source.
-    ///
-    /// A setting whose effect is invisible until something else happens is a
-    /// setting nobody can tell they changed. Sending one notice the moment the
-    /// choice is made answers the only question the choice raises — where will
-    /// my notifications appear now — by showing it.
-    pub fn announce_source(source: NotificationSource, config: &Config) {
-        let message = format!("notifications are now shown by {}", source.label());
-
-        if source.hands_to_compositor() {
-            notify(
-                Notice::Info,
-                ANNOUNCE_DURATION,
-                &compositor_color(config.appearance.primary_color.clone()),
-                config.appearance.font_size_px(),
-                &message
-            );
-
-            return;
-        }
-
-        post_to_bus(&message);
-    }
-
     /// File the choices are written to.
     #[must_use]
     pub fn config_path(&self) -> &Path {
@@ -445,8 +412,8 @@ mod tests {
         );
         assert_eq!(Message::SetOpacity(0.8).path(), &["appearance", "opacity"]);
         assert_eq!(
-            Message::SetFollowHyde(true).path(),
-            &["appearance", "follow_hyde"]
+            Message::SetNotificationSource(NotificationSource::Daemon).path(),
+            &["notifications", "source"]
         );
     }
 
@@ -465,8 +432,8 @@ mod tests {
             SettingValue::Text("Gradient".to_owned())
         );
         assert_eq!(
-            Message::SetFollowHyde(false).value(),
-            SettingValue::Flag(false)
+            Message::SetNotificationSource(NotificationSource::Builtin).value(),
+            SettingValue::Text("Builtin".to_owned())
         );
     }
 

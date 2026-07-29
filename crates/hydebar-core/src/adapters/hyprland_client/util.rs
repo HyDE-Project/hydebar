@@ -1,7 +1,5 @@
 use std::time::Duration;
 
-use tokio::time::sleep;
-
 /// Compute the delay to wait before retrying an operation using linear backoff.
 ///
 /// The returned duration is `base_backoff * attempt` with saturating
@@ -24,23 +22,11 @@ pub(crate) fn calculate_retry_delay(base_backoff: Duration, attempt: u8) -> Dura
     base_backoff.saturating_mul(u32::from(attempt))
 }
 
-/// Sleep for the provided backoff duration if it is non-zero.
-///
-/// This helper keeps listener retry loops concise and avoids duplicating the
-/// zero-duration guard at each call site.
-pub(crate) async fn sleep_with_backoff(backoff: Duration) {
-    if backoff.is_zero() {
-        return;
-    }
-
-    sleep(backoff).await;
-}
-
 #[cfg(test)]
 pub(crate) mod tests {
     use std::time::Duration;
 
-    use super::{calculate_retry_delay, sleep_with_backoff};
+    use super::calculate_retry_delay;
 
     #[test]
     fn retry_delay_uses_linear_backoff() {
@@ -58,16 +44,4 @@ pub(crate) mod tests {
         );
     }
 
-    #[tokio::test(start_paused = true)]
-    async fn sleep_with_zero_backoff_returns_immediately() {
-        sleep_with_backoff(Duration::ZERO).await;
-    }
-
-    #[tokio::test(start_paused = true)]
-    async fn sleep_with_positive_backoff_awaits_duration() {
-        let duration = Duration::from_millis(250);
-        let start = tokio::time::Instant::now();
-        sleep_with_backoff(duration).await;
-        assert_eq!(tokio::time::Instant::now() - start, duration);
-    }
 }

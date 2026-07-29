@@ -1,28 +1,7 @@
-//! Station state and the D-Bus agents iwd calls back into.
+//! The D-Bus agents iwd calls back into.
 
 use log::warn;
 use zbus::{interface, zvariant::OwnedObjectPath};
-
-pub(super) enum IwdStationState {
-    Connected,
-    Disconnected,
-    Connecting,
-    Disconnecting,
-    Roaming
-}
-
-impl From<String> for IwdStationState {
-    fn from(state: String) -> Self {
-        match state.as_str() {
-            "connected" => IwdStationState::Connected,
-            "disconnected" => IwdStationState::Disconnected,
-            "connecting" => IwdStationState::Connecting,
-            "disconnecting" => IwdStationState::Disconnecting,
-            "roaming" => IwdStationState::Roaming,
-            _ => IwdStationState::Disconnected
-        }
-    }
-}
 
 pub(super) struct SignalAgent {
     pub(super) tx: tokio::sync::mpsc::UnboundedSender<i16>
@@ -30,10 +9,11 @@ pub(super) struct SignalAgent {
 
 #[interface(name = "net.connman.iwd.SignalLevelAgent")]
 impl SignalAgent {
-    /// Called by iwd whenever RSSI crosses a threshold
+    /// Called by iwd whenever RSSI crosses a threshold.
+    ///
+    /// A send failure only means the receiver was dropped, so it is ignored.
     #[zbus(name = "Changed")]
     pub(super) fn changed(&self, level: i16) {
-        // ignore failure if receiver was dropped
         warn!("Signal level changed: {level}");
         let _ = self.tx.send(level);
     }
