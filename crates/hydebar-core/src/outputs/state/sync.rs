@@ -33,7 +33,9 @@ impl Outputs {
     ///     config.appearance.style,
     ///     &config.outputs,
     ///     config.position,
-    ///     &config
+    ///     &config,
+    ///     config.appearance.scale_factor,
+    ///     config.appearance.height
     /// );
     /// # let _ = task;
     /// ```
@@ -43,6 +45,7 @@ impl Outputs {
         request_outputs: &config::Outputs,
         position: Position,
         config: &crate::config::Config,
+        scale_factor: f64,
         height: Option<f32>
     ) -> Task<Message> {
         debug!("Syncing outputs: {self:?}, request_outputs: {request_outputs:?}");
@@ -87,6 +90,7 @@ impl Outputs {
                     name.as_str(),
                     wl_output,
                     config,
+                    scale_factor,
                     height
                 ));
             }

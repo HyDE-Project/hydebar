@@ -218,8 +218,7 @@ impl App {
         let mut appearance = self.config.appearance.clone();
 
         if let (true, Some(metrics)) = (appearance.auto_scale, self.auto_metrics) {
-            appearance.font_size = Some(metrics.font_size);
-            appearance.height = Some(metrics.height);
+            appearance.scale_factor *= f64::from(metrics.scale);
         }
 
         appearance

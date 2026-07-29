@@ -73,6 +73,7 @@ impl App {
                         &config.outputs,
                         config.position,
                         &config,
+                        self.scaled_appearance().scale_factor,
                         self.scaled_appearance().height
                     ));
                 }

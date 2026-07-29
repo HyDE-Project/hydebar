@@ -51,13 +51,14 @@ pub struct Appearance {
     /// desktop. Fields present in the configuration always win.
     #[serde(default = "default_follow_hyde")]
     pub follow_hyde:              bool,
-    /// Whether the text size and the bar height follow the screen.
+    /// Whether the bar magnifies itself to stay readable on the screen it
+    /// lands on.
     ///
-    /// Enabled the bar measures the output it lands on and picks sizes that
-    /// stay readable there, which is what a fresh install wants. Disabled the
-    /// configured sizes are used verbatim, which is what a bar tuned to match
-    /// another one wants.
-    #[serde(default)]
+    /// Enabled by default: the bar measures the output, both its pixels and its
+    /// physical size, and magnifies itself so a laptop panel, a dense desktop
+    /// screen and a television across the room all stay readable without a
+    /// single setting. Set it to `false` to keep the configured sizes verbatim.
+    #[serde(default = "default_auto_scale")]
     pub auto_scale:               bool,
     #[serde(default)]
     pub style:                    AppearanceStyle,
@@ -104,7 +105,7 @@ impl Default for Appearance {
             radius:                   None,
             height:                   None,
             follow_hyde:              default_follow_hyde(),
-            auto_scale:               false,
+            auto_scale:               default_auto_scale(),
             scale_factor:             1.0,
             style:                    AppearanceStyle::default(),
             opacity:                  default_opacity(),
@@ -122,6 +123,11 @@ impl Default for Appearance {
             special_workspace_colors: None
         }
     }
+}
+
+/// Automatic magnification is on unless the configuration turns it off.
+fn default_auto_scale() -> bool {
+    true
 }
 
 fn default_follow_hyde() -> bool {

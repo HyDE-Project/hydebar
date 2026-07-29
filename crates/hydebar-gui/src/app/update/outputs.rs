@@ -27,19 +27,20 @@ impl App {
                             .or_else(|| info.modes.first())
                             .map(|mode| mode.dimensions);
 
-                        self.adopt_metrics(mode, info.scale_factor);
+                        self.adopt_metrics(mode, info.scale_factor, info.physical_size);
                     }
 
-                    let height = self.scaled_appearance().height;
+                    let appearance = self.scaled_appearance();
 
                     self.outputs.add(
-                        self.config.appearance.style,
+                        appearance.style,
                         &self.config.outputs,
                         self.config.position,
                         &name,
                         wl_output,
                         &self.config,
-                        height
+                        appearance.scale_factor,
+                        appearance.height
                     )
                 }
                 OutputEvent::Removed => {
@@ -59,7 +60,7 @@ impl App {
                         .or_else(|| info.modes.first())
                         .map(|mode| mode.dimensions);
 
-                    if self.adopt_metrics(mode, info.scale_factor) {
+                    if self.adopt_metrics(mode, info.scale_factor, info.physical_size) {
                         self.refresh_appearance()
                     } else {
                         Task::none()
@@ -76,7 +77,12 @@ impl App {
     /// time by a compositor that already scales the surface, and the scale the
     /// bar applies to its own surface is divided out for the same reason.
     /// Reports whether the sizes changed.
-    fn adopt_metrics(&mut self, dimensions: Option<(i32, i32)>, scale_factor: i32) -> bool {
+    fn adopt_metrics(
+        &mut self,
+        dimensions: Option<(i32, i32)>,
+        scale_factor: i32,
+        physical: (i32, i32)
+    ) -> bool {
         let Some(dimensions) = dimensions else {
             return false;
         };
@@ -87,17 +93,15 @@ impl App {
         let metrics = auto_metrics(
             dimensions.0 as f32,
             dimensions.1 as f32,
-            compositor_scale * surface_scale.max(f32::EPSILON)
+            compositor_scale * surface_scale.max(f32::EPSILON),
+            (physical.0 as f32, physical.1 as f32)
         );
 
         if self.auto_metrics == Some(metrics) {
             return false;
         }
 
-        info!(
-            "screen calls for a text size of {} and a bar height of {}",
-            metrics.font_size, metrics.height
-        );
+        info!("screen calls for a bar magnified {} times", metrics.scale);
         self.auto_metrics = Some(metrics);
 
         true

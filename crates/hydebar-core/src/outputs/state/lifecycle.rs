@@ -27,7 +27,8 @@ impl Outputs {
     /// ```ignore
     /// let (mut outputs, _) = Outputs::new(style, position, &config);
     /// let wl_output = obtain_wl_output();
-    /// let task = outputs.add(style, &config.outputs, position, name, wl_output, &config);
+    /// let task =
+    ///     outputs.add(style, &config.outputs, position, name, wl_output, &config, 1.0, None);
     /// spawn(task);
     /// ```
     #[allow(clippy::too_many_arguments)]
@@ -39,6 +40,7 @@ impl Outputs {
         name: &str,
         wl_output: WlOutput,
         config: &crate::config::Config,
+        scale_factor: f64,
         height: Option<f32>
     ) -> Task<Message> {
         let target = is_output_requested(Some(name), request_outputs);
@@ -56,7 +58,7 @@ impl Outputs {
                 Some(wl_output.clone()),
                 position,
                 config.menu_keyboard_focus,
-                config.appearance.scale_factor,
+                scale_factor,
                 height,
                 config.layer
             );
