@@ -66,7 +66,7 @@ mod tests {
 
     #[test]
     fn renders_the_activated_glyph_while_inhibited() {
-        assert_eq!(IdleInhibitor::state_icon(true).default_glyph(), "\u{f0576}");
+        assert_eq!(IdleInhibitor::state_icon(true).default_glyph(), "\u{f0176}");
         assert_eq!(IdleInhibitor::state_icon(true), Icons::IdleInhibitorActive);
 
         let (_, action) = view(true, &IconTheme::default());

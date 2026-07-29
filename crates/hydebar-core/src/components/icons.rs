@@ -326,7 +326,7 @@ impl Icons {
             Icons::DownloadSpeed => "󰛴",
             Icons::UploadSpeed => "󰛶",
             Icons::Copy => "󰆏",
-            Icons::IdleInhibitorActive => "\u{f0576}",
+            Icons::IdleInhibitorActive => "\u{f0176}",
             Icons::IdleInhibitorInactive => "\u{f06ca}"
         }
     }
