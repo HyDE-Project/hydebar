@@ -1,7 +1,9 @@
 use std::time::Instant;
 
 use itertools::Itertools;
-use sysinfo::{Components, Disks, Networks, System};
+use sysinfo::{Disks, Networks, System};
+
+use super::sensors::{GpuReadings, HardwareSensors, Readings};
 
 /// Snapshot of network utilisation metrics captured during sampling.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -39,9 +41,28 @@ pub struct SystemInfoData {
     pub memory_swap_usage: u32,
     /// Swap in use, in bytes, behind [`Self::memory_swap_usage`].
     pub memory_swap_used:  u64,
-    pub temperature:       Option<i32>,
+    /// Processor temperature, absent on a machine that reports none.
+    pub cpu_temperature:   Option<i32>,
+    /// Graphics readings, absent when the machine exposes no graphics device.
+    pub gpu:               Option<GpuReadings>,
     pub disks:             Vec<(String, u32)>,
     pub network:           Option<NetworkData>
+}
+
+impl Default for SystemInfoData {
+    fn default() -> Self {
+        Self {
+            cpu_usage:         0,
+            memory_usage:      0,
+            memory_used:       0,
+            memory_swap_usage: 0,
+            memory_swap_used:  0,
+            cpu_temperature:   None,
+            gpu:               None,
+            disks:             Vec::new(),
+            network:           None
+        }
+    }
 }
 
 impl SystemInfoData {
@@ -68,7 +89,8 @@ impl SystemInfoData {
             && self.memory_used == other.memory_used
             && self.memory_swap_usage == other.memory_swap_usage
             && self.memory_swap_used == other.memory_swap_used
-            && self.temperature == other.temperature
+            && self.cpu_temperature == other.cpu_temperature
+            && self.gpu == other.gpu
             && self.disks == other.disks
     }
 }
@@ -143,10 +165,15 @@ impl NetworkSnapshot {
 }
 
 /// Samples system metrics using the [`sysinfo`] crate.
+///
+/// Temperatures come from [`HardwareSensors`] rather than from `sysinfo`: the
+/// panel has to know which chip a reading belongs to, has to pair it with the
+/// load the graphics driver publishes elsewhere, and has to read only the two
+/// files it settled on instead of the whole subsystem on every tick.
 #[derive(Debug)]
 pub struct SystemInfoSampler {
     system:       System,
-    components:   Option<Components>,
+    sensors:      HardwareSensors,
     disks:        Option<Disks>,
     networks:     Option<Networks>,
     last_network: Option<NetworkSnapshot>
@@ -167,17 +194,16 @@ impl SystemInfoSampler {
                     .with_cpu(sysinfo::CpuRefreshKind::nothing().with_cpu_usage())
                     .with_memory(sysinfo::MemoryRefreshKind::nothing().with_ram())
             ),
-            components:   None,
+            sensors:      HardwareSensors::new(),
             disks:        None,
             networks:     None,
             last_network: None
         }
     }
 
-    fn ensure_components(&mut self) {
-        if self.components.is_none() {
-            self.components = Some(Components::new_with_refreshed_list());
-        }
+    /// Pins the graphics device the readings come from.
+    pub fn prefer_gpu(&mut self, preferred: Option<&str>) {
+        self.sensors.prefer_gpu(preferred);
     }
 
     fn ensure_disks(&mut self) {
@@ -205,26 +231,17 @@ impl SystemInfoSampler {
         let (memory_swap_usage, memory_swap_used) =
             memory_share(self.system.total_swap(), self.system.free_swap());
 
-        let temperature = None;
-
-        let disks = Vec::new();
-
-        let network = None;
-
         SystemInfoData {
             cpu_usage,
             memory_usage,
             memory_used,
             memory_swap_usage,
             memory_swap_used,
-            temperature,
-            disks,
-            network
+            ..SystemInfoData::default()
         }
     }
 
     pub fn sample_with_extras(&mut self) -> SystemInfoData {
-        self.ensure_components();
         self.ensure_disks();
         self.ensure_networks();
 
@@ -232,9 +249,6 @@ impl SystemInfoSampler {
             .refresh_cpu_specifics(sysinfo::CpuRefreshKind::nothing().with_cpu_usage());
         self.system.refresh_memory();
 
-        if let Some(ref mut components) = self.components {
-            components.refresh(true);
-        }
         if let Some(ref mut disks) = self.disks {
             disks.refresh(true);
         }
@@ -258,10 +272,10 @@ impl SystemInfoSampler {
         let (memory_swap_usage, memory_swap_used) =
             memory_share(self.system.total_swap(), self.system.free_swap());
 
-        let temperature = self
-            .components
-            .as_ref()
-            .and_then(|components| cpu_temperature(components));
+        let Readings {
+            cpu: cpu_temperature,
+            gpu
+        } = self.sensors.read();
 
         let disks = self
             .disks
@@ -290,7 +304,8 @@ impl SystemInfoSampler {
             memory_used,
             memory_swap_usage,
             memory_swap_used,
-            temperature,
+            cpu_temperature,
+            gpu,
             disks,
             network
         }
@@ -316,115 +331,6 @@ fn memory_share(total: u64, unused: u64) -> (u32, u64) {
     let used = total.saturating_sub(unused);
 
     (percentage(used, total), used)
-}
-
-/// Chips whose readings stand for a CPU die or package temperature.
-const CPU_TEMPERATURE_CHIPS: [&str; 8] = [
-    "k10temp",
-    "zenpower",
-    "zenpower3",
-    "coretemp",
-    "k8temp",
-    "cpu_thermal",
-    "cpu-thermal",
-    "soc_thermal"
-];
-
-/// Sensor names a CPU chip gives its package reading, best candidate first.
-const CPU_PACKAGE_SENSORS: [&str; 5] = ["tdie", "tctl", "package id 0", "package", "cpu"];
-
-/// Sensor names a CPU chip gives its per-core and per-die readings.
-const CPU_CORE_SENSORS: [&str; 3] = ["core", "tccd", "die"];
-
-/// Rank of a per-core reading, worse than any package reading.
-const CORE_SENSOR_RANK: u8 = 100;
-
-/// Rank of a reading whose name says nothing about what it measures.
-const UNNAMED_SENSOR_RANK: u8 = 200;
-
-/// Splits a `sysinfo` component label into the chip and the sensor it names.
-///
-/// The crate builds labels as `"<chip> <sensor>"`, falling back to
-/// `"<chip> temp<n>"` for a sensor the driver leaves unlabelled.
-fn split_chip_and_sensor(label: &str) -> (&str, &str) {
-    match label.split_once(' ') {
-        Some((chip, sensor)) => (strip_chip_index(chip), sensor),
-        None => (strip_chip_index(label), "")
-    }
-}
-
-/// Drops the `_0` style index the kernel appends to some chip names.
-fn strip_chip_index(chip: &str) -> &str {
-    match chip.rsplit_once('_') {
-        Some((base, index))
-            if !base.is_empty()
-                && !index.is_empty()
-                && index.chars().all(|c| c.is_ascii_digit()) =>
-        {
-            base
-        }
-        _ => chip
-    }
-}
-
-/// Rank of a hwmon reading as a stand-in for the CPU temperature.
-///
-/// Lower sorts better, and [`None`] marks a reading that never qualifies. The
-/// chip decides the first component, so a CPU chip always beats the board-wide
-/// ACPI zone that reports whichever node the firmware happens to expose; the
-/// sensor decides the second, so the package reading beats a single core.
-fn cpu_temperature_rank(label: &str) -> Option<(u8, u8)> {
-    let (chip, sensor) = split_chip_and_sensor(label);
-    let chip = chip.to_ascii_lowercase();
-    let sensor = sensor.to_ascii_lowercase();
-
-    let chip_rank = if CPU_TEMPERATURE_CHIPS.contains(&chip.as_str()) {
-        0
-    } else if chip == "x86_pkg_temp" {
-        1
-    } else if chip == "acpitz" {
-        2
-    } else {
-        return None;
-    };
-
-    let sensor_rank = CPU_PACKAGE_SENSORS
-        .iter()
-        .position(|candidate| sensor.starts_with(candidate))
-        .map(|position| position as u8)
-        .or_else(|| {
-            CPU_CORE_SENSORS
-                .iter()
-                .any(|candidate| sensor.starts_with(candidate))
-                .then_some(CORE_SENSOR_RANK)
-        })
-        .unwrap_or(UNNAMED_SENSOR_RANK);
-
-    Some((chip_rank, sensor_rank))
-}
-
-/// Best CPU temperature among labelled hwmon readings, in whole degrees.
-///
-/// The value is truncated rather than rounded so the bar agrees with the
-/// `sensors` readout every other tool prints.
-fn best_cpu_temperature<'a, I>(readings: I) -> Option<i32>
-where
-    I: IntoIterator<Item = (&'a str, f32)>
-{
-    readings
-        .into_iter()
-        .filter_map(|(label, temperature)| Some((cpu_temperature_rank(label)?, temperature)))
-        .min_by_key(|(rank, _)| *rank)
-        .map(|(_, temperature)| temperature as i32)
-}
-
-/// CPU temperature reported by the refreshed component list.
-fn cpu_temperature(components: &Components) -> Option<i32> {
-    best_cpu_temperature(
-        components
-            .iter()
-            .filter_map(|component| Some((component.label(), component.temperature()?)))
-    )
 }
 
 #[cfg(test)]
@@ -478,90 +384,6 @@ mod tests {
             memory_share(total, available),
             (31, 20 * 1024 * 1024 * 1024)
         );
-    }
-
-    #[test]
-    fn the_cpu_chip_beats_the_board_thermal_zone() {
-        assert_eq!(
-            best_cpu_temperature([("acpitz_0 temp1", 80.0), ("k10temp Tctl", 65.6)]),
-            Some(65)
-        );
-    }
-
-    #[test]
-    fn the_package_reading_beats_a_single_core() {
-        assert_eq!(
-            best_cpu_temperature([
-                ("coretemp Core 0", 71.0),
-                ("coretemp Package id 0", 58.0),
-                ("coretemp Core 1", 69.0)
-            ]),
-            Some(58)
-        );
-    }
-
-    #[test]
-    fn the_die_reading_beats_the_control_reading() {
-        assert_eq!(
-            best_cpu_temperature([("k10temp Tctl", 75.0), ("k10temp Tdie", 48.0)]),
-            Some(48)
-        );
-    }
-
-    #[test]
-    fn a_core_reading_stands_in_when_the_chip_names_no_package() {
-        assert_eq!(
-            best_cpu_temperature([("acpitz temp1", 80.0), ("k10temp Tccd1", 61.0)]),
-            Some(61)
-        );
-    }
-
-    #[test]
-    fn the_thermal_zone_stands_in_when_no_cpu_chip_reports() {
-        assert_eq!(
-            best_cpu_temperature([
-                ("amdgpu edge", 52.0),
-                ("nvme Composite YMTC PC411-2TB-B", 42.8),
-                ("acpitz_0 temp1", 47.0)
-            ]),
-            Some(47)
-        );
-    }
-
-    #[test]
-    fn readings_from_other_hardware_never_qualify() {
-        assert_eq!(
-            best_cpu_temperature([
-                ("amdgpu edge", 52.0),
-                ("nvme Sensor 1 YMTC PC411-2TB-B", 42.8),
-                ("mt7925_phy0 temp1", 49.0),
-                ("r8169_0_c100:00 temp1", 51.0)
-            ]),
-            None
-        );
-    }
-
-    #[test]
-    fn an_empty_component_list_reports_no_temperature() {
-        assert_eq!(best_cpu_temperature([]), None);
-    }
-
-    #[test]
-    fn a_chip_index_suffix_does_not_hide_the_chip() {
-        assert_eq!(split_chip_and_sensor("acpitz_0 temp1"), ("acpitz", "temp1"));
-        assert_eq!(split_chip_and_sensor("k10temp Tctl"), ("k10temp", "Tctl"));
-        assert_eq!(
-            split_chip_and_sensor("cpu_thermal temp1"),
-            ("cpu_thermal", "temp1")
-        );
-        assert_eq!(split_chip_and_sensor("coretemp"), ("coretemp", ""));
-    }
-
-    #[test]
-    fn the_package_sensor_outranks_the_bare_chip_name() {
-        assert!(cpu_temperature_rank("k10temp Tctl") < cpu_temperature_rank("k10temp temp1"));
-        assert!(cpu_temperature_rank("k10temp temp1") < cpu_temperature_rank("acpitz temp1"));
-        assert_eq!(cpu_temperature_rank("nvme Composite"), None);
     }
 
     #[test]

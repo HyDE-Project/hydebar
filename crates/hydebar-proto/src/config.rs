@@ -46,7 +46,7 @@ pub use notifications::{NotificationSource, NotificationsConfig};
 use serde::Deserialize;
 pub use serde_helpers::RegexCfg;
 pub use system_info::{
-    MemoryFormat, SystemIndicator, SystemInfoCpu, SystemInfoDisk, SystemInfoMemory,
+    MemoryFormat, SystemIndicator, SystemInfoCpu, SystemInfoDisk, SystemInfoGpu, SystemInfoMemory,
     SystemInfoTemperature, SystemModuleConfig
 };
 pub use themes::PresetTheme;

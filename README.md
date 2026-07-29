@@ -228,13 +228,34 @@ run a command.
 
 ### System Information
 
+The module needs no configuration: it looks the machine over and draws load,
+memory and whichever temperatures the hardware actually reports. A processor
+temperature appears where a processor chip reports one, a graphics temperature
+and a graphics load appear where a graphics device reports them, and a machine
+that reports neither simply shows neither - no blank, no dash, no log line.
+The reading of a graphics block built into the processor is tagged `iGPU`, so
+it is never mistaken for a card.
+
+Configuration only overrides that: `indicators` pins the readouts and their
+order, `hide` drops one from the automatic selection, and `[system.gpu]` names
+which device to watch on a machine with more than one.
+
 ```toml
 [system]
-indicators = ["Cpu", "Memory", "Temperature", {"disk" = "/"}, "DownloadSpeed"]
+# Optional: pin the readouts and their order.
+indicators = ["Cpu", "Memory", "CpuTemperature", "GpuTemperature", {"disk" = "/"}]
+# Optional: drop a readout the panel would otherwise draw.
+hide = ["GpuUsage"]
 
 [system.cpu]
 warn_threshold = 60
 alert_threshold = 80
+
+[system.gpu]
+# Optional: "amd", "intel", "nvidia", a driver name, "discrete" or "integrated".
+device = "discrete"
+warn_threshold = 70
+alert_threshold = 85
 ```
 
 ### Power Management

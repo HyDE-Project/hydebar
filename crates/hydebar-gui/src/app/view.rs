@@ -322,7 +322,7 @@ impl App {
                     Some((MenuType::SystemInfo, button_ui_ref)) => menu_wrapper(
                         id,
                         self.system_info
-                            .menu_view(self.icons())
+                            .menu_view(&self.config.system, self.icons())
                             .map(Message::SystemInfo),
                         MenuSize::Medium,
                         *button_ui_ref,

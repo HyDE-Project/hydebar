@@ -51,8 +51,19 @@ impl PollingTask {
     }
 
     /// Spawn a periodic refresh loop bound to the provided runtime context.
-    pub fn spawn(&mut self, ctx: &ModuleContext, sender: ModuleEventSender<Message>) {
-        self.spawn_from(ctx, sender, SystemInfoSampler::new());
+    ///
+    /// `preferred_gpu` pins the graphics device the readings come from on a
+    /// machine that has more than one; leaving it out lets the panel choose.
+    pub fn spawn(
+        &mut self,
+        ctx: &ModuleContext,
+        sender: ModuleEventSender<Message>,
+        preferred_gpu: Option<&str>
+    ) {
+        let mut sampler = SystemInfoSampler::new();
+        sampler.prefer_gpu(preferred_gpu);
+
+        self.spawn_from(ctx, sender, sampler);
     }
 
     /// Spawn the refresh loop against an explicit metric source.
@@ -156,11 +167,7 @@ mod tests {
             cpu_usage,
             memory_usage: 42,
             memory_used: 1024,
-            memory_swap_usage: 0,
-            memory_swap_used: 0,
-            temperature: None,
-            disks: Vec::new(),
-            network: None
+            ..SystemInfoData::default()
         }
     }
 

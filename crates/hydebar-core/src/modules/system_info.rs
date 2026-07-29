@@ -1,11 +1,15 @@
 mod data;
+pub mod indicators;
 mod runtime;
+pub mod sensors;
 mod view;
 
 pub use data::{NetworkData, SystemInfoData, SystemInfoSampler};
 use hydebar_proto::config::{Appearance, MemoryFormat, SystemModuleConfig};
 use iced::Element;
+pub use indicators::{IndicatorStatus, Unavailable};
 pub use runtime::REFRESH_INTERVAL;
+pub use sensors::{GpuPlacement, GpuReadings, GpuVendor, HardwareSensors};
 pub use view::{build_indicator_view, build_menu_view, indicator_elements};
 
 use super::{Module, ModuleError, OnModulePress};
@@ -60,8 +64,12 @@ impl SystemInfo {
     }
 
     /// Render the menu entry exposing detailed system information.
-    pub fn menu_view(&self, icons: &IconTheme) -> Element<'_, Message> {
-        view::build_menu_view(&self.data, icons)
+    pub fn menu_view(
+        &self,
+        config: &SystemModuleConfig,
+        icons: &IconTheme
+    ) -> Element<'_, Message> {
+        view::build_menu_view(&self.data, config, icons)
     }
 }
 
@@ -70,15 +78,16 @@ where
     M: 'static + Clone + From<Message>
 {
     type ViewData<'a> = (&'a SystemModuleConfig, &'a Appearance, &'a IconTheme);
-    type RegistrationData<'a> = ();
+    type RegistrationData<'a> = &'a SystemModuleConfig;
 
     fn register(
         &mut self,
         ctx: &ModuleContext,
-        _: Self::RegistrationData<'_>
+        config: Self::RegistrationData<'_>
     ) -> Result<(), ModuleError> {
         let sender = ctx.module_sender(ModuleEvent::SystemInfo);
-        self.polling.spawn(ctx, sender);
+        self.polling
+            .spawn(ctx, sender, config.gpu.device.as_deref());
 
         Ok(())
     }

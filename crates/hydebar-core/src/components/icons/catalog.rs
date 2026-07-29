@@ -12,6 +12,8 @@ pub enum Icons {
     MenuClosed,
     MenuOpen,
     Cpu,
+    Gpu,
+    Accelerator,
     Mem,
     Temp,
     Speaker0,
@@ -81,7 +83,7 @@ pub enum Icons {
 
 impl Icons {
     /// Every icon that can be overridden from the configuration.
-    pub const ALL: [Icons; 74] = [
+    pub const ALL: [Icons; 76] = [
         Icons::None,
         Icons::AppLauncher,
         Icons::Clipboard,
@@ -91,6 +93,8 @@ impl Icons {
         Icons::MenuClosed,
         Icons::MenuOpen,
         Icons::Cpu,
+        Icons::Gpu,
+        Icons::Accelerator,
         Icons::Mem,
         Icons::Temp,
         Icons::Speaker0,
@@ -171,6 +175,8 @@ impl Icons {
             Icons::MenuClosed => "menu_closed",
             Icons::MenuOpen => "menu_open",
             Icons::Cpu => "cpu",
+            Icons::Gpu => "gpu",
+            Icons::Accelerator => "accelerator",
             Icons::Mem => "mem",
             Icons::Temp => "temp",
             Icons::Speaker0 => "speaker0",
@@ -258,6 +264,8 @@ impl Icons {
             Icons::MenuClosed => "",
             Icons::MenuOpen => "",
             Icons::Cpu => "󰔂",
+            Icons::Gpu => "󰢮",
+            Icons::Accelerator => "󰧑",
             Icons::Mem => "",
             Icons::Temp => "󰔏",
             Icons::Speaker0 => "󰸈",

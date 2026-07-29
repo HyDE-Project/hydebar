@@ -3,7 +3,7 @@ use iced::{
     widget::{Column, Row, column, container, row, rule, text}
 };
 
-use super::{Message, data::SystemInfoData};
+use super::{Message, data::SystemInfoData, indicators, sensors::GpuReadings};
 use crate::{
     components::{
         icons::{IconTheme, Icons, icon},
@@ -103,6 +103,22 @@ where
     }
 }
 
+/// Name of a graphics device as the menu spells it out.
+///
+/// The placement is spelled out rather than abbreviated, so a machine with
+/// switchable graphics says which of its two devices the bar is watching.
+fn gpu_title(gpu: &GpuReadings) -> String {
+    let placement = match gpu.tag() {
+        Some(_) => "Integrated graphics",
+        None => "Graphics"
+    };
+
+    match gpu.source.as_deref() {
+        Some(source) => format!("{placement} ({source})"),
+        None => format!("{placement} ({})", gpu.name)
+    }
+}
+
 fn format_speed(speed: u32) -> (u32, &'static str) {
     if speed > 1000 {
         (speed / 1000, "MB/s")
@@ -111,8 +127,51 @@ fn format_speed(speed: u32) -> (u32, &'static str) {
     }
 }
 
+/// Readouts this machine cannot report, each with the reason.
+///
+/// A readout that is simply absent from the bar leaves the user guessing, so
+/// the menu names it and says what is missing. A machine that reports
+/// everything shows nothing here.
+fn missing_readouts(
+    data: &SystemInfoData,
+    config: &SystemModuleConfig
+) -> Option<Element<'static, Message>> {
+    let missing: Vec<Element<'static, Message>> = indicators::statuses(config, data)
+        .into_iter()
+        .filter_map(|status| {
+            let reason = status.unavailable?.reason();
+
+            Some(
+                text(format!(
+                    "{} — {reason}",
+                    indicators::title(&status.indicator)
+                ))
+                .size(scale::scaled(12.0))
+                .into()
+            )
+        })
+        .collect();
+
+    if missing.is_empty() {
+        return None;
+    }
+
+    Some(
+        Column::new()
+            .push(rule::horizontal(1))
+            .push(text("Not reported by this machine").size(scale::scaled(14.0)))
+            .extend(missing)
+            .spacing(4)
+            .into()
+    )
+}
+
 /// Render the module menu displaying detailed system metrics.
-pub fn build_menu_view<'a>(data: &'a SystemInfoData, icons: &IconTheme) -> Element<'a, Message> {
+pub fn build_menu_view<'a>(
+    data: &'a SystemInfoData,
+    config: &SystemModuleConfig,
+    icons: &IconTheme
+) -> Element<'a, Message> {
     column![
         text("System Info").size(scale::scaled(20.0)),
         rule::horizontal(1),
@@ -136,8 +195,41 @@ pub fn build_menu_view<'a>(data: &'a SystemInfoData, icons: &IconTheme) -> Eleme
                 "Swap memory Usage",
                 format!("{}%", data.memory_swap_usage),
             ))
-            .push_maybe(data.temperature.map(|temp| {
-                info_element(icons, Icons::Temp, "Temperature", format!("{temp}°C"))
+            .push_maybe(data.cpu_temperature.map(|temp| {
+                info_element(icons, Icons::Temp, "CPU Temperature", format!("{temp}°C"))
+            }))
+            .push_maybe(data.gpu.as_ref().map(|gpu| {
+                let title = gpu_title(gpu);
+
+                Column::new()
+                    .push(text(title).size(scale::scaled(12.0)))
+                    .extend(
+                        [
+                            gpu.temperature.map(|temperature| {
+                                info_element(
+                                    icons,
+                                    Icons::Temp,
+                                    "GPU Temperature",
+                                    format!("{temperature}°C")
+                                )
+                            }),
+                            gpu.utilisation.map(|usage| {
+                                info_element(icons, Icons::Gpu, "GPU Usage", format!("{usage}%"))
+                            }),
+                            gpu.memory_used.zip(gpu.memory_total).map(|(used, total)| {
+                                info_element(
+                                    icons,
+                                    Icons::Mem,
+                                    "GPU Memory",
+                                    format!("{}GB / {}GB", gigabytes(used), gigabytes(total))
+                                )
+                            })
+                        ]
+                        .into_iter()
+                        .flatten()
+                        .collect::<Vec<Element<_>>>()
+                    )
+                    .spacing(4)
             }))
             .push(
                 Column::with_children(
@@ -178,6 +270,7 @@ pub fn build_menu_view<'a>(data: &'a SystemInfoData, icons: &IconTheme) -> Eleme
                     ),
                 ])
             }))
+            .push_maybe(missing_readouts(data, config))
             .spacing(4)
             .padding([0, 8])
     ]
@@ -201,8 +294,7 @@ where
 {
     let icon_label_gap = appearance.icon_label_gap();
 
-    config
-        .indicators
+    indicators::resolve(config, &data)
         .iter()
         .filter_map(|indicator| -> Option<Element<'static, Message>> {
             match indicator {
@@ -244,7 +336,7 @@ where
                     )),
                     icon_label_gap
                 )),
-                SystemIndicator::Temperature => data.temperature.map(|temperature| {
+                SystemIndicator::CpuTemperature => data.cpu_temperature.map(|temperature| {
                     indicator_info_element(
                         icons,
                         Icons::Temp,
@@ -257,9 +349,39 @@ where
                         icon_label_gap
                     )
                 }),
+                SystemIndicator::GpuTemperature => data.gpu.as_ref().and_then(|gpu| {
+                    gpu.temperature.map(|temperature| {
+                        indicator_info_element(
+                            icons,
+                            Icons::Gpu,
+                            indicator_label(gpu.tag(), temperature, "°C"),
+                            Some(Thresholds::new(
+                                temperature,
+                                config.gpu.warn_threshold,
+                                config.gpu.alert_threshold
+                            )),
+                            icon_label_gap
+                        )
+                    })
+                }),
+                SystemIndicator::GpuUsage => data.gpu.as_ref().and_then(|gpu| {
+                    gpu.utilisation.map(|usage| {
+                        indicator_info_element(
+                            icons,
+                            Icons::Accelerator,
+                            indicator_label(gpu.tag(), usage, "%"),
+                            Some(Thresholds::new(
+                                usage,
+                                config.gpu.usage_warn_threshold,
+                                config.gpu.usage_alert_threshold
+                            )),
+                            icon_label_gap
+                        )
+                    })
+                }),
                 SystemIndicator::Disk(mount) => {
                     data.disks.iter().find_map(|(disk_mount, disk)| {
-                        if disk_mount == mount {
+                        if disk_mount == mount.as_str() {
                             Some(indicator_info_element(
                                 icons,
                                 Icons::Drive,
@@ -350,7 +472,8 @@ mod tests {
             memory_used:       8 * 1024 * 1024 * 1024,
             memory_swap_usage: 10,
             memory_swap_used:  1024 * 1024 * 1024,
-            temperature:       Some(42),
+            cpu_temperature:   Some(42),
+            gpu:               None,
             disks:             vec![("/".to_string(), 60)],
             network:           None
         }

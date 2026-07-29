@@ -118,7 +118,11 @@ impl App {
         if hosts(ModuleName::SystemInfo) {
             register(
                 "system-info",
-                modules::Module::<Message>::register(&mut self.system_info, ctx, ())
+                modules::Module::<Message>::register(
+                    &mut self.system_info,
+                    ctx,
+                    &self.config.system
+                )
             );
         } else {
             modules::Module::<Message>::deregister(&mut self.system_info);

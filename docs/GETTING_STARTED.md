@@ -144,9 +144,10 @@ right = [
     ["Clock", "Battery", "Settings"]
 ]
 
-# Show system info
+# Show system info. The readouts are found automatically; listing them
+# here is only needed to pin the selection or the order.
 [system]
-indicators = ["Cpu", "Memory", "Temperature", "DownloadSpeed"]
+indicators = ["Cpu", "Memory", "CpuTemperature", "DownloadSpeed"]
 
 # Configure clock
 [clock]
@@ -174,6 +175,28 @@ format-alt = ["%R %d·%m·%y"]
 [system.memory]
 format = "Bytes"
 format-alt = ["Percentage"]
+```
+
+### System Readouts
+
+The system module finds its own readouts. Load and memory come from every
+machine; `CpuTemperature`, `GpuTemperature` and `GpuUsage` appear only where
+the hardware reports them, so a machine without a graphics sensor shows no
+graphics readout at all and a virtual machine without any sensor shows just
+load and memory. `Temperature` remains a valid spelling of `CpuTemperature`.
+
+The graphics reading is taken from the die where the driver publishes one,
+from the package edge otherwise, and from the memory as a last resort. A card
+is preferred over the graphics built into the processor; when the built-in one
+is shown it is tagged `iGPU`. Clicking the module lists any readout the
+machine cannot report, together with the reason.
+
+```toml
+[system]
+hide = ["GpuUsage"]          # drop one readout, keep the rest automatic
+
+[system.gpu]
+device = "nvidia"            # pin the device on a machine with several
 ```
 
 The memory readout applies to the `Memory` and `MemorySwap` indicators;
