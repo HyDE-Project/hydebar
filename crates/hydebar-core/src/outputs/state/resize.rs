@@ -7,7 +7,9 @@
 
 use iced::{
     Task,
-    platform_specific::shell::wayland::commands::layer_surface::{set_exclusive_zone, set_size}
+    platform_specific::shell::wayland::commands::layer_surface::{
+        Layer, set_exclusive_zone, set_layer, set_size
+    }
 };
 
 use super::Outputs;
@@ -16,15 +18,36 @@ use crate::{
     outputs::wayland::{NOTIFICATIONS_WIDTH, layer_height}
 };
 
+/// Height the notification surface keeps while no popup is on it.
+const PARKED_HEIGHT: u32 = 1;
+
 impl Outputs {
-    /// Re-states the height of every notification surface.
+    /// Re-states the height and the layer of every notification surface.
     ///
     /// Grown to what the popups need and shrunk back once they are gone, so the
     /// strip never covers more of the screen than it is drawing on.
+    ///
+    /// The layer travels with the height: the surface rises to the overlay when
+    /// the first popup arrives and parks in the background once the last one is
+    /// gone. The compositor stacks a surface that changes layer above everything
+    /// already there, so rising at that moment — after any menu was raised — is
+    /// what puts a popup above an open menu instead of behind it.
     pub fn resize_notifications<Message: 'static>(&mut self, height: u32) -> Task<Message> {
+        let height = height.max(PARKED_HEIGHT);
+        let layer = if height > PARKED_HEIGHT {
+            Layer::Overlay
+        } else {
+            Layer::Background
+        };
+
         let tasks = self
             .notification_ids()
-            .map(|id| set_size(id, Some(NOTIFICATIONS_WIDTH), Some(height.max(1))))
+            .flat_map(|id| {
+                [
+                    set_size(id, Some(NOTIFICATIONS_WIDTH), Some(height)),
+                    set_layer(id, layer)
+                ]
+            })
             .collect::<Vec<_>>();
 
         Task::batch(tasks)

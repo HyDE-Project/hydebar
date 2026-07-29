@@ -184,11 +184,12 @@ pub(crate) fn notifications_settings(
         id,
         namespace: NOTIFICATIONS_NAMESPACE.to_string(),
         size: Some((Some(NOTIFICATIONS_WIDTH), None)),
-        // Above everything the bar draws, menus included: a notification that
-        // arrives while a menu is open has to be seen, and a menu is the one
-        // surface wide enough to hide it. Taking no pointer input is what makes
-        // this safe — the surface is painted and nothing else.
-        layer: Layer::Overlay,
+        // Parked out of the way until a popup arrives. The compositor stacks a
+        // surface that changes layer above everything already on that layer, so
+        // a surface that sat on the overlay from the start would end up below a
+        // menu raised there later. Rising only when there is something to show
+        // is what keeps the popups above whatever the bar raised before them.
+        layer: Layer::Background,
         keyboard_interactivity: KeyboardInteractivity::None,
         input_zone: draw_only(),
         output: on_output(wl_output),
