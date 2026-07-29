@@ -42,7 +42,8 @@ impl Outputs {
         style: AppearanceStyle,
         request_outputs: &config::Outputs,
         position: Position,
-        config: &crate::config::Config
+        config: &crate::config::Config,
+        height: Option<f32>
     ) -> Task<Message> {
         debug!("Syncing outputs: {self:?}, request_outputs: {request_outputs:?}");
 
@@ -85,7 +86,8 @@ impl Outputs {
                     position,
                     name.as_str(),
                     wl_output,
-                    config
+                    config,
+                    height
                 ));
             }
         }

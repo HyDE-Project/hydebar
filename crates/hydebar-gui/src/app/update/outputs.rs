@@ -13,6 +13,12 @@ impl App {
             Message::OutputEvent((event, wl_output)) => match event {
                 OutputEvent::Created(info) => {
                     info!("Output created: {info:?}");
+                    let name = info
+                        .as_ref()
+                        .and_then(|info| info.name.as_deref())
+                        .unwrap_or("")
+                        .to_owned();
+
                     if let Some(info) = info.as_ref() {
                         let mode = info
                             .modes
@@ -21,20 +27,19 @@ impl App {
                             .or_else(|| info.modes.first())
                             .map(|mode| mode.dimensions);
 
-                        self.adopt_output_metrics(mode, info.scale_factor);
+                        self.adopt_metrics(mode, info.scale_factor);
                     }
-                    let name = info
-                        .as_ref()
-                        .and_then(|info| info.name.as_deref())
-                        .unwrap_or("");
+
+                    let height = self.scaled_appearance().height;
 
                     self.outputs.add(
                         self.config.appearance.style,
                         &self.config.outputs,
                         self.config.position,
-                        name,
+                        &name,
                         wl_output,
-                        &self.config
+                        &self.config,
+                        height
                     )
                 }
                 OutputEvent::Removed => {
@@ -54,8 +59,11 @@ impl App {
                         .or_else(|| info.modes.first())
                         .map(|mode| mode.dimensions);
 
-                    self.adopt_output_metrics(mode, info.scale_factor);
-                    Task::none()
+                    if self.adopt_metrics(mode, info.scale_factor) {
+                        self.refresh_appearance()
+                    } else {
+                        Task::none()
+                    }
                 }
             },
             _ => Task::none()
@@ -67,9 +75,10 @@ impl App {
     /// The compositor scale is handed on so the sizes are not scaled a second
     /// time by a compositor that already scales the surface, and the scale the
     /// bar applies to its own surface is divided out for the same reason.
-    fn adopt_output_metrics(&mut self, dimensions: Option<(i32, i32)>, scale_factor: i32) {
+    /// Reports whether the sizes changed.
+    fn adopt_metrics(&mut self, dimensions: Option<(i32, i32)>, scale_factor: i32) -> bool {
         let Some(dimensions) = dimensions else {
-            return;
+            return false;
         };
 
         let compositor_scale = scale_factor.max(1) as f32;
@@ -81,13 +90,16 @@ impl App {
             compositor_scale * surface_scale.max(f32::EPSILON)
         );
 
-        if self.auto_metrics != Some(metrics) {
-            info!(
-                "screen calls for a text size of {} and a bar height of {}",
-                metrics.font_size, metrics.height
-            );
-            self.auto_metrics = Some(metrics);
-            self.refresh_appearance();
+        if self.auto_metrics == Some(metrics) {
+            return false;
         }
+
+        info!(
+            "screen calls for a text size of {} and a bar height of {}",
+            metrics.font_size, metrics.height
+        );
+        self.auto_metrics = Some(metrics);
+
+        true
     }
 }

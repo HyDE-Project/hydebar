@@ -2,6 +2,7 @@ mod keyboard;
 mod lifecycle;
 mod lookup;
 mod menus;
+mod resize;
 mod sync;
 mod tooltips;
 

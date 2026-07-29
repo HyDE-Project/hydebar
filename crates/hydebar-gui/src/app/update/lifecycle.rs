@@ -72,7 +72,8 @@ impl App {
                         config.appearance.style,
                         &config.outputs,
                         config.position,
-                        &config
+                        &config,
+                        self.scaled_appearance().height
                     ));
                 }
 
@@ -81,7 +82,7 @@ impl App {
                 }
 
                 self.config = config;
-                self.refresh_appearance();
+                let resize = self.refresh_appearance();
 
                 self.register_modules();
 
@@ -89,6 +90,8 @@ impl App {
                     self.logger
                         .set_new_spec(get_log_spec(&self.config.log_level));
                 }
+
+                tasks.push(resize);
 
                 Task::batch(tasks)
             }

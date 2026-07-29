@@ -226,15 +226,26 @@ impl App {
     }
 
     /// Rebuilds everything derived from the appearance after the sizes changed.
-    pub(super) fn refresh_appearance(&mut self) {
+    ///
+    /// The surfaces are re-stated as well: the height of a layer surface is
+    /// fixed when it is created, so a bar that changed height has to tell the
+    /// compositor, otherwise the strip it occupies keeps the old size while its
+    /// contents are drawn at the new one.
+    pub(super) fn refresh_appearance(&mut self) -> Task<Message> {
         let appearance = self.scaled_appearance();
 
         self.icons =
             IconTheme::from_config(&self.config.icons).with_size(appearance.font_size_px());
 
         let blend_palette = appearance.animations.enabled;
+        let resize =
+            self.outputs
+                .resize(appearance.style, appearance.scale_factor, appearance.height);
+
         self.appearance_transition
             .set_target(appearance, blend_palette);
+
+        resize
     }
 
     /// Glyph table to render module icons with this frame.

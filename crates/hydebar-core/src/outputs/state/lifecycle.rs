@@ -30,6 +30,7 @@ impl Outputs {
     /// let task = outputs.add(style, &config.outputs, position, name, wl_output, &config);
     /// spawn(task);
     /// ```
+    #[allow(clippy::too_many_arguments)]
     pub fn add<Message: 'static>(
         &mut self,
         style: AppearanceStyle,
@@ -37,7 +38,8 @@ impl Outputs {
         position: Position,
         name: &str,
         wl_output: WlOutput,
-        config: &crate::config::Config
+        config: &crate::config::Config,
+        height: Option<f32>
     ) -> Task<Message> {
         let target = is_output_requested(Some(name), request_outputs);
 
@@ -55,7 +57,7 @@ impl Outputs {
                 position,
                 config.menu_keyboard_focus,
                 config.appearance.scale_factor,
-                config.appearance.height,
+                height,
                 config.layer
             );
 
