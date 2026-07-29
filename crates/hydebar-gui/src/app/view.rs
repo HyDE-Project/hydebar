@@ -2,7 +2,7 @@ use std::f32::consts::PI;
 
 use hydebar_core::{
     HEIGHT,
-    menu::{MenuLayout, MenuSize, MenuType, menu_wrapper},
+    menu::{MenuLayout, MenuSize, MenuType, dismiss_area, menu_wrapper},
     modules::{control_center::ControlCenterViewExt, custom_module},
     notifications_popup,
     outputs::HasOutput,
@@ -65,6 +65,20 @@ impl App {
         }
     }
 
+    /// Wraps the bar so a press on it takes the open menu down.
+    ///
+    /// The menu backdrop covers the screen the bar leaves free and nothing
+    /// else, so the bar is the one place the rule that a press outside a menu
+    /// dismisses it has to be applied from. The wrapper is only there while a
+    /// menu is open, so an ordinary press on the bar costs nothing.
+    fn dismisses_the_open_menu<'a>(&self, bar: Element<'a, Message>) -> Element<'a, Message> {
+        if self.outputs.menu_is_open() {
+            dismiss_area(bar, Message::BarPressed, Message::BarReleased).into()
+        } else {
+            bar
+        }
+    }
+
     pub fn view(&self, id: Id) -> Element<'_, Message> {
         match self.outputs.has(id) {
             Some(HasOutput::Main) => {
@@ -98,76 +112,76 @@ impl App {
                         [0.0, 0.0]
                     });
 
-                container(centerbox)
-                    .style(|t| container::Style {
-                        background: match self.appearance().style {
-                            AppearanceStyle::Gradient => Some({
-                                let start_color = t
-                                    .palette()
-                                    .background
-                                    .scale_alpha(self.appearance().opacity);
+                let bar = container(centerbox).style(|t| container::Style {
+                    background: match self.appearance().style {
+                        AppearanceStyle::Gradient => Some({
+                            let start_color = t
+                                .palette()
+                                .background
+                                .scale_alpha(self.appearance().opacity);
 
-                                let start_color = if self.outputs.menu_is_open() {
-                                    darken_color(start_color, self.appearance().menu.backdrop)
-                                } else {
-                                    start_color
-                                };
+                            let start_color = if self.outputs.menu_is_open() {
+                                darken_color(start_color, self.appearance().menu.backdrop)
+                            } else {
+                                start_color
+                            };
 
-                                let end_color = if self.outputs.menu_is_open() {
-                                    backdrop_color(self.appearance().menu.backdrop)
-                                } else {
-                                    Color::TRANSPARENT
-                                };
+                            let end_color = if self.outputs.menu_is_open() {
+                                backdrop_color(self.appearance().menu.backdrop)
+                            } else {
+                                Color::TRANSPARENT
+                            };
 
-                                Gradient::Linear(
-                                    Linear::new(Radians(PI))
-                                        .add_stop(
-                                            0.0,
-                                            match self.config.position {
-                                                Position::Top => start_color,
-                                                Position::Bottom => end_color
-                                            }
-                                        )
-                                        .add_stop(
-                                            1.0,
-                                            match self.config.position {
-                                                Position::Top => end_color,
-                                                Position::Bottom => start_color
-                                            }
-                                        )
-                                )
-                                .into()
-                            }),
-                            AppearanceStyle::Solid => Some({
-                                let bg = t
-                                    .palette()
-                                    .background
-                                    .scale_alpha(self.appearance().opacity);
-                                if self.outputs.menu_is_open() {
-                                    darken_color(bg, self.appearance().menu.backdrop)
-                                } else {
-                                    bg
-                                }
-                                .into()
-                            }),
-                            AppearanceStyle::Islands => {
-                                if self.outputs.menu_is_open() {
-                                    Some(backdrop_color(self.appearance().menu.backdrop).into())
-                                } else if self.appearance().bar_opacity > 0.0 {
-                                    Some(
-                                        t.palette()
-                                            .background
-                                            .scale_alpha(self.appearance().bar_opacity)
-                                            .into()
+                            Gradient::Linear(
+                                Linear::new(Radians(PI))
+                                    .add_stop(
+                                        0.0,
+                                        match self.config.position {
+                                            Position::Top => start_color,
+                                            Position::Bottom => end_color
+                                        }
                                     )
-                                } else {
-                                    None
-                                }
+                                    .add_stop(
+                                        1.0,
+                                        match self.config.position {
+                                            Position::Top => end_color,
+                                            Position::Bottom => start_color
+                                        }
+                                    )
+                            )
+                            .into()
+                        }),
+                        AppearanceStyle::Solid => Some({
+                            let bg = t
+                                .palette()
+                                .background
+                                .scale_alpha(self.appearance().opacity);
+                            if self.outputs.menu_is_open() {
+                                darken_color(bg, self.appearance().menu.backdrop)
+                            } else {
+                                bg
                             }
-                        },
-                        ..Default::default()
-                    })
-                    .into()
+                            .into()
+                        }),
+                        AppearanceStyle::Islands => {
+                            if self.outputs.menu_is_open() {
+                                Some(backdrop_color(self.appearance().menu.backdrop).into())
+                            } else if self.appearance().bar_opacity > 0.0 {
+                                Some(
+                                    t.palette()
+                                        .background
+                                        .scale_alpha(self.appearance().bar_opacity)
+                                        .into()
+                                )
+                            } else {
+                                None
+                            }
+                        }
+                    },
+                    ..Default::default()
+                });
+
+                self.dismisses_the_open_menu(bar.into())
             }
             Some(HasOutput::Menu(menu_info)) => {
                 let animated_opacity = self.outputs.get_menu_opacity(id);

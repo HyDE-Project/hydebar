@@ -17,7 +17,10 @@ use crate::{animation::Spring, config::AnimationConfig, position_button::ButtonU
 pub struct Menu {
     pub id:        Id,
     pub menu_info: Option<(MenuType, ButtonUIRef)>,
-    opacity:       Spring
+    opacity:       Spring,
+    /// Whether the press in flight has to take this menu down once it
+    /// completes.
+    dismiss_armed: bool
 }
 
 impl Menu {
@@ -25,7 +28,33 @@ impl Menu {
         Self {
             id,
             menu_info: None,
-            opacity: Spring::new(0.0)
+            opacity: Spring::new(0.0),
+            dismiss_armed: false
+        }
+    }
+
+    /// Arms the open menu for dismissal by the press currently in flight.
+    ///
+    /// Arming is deliberately silent. The menu is only taken down once that
+    /// press completes without a module having claimed it, so a press that
+    /// turns out to belong to another module switches the menu over instead of
+    /// flashing the surface off and on again.
+    pub fn arm_dismissal(&mut self) {
+        self.dismiss_armed = self.menu_info.is_some();
+    }
+
+    /// Closes the menu when the press that armed it completed elsewhere.
+    ///
+    /// A menu a module toggled in the meantime is no longer armed, so the press
+    /// that opened it does not immediately take it back down.
+    pub fn dismiss_if_armed<Message: 'static>(
+        &mut self,
+        config: &crate::config::Config
+    ) -> Task<Message> {
+        if std::mem::take(&mut self.dismiss_armed) {
+            self.close(config)
+        } else {
+            Task::none()
         }
     }
 
@@ -36,6 +65,7 @@ impl Menu {
         config: &crate::config::Config
     ) -> Task<Message> {
         self.menu_info.replace((menu_type, button_ui_ref));
+        self.dismiss_armed = false;
 
         self.aim_opacity(
             config.appearance.menu.opacity,
@@ -55,6 +85,8 @@ impl Menu {
     }
 
     pub fn close<Message: 'static>(&mut self, config: &crate::config::Config) -> Task<Message> {
+        self.dismiss_armed = false;
+
         if self.menu_info.is_some() {
             self.menu_info.take();
 
@@ -81,6 +113,8 @@ impl Menu {
         button_ui_ref: ButtonUIRef,
         config: &crate::config::Config
     ) -> Task<Message> {
+        self.dismiss_armed = false;
+
         match self.menu_info.as_mut() {
             None => self.open(menu_type, button_ui_ref, config),
             Some((current_type, _)) if *current_type == menu_type => self.close(config),

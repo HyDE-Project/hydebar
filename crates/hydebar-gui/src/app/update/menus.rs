@@ -56,6 +56,12 @@ impl App {
             }
             Message::ModuleTooltip(id, Some(info)) => self.outputs.show_tooltip(id, info),
             Message::ModuleTooltip(id, None) => self.outputs.hide_tooltip(id),
+            Message::BarPressed => {
+                self.outputs.arm_menu_dismissal();
+
+                Task::none()
+            }
+            Message::BarReleased => self.outputs.dismiss_armed_menus(&self.config),
             Message::CloseMenu(id) => self.outputs.close_menu(id, &self.config),
             Message::CloseAllMenus => {
                 if self.outputs.menu_is_open() {

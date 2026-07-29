@@ -111,6 +111,13 @@ pub enum Message {
     ExpirePopups,
     CloseMenu(Id),
     CloseAllMenus,
+    /// A press landed on a bar surface while a menu was open.
+    ///
+    /// Only arms the dismissal: the module the press landed on still gets the
+    /// whole click to open or switch its own menu.
+    BarPressed,
+    /// The press that armed the dismissal completed on a bar surface.
+    BarReleased,
     ActivateNavigationMode,
     DeactivateNavigationMode,
     NavigateUp,

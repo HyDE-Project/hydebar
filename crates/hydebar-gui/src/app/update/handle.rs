@@ -16,7 +16,9 @@ impl App {
             Message::ToggleMenu(..)
             | Message::ModuleTooltip(..)
             | Message::CloseMenu(_)
-            | Message::CloseAllMenus => self.update_menus(message),
+            | Message::CloseAllMenus
+            | Message::BarPressed
+            | Message::BarReleased => self.update_menus(message),
             Message::ActivateNavigationMode
             | Message::DeactivateNavigationMode
             | Message::NavigateUp
