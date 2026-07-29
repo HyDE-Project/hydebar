@@ -1,10 +1,12 @@
 use std::{
-    process::{ExitStatus, Output},
+    process::{ExitStatus, Output, Stdio},
     sync::Arc
 };
 
 use log::error;
 use tokio::process::Command;
+
+use crate::utils::process_group;
 
 /// Error type emitted when launching shell commands fails.
 ///
@@ -106,21 +108,53 @@ pub async fn run_shell_command_with_output(command: &Arc<str>) -> Result<Output,
     }
 }
 
+/// Run `command` to completion without collecting what it printed.
+///
+/// This is what every fire-and-forget action of the bar goes through, and it
+/// differs from [`run_shell_command_with_output`] in the two ways that matter
+/// for a command that starts a whole desktop action:
+///
+/// * the standard streams are inherited rather than piped. A piped stream is
+///   only at end of file once every descendant holding it has exited, and a
+///   desktop script routinely leaves background children behind — waiting for
+///   them would keep this future, and the report of what the command did,
+///   pending for as long as the longest of them lives. Inheriting also puts the
+///   command's own diagnostics straight into the bar's log, where a user
+///   looking for the reason a desktop action failed will find them.
+/// * the command leads a process group of its own, so a signal aimed at the bar
+///   does not tear a half-performed desktop change apart.
+///
+/// # Errors
+///
+/// Returns [`LauncherError::Spawn`] if the process cannot be created or
+/// [`LauncherError::NonZeroExit`] when it finishes unsuccessfully.
+pub async fn run_detached(command: &Arc<str>) -> Result<(), LauncherError> {
+    let mut process = Command::new("bash");
+    process.arg("-c").arg(command.as_ref()).stdin(Stdio::null());
+    process_group::in_own_group(&mut process);
+
+    let mut child = process
+        .spawn()
+        .map_err(|error| LauncherError::spawn_error(command.clone(), error))?;
+
+    let status = child
+        .wait()
+        .await
+        .map_err(|error| LauncherError::spawn_error(command.clone(), error))?;
+
+    if status.success() {
+        Ok(())
+    } else {
+        Err(LauncherError::exit_error(command.clone(), status))
+    }
+}
+
 fn spawn_and_log(command: String, context: &'static str) {
     tokio::spawn(async move {
         let command_arc: Arc<str> = Arc::from(command);
-        match run_shell_command_with_output(&command_arc).await {
-            Ok(output) => {
-                if !output.stderr.is_empty() {
-                    error!(
-                        "{context} command produced stderr: {}",
-                        String::from_utf8_lossy(&output.stderr)
-                    );
-                }
-            }
-            Err(error) => {
-                error!("{context} command failed: {error}");
-            }
+
+        if let Err(error) = run_detached(&command_arc).await {
+            error!("{context} command failed: {error}");
         }
     });
 }
@@ -165,7 +199,7 @@ pub fn logout(command: String) {
 mod tests {
     use std::{sync::Arc, time::Duration};
 
-    use super::{LauncherError, run_shell_command_with_output};
+    use super::{LauncherError, run_detached, run_shell_command_with_output};
 
     #[tokio::test]
     async fn reports_successful_status() -> Result<(), Box<dyn std::error::Error>> {
@@ -221,5 +255,73 @@ mod tests {
         assert!(output.status.success());
 
         Ok(())
+    }
+
+    #[tokio::test]
+    async fn a_detached_run_reports_a_successful_command() -> Result<(), Box<dyn std::error::Error>>
+    {
+        let command = Arc::from("true");
+
+        tokio::time::timeout(Duration::from_secs(5), run_detached(&command)).await??;
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn a_detached_run_reports_a_failing_command() -> Result<(), Box<dyn std::error::Error>> {
+        let command = Arc::from("exit 42");
+
+        let outcome = tokio::time::timeout(Duration::from_secs(5), run_detached(&command)).await?;
+
+        match outcome {
+            Err(LauncherError::NonZeroExit {
+                status, ..
+            }) => assert_eq!(status.code(), Some(42)),
+            other => return Err(format!("unexpected outcome: {other:?}").into())
+        }
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn a_detached_run_reports_a_command_that_cannot_start()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let command = Arc::from("exec /nonexistent/hydebar/command");
+
+        let outcome = tokio::time::timeout(Duration::from_secs(5), run_detached(&command)).await?;
+
+        assert!(matches!(outcome, Err(LauncherError::NonZeroExit { .. })));
+
+        Ok(())
+    }
+
+    /// A desktop script hands work to background children and returns; the bar
+    /// has to hear about the outcome then, not once the last of them is gone.
+    #[tokio::test]
+    async fn a_detached_run_does_not_wait_for_the_children_the_command_left_behind()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let command = Arc::from("sleep 5 & disown; exit 0");
+
+        tokio::time::timeout(Duration::from_secs(2), run_detached(&command)).await??;
+
+        Ok(())
+    }
+
+    /// The same command through the output-collecting runner keeps waiting,
+    /// which is exactly why the detached one exists.
+    #[tokio::test]
+    async fn collecting_the_output_waits_for_those_children() {
+        let command = Arc::from("sleep 5 & disown; exit 0");
+
+        let outcome = tokio::time::timeout(
+            Duration::from_millis(500),
+            run_shell_command_with_output(&command)
+        )
+        .await;
+
+        assert!(
+            outcome.is_err(),
+            "the output runner returned before the child was gone"
+        );
     }
 }

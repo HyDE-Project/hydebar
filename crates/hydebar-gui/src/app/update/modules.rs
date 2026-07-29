@@ -214,8 +214,8 @@ impl App {
             }
             Message::Settings(msg) => {
                 let config = Arc::clone(&self.config);
-                self.settings.update(msg, &config);
-                Task::none()
+
+                self.settings.update(msg, &config).map(Message::Settings)
             }
             Message::MediaPlayer(msg) => {
                 self.media_player.update(msg);

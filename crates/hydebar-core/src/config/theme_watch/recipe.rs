@@ -4,7 +4,8 @@ use std::{
     any::TypeId,
     hash::Hash,
     path::{Path, PathBuf},
-    sync::Arc
+    sync::Arc,
+    time::Duration
 };
 
 use iced::{
@@ -31,6 +32,18 @@ use crate::config::{
 /// milliseconds of each other, and the consumers that follow add more noise, so
 /// the batch exists to collapse that burst into a single reload.
 const BATCH_SIZE: usize = 16;
+
+/// How long the watcher lets the desktop settle before it reads the theme.
+///
+/// A HyDE switch is not one write but a chain of them spread over seconds: the
+/// state file, the palette symlink, then every template the desktop renders
+/// from the new colours. Reading on the first of them would repaint the bar
+/// from a desktop that is half-way through changing, and reading on each of
+/// them would repaint it a dozen times over. Waiting first turns the chain into
+/// a couple of reloads, and each one sees a consistent set of files, because
+/// everything that lands during the wait is still queued in the kernel and
+/// arrives as one batch.
+const SETTLE: Duration = Duration::from_millis(300);
 
 struct ThemeWatcher {
     config_path: PathBuf,
@@ -107,6 +120,8 @@ impl Recipe for ThemeWatcher {
                             let manager = Arc::clone(&manager_clone);
 
                             async move {
+                                tokio::time::sleep(SETTLE).await;
+
                                 handle_theme_event(
                                     &mut sender,
                                     &config_path,

@@ -71,7 +71,13 @@ impl Settings {
                 self.selected(),
                 self.page_width(config)
             ),
-            Tab::Hyde => hyde::view(self.hyde(), opacity, font_size, self.page_width(config))
+            Tab::Hyde => hyde::view(
+                self.hyde(),
+                self.switching(),
+                opacity,
+                font_size,
+                self.page_width(config)
+            )
         };
 
         Column::new()
@@ -115,7 +121,7 @@ impl Settings {
         let page = match self.tab() {
             Tab::Appearance => appearance::desired_width(font_size),
             Tab::Modules => modules::desired_width(config, font_size, self.section()),
-            Tab::Hyde => hyde::desired_width(self.hyde(), font_size)
+            Tab::Hyde => hyde::desired_width(self.hyde(), self.switching(), font_size)
         };
 
         header.max(tab_row).max(page) + metrics::ROW_SLACK_EM * font_size
@@ -175,7 +181,7 @@ mod tests {
         let column = style::label_width(font_size);
 
         assert!(appearance::desired_width(font_size) > column);
-        assert!(hyde::desired_width(&state, font_size) > column);
+        assert!(hyde::desired_width(&state, None, font_size) > column);
     }
 
     #[test]

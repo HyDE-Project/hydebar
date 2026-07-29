@@ -12,15 +12,18 @@ mod theme_script;
 mod view;
 mod writer;
 
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc
+};
 
 use hydebar_proto::{
     config::{Config, ModuleDef, Modules, NotificationSource},
     hyde_state::{self, HydeState}
 };
-use iced::Element;
+use iced::{Element, Task};
 pub use layout::{LayoutEdit, Section, Slot};
-use log::warn;
+use log::{error, info, warn};
 pub use tab::Tab;
 pub use writer::{SettingValue, SettingsWriteError, write_setting};
 
@@ -29,6 +32,7 @@ use crate::{
     components::icons::{IconTheme, Icons, icon},
     config::{AppearanceStyle, BarLayer, Position},
     menu::MenuType,
+    services::hyprland_notify::{Notice, compositor_color, notify},
     utils::launcher
 };
 
@@ -58,6 +62,13 @@ const FONT_SIZE_STEP: f32 = 1.0;
 
 /// Opacity added or removed by one press.
 const OPACITY_STEP: f32 = 0.05;
+
+/// How long a notice about a refused desktop action stays on screen, in
+/// milliseconds.
+///
+/// A theme switch is asked for deliberately, so the answer that it did not
+/// happen has to outlast a glance away from the screen.
+const NOTICE_DURATION: u32 = 6000;
 
 /// Choice made in the settings menu.
 #[derive(Debug, Clone, PartialEq)]
@@ -96,8 +107,24 @@ pub enum Message {
     SelectSection(Section),
     /// Ask HyDE to switch the desktop to the named theme.
     SwitchHydeTheme(String),
+    /// Report that the switch to the named theme has ended.
+    ///
+    /// Raised by the bar itself once the desktop's own switch has exited, so
+    /// the page stops promising a switch that is over and states what the
+    /// desktop actually settled on.
+    HydeThemeSwitched {
+        /// Theme the switch was asked for.
+        theme:   String,
+        /// Why the switch failed, when it did.
+        failure: Option<String>
+    },
     /// Ask HyDE for the next wallpaper of the active theme.
-    NextHydeWallpaper
+    NextHydeWallpaper,
+    /// Report that the wallpaper change has ended.
+    HydeWallpaperChanged {
+        /// Why the change failed, when it did.
+        failure: Option<String>
+    }
 }
 
 impl Message {
@@ -119,7 +146,13 @@ impl Message {
             | Self::SelectSlot(_)
             | Self::SelectSection(_)
             | Self::SwitchHydeTheme(_)
-            | Self::NextHydeWallpaper => &[]
+            | Self::HydeThemeSwitched {
+                ..
+            }
+            | Self::NextHydeWallpaper
+            | Self::HydeWallpaperChanged {
+                ..
+            } => &[]
         }
     }
 
@@ -157,7 +190,13 @@ impl Message {
             | Self::SelectSlot(_)
             | Self::SelectSection(_)
             | Self::SwitchHydeTheme(_)
-            | Self::NextHydeWallpaper => SettingValue::Flag(false)
+            | Self::HydeThemeSwitched {
+                ..
+            }
+            | Self::NextHydeWallpaper
+            | Self::HydeWallpaperChanged {
+                ..
+            } => SettingValue::Flag(false)
         }
     }
 
@@ -238,6 +277,56 @@ fn store_layout(config_path: &Path, modules: &Modules) {
     }
 }
 
+/// What a press on a theme chip leads to.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum SwitchDecision {
+    /// A switch is already running for the named theme, so this press is
+    /// dropped.
+    AlreadySwitching(String),
+    /// No theme of that name is installed, so nothing is asked of the desktop.
+    NotInstalled,
+    /// The desktop is asked to switch.
+    Start
+}
+
+/// Decides what to do with a press on the chip of `theme`.
+///
+/// Kept apart from the module state so both refusals can be stated once and
+/// checked without a HyDE install. They are refusals rather than best effort
+/// for the same reason: a HyDE switch rewrites the whole desktop over several
+/// seconds and is not reentrant, so a second one started on top of the first
+/// races it over the state file, the wallpaper cache and every generated
+/// stylesheet; and HyDE's own switcher answers a name it does not know by
+/// quietly keeping the current theme, which from the bar looks exactly like a
+/// press that did nothing.
+fn decide_switch(theme: &str, switching: Option<&str>, installed: &[String]) -> SwitchDecision {
+    if let Some(pending) = switching {
+        return SwitchDecision::AlreadySwitching(pending.to_owned());
+    }
+
+    if !installed.iter().any(|candidate| candidate == theme) {
+        return SwitchDecision::NotInstalled;
+    }
+
+    SwitchDecision::Start
+}
+
+/// Runs a desktop command, reporting why it failed if it did.
+///
+/// The command is run detached rather than with its output collected: a HyDE
+/// switch leaves background children behind that would keep a collected stream
+/// open long after the switch itself is over, and the bar has to hear that the
+/// switch ended when it ends. What the command printed goes to the bar's own
+/// log, which is where the detail belongs.
+async fn run_desktop_command(command: String) -> Option<String> {
+    let command: Arc<str> = Arc::from(command);
+
+    launcher::run_detached(&command)
+        .await
+        .err()
+        .map(|error| error.to_string())
+}
+
 /// Bar entry opening the settings of the bar.
 #[derive(Default, Debug, Clone)]
 pub struct Settings {
@@ -254,7 +343,13 @@ pub struct Settings {
     /// Kept here rather than read while rendering: the page is redrawn on every
     /// frame of the open animation, and reading two files that often would put
     /// the filesystem in the draw path.
-    hyde:        HydeState
+    hyde:        HydeState,
+    /// Theme a switch is running for, while one is.
+    ///
+    /// A HyDE switch rewrites the whole desktop over several seconds and is not
+    /// reentrant, so this is both what the page reports and what stops a second
+    /// press from starting a switch that would race the first.
+    switching:   Option<String>
 }
 
 impl Settings {
@@ -266,7 +361,8 @@ impl Settings {
             tab: Tab::default(),
             selected: None,
             section: Section::Left,
-            hyde: hyde_state::load()
+            hyde: hyde_state::load(),
+            switching: None
         }
     }
 
@@ -274,6 +370,21 @@ impl Settings {
     #[must_use]
     pub fn hyde(&self) -> &HydeState {
         &self.hyde
+    }
+
+    /// Theme a switch is running for, while one is.
+    #[must_use]
+    pub fn switching(&self) -> Option<&str> {
+        self.switching.as_deref()
+    }
+
+    /// Re-reads the desktop state HyDE publishes.
+    ///
+    /// Called whenever the bar reloads because a HyDE file changed, so a switch
+    /// made from a keybinding — or one made here and finished since — reaches
+    /// the page without it having to be closed and opened again.
+    pub fn refresh_hyde(&mut self) {
+        self.hyde = hyde_state::load();
     }
 
     /// Section the editor is showing.
@@ -301,30 +412,39 @@ impl Settings {
     /// the reload.
     ///
     /// The HyDE choices are not about the bar at all: they are handed to the
-    /// desktop's own scripts, and the desktop state is re-read whenever the
-    /// page is opened. A theme switch takes long enough that re-reading
-    /// straight away would still show the old name, so the picked theme is
-    /// recorded here and confirmed by the next read — and only once the switch
-    /// was actually started, so a missing switch script leaves the shown name
-    /// truthful.
-    pub fn update(&mut self, message: Message, config: &Config) {
+    /// desktop's own scripts, which take seconds to run. Nothing about the
+    /// desktop is therefore assumed here — the page reports that a switch is
+    /// running, and what the desktop settled on is read back off disk once it
+    /// has, so a switch that never happened is never drawn as if it had.
+    pub fn update(&mut self, message: Message, config: &Config) -> Task<Message> {
         match message {
             Message::SelectTab(tab) => {
                 if tab == Tab::Hyde {
-                    self.hyde = hyde_state::load();
+                    self.refresh_hyde();
                 }
 
                 self.tab = tab;
             }
-            Message::SwitchHydeTheme(theme) => match hyde_shell::switch_theme(&theme) {
-                Ok(command) => {
-                    launcher::execute_command(command);
-                    self.hyde.theme = Some(theme);
-                }
-                Err(error) => warn!("cannot switch the HyDE theme: {error}")
-            },
+            Message::SwitchHydeTheme(theme) => return self.switch_hyde_theme(theme, config),
+            Message::HydeThemeSwitched {
+                theme,
+                failure
+            } => self.hyde_theme_switched(&theme, failure.as_deref(), config),
             Message::NextHydeWallpaper => {
-                launcher::execute_command(hyde_shell::next_wallpaper());
+                return Task::perform(
+                    run_desktop_command(hyde_shell::next_wallpaper()),
+                    |failure| Message::HydeWallpaperChanged {
+                        failure
+                    }
+                );
+            }
+            Message::HydeWallpaperChanged {
+                failure
+            } => {
+                if let Some(reason) = failure {
+                    error!("the wallpaper could not be changed: {reason}");
+                    self.report(config, "the desktop refused to change the wallpaper");
+                }
             }
             Message::SelectSlot(slot) => self.selected = slot,
             Message::SelectSection(section) => {
@@ -342,6 +462,88 @@ impl Settings {
             }
             other => other.apply(&self.config_path)
         }
+
+        Task::none()
+    }
+
+    /// Hands a theme switch to the desktop, once it is worth handing over.
+    ///
+    /// Three things are settled before the desktop is disturbed, because each
+    /// of them used to end in a page that claimed a switch nobody performed:
+    /// a switch already under way is left alone, a theme that is not installed
+    /// is refused outright — HyDE's own switcher would silently keep the
+    /// current one — and a missing switch script is reported instead of being
+    /// logged where nobody looks.
+    fn switch_hyde_theme(&mut self, theme: String, config: &Config) -> Task<Message> {
+        self.refresh_hyde();
+
+        match decide_switch(&theme, self.switching.as_deref(), &self.hyde.themes) {
+            SwitchDecision::AlreadySwitching(pending) => {
+                info!("ignoring the switch to `{theme}`: `{pending}` is still being applied");
+                return Task::none();
+            }
+            SwitchDecision::NotInstalled => {
+                self.report(
+                    config,
+                    &format!("no HyDE theme named `{theme}` is installed")
+                );
+                return Task::none();
+            }
+            SwitchDecision::Start => {}
+        }
+
+        let command = match hyde_shell::switch_theme(&theme) {
+            Ok(command) => command,
+            Err(error) => {
+                self.report(config, &format!("cannot switch the HyDE theme: {error}"));
+                return Task::none();
+            }
+        };
+
+        info!("switching the desktop to the HyDE theme `{theme}`");
+        self.switching = Some(theme.clone());
+
+        Task::perform(run_desktop_command(command), move |failure| {
+            Message::HydeThemeSwitched {
+                theme: theme.clone(),
+                failure
+            }
+        })
+    }
+
+    /// Records what the desktop made of the switch that just ended.
+    fn hyde_theme_switched(&mut self, theme: &str, failure: Option<&str>, config: &Config) {
+        self.switching = None;
+        self.refresh_hyde();
+
+        match failure {
+            Some(reason) => {
+                error!("the switch to the HyDE theme `{theme}` failed: {reason}");
+                self.report(
+                    config,
+                    &format!("the desktop refused to switch to `{theme}`")
+                );
+            }
+            None => info!("the desktop finished switching to the HyDE theme `{theme}`")
+        }
+    }
+
+    /// Puts `message` in front of the user as well as in the log.
+    ///
+    /// A desktop action the bar could not perform has no other way of being
+    /// noticed: the window that asked for it draws the desktop as it is, so a
+    /// refused switch simply leaves the page unchanged and reads as the press
+    /// having been missed.
+    fn report(&self, config: &Config, message: &str) {
+        warn!("{message}");
+
+        notify(
+            Notice::Error,
+            NOTICE_DURATION,
+            &compositor_color(config.appearance.primary_color.clone()),
+            config.appearance.font_size_px(),
+            message
+        );
     }
 
     /// File the choices are written to.
@@ -522,5 +724,72 @@ mod tests {
     fn the_opacity_steps_keep_two_decimals() {
         assert_eq!(Settings::opacity_above(0.8), 0.85);
         assert_eq!(Settings::opacity_below(0.8), 0.75);
+    }
+
+    fn installed() -> Vec<String> {
+        vec!["Gruvbox Retro".to_owned(), "Tokyo Night".to_owned()]
+    }
+
+    #[test]
+    fn an_installed_theme_is_handed_to_the_desktop() {
+        assert_eq!(
+            decide_switch("Tokyo Night", None, &installed()),
+            SwitchDecision::Start
+        );
+    }
+
+    #[test]
+    fn a_theme_that_is_not_installed_is_refused_rather_than_attempted() {
+        assert_eq!(
+            decide_switch("Nordic Blue", None, &installed()),
+            SwitchDecision::NotInstalled
+        );
+    }
+
+    #[test]
+    fn a_second_press_while_a_switch_runs_is_dropped() {
+        assert_eq!(
+            decide_switch("Tokyo Night", Some("Gruvbox Retro"), &installed()),
+            SwitchDecision::AlreadySwitching("Gruvbox Retro".to_owned())
+        );
+    }
+
+    #[test]
+    fn pressing_the_theme_already_being_switched_to_does_not_start_it_twice() {
+        assert_eq!(
+            decide_switch("Tokyo Night", Some("Tokyo Night"), &installed()),
+            SwitchDecision::AlreadySwitching("Tokyo Night".to_owned())
+        );
+    }
+
+    #[test]
+    fn a_machine_without_hyde_offers_no_theme_to_switch_to() {
+        assert_eq!(
+            decide_switch("Tokyo Night", None, &[]),
+            SwitchDecision::NotInstalled
+        );
+    }
+
+    #[test]
+    fn a_finished_switch_releases_the_page_for_the_next_one() {
+        let mut settings = Settings {
+            switching: Some("Tokyo Night".to_owned()),
+            ..Settings::default()
+        };
+
+        let _ = settings.update(
+            Message::HydeThemeSwitched {
+                theme:   "Tokyo Night".to_owned(),
+                failure: None
+            },
+            &Config::default()
+        );
+
+        assert_eq!(settings.switching(), None);
+    }
+
+    #[test]
+    fn a_page_that_is_not_switching_reports_nothing_pending() {
+        assert_eq!(Settings::default().switching(), None);
     }
 }

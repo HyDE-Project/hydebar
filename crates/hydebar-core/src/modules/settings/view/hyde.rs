@@ -1,10 +1,12 @@
 //! HyDE page of the settings window.
 //!
 //! The page is about the desktop rather than about the bar, so nothing on it is
-//! written into the bar's configuration file: pressing a theme asks
-//! `hyde-shell` to switch, and the desktop — the bar included — follows. What
-//! the page shows is read back from HyDE's own state, so it reports the desktop
-//! as it is even when the change came from a keybinding rather than from here.
+//! written into the bar's configuration file: pressing a theme asks HyDE's own
+//! switcher to run, and the desktop — the bar included — follows. What the page
+//! shows is read back from HyDE's own state, so it reports the desktop as it is
+//! even when the change came from a keybinding rather than from here, and it
+//! keeps reporting the old theme for as long as the switch takes rather than
+//! the one that was pressed.
 //!
 //! Facts HyDE owns but does not take an instruction for, such as whether the
 //! colours are pulled from the wallpaper, are shown as plain text: a control
@@ -44,6 +46,13 @@ const WALLPAPER: &str = "Wallpaper";
 /// Shown in place of the theme name while HyDE has recorded none.
 const UNKNOWN: &str = "unknown";
 
+/// Placed between the theme in force and the one being switched to.
+///
+/// A switch takes seconds, and for all of them the desktop is still on the old
+/// theme; naming both is the only honest thing the page can draw, and it is
+/// also what tells the user the press was taken.
+const SWITCHING_TO: &str = " \u{2192} ";
+
 /// Shown in place of the theme list while none are installed.
 const NO_THEMES: &str = "no HyDE themes found on this machine";
 
@@ -65,6 +74,7 @@ const WALLPAPER_ROWS: f32 = 1.0;
 /// inside the window instead of running past its edge.
 pub(super) fn view<'a>(
     state: &HydeState,
+    switching: Option<&str>,
     opacity: f32,
     font_size: f32,
     available_width: f32
@@ -72,7 +82,7 @@ pub(super) fn view<'a>(
     let desktop = row_stack(font_size)
         .push(status_row(
             STATUS_LABELS[0],
-            state.theme.clone().unwrap_or_else(|| UNKNOWN.to_owned()),
+            active_label(state, switching),
             font_size
         ))
         .push(status_row(
@@ -148,6 +158,21 @@ fn switch_label(enabled: bool) -> &'static str {
     if enabled { "On" } else { "Off" }
 }
 
+/// Renders what the desktop is on, and what it is on its way to.
+///
+/// The theme in force always comes from HyDE's own state file; a theme the bar
+/// asked for is drawn beside it rather than in its place, because until the
+/// switch has finished the desktop is still on the old one and a page that
+/// already named the new one would be reporting something that may yet fail.
+fn active_label(state: &HydeState, switching: Option<&str>) -> String {
+    let active = state.theme.as_deref().unwrap_or(UNKNOWN);
+
+    match switching {
+        Some(pending) if !state.is_active(pending) => format!("{active}{SWITCHING_TO}{pending}"),
+        _ => active.to_owned()
+    }
+}
+
 /// Rows the theme grid fills when laid out `available_width` wide.
 fn theme_rows(state: &HydeState, font_size: f32, available_width: f32) -> f32 {
     if state.themes.is_empty() {
@@ -180,13 +205,13 @@ pub(super) fn rows(state: &HydeState, font_size: f32, available_width: f32) -> f
 /// on, and sizing the window to hold every theme side by side would make it far
 /// wider than the screen.
 #[must_use]
-pub(super) fn desired_width(state: &HydeState, font_size: f32) -> f32 {
+pub(super) fn desired_width(state: &HydeState, switching: Option<&str>, font_size: f32) -> f32 {
     let statuses = [
-        state.theme.as_deref().unwrap_or(UNKNOWN),
-        switch_label(state.wallpaper_colors),
-        state.shader.as_deref().unwrap_or(UNKNOWN)
+        active_label(state, switching),
+        switch_label(state.wallpaper_colors).to_owned(),
+        state.shader.clone().unwrap_or_else(|| UNKNOWN.to_owned())
     ]
-    .into_iter()
+    .iter()
     .map(|value| status_row_width(value, font_size))
     .fold(0.0_f32, f32::max);
 
@@ -237,7 +262,63 @@ mod tests {
 
     #[test]
     fn a_page_without_themes_still_asks_for_a_width() {
-        assert!(desired_width(&HydeState::default(), 16.0) > 0.0);
+        assert!(desired_width(&HydeState::default(), None, 16.0) > 0.0);
+    }
+
+    #[test]
+    fn a_page_that_is_not_switching_names_the_theme_in_force() {
+        let state = state(&["Nord", "Mocha"], Some("Nord"));
+
+        assert_eq!(active_label(&state, None), "Nord");
+    }
+
+    #[test]
+    fn a_running_switch_names_both_themes_and_keeps_the_old_one_first() {
+        let state = state(&["Nord", "Mocha"], Some("Nord"));
+
+        let label = active_label(&state, Some("Mocha"));
+
+        assert!(label.starts_with("Nord"), "{label}");
+        assert!(label.ends_with("Mocha"), "{label}");
+    }
+
+    /// HyDE writes the new name into its state file long before the switch is
+    /// over, so the page has to stop drawing an arrow that points at the theme
+    /// it already reports.
+    #[test]
+    fn a_switch_the_state_file_already_reports_is_named_only_once() {
+        let state = state(&["Nord", "Mocha"], Some("Mocha"));
+
+        assert_eq!(active_label(&state, Some("Mocha")), "Mocha");
+    }
+
+    #[test]
+    fn a_running_switch_leaves_the_old_theme_the_active_one() {
+        let state = state(&["Nord", "Mocha"], Some("Nord"));
+
+        assert!(state.is_active("Nord"));
+        assert!(!state.is_active("Mocha"));
+    }
+
+    #[test]
+    fn a_desktop_without_a_theme_still_names_the_one_being_switched_to() {
+        let state = state(&["Nord"], None);
+
+        assert_eq!(
+            active_label(&state, Some("Nord")),
+            format!("{UNKNOWN}{SWITCHING_TO}Nord")
+        );
+    }
+
+    #[test]
+    fn a_running_switch_widens_the_page_enough_to_draw_it() {
+        let state = state(&["Nord", "An Extremely Long Theme Name"], Some("Nord"));
+        let pending = Some("An Extremely Long Theme Name");
+
+        assert!(
+            desired_width(&state, pending, 16.0)
+                >= status_row_width(&active_label(&state, pending), 16.0)
+        );
     }
 
     #[test]
@@ -250,7 +331,7 @@ mod tests {
         let short = state(&["Nord"], Some("Nord"));
         let long = state(&["An Extremely Long Theme Name"], Some("Nord"));
 
-        assert!(desired_width(&long, 16.0) > desired_width(&short, 16.0));
+        assert!(desired_width(&long, None, 16.0) > desired_width(&short, None, 16.0));
     }
 
     #[test]
@@ -269,7 +350,7 @@ mod tests {
             ],
             Some("Nord")
         );
-        let width = desired_width(&few, 16.0);
+        let width = desired_width(&few, None, 16.0);
 
         assert!(desired_height(&many, 16.0, width) > desired_height(&few, 16.0, width));
     }

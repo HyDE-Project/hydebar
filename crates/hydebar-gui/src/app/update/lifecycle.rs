@@ -93,6 +93,7 @@ impl App {
                 }
 
                 self.config = config;
+                self.settings.refresh_hyde();
                 let resize = self.refresh_appearance();
 
                 self.register_modules();

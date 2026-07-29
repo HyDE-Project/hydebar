@@ -1,6 +1,10 @@
 //! Translation of theme file events into configuration reloads.
 
-use std::{ffi::OsString, path::Path, sync::Arc};
+use std::{
+    ffi::OsString,
+    path::{Path, PathBuf},
+    sync::Arc
+};
 
 use hydebar_proto::{compositor_look::CompositorLook, theme_source};
 use iced::futures::{
@@ -11,7 +15,7 @@ use log::{debug, info, warn};
 
 use super::sources::ThemeRoots;
 use crate::config::{
-    ConfigEvent, ConfigManager,
+    ConfigApplied, ConfigEvent, ConfigManager, ConfigUpdateError,
     watch::{
         Event, WatchedEvent,
         interpret::classify_mask,
@@ -61,15 +65,47 @@ pub(super) async fn handle_theme_event(
     debug!("HyDE theme sources reported {event:?}");
     info!("Reloading the configuration to follow the HyDE theme");
 
-    let dirs = roots.dirs.clone();
-
-    match load_candidate_with(config_path, &manager, || {
-        theme_source::load_from(&dirs, &CompositorLook::read())
-    }) {
+    match reload(
+        config_path.to_path_buf(),
+        roots.clone(),
+        Arc::clone(&manager)
+    )
+    .await
+    {
         Ok(applied) => output.send(ConfigEvent::Applied(applied)).await,
         Err(reason) => {
             warn!("Following the HyDE theme failed: {reason}");
             send_degradation(output, manager, reason).await
         }
+    }
+}
+
+/// Re-reads the configuration and the theme away from the runtime's own
+/// threads.
+///
+/// Every source is read with blocking calls, and asking the compositor for its
+/// rounding starts a process per option; done inline, a theme switch would park
+/// a runtime worker for as long as those take, in the middle of the burst of
+/// events the switch itself produces. Handing the whole read to the blocking
+/// pool keeps the bar answering while the desktop is being rebuilt around it.
+async fn reload(
+    config_path: PathBuf,
+    roots: ThemeRoots,
+    manager: Arc<ConfigManager>
+) -> Result<ConfigApplied, ConfigUpdateError> {
+    let read = tokio::task::spawn_blocking(move || {
+        let dirs = roots.dirs.clone();
+
+        load_candidate_with(&config_path, &manager, || {
+            theme_source::load_from(&dirs, &CompositorLook::read())
+        })
+    })
+    .await;
+
+    match read {
+        Ok(outcome) => outcome,
+        Err(error) => Err(ConfigUpdateError::state(format!(
+            "the theme could not be read: {error}"
+        )))
     }
 }
