@@ -33,7 +33,10 @@ pub struct HydeState {
     /// Whether HyDE recolours the desktop from the wallpaper.
     ///
     /// The bar shows this because it explains why the colours moved without
-    /// anybody touching a theme.
+    /// anybody touching a theme. The switch is a mode number, not a flag: `0`
+    /// leaves the theme's palette in charge and every other setting — plain
+    /// recolouring or one of the forced-mirror modes — takes the colours from
+    /// the wallpaper, so the reading here has to match the colour engine's.
     pub wallpaper_colors: bool,
     /// Shader applied to the screen, if any.
     pub shader:           Option<String>
@@ -50,7 +53,9 @@ impl HydeState {
         Self {
             theme: staterc::value_of(staterc_source, THEME_KEY),
             themes,
-            wallpaper_colors: staterc::flag(staterc_source, WALL_DCOL_KEY),
+            wallpaper_colors: staterc::number::<u8>(staterc_source, WALL_DCOL_KEY)
+                .unwrap_or_default()
+                != 0,
             shader: staterc::value_of(staterc_source, SHADER_KEY)
         }
     }
@@ -157,6 +162,22 @@ WAYBAR_LAYOUT_NAME=hyprdots/02
     fn the_recolouring_switch_follows_the_state_file() {
         assert!(!HydeState::parse("enableWallDcol=\"0\"\n", Vec::new()).wallpaper_colors);
         assert!(HydeState::parse("enableWallDcol=\"1\"\n", Vec::new()).wallpaper_colors);
+    }
+
+    /// The forced-mirror settings `2` and `3` still recolour from the
+    /// wallpaper; reading them as a boolean flag once reported them as off
+    /// while the colour engine painted from the wallpaper regardless.
+    #[test]
+    fn the_forced_mirror_settings_read_as_wallpaper_recolouring() {
+        assert!(HydeState::parse("enableWallDcol=\"2\"\n", Vec::new()).wallpaper_colors);
+        assert!(HydeState::parse("enableWallDcol=\"3\"\n", Vec::new()).wallpaper_colors);
+    }
+
+    /// A value the scripts would fail to read falls back to the default of
+    /// `0`, exactly as `${enableWallDcol:-0}` does.
+    #[test]
+    fn an_unreadable_recolouring_switch_reads_as_off() {
+        assert!(!HydeState::parse("enableWallDcol=\"maybe\"\n", Vec::new()).wallpaper_colors);
     }
 
     #[test]

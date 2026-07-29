@@ -11,12 +11,6 @@
 //! anything else a shell would evaluate are left alone, because the bar reads
 //! the files and never runs them.
 
-/// Values a flag is written as when HyDE means "on".
-///
-/// HyDE writes `1`, but the same files are edited by hand, so the spellings a
-/// user would reasonably reach for are accepted as well.
-const TRUTHY: [&str; 4] = ["1", "true", "yes", "on"];
-
 /// Value assigned to `key`, with its quotes removed.
 ///
 /// The last assignment wins, mirroring what sourcing the file in a shell would
@@ -36,17 +30,6 @@ pub(crate) fn value_of(source: &str, key: &str) -> Option<String> {
     }
 
     found.filter(|value| !value.is_empty())
-}
-
-/// Whether `key` is assigned a value meaning "on".
-///
-/// An absent key reads as off, which is what a HyDE install that never enabled
-/// the feature looks like.
-#[must_use]
-pub(crate) fn flag(source: &str, key: &str) -> bool {
-    value_of(source, key)
-        .map(|value| TRUTHY.contains(&value.to_ascii_lowercase().as_str()))
-        .unwrap_or(false)
 }
 
 /// Value assigned to `key`, read as a number.
@@ -184,23 +167,6 @@ export HYDE_THEME_DIR="/home/user/.config/hyde/themes/Gruvbox Retro"
     fn a_line_that_assigns_nothing_is_skipped() {
         assert_eq!(assignment("case $option in"), None);
         assert_eq!(assignment("   "), None);
-    }
-
-    #[test]
-    fn the_documented_truthy_spellings_read_as_enabled() {
-        for spelling in ["1", "true", "yes", "on", "ON", "True"] {
-            assert!(
-                flag(&format!("enableWallDcol=\"{spelling}\""), "enableWallDcol"),
-                "expected `{spelling}` to read as enabled"
-            );
-        }
-    }
-
-    #[test]
-    fn anything_else_reads_as_disabled() {
-        assert!(!flag("enableWallDcol=\"0\"", "enableWallDcol"));
-        assert!(!flag("enableWallDcol=\"false\"", "enableWallDcol"));
-        assert!(!flag("", "enableWallDcol"));
     }
 
     #[test]
