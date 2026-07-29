@@ -37,6 +37,7 @@ use hydebar_core::{
     tooltip::TooltipInfo
 };
 use hydebar_proto::{
+    compositor_look::CompositorLook,
     config::{Appearance, Config},
     ports::hyprland::HyprlandPort
 };
@@ -222,21 +223,24 @@ impl App {
         self.appearance_transition.current()
     }
 
-    /// Returns `config` with the magnification of this screen folded in.
+    /// Returns `config` restated for the screen the bar runs on.
     ///
     /// A configuration read from disk carries the sizes the user wrote, not the
-    /// sizes this screen needs; folding the factor in on every load is what
-    /// keeps a saved setting from throwing the whole bar back to its unscaled
-    /// size.
-    pub(super) fn magnified(&self, config: Arc<Config>) -> Arc<Config> {
-        if self.magnification <= 1.0 {
-            return config;
-        }
+    /// sizes this screen needs and nothing the compositor knows; a reload that
+    /// only folded the magnification in would drop the window gap the
+    /// outermost islands line up with and fall back to the font-derived
+    /// margin, which is why the whole restatement lives in one place and both
+    /// the first load and every reload after it go through it.
+    pub(super) fn adopted(&self, config: Arc<Config>) -> Arc<Config> {
+        self.adopted_with(config, &CompositorLook::read())
+    }
 
-        let mut magnified = (*config).clone();
-        magnified.appearance.magnify(self.magnification);
+    /// Restates `config` against a compositor look the caller already has.
+    fn adopted_with(&self, config: Arc<Config>, look: &CompositorLook) -> Arc<Config> {
+        let mut adopted = (*config).clone();
+        adopted.appearance.adopt_screen(self.magnification, look);
 
-        Arc::new(magnified)
+        Arc::new(adopted)
     }
 
     /// Appearance the bar renders with.
@@ -458,5 +462,81 @@ mod tests {
         ));
 
         assert_eq!(mock.switch_layout_calls(), 1);
+    }
+
+    fn test_app(magnification: f32) -> App {
+        let logger = test_logger();
+        let config = Config::default();
+        let mock_port: Arc<dyn HyprlandPort> = Arc::new(MockHyprlandPort::default());
+        let config_manager = Arc::new(ConfigManager::new(config.clone()));
+        let capacity = NonZeroUsize::new(16).expect("non-zero");
+        let bus = EventBus::new(capacity);
+        let runtime = tokio::runtime::Runtime::new().expect("runtime");
+        let event_sender = bus.sender();
+        let runtime_handle = runtime.handle().clone();
+        let bus_receiver = bus.receiver();
+
+        let (mut app, _) = App::new((
+            logger,
+            Arc::new(config),
+            config_manager,
+            PathBuf::new(),
+            mock_port,
+            event_sender,
+            runtime_handle,
+            bus_receiver
+        ));
+        app.magnification = magnification;
+
+        app
+    }
+
+    fn window_look() -> CompositorLook {
+        CompositorLook {
+            rounding:   Some(3.0),
+            gaps_out:   Some(8.0),
+            gaps_in:    Some(3.0),
+            animations: Some(true)
+        }
+    }
+
+    #[test]
+    fn a_reloaded_config_keeps_the_islands_at_the_window_gap() {
+        let app = test_app(2.0);
+        let mut config = Config::default();
+        config.appearance.font_size = Some(10.0);
+        config.appearance.side_padding = None;
+
+        let reloaded = app.adopted_with(Arc::new(config), &window_look());
+
+        assert_eq!(reloaded.appearance.side_padding, Some(8.0));
+        assert_eq!(reloaded.appearance.bar_padding()[1], 8.0);
+    }
+
+    #[test]
+    fn reloading_over_and_over_never_moves_the_islands() {
+        let app = test_app(2.0);
+        let mut config = Config::default();
+        config.appearance.font_size = Some(10.0);
+        let config = Arc::new(config);
+
+        let once = app.adopted_with(Arc::clone(&config), &window_look());
+        let twice = app.adopted_with(config, &window_look());
+
+        assert_eq!(
+            once.appearance.bar_padding(),
+            twice.appearance.bar_padding()
+        );
+        assert_eq!(once.appearance.font_size, twice.appearance.font_size);
+    }
+
+    #[test]
+    fn an_unmagnified_bar_is_restated_all_the_same() {
+        let app = test_app(1.0);
+        let config = Config::default();
+
+        let reloaded = app.adopted_with(Arc::new(config), &window_look());
+
+        assert_eq!(reloaded.appearance.side_padding, Some(8.0));
     }
 }

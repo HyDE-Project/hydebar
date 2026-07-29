@@ -64,7 +64,7 @@ impl App {
                     impact
                 } = update;
 
-                let config = self.magnified(config);
+                let config = self.adopted(config);
 
                 info!("New config applied: {config:?}");
                 debug!("Config impact: {impact:?}");

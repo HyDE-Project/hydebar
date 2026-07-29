@@ -119,21 +119,21 @@ fn run(runtime_handle: Handle) -> Result<(), MainError> {
 
     let mut raw_config = raw_config;
 
-    if raw_config.appearance.auto_scale
-        && let Some(screen) = startup_scale::focused_screen()
-    {
-        let magnification = screen.magnification();
+    let magnification = if raw_config.appearance.auto_scale {
+        startup_scale::focused_screen().map_or(1.0, |screen| screen.magnification())
+    } else {
+        1.0
+    };
 
-        if magnification > 1.0 {
-            debug!("magnifying the bar {magnification} times for this screen");
-            hydebar_core::components::scale::set_screen_factor(magnification);
-            raw_config.appearance.magnify(magnification);
-        }
+    if magnification > 1.0 {
+        debug!("magnifying the bar {magnification} times for this screen");
+        hydebar_core::components::scale::set_screen_factor(magnification);
     }
 
-    raw_config
-        .appearance
-        .follow_compositor(&hydebar_proto::compositor_look::CompositorLook::read());
+    raw_config.appearance.adopt_screen(
+        magnification,
+        &hydebar_proto::compositor_look::CompositorLook::read()
+    );
 
     hydebar_core::components::scale::set_base(raw_config.appearance.font_size_px());
 
