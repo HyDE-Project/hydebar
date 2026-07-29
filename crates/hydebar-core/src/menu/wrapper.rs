@@ -1,0 +1,102 @@
+//! Placement of a menu box on the full screen menu surface.
+
+use iced::{
+    Element, Length, Padding,
+    alignment::{Horizontal, Vertical},
+    widget::{container, mouse_area, scrollable},
+    window::Id
+};
+
+use super::size::MenuSize;
+use crate::{
+    config::{AppearanceStyle, Position},
+    position_button::ButtonUIRef,
+    style::{menu_backdrop_style, menu_container_style}
+};
+
+/// Inner padding of a menu box, in multiples of the themed text size.
+const PADDING_EM: f32 = 1.6;
+
+/// Everything the placement needs to know about the theme in force.
+#[derive(Debug, Clone, Copy)]
+pub struct MenuLayout {
+    /// Themed text size, the unit every length here is stated in.
+    pub font_size:     f32,
+    /// Screen edge the bar is docked to.
+    pub bar_position:  Position,
+    /// Style the bar is drawn in.
+    pub style:         AppearanceStyle,
+    /// Opacity of the menu box.
+    pub opacity:       f32,
+    /// Opacity of the dimming behind the menu.
+    pub menu_backdrop: f32
+}
+
+/// Wraps `content` into a menu box anchored under `button_ui_ref`.
+///
+/// The box follows its content, never grows past what `menu_size` asks for on
+/// the output it lands on, scrolls
+/// once it grows past the share of the screen a menu may cover, and is nudged
+/// back inside the screen when its button sits near an edge.
+pub fn menu_wrapper<Message: Clone + 'static>(
+    _id: Id,
+    content: Element<'_, Message>,
+    menu_size: MenuSize,
+    button_ui_ref: ButtonUIRef,
+    layout: MenuLayout,
+    none_message: Message,
+    close_menu_message: Message
+) -> Element<'_, Message> {
+    let (viewport_width, viewport_height) = button_ui_ref.viewport;
+    let width = menu_size.width(layout.font_size, viewport_width);
+    let padding = PADDING_EM * layout.font_size;
+
+    mouse_area(
+        container(
+            mouse_area(
+                container(scrollable(content))
+                    .height(Length::Shrink)
+                    .max_height(MenuSize::max_height(viewport_height))
+                    .width(Length::Shrink)
+                    .max_width(width)
+                    .padding(padding)
+                    .style(menu_container_style(layout.opacity))
+            )
+            .on_release(none_message)
+        )
+        .align_y(match layout.bar_position {
+            Position::Top => Vertical::Top,
+            Position::Bottom => Vertical::Bottom
+        })
+        .align_x(Horizontal::Left)
+        .padding({
+            let edge_gap = match layout.style {
+                AppearanceStyle::Solid | AppearanceStyle::Gradient => 2.0,
+                AppearanceStyle::Islands => 0.0
+            };
+
+            Padding::new(0.)
+                .top(if layout.bar_position == Position::Top {
+                    edge_gap
+                } else {
+                    0.0
+                })
+                .bottom(if layout.bar_position == Position::Bottom {
+                    edge_gap
+                } else {
+                    0.0
+                })
+                .left(MenuSize::left_offset(
+                    width,
+                    button_ui_ref.position.x,
+                    viewport_width,
+                    layout.font_size
+                ))
+        })
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .style(menu_backdrop_style(layout.menu_backdrop))
+    )
+    .on_release(close_menu_message)
+    .into()
+}

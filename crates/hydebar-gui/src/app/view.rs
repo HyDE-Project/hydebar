@@ -2,7 +2,7 @@ use std::f32::consts::PI;
 
 use hydebar_core::{
     HEIGHT,
-    menu::{MenuSize, MenuType, menu_wrapper},
+    menu::{MenuLayout, MenuSize, MenuType, menu_wrapper},
     modules::{control_center::ControlCenterViewExt, custom_module},
     outputs::HasOutput,
     style::{backdrop_color, darken_color, hydebar_theme},
@@ -42,6 +42,17 @@ impl App {
 
     pub fn scale_factor(&self, _id: Id) -> f64 {
         self.appearance().scale_factor
+    }
+
+    /// Theme facts a menu needs to place itself, at the given animated opacity.
+    fn menu_layout(&self, opacity: f32) -> MenuLayout {
+        MenuLayout {
+            font_size: self.appearance().font_size_px(),
+            bar_position: self.config.position,
+            style: self.appearance().style,
+            opacity,
+            menu_backdrop: self.appearance().menu.backdrop
+        }
     }
 
     pub fn view(&self, id: Id) -> Element<'_, Message> {
@@ -158,10 +169,7 @@ impl App {
                             .map(Message::Updates),
                         MenuSize::Small,
                         *button_ui_ref,
-                        self.config.position,
-                        self.appearance().style,
-                        animated_opacity,
-                        self.appearance().menu.backdrop,
+                        self.menu_layout(animated_opacity),
                         Message::None,
                         Message::CloseMenu(id)
                     ),
@@ -172,10 +180,7 @@ impl App {
                             .map(Message::Tray),
                         MenuSize::Small,
                         *button_ui_ref,
-                        self.config.position,
-                        self.appearance().style,
-                        animated_opacity,
-                        self.appearance().menu.backdrop,
+                        self.menu_layout(animated_opacity),
                         Message::None,
                         Message::CloseMenu(id)
                     ),
@@ -192,10 +197,7 @@ impl App {
                             .map(Message::ControlCenter),
                         MenuSize::Medium,
                         *button_ui_ref,
-                        self.config.position,
-                        self.appearance().style,
-                        animated_opacity,
-                        self.appearance().menu.backdrop,
+                        self.menu_layout(animated_opacity),
                         Message::None,
                         Message::CloseMenu(id)
                     ),
@@ -212,10 +214,7 @@ impl App {
                             .map(Message::ControlCenter),
                         MenuSize::Medium,
                         *button_ui_ref,
-                        self.config.position,
-                        self.appearance().style,
-                        animated_opacity,
-                        self.appearance().menu.backdrop,
+                        self.menu_layout(animated_opacity),
                         Message::None,
                         Message::CloseMenu(id)
                     ),
@@ -231,10 +230,7 @@ impl App {
                             .map(Message::ControlCenter),
                         MenuSize::Medium,
                         *button_ui_ref,
-                        self.config.position,
-                        self.appearance().style,
-                        animated_opacity,
-                        self.appearance().menu.backdrop,
+                        self.menu_layout(animated_opacity),
                         Message::None,
                         Message::CloseMenu(id)
                     ),
@@ -250,10 +246,7 @@ impl App {
                             .map(Message::ControlCenter),
                         MenuSize::Medium,
                         *button_ui_ref,
-                        self.config.position,
-                        self.appearance().style,
-                        animated_opacity,
-                        self.appearance().menu.backdrop,
+                        self.menu_layout(animated_opacity),
                         Message::None,
                         Message::CloseMenu(id)
                     ),
@@ -268,10 +261,7 @@ impl App {
                             .map(Message::ControlCenter),
                         MenuSize::Small,
                         *button_ui_ref,
-                        self.config.position,
-                        self.appearance().style,
-                        animated_opacity,
-                        self.appearance().menu.backdrop,
+                        self.menu_layout(animated_opacity),
                         Message::None,
                         Message::CloseMenu(id)
                     ),
@@ -282,10 +272,7 @@ impl App {
                             .map(Message::Settings),
                         MenuSize::Large,
                         *button_ui_ref,
-                        self.config.position,
-                        self.appearance().style,
-                        animated_opacity,
-                        self.appearance().menu.backdrop,
+                        self.menu_layout(animated_opacity),
                         Message::None,
                         Message::CloseMenu(id)
                     ),
@@ -296,10 +283,7 @@ impl App {
                             .map(Message::MediaPlayer),
                         MenuSize::Large,
                         *button_ui_ref,
-                        self.config.position,
-                        self.appearance().style,
-                        animated_opacity,
-                        self.appearance().menu.backdrop,
+                        self.menu_layout(animated_opacity),
                         Message::None,
                         Message::CloseMenu(id)
                     ),
@@ -310,10 +294,7 @@ impl App {
                             .map(Message::SystemInfo),
                         MenuSize::Medium,
                         *button_ui_ref,
-                        self.config.position,
-                        self.appearance().style,
-                        animated_opacity,
-                        self.appearance().menu.backdrop,
+                        self.menu_layout(animated_opacity),
                         Message::None,
                         Message::CloseMenu(id)
                     ),
@@ -324,10 +305,7 @@ impl App {
                             .map(Message::Notifications),
                         MenuSize::Medium,
                         *button_ui_ref,
-                        self.config.position,
-                        self.appearance().style,
-                        animated_opacity,
-                        self.appearance().menu.backdrop,
+                        self.menu_layout(animated_opacity),
                         Message::None,
                         Message::CloseMenu(id)
                     ),
@@ -338,10 +316,7 @@ impl App {
                             .map(Message::Screenshot),
                         MenuSize::Small,
                         *button_ui_ref,
-                        self.config.position,
-                        self.appearance().style,
-                        animated_opacity,
-                        self.appearance().menu.backdrop,
+                        self.menu_layout(animated_opacity),
                         Message::None,
                         Message::CloseMenu(id)
                     ),
@@ -350,10 +325,7 @@ impl App {
                         self.clock.menu_view(self.icons()).map(Message::Clock),
                         MenuSize::Medium,
                         *button_ui_ref,
-                        self.config.position,
-                        self.appearance().style,
-                        animated_opacity,
-                        self.appearance().menu.backdrop,
+                        self.menu_layout(animated_opacity),
                         Message::None,
                         Message::CloseMenu(id)
                     ),
@@ -374,10 +346,7 @@ impl App {
                                 ),
                                 MenuSize::Small,
                                 *button_ui_ref,
-                                self.config.position,
-                                self.appearance().style,
-                                animated_opacity,
-                                self.appearance().menu.backdrop,
+                                self.menu_layout(animated_opacity),
                                 Message::None,
                                 Message::CloseMenu(id)
                             ),
