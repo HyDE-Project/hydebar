@@ -33,6 +33,13 @@ const DESKTOP: &str = "Desktop";
 /// width the page asks for and the number of rows it reserves height for both
 /// come from the same list: a row added to the page without an entry here would
 /// be measured out of existence.
+/// Rows the size section drops while the bar scales itself.
+///
+/// Height, side padding and text size are then decided from the screen, so a
+/// stepper offering to change them would be offering something that is
+/// overwritten the moment it is written.
+const SCALED_ROWS: f32 = 3.0;
+
 const SECTIONS: [(&str, &[(&str, &[&str])]); 3] = [
     (
         PLACEMENT,
@@ -138,30 +145,36 @@ pub(super) fn view(config: &Config, opacity: f32, magnification: f32) -> Element
             font_size,
             opacity
         ))
-        .push(stepper_row(
-            "Height",
-            format!("{height:.0}"),
-            Message::SetHeight(Settings::height_below(height)),
-            Message::SetHeight(Settings::height_above(height)),
-            font_size,
-            opacity
-        ))
-        .push(stepper_row(
-            "Side padding",
-            format!("{side_padding:.0}"),
-            Message::SetSidePadding(Settings::side_padding_below(side_padding)),
-            Message::SetSidePadding(Settings::side_padding_above(side_padding)),
-            font_size,
-            opacity
-        ))
-        .push(stepper_row(
-            "Font size",
-            format!("{written_font_size:.0}"),
-            Message::SetFontSize(Settings::font_size_below(written_font_size)),
-            Message::SetFontSize(Settings::font_size_above(written_font_size)),
-            font_size,
-            opacity
-        ))
+        .push_maybe((!appearance.auto_scale).then(|| {
+            stepper_row(
+                "Height",
+                format!("{height:.0}"),
+                Message::SetHeight(Settings::height_below(height)),
+                Message::SetHeight(Settings::height_above(height)),
+                font_size,
+                opacity
+            )
+        }))
+        .push_maybe((!appearance.auto_scale).then(|| {
+            stepper_row(
+                "Side padding",
+                format!("{side_padding:.0}"),
+                Message::SetSidePadding(Settings::side_padding_below(side_padding)),
+                Message::SetSidePadding(Settings::side_padding_above(side_padding)),
+                font_size,
+                opacity
+            )
+        }))
+        .push_maybe((!appearance.auto_scale).then(|| {
+            stepper_row(
+                "Font size",
+                format!("{written_font_size:.0}"),
+                Message::SetFontSize(Settings::font_size_below(written_font_size)),
+                Message::SetFontSize(Settings::font_size_above(written_font_size)),
+                font_size,
+                opacity
+            )
+        }))
         .push(stepper_row(
             "Opacity",
             format!("{:.2}", appearance.opacity),
@@ -221,10 +234,11 @@ pub(super) fn view(config: &Config, opacity: f32, magnification: f32) -> Element
 /// The notification row is the one that is not written down in [`SECTIONS`], so
 /// it is added here rather than baked into a literal that could drift.
 #[must_use]
-pub(super) fn rows() -> f32 {
+pub(super) fn rows(auto_scale: bool) -> f32 {
     let settings: usize = SECTIONS.iter().map(|(_, rows)| rows.len()).sum();
+    let scaled = if auto_scale { SCALED_ROWS } else { 0.0 };
 
-    SECTIONS.len() as f32 * style::SECTION_TITLE_ROWS + settings as f32 + 1.0
+    SECTIONS.len() as f32 * style::SECTION_TITLE_ROWS + settings as f32 + 1.0 - scaled
 }
 
 /// Longest row of this page, which is how wide the window has to be.
@@ -250,8 +264,8 @@ pub(super) fn desired_width(font_size: f32) -> f32 {
 
 /// Height this page needs.
 #[must_use]
-pub(super) fn desired_height(font_size: f32) -> f32 {
-    style::page_height(rows(), font_size)
+pub(super) fn desired_height(font_size: f32, auto_scale: bool) -> f32 {
+    style::page_height(rows(auto_scale), font_size)
 }
 
 #[cfg(test)]
@@ -308,7 +322,8 @@ mod tests {
 
     #[test]
     fn the_page_reserves_a_row_for_every_row_and_every_heading_it_draws() {
-        assert_eq!(rows(), labels().len() as f32 + SECTIONS.len() as f32);
+        assert_eq!(rows(false), labels().len() as f32 + SECTIONS.len() as f32);
+        assert_eq!(rows(true), rows(false) - SCALED_ROWS);
     }
 
     #[test]
@@ -324,8 +339,8 @@ mod tests {
         let font_size = 16.0;
 
         assert_eq!(
-            desired_height(font_size),
-            style::page_height(rows(), font_size)
+            desired_height(font_size, false),
+            style::page_height(rows(false), font_size)
         );
     }
 }

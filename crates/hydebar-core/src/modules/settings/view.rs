@@ -129,7 +129,7 @@ impl Settings {
         let header = style::row_height(font_size);
         let tabs = style::row_height(font_size);
         let page = match self.tab() {
-            Tab::Appearance => appearance::desired_height(font_size),
+            Tab::Appearance => appearance::desired_height(font_size, config.appearance.auto_scale),
             Tab::Modules => modules::desired_height(config, font_size, self.section())
         };
 
@@ -147,8 +147,8 @@ mod tests {
         let font_size = 16.0;
         let config = Config::default();
         assert_eq!(
-            appearance::desired_height(font_size),
-            style::page_height(appearance::rows(), font_size)
+            appearance::desired_height(font_size, false),
+            style::page_height(appearance::rows(false), font_size)
         );
         assert_eq!(
             modules::desired_height(&config, font_size, Section::Left),
@@ -170,7 +170,7 @@ mod tests {
     fn a_larger_text_size_makes_every_page_taller() {
         let config = Config::default();
 
-        assert!(appearance::desired_height(20.0) > appearance::desired_height(16.0));
+        assert!(appearance::desired_height(20.0, false) > appearance::desired_height(16.0, false));
         assert!(
             modules::desired_height(&config, 20.0, Section::Left)
                 > modules::desired_height(&config, 16.0, Section::Left)
@@ -185,7 +185,8 @@ mod tests {
 
         assert!(
             settings.content_height(&config)
-                >= 2.0 * style::row_height(font_size) + appearance::desired_height(font_size)
+                >= 2.0 * style::row_height(font_size)
+                    + appearance::desired_height(font_size, config.appearance.auto_scale)
         );
     }
 
