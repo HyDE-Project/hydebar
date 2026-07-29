@@ -60,6 +60,64 @@ pub enum ModuleName {
     Custom(String)
 }
 
+impl ModuleName {
+    /// Every module the bar ships, in the order the editor lists them.
+    pub const BUILT_IN: [ModuleName; 22] = [
+        ModuleName::AppLauncher,
+        ModuleName::Updates,
+        ModuleName::Clipboard,
+        ModuleName::Workspaces,
+        ModuleName::WindowTitle,
+        ModuleName::SystemInfo,
+        ModuleName::KeyboardLayout,
+        ModuleName::KeyboardSubmap,
+        ModuleName::Tray,
+        ModuleName::Clock,
+        ModuleName::Battery,
+        ModuleName::Privacy,
+        ModuleName::ControlCenter,
+        ModuleName::Audio,
+        ModuleName::Network,
+        ModuleName::Bluetooth,
+        ModuleName::PowerProfile,
+        ModuleName::Settings,
+        ModuleName::MediaPlayer,
+        ModuleName::Notifications,
+        ModuleName::Screenshot,
+        ModuleName::IdleInhibitor
+    ];
+
+    /// Name this module is written as in the configuration.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        match self {
+            ModuleName::AppLauncher => "AppLauncher",
+            ModuleName::Updates => "Updates",
+            ModuleName::Clipboard => "Clipboard",
+            ModuleName::Workspaces => "Workspaces",
+            ModuleName::WindowTitle => "WindowTitle",
+            ModuleName::SystemInfo => "SystemInfo",
+            ModuleName::KeyboardLayout => "KeyboardLayout",
+            ModuleName::KeyboardSubmap => "KeyboardSubmap",
+            ModuleName::Tray => "Tray",
+            ModuleName::Clock => "Clock",
+            ModuleName::Battery => "Battery",
+            ModuleName::Privacy => "Privacy",
+            ModuleName::ControlCenter => "ControlCenter",
+            ModuleName::Audio => "Audio",
+            ModuleName::Network => "Network",
+            ModuleName::Bluetooth => "Bluetooth",
+            ModuleName::PowerProfile => "PowerProfile",
+            ModuleName::Settings => "Settings",
+            ModuleName::MediaPlayer => "MediaPlayer",
+            ModuleName::Notifications => "Notifications",
+            ModuleName::Screenshot => "Screenshot",
+            ModuleName::IdleInhibitor => "IdleInhibitor",
+            ModuleName::Custom(name) => name.as_str()
+        }
+    }
+}
+
 impl<'de> Deserialize<'de> for ModuleName {
     fn deserialize<D>(deserializer: D) -> Result<ModuleName, D::Error>
     where

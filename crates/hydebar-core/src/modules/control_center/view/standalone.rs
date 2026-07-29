@@ -84,8 +84,7 @@ impl ControlCenter {
     where
         M: 'static + From<Message>
     {
-        let bluetooth = self
-            .bluetooth
+        self.bluetooth
             .as_ref()
             .filter(|b| b.state != BluetoothState::Unavailable)?;
 
@@ -281,6 +280,7 @@ impl ControlCenter {
     }
 
     /// Quick toggle of the idle inhibitor, shared by the control center menu.
+    #[allow(dead_code)]
     pub(super) fn idle_quick_button(
         &self,
         opacity: f32,

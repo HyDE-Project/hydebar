@@ -270,7 +270,7 @@ impl App {
                         self.settings
                             .menu_view(&self.config, animated_opacity, self.icons())
                             .map(Message::Settings),
-                        MenuSize::Large,
+                        MenuSize::Wide,
                         *button_ui_ref,
                         self.menu_layout(animated_opacity),
                         Message::None,

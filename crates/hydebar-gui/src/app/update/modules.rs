@@ -1,5 +1,7 @@
 //! Messages forwarded to individual bar modules.
 
+use std::sync::Arc;
+
 use hydebar_core::{
     menu::MenuType,
     modules::{self, tray::TrayMessage},
@@ -124,7 +126,8 @@ impl App {
                 Task::none()
             }
             Message::Settings(msg) => {
-                msg.apply(self.settings.config_path());
+                let config = Arc::clone(&self.config);
+                self.settings.update(msg, &config);
                 Task::none()
             }
             Message::MediaPlayer(msg) => {

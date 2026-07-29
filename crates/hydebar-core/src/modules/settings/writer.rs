@@ -7,7 +7,7 @@
 
 use std::{fmt, fs, io, path::Path};
 
-use toml_edit::{DocumentMut, Item, Table, value};
+use toml_edit::{Array, DocumentMut, Item, Table, Value, value};
 
 /// Why a setting could not be written back.
 #[derive(Debug)]
@@ -57,7 +57,23 @@ pub enum SettingValue {
     /// A number, written as a float.
     Number(f64),
     /// A flag.
-    Flag(bool)
+    Flag(bool),
+    /// A list, whose entries may be lists themselves.
+    List(Vec<SettingValue>)
+}
+
+impl SettingValue {
+    /// Renders this value as a TOML value.
+    fn into_toml(self) -> Value {
+        match self {
+            Self::Text(text) => Value::from(text),
+            Self::Number(number) => Value::from(number),
+            Self::Flag(flag) => Value::from(flag),
+            Self::List(entries) => {
+                Value::Array(entries.into_iter().map(Self::into_toml).collect::<Array>())
+            }
+        }
+    }
 }
 
 impl From<&str> for SettingValue {
@@ -131,11 +147,7 @@ pub fn write_setting(
             path: tables.join(".")
         })?;
 
-    let mut replacement = match setting {
-        SettingValue::Text(text) => value(text),
-        SettingValue::Number(number) => value(number),
-        SettingValue::Flag(flag) => value(flag)
-    };
+    let mut replacement = value(setting.into_toml());
 
     match table.get_mut(key) {
         Some(existing) => {
@@ -234,6 +246,29 @@ mod tests {
             .expect_err("a scalar cannot hold a table");
 
         assert!(matches!(err, SettingsWriteError::NotATable { .. }));
+    }
+
+    #[test]
+    fn a_nested_list_is_written_as_an_array_of_arrays() {
+        let file = scratch("nested-list");
+        fs::write(&file, "").expect("seed");
+
+        write_setting(
+            &file,
+            &["modules", "left"],
+            SettingValue::List(vec![
+                SettingValue::Text("Clock".to_owned()),
+                SettingValue::List(vec![
+                    SettingValue::Text("Workspaces".to_owned()),
+                    SettingValue::Text("WindowTitle".to_owned()),
+                ]),
+            ])
+        )
+        .expect("write");
+
+        let written = fs::read_to_string(&file).expect("read");
+        assert!(written.contains("[modules]"));
+        assert!(written.contains(r#"left = ["Clock", ["Workspaces", "WindowTitle"]]"#));
     }
 
     #[test]

@@ -5,13 +5,18 @@
 //! so the menu never holds state of its own: what it draws is always what the
 //! running configuration says.
 
-mod menu;
+mod layout;
+mod tab;
+mod view;
 mod writer;
 
 use std::path::{Path, PathBuf};
 
+use hydebar_proto::config::{Config, ModuleDef, Modules};
 use iced::Element;
+pub use layout::{LayoutEdit, Section};
 use log::warn;
+pub use tab::Tab;
 pub use writer::{SettingValue, SettingsWriteError, write_setting};
 
 use super::{Module, OnModulePress};
@@ -54,7 +59,11 @@ pub enum Message {
     /// Set the opacity of the module pills.
     SetOpacity(f32),
     /// Follow the theme published by the HyDE Project, or stop following it.
-    SetFollowHyde(bool)
+    SetFollowHyde(bool),
+    /// Show another page of the window.
+    SelectTab(Tab),
+    /// Rearrange the modules of the bar.
+    EditLayout(LayoutEdit)
 }
 
 impl Message {
@@ -67,7 +76,8 @@ impl Message {
             Self::SetHeight(_) => &["appearance", "height"],
             Self::SetFontSize(_) => &["appearance", "font_size"],
             Self::SetOpacity(_) => &["appearance", "opacity"],
-            Self::SetFollowHyde(_) => &["appearance", "follow_hyde"]
+            Self::SetFollowHyde(_) => &["appearance", "follow_hyde"],
+            Self::SelectTab(_) | Self::EditLayout(_) => &[]
         }
     }
 
@@ -92,7 +102,8 @@ impl Message {
             Self::SetHeight(height) => (*height).into(),
             Self::SetFontSize(size) => (*size).into(),
             Self::SetOpacity(opacity) => (*opacity).into(),
-            Self::SetFollowHyde(follow) => (*follow).into()
+            Self::SetFollowHyde(follow) => (*follow).into(),
+            Self::SelectTab(_) | Self::EditLayout(_) => SettingValue::Flag(false)
         }
     }
 
@@ -100,9 +111,46 @@ impl Message {
     ///
     /// Failures are logged rather than propagated: a settings menu that cannot
     /// persist a choice should still leave the bar running.
-    pub fn apply(&self, config_path: &Path) {
-        if let Err(err) = write_setting(config_path, self.path(), self.value()) {
+    fn apply(&self, config_path: &Path) {
+        let path = self.path();
+
+        if path.is_empty() {
+            return;
+        }
+
+        if let Err(err) = write_setting(config_path, path, self.value()) {
             warn!("failed to store the setting: {err}");
+        }
+    }
+}
+
+/// Renders a bar entry as the value the configuration stores.
+fn entry_value(entry: &ModuleDef) -> SettingValue {
+    match entry {
+        ModuleDef::Single(name) => SettingValue::Text(name.as_str().to_owned()),
+        ModuleDef::Group(group) => SettingValue::List(
+            group
+                .iter()
+                .map(|name| SettingValue::Text(name.as_str().to_owned()))
+                .collect()
+        )
+    }
+}
+
+/// Renders a section as the list the configuration stores.
+fn section_value(entries: &[ModuleDef]) -> SettingValue {
+    SettingValue::List(entries.iter().map(entry_value).collect())
+}
+
+/// Writes every section of `modules` into the configuration file.
+fn store_layout(config_path: &Path, modules: &Modules) {
+    for (key, entries) in [
+        ("left", &modules.left),
+        ("center", &modules.center),
+        ("right", &modules.right)
+    ] {
+        if let Err(err) = write_setting(config_path, &["modules", key], section_value(entries)) {
+            warn!("failed to store the `{key}` modules: {err}");
         }
     }
 }
@@ -111,7 +159,9 @@ impl Message {
 #[derive(Default, Debug, Clone)]
 pub struct Settings {
     /// File the choices are written to.
-    config_path: PathBuf
+    config_path: PathBuf,
+    /// Page the window currently shows.
+    tab:         Tab
 }
 
 impl Settings {
@@ -119,7 +169,29 @@ impl Settings {
     #[must_use]
     pub fn new(config_path: PathBuf) -> Self {
         Self {
-            config_path
+            config_path,
+            tab: Tab::default()
+        }
+    }
+
+    /// Page the window currently shows.
+    #[must_use]
+    pub fn tab(&self) -> Tab {
+        self.tab
+    }
+
+    /// Applies a choice made in the window.
+    ///
+    /// Picking a tab is the only choice kept in memory; everything else lands
+    /// in the configuration file and comes back through the reload.
+    pub fn update(&mut self, message: Message, config: &Config) {
+        match message {
+            Message::SelectTab(tab) => self.tab = tab,
+            Message::EditLayout(edit) => {
+                let modules = layout::apply(&config.modules, &edit);
+                store_layout(&self.config_path, &modules);
+            }
+            other => other.apply(&self.config_path)
         }
     }
 
