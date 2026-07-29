@@ -12,7 +12,8 @@ use super::{
         NetworkData, NetworkEvent, NetworkService, NetworkServiceError,
         backend::{NetworkBackend, iwd::IwdDbus, network_manager::NetworkDbus}
     },
-    BackendChoice, State
+    BackendChoice, State,
+    gate::EventGate
 };
 use crate::services::{ServiceEvent, ServiceEventPublisher};
 
@@ -40,7 +41,8 @@ impl NetworkService {
 
     pub(super) async fn consume_network_events<S, P>(
         mut events: S,
-        publisher: &mut P
+        publisher: &mut P,
+        gate: &mut EventGate
     ) -> AppResult<()>
     where
         S: Stream<Item = AppResult<NetworkEvent>> + Unpin,
@@ -55,7 +57,10 @@ impl NetworkService {
             {
                 exit_loop = true;
             }
-            let _ = publisher.send(ServiceEvent::Update(event)).await;
+
+            if gate.admits(&event) {
+                let _ = publisher.send(ServiceEvent::Update(event)).await;
+            }
 
             if exit_loop {
                 break;
@@ -65,7 +70,11 @@ impl NetworkService {
         Ok(())
     }
 
-    pub(super) async fn start_listening<P>(state: State, publisher: &mut P) -> State
+    pub(super) async fn start_listening<P>(
+        state: State,
+        publisher: &mut P,
+        gate: &mut EventGate
+    ) -> State
     where
         P: ServiceEventPublisher<Self> + Send
     {
@@ -106,6 +115,7 @@ impl NetworkService {
                     match maybe_backend {
                         Ok((data, choice)) => {
                             info!("Network service initialized");
+                            *gate = EventGate::new(&data);
                             let _ = publisher
                                 .send(ServiceEvent::Init(NetworkService {
                                     data,
@@ -154,7 +164,7 @@ impl NetworkService {
 
                         match nm.subscribe_events().await {
                             Ok(events) => {
-                                match Self::consume_network_events(events, publisher).await {
+                                match Self::consume_network_events(events, publisher, gate).await {
                                     Ok(()) => {
                                         debug!("Network service exit events stream");
                                         State::Active(conn, choice)
@@ -190,7 +200,10 @@ impl NetworkService {
                             Ok(mut event_s) => {
                                 while let Some(events) = event_s.next().await {
                                     for event in events {
-                                        let _ = publisher.send(ServiceEvent::Update(event)).await;
+                                        if gate.admits(&event) {
+                                            let _ =
+                                                publisher.send(ServiceEvent::Update(event)).await;
+                                        }
                                     }
                                 }
 
@@ -223,9 +236,10 @@ impl NetworkService {
     {
         let mut state = State::Init;
         let mut failures: u32 = 0;
+        let mut gate = EventGate::default();
 
         loop {
-            state = Self::start_listening(state, publisher).await;
+            state = Self::start_listening(state, publisher, &mut gate).await;
 
             match state {
                 State::Error => {

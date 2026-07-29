@@ -10,9 +10,36 @@ use iced::Task;
 use super::super::state::{App, Message};
 
 impl App {
+    /// Restates the attention from the menu that is open, if one is.
+    ///
+    /// An open menu outranks the pointer: the user opened it to read it, and
+    /// the pointer has to leave the module to reach the menu at all. Closing
+    /// the last menu releases the attention rather than handing it back to
+    /// whatever the pointer happens to be over, so nothing stays attended by
+    /// accident.
+    fn attend_the_open_menu(&mut self) {
+        let focus = self.outputs.open_menu().map(MenuType::owner);
+
+        self.attention.look_at(focus);
+    }
+
     /// Handles the messages this module owns.
     pub(super) fn update_menus(&mut self, message: Message) -> Task<Message> {
         match message {
+            Message::ModuleHover {
+                surface,
+                module,
+                entered,
+                tooltip
+            } => {
+                self.attention
+                    .follow_pointer(module, entered, self.outputs.menu_is_open());
+
+                match tooltip {
+                    Some(info) => self.outputs.show_tooltip(surface, info),
+                    None => self.outputs.hide_tooltip(surface)
+                }
+            }
             Message::ToggleMenu(menu_type, id, button_ui_ref) => {
                 let mut cmd = vec![];
                 match &menu_type {
@@ -52,20 +79,33 @@ impl App {
                         .toggle_menu(id, menu_type, button_ui_ref, &self.config)
                 );
 
+                self.attend_the_open_menu();
+
                 Task::batch(cmd)
             }
-            Message::ModuleTooltip(id, Some(info)) => self.outputs.show_tooltip(id, info),
-            Message::ModuleTooltip(id, None) => self.outputs.hide_tooltip(id),
             Message::BarPressed => {
                 self.outputs.arm_menu_dismissal();
 
                 Task::none()
             }
-            Message::BarReleased => self.outputs.dismiss_armed_menus(&self.config),
-            Message::CloseMenu(id) => self.outputs.close_menu(id, &self.config),
+            Message::BarReleased => {
+                let task = self.outputs.dismiss_armed_menus(&self.config);
+                self.attend_the_open_menu();
+
+                task
+            }
+            Message::CloseMenu(id) => {
+                let task = self.outputs.close_menu(id, &self.config);
+                self.attend_the_open_menu();
+
+                task
+            }
             Message::CloseAllMenus => {
                 if self.outputs.menu_is_open() {
-                    self.outputs.close_all_menus(&self.config)
+                    let task = self.outputs.close_all_menus(&self.config);
+                    self.attend_the_open_menu();
+
+                    task
                 } else {
                     Task::none()
                 }

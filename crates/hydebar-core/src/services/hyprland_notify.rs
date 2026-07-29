@@ -7,8 +7,15 @@
 
 use std::process::Command;
 
-use hydebar_proto::config::AppearanceColor;
+use hydebar_proto::config::{AppearanceColor, Config};
 use log::warn;
+
+/// How long a notice about a refused desktop action stays on screen, in
+/// milliseconds.
+///
+/// A desktop action is asked for deliberately, so the answer that it did not
+/// happen has to outlast a glance away from the screen.
+const REFUSAL_DURATION: u32 = 6000;
 
 /// Kind of notice, which decides the glyph the compositor draws beside it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -86,6 +93,24 @@ pub fn notify(notice: Notice, duration: u32, color: &str, font_size: f32, messag
         ),
         Err(err) => warn!("the compositor could not be reached for a notice: {err}")
     }
+}
+
+/// Puts `message` in front of the user as well as in the log.
+///
+/// A desktop action the bar could not perform has no other way of being
+/// noticed: the surface that asked for it draws the desktop as it is, so a
+/// refused change simply leaves that surface unchanged and reads as the press
+/// having been missed.
+pub fn report(config: &Config, message: &str) {
+    warn!("{message}");
+
+    notify(
+        Notice::Error,
+        REFUSAL_DURATION,
+        &compositor_color(config.appearance.primary_color.clone()),
+        config.appearance.font_size_px(),
+        message
+    );
 }
 
 #[cfg(test)]

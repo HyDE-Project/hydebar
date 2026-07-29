@@ -217,6 +217,11 @@ impl App {
 
                 self.settings.update(msg, &config).map(Message::Settings)
             }
+            Message::Themes(msg) => {
+                let config = Arc::clone(&self.config);
+
+                self.themes.update(msg, &config).map(Message::Themes)
+            }
             Message::MediaPlayer(msg) => {
                 self.media_player.update(msg);
                 Task::none()

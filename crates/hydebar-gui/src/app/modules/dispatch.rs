@@ -1,6 +1,8 @@
 //! Per module dispatch of the view and subscription of a bar module.
 
-use hydebar_core::{config::ModuleName, menu::MenuType, modules::OnModulePress};
+use hydebar_core::{
+    attention::PollSchedule, config::ModuleName, menu::MenuType, modules::OnModulePress
+};
 use iced::{Element, Subscription, window::Id};
 use log::error;
 
@@ -8,6 +10,40 @@ use super::actions::custom_module_action;
 use crate::app::state::{App, Message};
 
 impl App {
+    /// The cadences `module_name` declared, if it can be polled at all.
+    ///
+    /// The five readouts behind the control centre share one set of services,
+    /// so both the panel and the standalone network entry answer with the same
+    /// schedule: whichever of them the user is looking at, the list of nearby
+    /// networks is what wants refreshing.
+    pub(crate) fn module_poll_schedule(&self, module_name: &ModuleName) -> Option<PollSchedule> {
+        use hydebar_core::modules::Module;
+
+        match module_name {
+            ModuleName::ControlCenter | ModuleName::Network => {
+                Module::<Message>::poll_schedule(&self.control_center)
+            }
+            _ => None
+        }
+    }
+
+    /// Takes one sample of `module_name`.
+    pub(crate) fn poll_module(&mut self, module_name: &ModuleName) {
+        use hydebar_core::modules::Module;
+
+        let ctx = self.module_context.clone();
+        let outcome = match module_name {
+            ModuleName::ControlCenter | ModuleName::Network => {
+                Module::<Message>::poll(&mut self.control_center, &ctx)
+            }
+            _ => Ok(())
+        };
+
+        if let Err(err) = outcome {
+            error!("failed to poll {module_name:?} module: {err}");
+        }
+    }
+
     pub(super) fn get_module_view(
         &self,
         module_name: &ModuleName,
@@ -58,7 +94,9 @@ impl App {
                 &self.config.workspaces,
                 self.appearance()
             )),
-            ModuleName::WindowTitle => self.window_title.view(()),
+            ModuleName::WindowTitle => self
+                .window_title
+                .view((&self.config.window_title, self.attention.is_on(module_name))),
             ModuleName::SystemInfo => {
                 self.system_info
                     .view((&self.config.system, self.appearance(), self.icons()))
@@ -87,6 +125,7 @@ impl App {
             ModuleName::Bluetooth => self.control_center.bluetooth_bar(self.icons()),
             ModuleName::PowerProfile => self.control_center.power_profile_bar(self.icons()),
             ModuleName::Settings => self.settings.view(self.icons()),
+            ModuleName::Themes => self.themes.view(self.icons()),
             ModuleName::MediaPlayer => self
                 .media_player
                 .view((&self.config.media_player, self.icons())),
@@ -133,6 +172,7 @@ impl App {
             ModuleName::KeyboardSubmap => self.keyboard_submap.subscription(),
             ModuleName::Tray => self.tray.subscription(),
             ModuleName::Clock => None,
+            ModuleName::Themes => None,
             ModuleName::Battery => None,
             ModuleName::Privacy => self.privacy.subscription(),
             ModuleName::ControlCenter

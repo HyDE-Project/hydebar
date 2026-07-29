@@ -144,7 +144,24 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::sync::{Mutex, MutexGuard};
+
     use super::*;
+
+    /// Serialises the tests that read or write the remembered dialect.
+    ///
+    /// The dialect is process wide, so two of these running at once would each
+    /// see the other's writes and fail for reasons that have nothing to do with
+    /// what they assert.
+    static REMEMBERED: Mutex<()> = Mutex::new(());
+
+    /// Takes the lock and forgets whatever an earlier test remembered.
+    fn with_a_forgotten_dialect() -> MutexGuard<'static, ()> {
+        let guard = REMEMBERED.lock().unwrap_or_else(|err| err.into_inner());
+        DIALECT.store(UNKNOWN, Ordering::Relaxed);
+
+        guard
+    }
 
     #[test]
     fn a_scripted_workspace_is_addressed_by_id() {
@@ -209,13 +226,14 @@ mod tests {
 
     #[test]
     fn the_scripted_dialect_is_tried_first_while_none_is_known() {
-        DIALECT.store(UNKNOWN, Ordering::Relaxed);
+        let _guard = with_a_forgotten_dialect();
 
         assert_eq!(Dialect::attempts(), [Dialect::Scripted, Dialect::Legacy]);
     }
 
     #[test]
     fn a_remembered_legacy_dialect_is_tried_first() {
+        let _guard = with_a_forgotten_dialect();
         Dialect::Legacy.remember();
 
         assert_eq!(Dialect::attempts(), [Dialect::Legacy, Dialect::Scripted]);

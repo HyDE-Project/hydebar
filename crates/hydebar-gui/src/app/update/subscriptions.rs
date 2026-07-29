@@ -1,10 +1,10 @@
 //! Event sources the application listens to.
 
-use std::sync::Arc;
+use std::{sync::Arc, time::Instant};
 
 use hydebar_core::{
     config::{self, ConfigEvent},
-    modules::settings
+    modules::themes
 };
 use iced::{
     Subscription,
@@ -24,6 +24,15 @@ use super::super::{
 /// nothing: the frame clock the rest of the bar rides on stops when nothing
 /// animates, and a popup would otherwise never be taken down.
 const POPUP_TICK_MS: u64 = 250;
+
+/// Which of the two clocks of the bar a tick came from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum Clock {
+    /// Serves every pollable module the layout draws.
+    Rest,
+    /// Serves the one module the user is looking at.
+    Attended
+}
 
 impl App {
     /// Maps a watcher event onto the messages the reload path already handles.
@@ -57,12 +66,44 @@ impl App {
     /// on the indicator's own cadence rather than on the frame clock, so a wait
     /// costs a handful of redraws a second instead of one per refresh.
     fn switch_subscription(&self) -> Subscription<Message> {
-        if self.settings.is_waiting() {
-            iced::time::every(settings::FRAME_INTERVAL)
-                .map(|_| Message::Settings(settings::Message::SwitchTick))
+        if self.themes.is_waiting() {
+            iced::time::every(themes::FRAME_INTERVAL)
+                .map(|_| Message::Themes(themes::Message::Tick))
         } else {
             Subscription::none()
         }
+    }
+
+    /// The clock refreshing what every module keeps on the bar.
+    ///
+    /// One clock for the whole bar rather than one per module, and none at all
+    /// while the layout draws nothing that can be polled.
+    fn rest_clock(&self) -> Subscription<Message> {
+        match self.attention.rest_period() {
+            Some(period) => Self::clock(Clock::Rest, period).map(|_| Message::PollAtRest),
+            None => Subscription::none()
+        }
+    }
+
+    /// The clock refreshing the module the user is looking at.
+    ///
+    /// It exists only while something is attended, so a bar nobody is touching
+    /// carries no fast clock at all rather than one ticking on an empty roster.
+    fn attended_clock(&self) -> Subscription<Message> {
+        match self.attention.attended_period() {
+            Some(period) => Self::clock(Clock::Attended, period).map(|_| Message::PollAttended),
+            None => Subscription::none()
+        }
+    }
+
+    /// A clock ticking every `period`, told apart from the other one by
+    /// `which`.
+    ///
+    /// The runtime keys a subscription on what it was built from, so two clocks
+    /// left to their bare periods would collapse into one the moment those
+    /// periods matched, and only one of them would ever tick.
+    fn clock(which: Clock, period: std::time::Duration) -> Subscription<(Clock, Instant)> {
+        iced::time::every(period).with(which)
     }
 
     /// of interpolating on a polling timer.
@@ -79,8 +120,9 @@ impl App {
             bus::subscription(self.bus_receiver.clone()).map(Message::BusFlushed),
             shutdown::subscription().map(Message::Shutdown),
             self.frame_subscription(),
+            self.rest_clock(),
+            self.attended_clock(),
             self.switch_subscription(),
-            self.demo_subscription(),
             config::subscription(&self.config_path, Arc::clone(&self.config_manager))
                 .map(Self::config_event),
             self.theme_subscription(),

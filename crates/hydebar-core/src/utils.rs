@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+pub mod hyde_shell;
 pub mod launcher;
 pub mod process_group;
 

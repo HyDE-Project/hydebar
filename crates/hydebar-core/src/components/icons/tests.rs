@@ -67,3 +67,14 @@ fn set_overrides_a_single_icon() {
     assert_eq!(theme.glyph(Icons::Bluetooth), "Z");
     assert_eq!(theme.glyph(Icons::Vpn), Icons::Vpn.default_glyph());
 }
+
+/// The theme module draws its bar entry from the shared catalogue, so its
+/// glyph is overridable from `[icons]` like every other one.
+#[test]
+fn the_theme_icon_is_part_of_the_overridable_catalogue() {
+    assert!(Icons::ALL.contains(&Icons::Themes));
+
+    let theme = IconTheme::from_config(&IconsConfig::from_iter([(Icons::Themes.name(), "X")]));
+
+    assert_eq!(theme.glyph(Icons::Themes), "X");
+}

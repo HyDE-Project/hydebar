@@ -78,12 +78,13 @@ pub enum Icons {
     Copy,
     IdleInhibitorActive,
     IdleInhibitorInactive,
-    Settings
+    Settings,
+    Themes
 }
 
 impl Icons {
     /// Every icon that can be overridden from the configuration.
-    pub const ALL: [Icons; 76] = [
+    pub const ALL: [Icons; 77] = [
         Icons::None,
         Icons::AppLauncher,
         Icons::Clipboard,
@@ -159,7 +160,8 @@ impl Icons {
         Icons::Copy,
         Icons::IdleInhibitorActive,
         Icons::IdleInhibitorInactive,
-        Icons::Settings
+        Icons::Settings,
+        Icons::Themes
     ];
 
     /// Key used to address the icon inside the `[icons]` configuration table.
@@ -241,7 +243,8 @@ impl Icons {
             Icons::Copy => "copy",
             Icons::IdleInhibitorActive => "idle_inhibitor_active",
             Icons::IdleInhibitorInactive => "idle_inhibitor_inactive",
-            Icons::Settings => "settings"
+            Icons::Settings => "settings",
+            Icons::Themes => "themes"
         }
     }
 
@@ -330,7 +333,8 @@ impl Icons {
             Icons::Copy => "󰆏",
             Icons::IdleInhibitorActive => "\u{f0176}",
             Icons::IdleInhibitorInactive => "\u{f06ca}",
-            Icons::Settings => "\u{f0493}"
+            Icons::Settings => "\u{f0493}",
+            Icons::Themes => "\u{f00e1}"
         }
     }
 }

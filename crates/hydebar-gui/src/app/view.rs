@@ -296,14 +296,29 @@ impl App {
                                 &self.config,
                                 animated_opacity,
                                 self.icons(),
-                                self.magnification
+                                self.magnification,
+                                &self.themes
                             )
                             .map(Message::Settings),
-                        MenuSize::Content(self.settings.content_width(&self.config)),
+                        MenuSize::Content(self.settings.content_width(&self.config, &self.themes)),
                         *button_ui_ref,
                         self.measured_menu_layout(
                             animated_opacity,
-                            self.settings.content_height(&self.config)
+                            self.settings.content_height(&self.config, &self.themes)
+                        ),
+                        Message::None,
+                        Message::CloseMenu(id)
+                    ),
+                    Some((MenuType::Themes, button_ui_ref)) => menu_wrapper(
+                        id,
+                        self.themes
+                            .menu_view(&self.config, animated_opacity)
+                            .map(Message::Themes),
+                        MenuSize::Content(self.themes.content_width(&self.config)),
+                        *button_ui_ref,
+                        self.measured_menu_layout(
+                            animated_opacity,
+                            self.themes.content_height(&self.config)
                         ),
                         Message::None,
                         Message::CloseMenu(id)

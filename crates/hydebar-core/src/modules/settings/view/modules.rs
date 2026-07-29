@@ -13,17 +13,19 @@
 use hydebar_proto::config::Config;
 use iced::Element;
 
-use super::{
-    metrics::{button_row_width, chip_width, wrap_chips_into_rows},
-    style,
-    widgets::{
-        card, chip, choice_button, grid, group, labelled_row, note, outlined, page,
-        rows as row_stack, section as titled
+use crate::{
+    components::page::{
+        metrics::{button_row_width, chip_width, wrap_chips_into_rows},
+        style,
+        widgets::{
+            card, chip, choice_button, grid, group, labelled_row, note, outlined, page,
+            rows as row_stack, section as titled
+        }
+    },
+    modules::settings::{
+        Message,
+        layout::{Entry, LayoutEdit, Section, Slot, available}
     }
-};
-use crate::modules::settings::{
-    Message,
-    layout::{Entry, LayoutEdit, Section, Slot, available}
 };
 
 /// Label of the action moving a module one place earlier.

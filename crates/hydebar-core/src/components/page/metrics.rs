@@ -23,11 +23,11 @@ const GLYPH_ADVANCE_EM: f32 = 0.66;
 /// The estimate is deliberately a little generous: a row that asks for a few
 /// pixels too many is invisible, while a row that asks for too few pushes its
 /// label into the controls beside it.
-pub(super) const ROW_SLACK_EM: f32 = 2.5;
+pub(crate) const ROW_SLACK_EM: f32 = 2.5;
 
 /// Width `label` takes when drawn at `font_size`.
 #[must_use]
-pub(super) fn text_width(label: &str, font_size: f32) -> f32 {
+pub(crate) fn text_width(label: &str, font_size: f32) -> f32 {
     label.chars().count() as f32 * GLYPH_ADVANCE_EM * font_size
 }
 
@@ -36,7 +36,7 @@ pub(super) fn text_width(label: &str, font_size: f32) -> f32 {
 /// `font_size` is the size the button's own label is drawn at, not the page
 /// text size, because the padding is stated in the button's own ems.
 #[must_use]
-pub(super) fn button_width(label: &str, font_size: f32) -> f32 {
+pub(crate) fn button_width(label: &str, font_size: f32) -> f32 {
     text_width(label, font_size) + 2.0 * style::BUTTON_PADDING_EM[1] * font_size
 }
 
@@ -45,7 +45,7 @@ pub(super) fn button_width(label: &str, font_size: f32) -> f32 {
 /// A chip is padded more tightly than a button, so measuring one as the other
 /// would fit fewer of them per row than the window actually draws.
 #[must_use]
-pub(super) fn chip_width(label: &str, font_size: f32) -> f32 {
+pub(crate) fn chip_width(label: &str, font_size: f32) -> f32 {
     text_width(label, font_size) + 2.0 * style::CHIP_PADDING_EM[1] * font_size
 }
 
@@ -56,13 +56,13 @@ pub(super) fn chip_width(label: &str, font_size: f32) -> f32 {
 /// show one so a window measured while nothing is running is still wide enough
 /// the moment something starts.
 #[must_use]
-pub(super) fn indicator_width(font_size: f32) -> f32 {
+pub(crate) fn indicator_width(font_size: f32) -> f32 {
     style::icon_width(style::control_size(font_size)) + style::row_gap(font_size)
 }
 
 /// Width a row of buttons takes, gaps included.
 #[must_use]
-pub(super) fn button_row_width<'a, I>(labels: I, font_size: f32, gap: f32) -> f32
+pub(crate) fn button_row_width<'a, I>(labels: I, font_size: f32, gap: f32) -> f32
 where
     I: IntoIterator<Item = &'a str>
 {
@@ -82,7 +82,7 @@ where
 /// Every page measures its rows through this one function, so a page cannot ask
 /// for a width its own row shape would not produce.
 #[must_use]
-pub(super) fn row_width<'a, I>(controls: I, font_size: f32) -> f32
+pub(crate) fn row_width<'a, I>(controls: I, font_size: f32) -> f32
 where
     I: IntoIterator<Item = &'a str>
 {
@@ -100,7 +100,7 @@ where
 /// A reported value is plain text rather than a button, so it carries no
 /// padding of its own.
 #[must_use]
-pub(super) fn status_row_width(value: &str, font_size: f32) -> f32 {
+pub(crate) fn status_row_width(value: &str, font_size: f32) -> f32 {
     style::label_width(font_size)
         + style::row_gap(font_size)
         + text_width(value, style::control_size(font_size))
@@ -116,7 +116,7 @@ pub(super) fn status_row_width(value: &str, font_size: f32) -> f32 {
 /// `item_width` is passed in rather than assumed so a grid of chips is wrapped
 /// by the width of a chip and a grid of buttons by the width of a button.
 #[must_use]
-pub(super) fn wrap_into_rows(
+pub(crate) fn wrap_into_rows(
     labels: &[String],
     available: f32,
     item_width: impl Fn(&str) -> f32,
@@ -147,7 +147,7 @@ pub(super) fn wrap_into_rows(
 /// Groups `labels` into the rows of chips they fill when laid out `available`
 /// wide at the page text size `font_size`.
 #[must_use]
-pub(super) fn wrap_chips_into_rows(
+pub(crate) fn wrap_chips_into_rows(
     labels: &[String],
     available: f32,
     font_size: f32,

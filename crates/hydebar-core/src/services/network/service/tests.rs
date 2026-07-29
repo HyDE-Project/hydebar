@@ -8,7 +8,8 @@ use tokio::time::timeout;
 
 use super::{
     super::{NetworkEvent, NetworkService, NetworkServiceError},
-    State
+    State,
+    gate::EventGate
 };
 use crate::services::{ServiceEvent, ServiceEventPublisher};
 
@@ -22,7 +23,8 @@ async fn consume_network_events_stops_on_error() {
         Ok(NetworkEvent::WiFiEnabled(false)),
     ]);
 
-    let result = NetworkService::consume_network_events(events, &mut sender).await;
+    let mut gate = EventGate::default();
+    let result = NetworkService::consume_network_events(events, &mut sender, &mut gate).await;
     assert!(result.is_err(), "expected error from stream consumption");
 
     let first_event = receiver.next().await;
@@ -47,7 +49,7 @@ async fn state_error_transitions_to_init_without_holding_the_loop() {
 
     let state = timeout(
         Duration::from_secs(2),
-        NetworkService::start_listening(State::Error, &mut sender)
+        NetworkService::start_listening(State::Error, &mut sender, &mut EventGate::default())
     )
     .await
     .expect("network listener should complete without waiting");

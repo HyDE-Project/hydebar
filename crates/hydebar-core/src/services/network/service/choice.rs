@@ -64,6 +64,15 @@ impl NetworkBackend for BackendChoiceWithConnection {
         }
     }
 
+    async fn access_points(&self) -> AppResult<Vec<AccessPoint>> {
+        match self.choice {
+            BackendChoice::NetworkManager => {
+                NetworkDbus::new(&self.conn).await?.access_points().await
+            }
+            BackendChoice::Iwd => IwdDbus::new(&self.conn).await?.access_points().await
+        }
+    }
+
     async fn set_wifi_enabled(&self, enable: bool) -> AppResult<()> {
         match self.choice {
             BackendChoice::NetworkManager => {

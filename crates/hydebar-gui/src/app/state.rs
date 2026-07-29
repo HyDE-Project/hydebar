@@ -3,8 +3,9 @@ use std::{collections::HashMap, path::PathBuf, sync::Arc, time::Instant};
 use flexi_logger::LoggerHandle;
 use hydebar_core::{
     ModuleContext,
+    attention::Attention,
     components::icons::IconTheme,
-    config::{ConfigApplied, ConfigDegradation, ConfigManager, ModuleDef},
+    config::{ConfigApplied, ConfigDegradation, ConfigManager, ModuleDef, ModuleName},
     event_bus::{EventReceiver, EventSender},
     menu::MenuType,
     modules::{
@@ -24,6 +25,7 @@ use hydebar_core::{
         screenshot::Screenshot,
         settings::Settings,
         system_info::SystemInfo,
+        themes::Themes,
         tray::{TrayMessage, TrayModule},
         updates::Updates,
         weather::Weather,
@@ -84,9 +86,14 @@ pub struct App {
     pub screenshot: Screenshot,
     pub idle_inhibitor: IdleInhibitor,
     pub settings: Settings,
+    /// Bar entry choosing the desktop theme, and the one holder of a running
+    /// switch.
+    pub themes: Themes,
     pub weather: Weather,
     /// Notifications currently shown as popups.
-    pub notification_popups: Vec<notifications_popup::Popup>
+    pub notification_popups: Vec<notifications_popup::Popup>,
+    /// The one module the user is looking at, and the clocks that follow it.
+    pub attention: Attention
 }
 
 #[derive(Debug, Clone)]
@@ -105,9 +112,23 @@ pub enum Message {
     ToggleMenu(MenuType, Id, ButtonUIRef),
     /// A module of the bar surface was entered or left by the pointer.
     ///
-    /// Carries the hint to show and the placement of the module it belongs to,
-    /// or nothing at all once the pointer moves away.
-    ModuleTooltip(Id, Option<TooltipInfo>),
+    /// One message serves the tooltip and the attention, because the pointer
+    /// resting on a module answers both questions at once: what hint to draw
+    /// beside the bar, and what the fast clock should be refreshing.
+    ModuleHover {
+        /// Bar surface the module is drawn on.
+        surface: Id,
+        /// Module the pointer entered, or left.
+        module:  ModuleName,
+        /// Whether the pointer is on the module now.
+        entered: bool,
+        /// Hint to show while it rests there, absent when it publishes none.
+        tooltip: Option<TooltipInfo>
+    },
+    /// The slow clock came due for the modules resting on the bar.
+    PollAtRest,
+    /// The fast clock came due for the module being attended.
+    PollAttended,
     /// Take down the popups whose time is up.
     ExpirePopups,
     CloseMenu(Id),
@@ -140,6 +161,7 @@ pub enum Message {
     Privacy(modules::privacy::PrivacyMessage),
     ControlCenter(modules::control_center::Message),
     Settings(modules::settings::Message),
+    Themes(modules::themes::Message),
     MediaPlayer(modules::media_player::Message),
     Notifications(modules::notifications::NotificationsMessage),
     Screenshot(modules::screenshot::ScreenshotMessage),
@@ -151,8 +173,7 @@ pub enum Message {
     /// Carries the surface the menu was opened from so it can be dismissed
     /// once the command is on its way.
     CustomMenuAction(Id, String),
-    CustomUpdate(String, modules::custom_module::Message),
-    Demo
+    CustomUpdate(String, modules::custom_module::Message)
 }
 
 impl From<modules::control_center::Message> for Message {
@@ -164,6 +185,12 @@ impl From<modules::control_center::Message> for Message {
 impl From<modules::settings::Message> for Message {
     fn from(msg: modules::settings::Message) -> Self {
         Message::Settings(msg)
+    }
+}
+
+impl From<modules::themes::Message> for Message {
+    fn from(msg: modules::themes::Message) -> Self {
+        Message::Themes(msg)
     }
 }
 
@@ -359,7 +386,9 @@ impl App {
             screenshot: Screenshot::default(),
             idle_inhibitor: IdleInhibitor,
             settings: Settings::new(config_path.clone()),
+            themes: Themes::new(),
             notification_popups: Vec::new(),
+            attention: Attention::default(),
             weather: Weather::new(
                 config.weather.location.clone(),
                 config.weather.api_key.clone(),

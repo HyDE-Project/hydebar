@@ -21,6 +21,13 @@ pub trait NetworkBackend: Send + Sync {
     /// Requests a scan for nearby Wi-Fi networks.
     async fn scan_nearby_wifi(&self) -> AppResult<()>;
 
+    /// Reads the access points the wireless devices can currently see.
+    ///
+    /// Every entry costs a bus round trip, and the list is drawn nowhere but
+    /// inside the network menu, so the bar asks for it only while somebody is
+    /// looking at that menu rather than on every signal the daemon emits.
+    async fn access_points(&self) -> AppResult<Vec<AccessPoint>>;
+
     /// Enables or disables Wi-Fi functionality on the backend.
     async fn set_wifi_enabled(&self, enable: bool) -> AppResult<()>;
 

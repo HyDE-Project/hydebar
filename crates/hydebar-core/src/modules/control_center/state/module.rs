@@ -1,22 +1,77 @@
 //! Module trait wiring for the settings menu.
 
+use std::time::Duration;
+
+use log::warn;
+
 use super::super::{
     ControlCenter, Message,
     event_forwarders::{
         AudioEventForwarder, BluetoothEventForwarder, BrightnessEventForwarder,
         NetworkEventForwarder, UPowerEventForwarder
     },
+    network::NetworkMessage,
     view::ControlCenterViewExt
 };
 use crate::{
     ModuleContext,
+    attention::PollSchedule,
     event_bus::ModuleEvent,
     modules::{Module, ModuleError, OnModulePress},
     services::{
-        audio::AudioService, bluetooth::BluetoothService, brightness::BrightnessService,
-        network::NetworkService, upower::UPowerService
+        ServiceEvent,
+        audio::AudioService,
+        bluetooth::BluetoothService,
+        brightness::BrightnessService,
+        network::{NetworkEvent, NetworkService},
+        upower::UPowerService
     }
 };
+
+/// How often the attended network menu re-reads the radios in earshot.
+const NEARBY_NETWORKS_INTERVAL: Duration = Duration::from_secs(2);
+
+impl ControlCenter {
+    /// Re-reads the nearby networks the open menu draws.
+    ///
+    /// A list identical to the one already on screen is dropped rather than
+    /// published: every event reaching the bar rebuilds every surface it owns,
+    /// and a band nobody is roaming reports the same radios sample after
+    /// sample.
+    pub(crate) fn refresh_access_points(&mut self, ctx: &ModuleContext) {
+        if self
+            .network_poll
+            .as_ref()
+            .is_some_and(|poll| !poll.is_finished())
+        {
+            return;
+        }
+
+        let (Some(service), Some(sender)) = (self.network.as_ref(), self.sender.clone()) else {
+            return;
+        };
+
+        let service = service.clone();
+        let known = service.wireless_access_points.clone();
+
+        self.network_poll = Some(ctx.runtime_handle().spawn(async move {
+            match service.access_points().await {
+                Ok(access_points) => {
+                    if access_points == known {
+                        return;
+                    }
+
+                    if let Err(err) = sender.try_send(Message::Network(NetworkMessage::Event(
+                        ServiceEvent::Update(NetworkEvent::WirelessAccessPoint(access_points))
+                    ))) {
+                        warn!("failed to publish the nearby networks: {err}");
+                    }
+                }
+                Err(err) => warn!("failed to read the nearby networks: {err}")
+            }
+        }));
+    }
+}
 
 impl<M> Module<M> for ControlCenter
 where
@@ -86,7 +141,28 @@ where
             task.abort();
         }
 
+        if let Some(poll) = self.network_poll.take() {
+            poll.abort();
+        }
+
         self.sender = None;
+    }
+
+    /// Refreshes the nearby networks only while the menu showing them is
+    /// attended.
+    ///
+    /// Nothing on the bar draws the list, so a resting cadence would pay a bus
+    /// round trip per neighbouring radio for a readout behind a closed menu.
+    fn poll_schedule(&self) -> Option<PollSchedule> {
+        self.network
+            .is_some()
+            .then(|| PollSchedule::only_when_attended(NEARBY_NETWORKS_INTERVAL))
+    }
+
+    fn poll(&mut self, ctx: &ModuleContext) -> Result<(), ModuleError> {
+        self.refresh_access_points(ctx);
+
+        Ok(())
     }
 
     fn view(

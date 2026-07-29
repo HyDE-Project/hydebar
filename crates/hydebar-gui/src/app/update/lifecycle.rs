@@ -57,6 +57,24 @@ impl App {
                     Task::batch(tasks)
                 }
             }
+            Message::PollAtRest => {
+                let now = std::time::Instant::now();
+
+                for module in self.attention.due_at_rest(now) {
+                    self.poll_module(&module);
+                }
+
+                Task::none()
+            }
+            Message::PollAttended => {
+                let now = std::time::Instant::now();
+
+                if let Some(module) = self.attention.due_attended(now) {
+                    self.poll_module(&module);
+                }
+
+                Task::none()
+            }
             Message::None => Task::none(),
             Message::ConfigChanged(update) => {
                 let hydebar_core::config::ConfigApplied {
@@ -93,7 +111,7 @@ impl App {
                 }
 
                 self.config = config;
-                self.settings.refresh_hyde();
+                self.themes.refresh();
                 let resize = self.refresh_appearance();
 
                 self.register_modules();

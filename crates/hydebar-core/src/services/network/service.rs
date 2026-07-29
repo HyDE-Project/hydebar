@@ -37,6 +37,7 @@ enum State {
 
 mod choice;
 mod command;
+mod gate;
 mod listen;
 mod reactive;
 

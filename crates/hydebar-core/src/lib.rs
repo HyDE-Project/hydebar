@@ -3,6 +3,8 @@ pub const HEIGHT: f64 = 34.;
 
 pub mod adapters;
 pub mod animation;
+/// The module the user is looking at, and the two clocks that follow it.
+pub mod attention;
 pub mod components;
 pub mod config;
 /// Event bus primitives for communicating UI updates across the core.

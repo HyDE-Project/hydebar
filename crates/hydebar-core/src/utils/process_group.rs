@@ -33,7 +33,7 @@ use std::{
     ptr,
     sync::{
         OnceLock,
-        atomic::{AtomicI32, AtomicU32, Ordering}
+        atomic::{AtomicI32, AtomicU32, AtomicU64, Ordering}
     },
     thread,
     time::{Duration, SystemTime, UNIX_EPOCH}
@@ -50,6 +50,21 @@ pub const LAUNCH_VAR: &str = "HYDEBAR_LAUNCH_ID";
 
 /// [`LAUNCH_VAR`] as it appears in a `/proc/<pid>/environ` entry.
 const LAUNCH_PREFIX: &[u8] = b"HYDEBAR_LAUNCH_ID=";
+
+/// Environment variable stamping one supervised spawn.
+///
+/// The launch stamp tells this bar's processes from an earlier bar's, which is
+/// too coarse to cancel a single command: ending everything carrying it would
+/// take every other listener down as well. This one narrows the same trick to
+/// one spawn, so a cancelled command can be followed to the descendants that
+/// left its process group behind.
+pub const SPAWN_VAR: &str = "HYDEBAR_SPAWN_ID";
+
+/// [`SPAWN_VAR`] as it appears in a `/proc/<pid>/environ` entry.
+const SPAWN_PREFIX: &[u8] = b"HYDEBAR_SPAWN_ID=";
+
+/// Serial number handed to the next supervised spawn.
+static SPAWN_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 /// Process groups the registry can hold at once.
 ///
@@ -159,6 +174,16 @@ pub fn launch_id() -> &'static str {
     })
 }
 
+/// Stamp identifying one spawn among every spawn of every run.
+///
+/// Built on top of [`launch_id`] so that two bars running side by side cannot
+/// hand out the same value and sweep each other's descendants.
+fn next_spawn_id() -> String {
+    let serial = SPAWN_COUNTER.fetch_add(1, Ordering::Relaxed);
+
+    format!("{}-{serial}", launch_id())
+}
+
 /// Puts the child, and everything it spawns, in a process group of its own.
 ///
 /// The group identifier equals the child's own identifier, which is what makes
@@ -217,8 +242,11 @@ fn arm_parent_death(parent: i32) -> io::Result<()> {
 ///
 /// Returns the spawn failure reported by the operating system.
 pub fn spawn_guarded(command: &mut Command) -> io::Result<(Child, Option<GroupGuard>)> {
-    let child = supervised(command).spawn()?;
-    let guard = child.id().map(GroupGuard::new);
+    let spawn = next_spawn_id();
+    let child = supervised(command).env(SPAWN_VAR, &spawn).spawn()?;
+    let guard = child
+        .id()
+        .map(|pid| GroupGuard::new(pid).following_detached(spawn));
 
     Ok((child, guard))
 }
@@ -287,7 +315,7 @@ pub fn terminate_all() {
     }
 
     let own = launch_id();
-    let strays = terminate_marked(|stamp| stamp == own);
+    let strays = terminate_marked(LAUNCH_PREFIX, |stamp| stamp == own);
 
     if strays > 0 {
         info!("ended {strays} detached processes on the way out");
@@ -415,7 +443,7 @@ fn wait_for_wake(reader: i32) -> bool {
 /// count of supervised processes does not grow from one run to the next.
 pub fn sweep_orphans() -> usize {
     let own = launch_id();
-    let ended = terminate_marked(|stamp| stamp != own);
+    let ended = terminate_marked(LAUNCH_PREFIX, |stamp| stamp != own);
 
     if ended > 0 {
         warn!("ended {ended} processes left behind by an earlier run");
@@ -424,16 +452,28 @@ pub fn sweep_orphans() -> usize {
     ended
 }
 
-/// Ends every process whose launch stamp `wanted` accepts.
+/// Ends the descendants of one spawn that left its process group.
+///
+/// A group kill cannot reach a process that called `setsid`, and the helpers
+/// that do so are exactly the ones a cancelled command cannot clean up itself:
+/// `fakeroot` starts its `faked` daemon in a session of its own and only ends
+/// it from an exit trap, which a signalled shell never runs. The spawn stamp
+/// rides into `faked` through the inherited environment, so the daemon stays
+/// recognisable as belonging to this one command and to nothing else.
+fn terminate_detached(spawn: &str) -> usize {
+    terminate_marked(SPAWN_PREFIX, |stamp| stamp == spawn)
+}
+
+/// Ends every process whose stamp under `prefix` is accepted by `wanted`.
 ///
 /// Two passes, because the first one may land between a shell loop starting a
 /// helper and the scan noticing it; the helper carries the same stamp through
 /// the inherited environment, so the second pass finds it.
-fn terminate_marked(wanted: impl Fn(&str) -> bool) -> usize {
+fn terminate_marked(prefix: &[u8], wanted: impl Fn(&str) -> bool) -> usize {
     let mut ended = 0;
 
     for _ in 0..2 {
-        for pid in marked_processes(&wanted) {
+        for pid in marked_processes(prefix, &wanted) {
             if unsafe { libc::kill(pid as i32, libc::SIGKILL) } == 0 {
                 ended += 1;
             }
@@ -443,8 +483,8 @@ fn terminate_marked(wanted: impl Fn(&str) -> bool) -> usize {
     ended
 }
 
-/// Lists the running processes whose launch stamp `wanted` accepts.
-fn marked_processes(wanted: &impl Fn(&str) -> bool) -> Vec<u32> {
+/// Lists the running processes whose stamp under `prefix` `wanted` accepts.
+fn marked_processes(prefix: &[u8], wanted: &impl Fn(&str) -> bool) -> Vec<u32> {
     let own = std::process::id();
     let Ok(entries) = fs::read_dir("/proc") else {
         return Vec::new();
@@ -457,16 +497,16 @@ fn marked_processes(wanted: &impl Fn(&str) -> bool) -> Vec<u32> {
         .filter(|pid| {
             fs::read(format!("/proc/{pid}/environ"))
                 .ok()
-                .and_then(|environ| marked_launch(&environ).map(wanted))
+                .and_then(|environ| marked_stamp(&environ, prefix).map(wanted))
                 .unwrap_or(false)
         })
         .collect()
 }
 
-/// Reads the launch stamp out of a NUL separated environment block.
-fn marked_launch(environ: &[u8]) -> Option<&str> {
+/// Reads the stamp carried under `prefix` out of a NUL separated environment.
+fn marked_stamp<'a>(environ: &'a [u8], prefix: &[u8]) -> Option<&'a str> {
     environ.split(|byte| *byte == 0).find_map(|entry| {
-        let stamp = entry.strip_prefix(LAUNCH_PREFIX)?;
+        let stamp = entry.strip_prefix(prefix)?;
 
         std::str::from_utf8(stamp).ok()
     })
@@ -482,7 +522,9 @@ fn marked_launch(environ: &[u8]) -> Option<&str> {
 #[derive(Debug)]
 pub struct GroupGuard {
     /// Leader of the group, absent once it has been released.
-    pid: Option<u32>
+    pid:   Option<u32>,
+    /// Spawn stamp to sweep for once the group has been ended.
+    spawn: Option<String>
 }
 
 impl GroupGuard {
@@ -497,16 +539,30 @@ impl GroupGuard {
         }
 
         Self {
-            pid: Some(pid)
+            pid:   Some(pid),
+            spawn: None
         }
+    }
+
+    /// Extends the guard to the descendants that leave the group behind.
+    ///
+    /// `spawn` is the value of [`SPAWN_VAR`] the command was started with.
+    #[must_use]
+    pub fn following_detached(mut self, spawn: String) -> Self {
+        self.spawn = Some(spawn);
+
+        self
     }
 
     /// Lets the group outlive this guard.
     ///
     /// Called once the child has been reaped: the identifier is free to be
     /// handed to an unrelated process from that moment on, and signalling it
-    /// later would hit a stranger.
+    /// later would hit a stranger. A command that ran to its own end has also
+    /// had the chance to take its helpers down, so nothing is swept.
     pub fn release(&mut self) {
+        self.spawn = None;
+
         if let Some(pid) = self.pid.take() {
             LIVE_GROUPS.remove(pid);
         }
@@ -518,6 +574,14 @@ impl Drop for GroupGuard {
         if let Some(pid) = self.pid.take() {
             LIVE_GROUPS.remove(pid);
             let _ = terminate_group(pid);
+
+            if let Some(spawn) = self.spawn.take() {
+                let ended = terminate_detached(&spawn);
+
+                if ended > 0 {
+                    info!("ended {ended} processes detached from a cancelled command");
+                }
+            }
         }
     }
 }
@@ -737,20 +801,89 @@ mod tests {
     #[test]
     fn the_marker_prefix_matches_the_variable_it_stands_for() {
         assert_eq!(LAUNCH_PREFIX, format!("{LAUNCH_VAR}=").as_bytes());
+        assert_eq!(SPAWN_PREFIX, format!("{SPAWN_VAR}=").as_bytes());
+    }
+
+    #[test]
+    fn no_two_spawns_share_a_stamp() {
+        let first = next_spawn_id();
+        let second = next_spawn_id();
+
+        assert_ne!(first, second);
+        assert!(first.starts_with(launch_id()));
+        assert!(second.starts_with(launch_id()));
+    }
+
+    #[tokio::test]
+    async fn a_guarded_command_carries_a_spawn_stamp_of_its_own() {
+        let mut command = Command::new("bash");
+        command
+            .arg("-c")
+            .arg("printf %s \"$HYDEBAR_SPAWN_ID\"")
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+
+        let first = guarded_output(&mut command)
+            .await
+            .expect("the command runs");
+        let second = guarded_output(&mut command)
+            .await
+            .expect("the command runs again");
+
+        assert!(!first.stdout.is_empty());
+        assert_ne!(first.stdout, second.stdout);
+    }
+
+    /// What a cancelled update check leaves behind: `fakeroot` starts `faked`
+    /// in a session of its own, so ending the group reaches the shell and not
+    /// the daemon. The guard has to follow the stamp to it.
+    #[tokio::test]
+    async fn a_cancelled_command_takes_its_detached_helper_along() {
+        let stamp = unique_stamp();
+
+        let mut command = Command::new("bash");
+        command
+            .arg("-c")
+            .arg("setsid sleep 60 >/dev/null 2>&1 & sleep 60")
+            .env(SPAWN_VAR, &stamp)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null());
+
+        let mut child = supervised(&mut command).spawn().expect("the command runs");
+        let pid = child.id().expect("a running command");
+        let guard = GroupGuard::new(pid).following_detached(stamp.clone());
+
+        tokio::time::sleep(Duration::from_millis(300)).await;
+
+        let marked = marked_processes(SPAWN_PREFIX, &|found: &str| found == stamp);
+        assert!(
+            marked.len() >= 2,
+            "the helper left the group but kept the stamp: {marked:?}"
+        );
+
+        drop(guard);
+
+        let _ = tokio::time::timeout(Duration::from_secs(5), child.wait()).await;
+
+        for pid in marked {
+            assert!(wait_until_gone(pid), "{pid} outlived the cancelled command");
+        }
     }
 
     #[test]
     fn a_stamped_environment_reveals_the_run_that_started_it() {
         let environ = b"PATH=/usr/bin\0HYDEBAR_LAUNCH_ID=7-42\0HOME=/home/user\0";
 
-        assert_eq!(marked_launch(environ), Some("7-42"));
+        assert_eq!(marked_stamp(environ, LAUNCH_PREFIX), Some("7-42"));
     }
 
     #[test]
     fn an_environment_without_the_stamp_reveals_nothing() {
         let environ = b"PATH=/usr/bin\0WAYBAR_SOMETHING=1\0";
 
-        assert_eq!(marked_launch(environ), None);
+        assert_eq!(marked_stamp(environ, LAUNCH_PREFIX), None);
     }
 
     /// The stamp is a whole entry, never a fragment of a longer name: a
@@ -759,7 +892,7 @@ mod tests {
     fn a_lookalike_variable_is_not_the_stamp() {
         let environ = b"NOT_HYDEBAR_LAUNCH_ID=7-42\0";
 
-        assert_eq!(marked_launch(environ), None);
+        assert_eq!(marked_stamp(environ, LAUNCH_PREFIX), None);
     }
 
     #[tokio::test]
@@ -786,9 +919,9 @@ mod tests {
         let pid = stray.id().expect("a running listener");
 
         tokio::time::sleep(Duration::from_millis(200)).await;
-        assert!(marked_processes(&|found: &str| found == stamp).contains(&pid));
+        assert!(marked_processes(LAUNCH_PREFIX, &|found: &str| found == stamp).contains(&pid));
 
-        let ended = terminate_marked(|found| found == stamp);
+        let ended = terminate_marked(LAUNCH_PREFIX, |found| found == stamp);
 
         assert!(ended >= 1);
         tokio::time::timeout(Duration::from_secs(5), stray.wait())
@@ -806,7 +939,7 @@ mod tests {
 
         tokio::time::sleep(Duration::from_millis(200)).await;
 
-        assert_eq!(terminate_marked(|found| found == hunted), 0);
+        assert_eq!(terminate_marked(LAUNCH_PREFIX, |found| found == hunted), 0);
         assert!(is_running(pid));
 
         let _ = terminate_group(pid);
@@ -834,10 +967,10 @@ mod tests {
             .expect("the command runs");
         assert_eq!(output.stdout, b"ready");
 
-        let detached = marked_processes(&|found: &str| found == stamp);
+        let detached = marked_processes(LAUNCH_PREFIX, &|found: &str| found == stamp);
         assert_eq!(detached.len(), 1, "the session of its own survived alone");
 
-        assert!(terminate_marked(|found| found == stamp) >= 1);
+        assert!(terminate_marked(LAUNCH_PREFIX, |found| found == stamp) >= 1);
         assert!(wait_until_gone(detached[0]));
     }
 
@@ -850,7 +983,7 @@ mod tests {
 
         tokio::time::sleep(Duration::from_millis(200)).await;
 
-        assert!(!marked_processes(&|_: &str| true).contains(&pid));
+        assert!(!marked_processes(LAUNCH_PREFIX, &|_: &str| true).contains(&pid));
         assert!(is_running(pid));
 
         let _ = terminate_group(pid);

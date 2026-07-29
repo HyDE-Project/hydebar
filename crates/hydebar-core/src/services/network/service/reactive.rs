@@ -47,17 +47,17 @@ impl ReadOnlyService for NetworkService {
                     .find(|ap| ap.ssid == ssid)
                 {
                     ap.strength = new_strength;
+                }
 
-                    if let Some(ActiveConnectionInfo::WiFi {
-                        strength, ..
-                    }) = self
-                        .data
-                        .active_connections
-                        .iter_mut()
-                        .find(|ac| ac.name() == ap.ssid)
-                    {
-                        *strength = new_strength;
-                    }
+                if let Some(ActiveConnectionInfo::WiFi {
+                    strength, ..
+                }) = self
+                    .data
+                    .active_connections
+                    .iter_mut()
+                    .find(|ac| ac.name() == ssid)
+                {
+                    *strength = new_strength;
                 }
             }
             NetworkEvent::Connectivity(connectivity) => {

@@ -53,6 +53,7 @@ pub enum ModuleName {
     Bluetooth,
     PowerProfile,
     Settings,
+    Themes,
     MediaPlayer,
     Notifications,
     Screenshot,
@@ -62,7 +63,7 @@ pub enum ModuleName {
 
 impl ModuleName {
     /// Every module the bar ships, in the order the editor lists them.
-    pub const BUILT_IN: [ModuleName; 22] = [
+    pub const BUILT_IN: [ModuleName; 23] = [
         ModuleName::AppLauncher,
         ModuleName::Updates,
         ModuleName::Clipboard,
@@ -81,6 +82,7 @@ impl ModuleName {
         ModuleName::Bluetooth,
         ModuleName::PowerProfile,
         ModuleName::Settings,
+        ModuleName::Themes,
         ModuleName::MediaPlayer,
         ModuleName::Notifications,
         ModuleName::Screenshot,
@@ -109,6 +111,7 @@ impl ModuleName {
             ModuleName::Bluetooth => "Bluetooth",
             ModuleName::PowerProfile => "PowerProfile",
             ModuleName::Settings => "Settings",
+            ModuleName::Themes => "Themes",
             ModuleName::MediaPlayer => "MediaPlayer",
             ModuleName::Notifications => "Notifications",
             ModuleName::Screenshot => "Screenshot",
@@ -155,6 +158,7 @@ impl<'de> Deserialize<'de> for ModuleName {
                     "Bluetooth" => ModuleName::Bluetooth,
                     "PowerProfile" => ModuleName::PowerProfile,
                     "Settings" => ModuleName::Settings,
+                    "Themes" => ModuleName::Themes,
                     "MediaPlayer" => ModuleName::MediaPlayer,
                     "Notifications" => ModuleName::Notifications,
                     "Screenshot" => ModuleName::Screenshot,
@@ -399,5 +403,31 @@ mod tests {
         let name = ModuleName::deserialize(StrDeserializer::<DeError>::new("MyCustom"))
             .expect("custom variant");
         assert!(matches!(name, ModuleName::Custom(value) if value == "MyCustom"));
+    }
+
+    /// A module the editor cannot offer is a module nobody can place from the
+    /// window, whatever else it can do.
+    #[test]
+    fn the_theme_module_is_one_the_layout_editor_offers() {
+        assert!(ModuleName::BUILT_IN.contains(&ModuleName::Themes));
+    }
+
+    #[test]
+    fn the_theme_module_reads_back_as_it_is_written() {
+        let name: ModuleName =
+            Deserialize::deserialize(StrDeserializer::<DeError>::new("Themes")).expect("name");
+
+        assert_eq!(name, ModuleName::Themes);
+        assert_eq!(name.as_str(), "Themes");
+    }
+
+    /// The user's own `[[CustomModule]] name = "theme"` must keep being a
+    /// custom module: the built in one answers to `Themes`, and nothing else.
+    #[test]
+    fn a_lowercase_theme_stays_the_custom_module_of_that_name() {
+        let name: ModuleName =
+            Deserialize::deserialize(StrDeserializer::<DeError>::new("theme")).expect("name");
+
+        assert_eq!(name, ModuleName::Custom("theme".to_owned()));
     }
 }

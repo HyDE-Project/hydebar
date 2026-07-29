@@ -2,13 +2,27 @@
 
 use iced::Task;
 use log::debug;
+use masterror::AppResult;
 
 use super::super::{
-    ActiveConnectionInfo, NetworkCommand, NetworkEvent, NetworkService, backend::NetworkBackend
+    AccessPoint, ActiveConnectionInfo, NetworkCommand, NetworkEvent, NetworkService,
+    backend::NetworkBackend
 };
 use crate::services::{Service, ServiceEvent};
 
 impl NetworkService {
+    /// Reads the access points the wireless devices can currently see.
+    ///
+    /// Costs a bus round trip per access point, which is why the bar calls it
+    /// on the clock that follows the user's attention rather than on every
+    /// signal the daemon emits about a band it can hear.
+    pub async fn access_points(&self) -> AppResult<Vec<AccessPoint>> {
+        self.backend_choice
+            .with_connection(self.conn.clone())
+            .access_points()
+            .await
+    }
+
     pub async fn run_command(self, command: NetworkCommand) -> ServiceEvent<Self> {
         let mut bc = self.backend_choice.with_connection(self.conn.clone());
 

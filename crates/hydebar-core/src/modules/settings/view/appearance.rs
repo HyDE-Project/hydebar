@@ -2,12 +2,12 @@
 
 use iced::Element;
 
-use super::{
-    metrics::row_width,
-    style,
-    widgets::{choice_row, page, rows as row_stack, section, stepper_row}
-};
 use crate::{
+    components::page::{
+        metrics::row_width,
+        style,
+        widgets::{choice_row, page, rows as row_stack, section, stepper_row}
+    },
     config::{
         Appearance, AppearanceStyle, BarLayer, Config, DEFAULT_FONT_SIZE, NotificationSource,
         Position

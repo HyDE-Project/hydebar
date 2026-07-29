@@ -43,8 +43,9 @@ pub(super) fn icon(
 ) -> Element<'static, Message> {
     let icon = match state {
         CheckState::Checking => Icons::Refresh,
+        CheckState::Unavailable => Icons::NoUpdatesAvailable,
         CheckState::Ready if update_count == 0 => Icons::NoUpdatesAvailable,
-        _ => Icons::UpdatesAvailable
+        CheckState::Ready => Icons::UpdatesAvailable
     };
 
     let mut content = row!(container(icon_component(icons, icon)))

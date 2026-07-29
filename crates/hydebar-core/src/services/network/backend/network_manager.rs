@@ -28,6 +28,10 @@ use crate::services::{
 pub struct NetworkDbus<'a>(NetworkManagerProxy<'a>);
 
 impl NetworkBackend for NetworkDbus<'_> {
+    async fn access_points(&self) -> AppResult<Vec<AccessPoint>> {
+        self.wireless_access_points().await
+    }
+
     async fn initialize_data(&self) -> AppResult<NetworkData> {
         let nm = self;
 

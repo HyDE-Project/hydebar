@@ -243,6 +243,36 @@ impl App {
                 error!("failed to clear registration for custom module '{name}': {err}");
             }
         }
+
+        self.place_pollable_modules();
+    }
+
+    /// Hands the two clocks the pollable modules the layout draws.
+    ///
+    /// Placement is the whole gate: a module the layout does not draw is not on
+    /// the roster and is never sampled, so a readout nobody can see costs
+    /// nothing. An attention resting on a module the reload dropped is released
+    /// for the same reason.
+    fn place_pollable_modules(&mut self) {
+        let placed: Vec<ModuleName> = self.config.modules.placed().cloned().collect();
+
+        let schedules: Vec<_> = placed
+            .iter()
+            .filter_map(|name| {
+                self.module_poll_schedule(name)
+                    .map(|schedule| (name.clone(), schedule))
+            })
+            .collect();
+
+        self.attention.place(schedules);
+
+        if self
+            .attention
+            .focus()
+            .is_some_and(|focus| !placed.contains(focus))
+        {
+            self.attention.look_at(None);
+        }
     }
 
     pub(super) fn update_custom_modules(&mut self, config: &Config, impact: &ConfigImpact) {

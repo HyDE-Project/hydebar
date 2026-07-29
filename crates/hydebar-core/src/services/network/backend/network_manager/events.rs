@@ -1,4 +1,12 @@
 //! Event stream assembled from NetworkManager D-Bus signals.
+//!
+//! The list of nearby access points is deliberately absent from it. The daemon
+//! republishes `AccessPoints` whenever any neighbouring radio appears or fades,
+//! which on a populated band is several times a second, and answering each one
+//! meant re-reading every access point over the bus and repainting every
+//! surface the bar owns for a list drawn nowhere but inside the network menu.
+//! The bar asks for that list on its own clock instead, and only while the user
+//! is looking at the menu.
 
 use iced::futures::{
     Stream, StreamExt,
@@ -9,7 +17,7 @@ use masterror::{AppError, AppResult};
 
 use super::{
     NetworkBackend, NetworkDbus, NetworkSettingsDbus,
-    proxies::{AccessPointProxy, DeviceProxy, WirelessDeviceProxy}
+    proxies::{AccessPointProxy, DeviceProxy}
 };
 use crate::services::network::{ConnectivityState, DeviceState, NetworkEvent};
 
@@ -155,40 +163,6 @@ impl<'a> NetworkDbus<'a> {
             streams.push(device_states);
         }
 
-        let mut access_point_changes = Vec::with_capacity(wireless_access_points.len());
-        for access_point in wireless_access_points.iter() {
-            let proxy = WirelessDeviceProxy::builder(conn)
-                .path(access_point.device_path.clone())
-                .map_err(|e| {
-                    AppError::internal(format!("Failed to set WirelessDeviceProxy path: {}", e))
-                })?
-                .build()
-                .await
-                .map_err(|e| {
-                    AppError::internal(format!("Failed to build WirelessDeviceProxy: {}", e))
-                })?;
-
-            access_point_changes.push(
-                proxy
-                    .receive_access_points_changed()
-                    .await
-                    .then({
-                        let backend = self.clone();
-                        move |_| {
-                            let backend = backend.clone();
-                            async move {
-                                let wireless_access_points =
-                                    backend.wireless_access_points().await?;
-                                debug!("access_points_changed {wireless_access_points:?}");
-
-                                Ok(NetworkEvent::WirelessAccessPoint(wireless_access_points))
-                            }
-                        }
-                    })
-                    .boxed()
-            );
-        }
-
         let mut strength_changes_streams = Vec::with_capacity(wireless_access_points.len());
         for access_point in wireless_access_points {
             let ssid = access_point.ssid.clone();
@@ -229,9 +203,6 @@ impl<'a> NetworkDbus<'a> {
 
         let strength_changes = select_all(strength_changes_streams).boxed();
         streams.push(strength_changes);
-
-        let access_points = select_all(access_point_changes).boxed();
-        streams.push(access_points);
 
         let known_connections = settings
             .clone()

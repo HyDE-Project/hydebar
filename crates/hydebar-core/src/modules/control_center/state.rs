@@ -20,7 +20,13 @@ pub struct ControlCenter {
     pub(super) sender:          Option<ModuleEventSender<Message>>,
     pub(super) runtime:         Option<Handle>,
     pub(super) tasks:           Vec<JoinHandle<()>>,
-    pub(super) idle_release:    Option<JoinHandle<()>>
+    pub(super) idle_release:    Option<JoinHandle<()>>,
+    /// Read of the nearby networks the attended menu asked for.
+    ///
+    /// Held so a read still in flight is not started a second time: the answer
+    /// takes a bus round trip per access point, which on a busy band outlasts
+    /// the cadence the menu refreshes at.
+    pub(super) network_poll:    Option<JoinHandle<()>>
 }
 
 impl ControlCenter {
@@ -77,7 +83,8 @@ impl Default for ControlCenter {
             sender: None,
             runtime: None,
             tasks: Vec::new(),
-            idle_release: None
+            idle_release: None,
+            network_poll: None
         }
     }
 }

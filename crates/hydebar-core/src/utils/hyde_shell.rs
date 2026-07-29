@@ -13,10 +13,18 @@
 //!
 //! The commands are built here, as plain strings, so the shape of an invocation
 //! can be checked without a HyDE install present.
+//!
+//! Running them lives here too, in [`run`], because every caller wants the same
+//! thing out of a desktop command: to hear that it ended, and why it failed
+//! when it did.
 
-use std::path::Path;
+mod theme_script;
 
-use super::theme_script::{self, ScriptNotFound};
+use std::{path::Path, sync::Arc};
+
+use theme_script::ScriptNotFound;
+
+use crate::utils::launcher;
 
 /// Command switching the desktop to `theme`.
 ///
@@ -25,7 +33,7 @@ use super::theme_script::{self, ScriptNotFound};
 /// Returns [`ScriptNotFound`] when the switch script is not installed, in which
 /// case no command is issued at all — a half-performed switch would be worse
 /// than none.
-pub(super) fn switch_theme(theme: &str) -> Result<String, ScriptNotFound> {
+pub fn switch_theme(theme: &str) -> Result<String, ScriptNotFound> {
     let script = theme_script::locate()?;
 
     Ok(switch_theme_with(&script, theme))
@@ -45,7 +53,7 @@ fn switch_theme_with(script: &Path, theme: &str) -> String {
 
 /// Command moving the desktop to the next wallpaper of the active theme.
 #[must_use]
-pub(super) fn next_wallpaper() -> String {
+pub fn next_wallpaper() -> String {
     "hyde-shell wallpaper --next".to_owned()
 }
 
@@ -103,4 +111,20 @@ mod tests {
     fn the_wallpaper_command_asks_for_the_next_one() {
         assert_eq!(next_wallpaper(), "hyde-shell wallpaper --next");
     }
+}
+
+/// Runs a desktop command, reporting why it failed if it did.
+///
+/// The command is run detached rather than with its output collected: a HyDE
+/// switch leaves background children behind that would keep a collected stream
+/// open long after the switch itself is over, and the bar has to hear that the
+/// switch ended when it ends. What the command printed goes to the bar's own
+/// log, which is where the detail belongs.
+pub async fn run(command: String) -> Option<String> {
+    let command: Arc<str> = Arc::from(command);
+
+    launcher::run_detached(&command)
+        .await
+        .err()
+        .map(|error| error.to_string())
 }

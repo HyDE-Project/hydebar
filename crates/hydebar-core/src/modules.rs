@@ -3,7 +3,7 @@ use std::borrow::Cow;
 
 use masterror::AppError;
 
-use crate::{event_bus::EventBusError, menu::MenuType};
+use crate::{attention::PollSchedule, event_bus::EventBusError, menu::MenuType};
 
 pub mod app_launcher;
 pub mod battery;
@@ -20,6 +20,7 @@ pub mod privacy;
 pub mod screenshot;
 pub mod settings;
 pub mod system_info;
+pub mod themes;
 pub mod tray;
 pub mod updates;
 pub mod weather;
@@ -108,6 +109,32 @@ pub trait Module<Message> {
     ///
     /// [`register`]: Module::register
     fn deregister(&mut self) {}
+
+    /// The two cadences the module is willing to be sampled at.
+    ///
+    /// A module that declares a schedule owns no timer: the bar keeps one clock
+    /// for every module at rest and one for the module being attended, and
+    /// calls [`poll`] when either of them comes due. The default is [`None`],
+    /// which is right for a module fed by a compositor or bus listener rather
+    /// than by a readout somebody has to go and take.
+    ///
+    /// [`poll`]: Module::poll
+    fn poll_schedule(&self) -> Option<PollSchedule> {
+        None
+    }
+
+    /// Takes one sample now.
+    ///
+    /// Called from the clock the module's [`poll_schedule`] put it on, never
+    /// more often than the cadence it declared. A module that publishes a
+    /// reading identical to the one already on screen should drop it instead:
+    /// every event reaching the bar rebuilds every surface it draws.
+    ///
+    /// [`poll_schedule`]: Module::poll_schedule
+    fn poll(&mut self, ctx: &crate::module_context::ModuleContext) -> Result<(), ModuleError> {
+        let _ = ctx;
+        Ok(())
+    }
 
     fn view(
         &self,

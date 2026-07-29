@@ -12,9 +12,7 @@ use iced::{
 
 use super::style;
 use crate::{
-    components::icons::icon_raw_sized,
-    modules::settings::{Message, Spinner},
-    style::settings_button_style
+    components::icons::icon_raw_sized, modules::themes::Spinner, style::settings_button_style
 };
 
 /// Share of its colour a control that cannot be pressed right now is drawn at.
@@ -31,13 +29,13 @@ const BLOCKED_ALPHA: f32 = 0.35;
 ///
 /// An `active` button is tinted with the accent colour, which is how the window
 /// shows the choice currently in force.
-pub(super) fn choice_button<'a>(
+pub(crate) fn choice_button<'a, M: Clone + 'a>(
     label: impl text::IntoFragment<'a>,
-    message: Message,
+    message: M,
     active: bool,
     font_size: f32,
     opacity: f32
-) -> Element<'a, Message> {
+) -> Element<'a, M> {
     let control = style::control_size(font_size);
 
     button(text(label).size(control))
@@ -59,15 +57,16 @@ pub(super) fn choice_button<'a>(
 }
 
 /// Renders a label followed by a row of mutually exclusive choices.
-pub(super) fn choice_row<'a, T>(
+pub(crate) fn choice_row<'a, T, M>(
     label: &'a str,
     choices: Vec<(&'a str, T, bool)>,
-    to_message: impl Fn(T) -> Message + 'a,
+    to_message: impl Fn(T) -> M + 'a,
     font_size: f32,
     opacity: f32
-) -> Element<'a, Message>
+) -> Element<'a, M>
 where
-    T: Clone + 'a
+    T: Clone + 'a,
+    M: Clone + 'a
 {
     let mut buttons = controls(font_size);
 
@@ -95,15 +94,15 @@ where
 /// change it has asked the desktop for. It is drawn in front of the value
 /// rather than after it, so the row reads as "something is happening to this"
 /// from its first character.
-pub(super) fn status_row<'a>(
+pub(crate) fn status_row<'a, M: 'a>(
     label: &'a str,
     value: String,
     indicator: Option<&'static str>,
     font_size: f32
-) -> Element<'a, Message> {
+) -> Element<'a, M> {
     let control = style::control_size(font_size);
 
-    let content: Element<'a, Message> = match indicator {
+    let content: Element<'a, M> = match indicator {
         Some(glyph) => controls(font_size)
             .push(icon_raw_sized(glyph.to_owned(), Some(control)))
             .push(text(value).size(control))
@@ -115,14 +114,14 @@ pub(super) fn status_row<'a>(
 }
 
 /// Renders a label with a value that steps down and up.
-pub(super) fn stepper_row<'a>(
+pub(crate) fn stepper_row<'a, M: Clone + 'a>(
     label: &'a str,
     current: String,
-    down: Message,
-    up: Message,
+    down: M,
+    up: M,
     font_size: f32,
     opacity: f32
-) -> Element<'a, Message> {
+) -> Element<'a, M> {
     let control = style::control_size(font_size);
 
     let stepper = controls(font_size)
@@ -145,13 +144,13 @@ pub(super) fn stepper_row<'a>(
 /// A chip is not a button in disguise: it is filled when picked and outlined
 /// when not, so the row reads as a picture of the bar rather than as a row of
 /// controls.
-pub(super) fn chip<'a>(
+pub(crate) fn chip<'a, M: Clone + 'a>(
     label: impl text::IntoFragment<'a>,
-    message: Message,
+    message: M,
     picked: bool,
     font_size: f32,
     opacity: f32
-) -> Element<'a, Message> {
+) -> Element<'a, M> {
     let control = style::control_size(font_size);
 
     button(text(label).size(control))
@@ -190,7 +189,7 @@ pub(super) fn chip<'a>(
 /// can be switched to, the theme being applied, or a theme that cannot be
 /// pressed because another one is being applied.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum ThemeChip {
+pub(crate) enum ThemeChip {
     /// The theme the desktop is on.
     Active,
     /// A theme the desktop can be switched to.
@@ -207,7 +206,7 @@ impl ThemeChip {
     /// A chip that cannot start one carries no press handler at all, so the
     /// refusal is something the pointer meets rather than something the module
     /// has to log after the fact.
-    pub(super) fn is_pressable(self) -> bool {
+    pub(crate) fn is_pressable(self) -> bool {
         matches!(self, Self::Active | Self::Idle)
     }
 }
@@ -218,13 +217,13 @@ impl ThemeChip {
 /// blocked, because this one has to say three things at once: which theme the
 /// desktop is on, which one it is moving to, and that nothing else can be asked
 /// for until it gets there.
-pub(super) fn theme_chip<'a>(
+pub(crate) fn theme_chip<'a, M: Clone + 'a>(
     label: String,
-    message: Message,
+    message: M,
     state: ThemeChip,
     font_size: f32,
     opacity: f32
-) -> Element<'a, Message> {
+) -> Element<'a, M> {
     let control = style::control_size(font_size);
 
     let mut chip = button(text(label).size(control)).padding([
@@ -267,10 +266,10 @@ pub(super) fn theme_chip<'a>(
 ///
 /// Drawn smaller than a value so it reads as an aside rather than as something
 /// the bar is reporting.
-pub(super) fn note<'a>(
+pub(crate) fn note<'a, M: 'a>(
     label: impl text::IntoFragment<'a>,
     font_size: f32
-) -> Element<'a, Message> {
+) -> Element<'a, M> {
     text(label).size(style::caption_size(font_size)).into()
 }
 
@@ -278,7 +277,7 @@ pub(super) fn note<'a>(
 ///
 /// Every heading on every tab comes from here, so no page can invent a heading
 /// of its own size or weight.
-fn section_title<'a>(label: impl text::IntoFragment<'a>, font_size: f32) -> Element<'a, Message> {
+fn section_title<'a, M: 'a>(label: impl text::IntoFragment<'a>, font_size: f32) -> Element<'a, M> {
     text(label)
         .size(style::section_title_size(font_size))
         .into()
@@ -288,11 +287,11 @@ fn section_title<'a>(label: impl text::IntoFragment<'a>, font_size: f32) -> Elem
 ///
 /// A page is a stack of these and nothing else, which is what makes the three
 /// tabs read as one window.
-pub(super) fn section<'a>(
+pub(crate) fn section<'a, M: 'a>(
     title: impl text::IntoFragment<'a>,
-    content: Element<'a, Message>,
+    content: Element<'a, M>,
     font_size: f32
-) -> Element<'a, Message> {
+) -> Element<'a, M> {
     Column::new()
         .push(section_title(title, font_size))
         .push(content)
@@ -305,7 +304,7 @@ pub(super) fn section<'a>(
 ///
 /// Handed out ready-spaced and ready-padded so a page states what it holds and
 /// never how far apart it holds it.
-pub(super) fn page<'a>(font_size: f32) -> Column<'a, Message> {
+pub(crate) fn page<'a, M: 'a>(font_size: f32) -> Column<'a, M> {
     Column::new()
         .spacing(style::section_gap(font_size))
         .padding(style::page_padding(font_size))
@@ -313,7 +312,7 @@ pub(super) fn page<'a>(font_size: f32) -> Column<'a, Message> {
 }
 
 /// Starts the column the rows of one section are stacked in.
-pub(super) fn rows<'a>(font_size: f32) -> Column<'a, Message> {
+pub(crate) fn rows<'a, M: 'a>(font_size: f32) -> Column<'a, M> {
     Column::new()
         .spacing(style::page_gap(font_size))
         .width(Length::Fill)
@@ -323,14 +322,14 @@ pub(super) fn rows<'a>(font_size: f32) -> Column<'a, Message> {
 ///
 /// Chips sit closer together than rows do, in both directions, so a grid reads
 /// as one block rather than as a stack of unrelated rows.
-pub(super) fn grid<'a>(font_size: f32) -> Column<'a, Message> {
+pub(crate) fn grid<'a, M: 'a>(font_size: f32) -> Column<'a, M> {
     Column::new()
         .spacing(style::group_gap(font_size))
         .width(Length::Fill)
 }
 
 /// Starts the row the controls of one setting sit in.
-pub(super) fn controls<'a>(font_size: f32) -> Row<'a, Message> {
+pub(crate) fn controls<'a, M: 'a>(font_size: f32) -> Row<'a, M> {
     Row::new()
         .spacing(style::row_gap(font_size))
         .align_y(Alignment::Center)
@@ -338,7 +337,7 @@ pub(super) fn controls<'a>(font_size: f32) -> Row<'a, Message> {
 
 /// Starts the row items that belong together sit in, such as the chips of an
 /// island or the buttons of one action.
-pub(super) fn group<'a>(font_size: f32) -> Row<'a, Message> {
+pub(crate) fn group<'a, M: 'a>(font_size: f32) -> Row<'a, M> {
     Row::new()
         .spacing(style::group_gap(font_size))
         .align_y(Alignment::Center)
@@ -349,11 +348,11 @@ pub(super) fn group<'a>(font_size: f32) -> Row<'a, Message> {
 ///
 /// Shares the label column with every other row on every other tab, so the
 /// islands of the module page line up with the steppers of the appearance page.
-pub(super) fn labelled_row<'a>(
+pub(crate) fn labelled_row<'a, M: 'a>(
     label: impl text::IntoFragment<'a>,
-    content: Element<'a, Message>,
+    content: Element<'a, M>,
     font_size: f32
-) -> Element<'a, Message> {
+) -> Element<'a, M> {
     Row::new()
         .push(
             text(label)
@@ -368,11 +367,11 @@ pub(super) fn labelled_row<'a>(
 }
 
 /// Renders a card the detail of a picked entry lives in.
-pub(super) fn card<'a>(
-    content: Element<'a, Message>,
+pub(crate) fn card<'a, M: 'a>(
+    content: Element<'a, M>,
     font_size: f32,
     opacity: f32
-) -> Element<'a, Message> {
+) -> Element<'a, M> {
     container(content)
         .padding(style::card_padding(font_size))
         .width(Length::Fill)
@@ -395,11 +394,11 @@ pub(super) fn card<'a>(
 ///
 /// The outline carries the same padding and the same corner as a card, so an
 /// island on the module page sits on the same grid as the card below it.
-pub(super) fn outlined<'a>(
-    content: Element<'a, Message>,
+pub(crate) fn outlined<'a, M: 'a>(
+    content: Element<'a, M>,
     font_size: f32,
     opacity: f32
-) -> Element<'a, Message> {
+) -> Element<'a, M> {
     container(content)
         .padding(style::card_padding(font_size))
         .style(move |theme: &Theme| container::Style {

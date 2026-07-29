@@ -38,7 +38,7 @@ const SYSTEM_DATA_DIRECTORIES: [&str; 2] = ["/usr/local/share", "/usr/share"];
 /// The error carries every path that was tried, because the fix is always to
 /// put the script in one of them — or to point [`OVERRIDE_VARIABLE`] at it.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(super) struct ScriptNotFound {
+pub(crate) struct ScriptNotFound {
     /// Paths that were probed, in the order they were probed.
     candidates: Vec<PathBuf>
 }
@@ -73,7 +73,7 @@ impl std::error::Error for ScriptNotFound {}
 ///
 /// Returns [`ScriptNotFound`] when none of the searched locations holds an
 /// executable file.
-pub(super) fn locate() -> Result<PathBuf, ScriptNotFound> {
+pub(crate) fn locate() -> Result<PathBuf, ScriptNotFound> {
     let executable = env::current_exe().ok();
     let candidates = candidates(
         env::var_os(OVERRIDE_VARIABLE)

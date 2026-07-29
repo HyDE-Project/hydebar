@@ -26,6 +26,19 @@ impl Outputs {
         })
     }
 
+    /// The menu currently on screen, if any.
+    ///
+    /// Only one menu is ever open at a time, so the first one found is the one
+    /// the user is looking at.
+    pub fn open_menu(&self) -> Option<&MenuType> {
+        self.0.iter().find_map(|(_, shell_info, _)| {
+            shell_info
+                .as_ref()
+                .and_then(|shell_info| shell_info.menu.menu_info.as_ref())
+                .map(|(menu_type, _)| menu_type)
+        })
+    }
+
     /// Get the animated opacity for a menu window.
     pub fn get_menu_opacity(&self, id: Id) -> f32 {
         self.0

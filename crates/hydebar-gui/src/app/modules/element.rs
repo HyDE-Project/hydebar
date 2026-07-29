@@ -142,28 +142,30 @@ impl App {
         }
     }
 
-    /// Wraps a module in the anchor its tooltip is published from.
+    /// Wraps a module in the anchor its hover is published from.
     ///
-    /// A module that publishes hints stays wrapped even while its own hint is
-    /// empty, so leaving one always clears whatever the tooltip surface shows.
+    /// Every module is wrapped, hint or no hint: the pointer resting on a
+    /// module is what the bar reads its attention out of, and a module that
+    /// shows no tooltip is still something the user can look at. The hint, when
+    /// there is one, rides along on the same message rather than on a second
+    /// one, because there is only ever one thing being looked at.
     fn with_tooltip<'a>(
         &self,
         module_name: &ModuleName,
         module: Element<'a, Message>,
         id: Id
     ) -> Element<'a, Message> {
-        let Some(hint) = self.module_tooltip(module_name) else {
-            return module;
-        };
+        let hint = self.module_tooltip(module_name).flatten();
+        let module_name = module_name.clone();
 
-        tooltip_anchor(module, move |anchor| {
-            Message::ModuleTooltip(
-                id,
-                anchor.zip(hint.clone()).map(|(anchor, text)| TooltipInfo {
-                    text,
-                    anchor
-                })
-            )
+        tooltip_anchor(module, move |anchor| Message::ModuleHover {
+            surface: id,
+            module:  module_name.clone(),
+            entered: anchor.is_some(),
+            tooltip: anchor.zip(hint.clone()).map(|(anchor, text)| TooltipInfo {
+                text,
+                anchor
+            })
         })
         .into()
     }

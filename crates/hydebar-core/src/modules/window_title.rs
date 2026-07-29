@@ -32,6 +32,24 @@ fn get_window(port: &dyn HyprlandPort, config: &WindowTitleConfig) -> Option<Str
     }
 }
 
+/// The title as the bar draws it.
+///
+/// Whole while the module is attended, shortened to the configured length
+/// otherwise: a title that had to be cut is the one the user leans in to read,
+/// so looking at the module is taken as asking for the rest of it.
+fn shown_title(value: &str, config: &WindowTitleConfig, attended: bool) -> String {
+    if attended {
+        value.to_owned()
+    } else {
+        truncate_text(value, config.truncate_title_after_length)
+    }
+}
+
+/// Title of the focused window, as the compositor reports it.
+///
+/// The whole title is kept rather than the shortened one the bar draws: a
+/// module the user is looking at shows what it has in full, and a title
+/// shortened on the way in could never be restored.
 pub struct WindowTitle {
     hyprland: Arc<dyn HyprlandPort>,
     value:    Option<String>,
@@ -93,17 +111,58 @@ mod tests {
 
         assert_eq!(module.current_value(), None);
     }
+
+    #[test]
+    fn a_long_title_is_shortened_until_the_module_is_attended() {
+        let config = WindowTitleConfig {
+            truncate_title_after_length: 10,
+            ..Default::default()
+        };
+        let title = "a window with a very long title indeed";
+
+        assert_ne!(shown_title(title, &config, false), title);
+        assert_eq!(shown_title(title, &config, true), title);
+    }
+
+    #[test]
+    fn a_short_title_reads_the_same_either_way() {
+        let config = WindowTitleConfig {
+            truncate_title_after_length: 150,
+            ..Default::default()
+        };
+
+        assert_eq!(shown_title("short", &config, false), "short");
+        assert_eq!(shown_title("short", &config, true), "short");
+    }
+
+    #[test]
+    fn the_whole_title_survives_the_update() {
+        let port = Arc::new(MockHyprlandPort::with_active_window(
+            "a window with a very long title indeed",
+            "Class"
+        ));
+        let port_trait: Arc<dyn HyprlandPort> = port;
+        let config = WindowTitleConfig {
+            truncate_title_after_length: 10,
+            ..Default::default()
+        };
+
+        let mut module = WindowTitle::new(port_trait, &config);
+        module.update(Message::TitleChanged, &config);
+
+        assert_eq!(
+            module.current_value(),
+            Some("a window with a very long title indeed"),
+            "a title shortened on the way in could never be shown in full"
+        );
+    }
 }
 
 impl WindowTitle {
     pub fn update(&mut self, message: Message, config: &WindowTitleConfig) {
         match message {
             Message::TitleChanged => {
-                if let Some(value) = get_window(self.hyprland.as_ref(), config) {
-                    self.value = Some(truncate_text(&value, config.truncate_title_after_length));
-                } else {
-                    self.value = None;
-                }
+                self.value = get_window(self.hyprland.as_ref(), config);
             }
         }
     }
@@ -118,7 +177,7 @@ impl<M> Module<M> for WindowTitle
 where
     M: 'static + Clone
 {
-    type ViewData<'a> = ();
+    type ViewData<'a> = (&'a WindowTitleConfig, bool);
     type RegistrationData<'a> = ();
 
     fn register(
@@ -180,13 +239,20 @@ where
         self.sender = None;
     }
 
+    /// Draws the title, in full while the module is attended.
+    ///
+    /// A title long enough to be shortened is exactly the one the user leans
+    /// in to read, so looking at the module is taken as asking for the rest of
+    /// it.
     fn view(
         &self,
-        _: Self::ViewData<'_>
+        (config, attended): Self::ViewData<'_>
     ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
         self.value.as_ref().map(|value| {
+            let shown = shown_title(value, config, attended);
+
             (
-                text(value.clone())
+                text(shown)
                     .size(scale::scaled(12.0))
                     .wrapping(text::Wrapping::WordOrGlyph)
                     .into(),
