@@ -69,10 +69,10 @@ fn rules(namespace: &str) -> [Rule; 2] {
         Rule {
             lua:        format!(
                 "hl.layer_rule({{ name = \"hydebar_ignore_alpha\", match = {{ namespace = \
-                 \"{matched}\" }}, ignore_alpha = {IGNORED_ALPHA} }})"
+                 \"{matched}\" }}, ignore_alpha = {IGNORED_ALPHA:.1} }})"
             ),
-            keyword:    format!("ignore_alpha {IGNORED_ALPHA}, match:namespace {matched}"),
-            positional: format!("ignore_alpha {IGNORED_ALPHA}, {matched}")
+            keyword:    format!("ignore_alpha {IGNORED_ALPHA:.1}, match:namespace {matched}"),
+            positional: format!("ignore_alpha {IGNORED_ALPHA:.1}, {matched}")
         }
     ]
 }
@@ -157,7 +157,7 @@ mod tests {
         );
         assert_eq!(
             ignore_alpha.keyword,
-            "ignore_alpha 0, match:namespace ^(hydebar-main-layer)$"
+            "ignore_alpha 0.0, match:namespace ^(hydebar-main-layer)$"
         );
     }
 
@@ -173,7 +173,7 @@ mod tests {
         assert_eq!(
             ignore_alpha.lua,
             "hl.layer_rule({ name = \"hydebar_ignore_alpha\", match = { namespace = \
-             \"^(hydebar-main-layer)$\" }, ignore_alpha = 0 })"
+             \"^(hydebar-main-layer)$\" }, ignore_alpha = 0.0 })"
         );
     }
 
@@ -184,7 +184,7 @@ mod tests {
         assert_eq!(blur.positional, "blur, ^(hydebar-main-layer)$");
         assert_eq!(
             ignore_alpha.positional,
-            "ignore_alpha 0, ^(hydebar-main-layer)$"
+            "ignore_alpha 0.0, ^(hydebar-main-layer)$"
         );
     }
 
