@@ -28,6 +28,8 @@ pub struct MenuLayout {
     pub style:          AppearanceStyle,
     /// Opacity of the menu box.
     pub opacity:        f32,
+    /// Corner radius of the menu box, matching the bar pills.
+    pub radius:         f32,
     /// Opacity of the dimming behind the menu.
     pub menu_backdrop:  f32,
     /// Height the content needs, when the caller can measure it.
@@ -64,7 +66,7 @@ pub fn menu_wrapper<Message: Clone + 'static>(
                     .width(Length::Fill)
                     .max_width(width)
                     .padding(padding)
-                    .style(menu_container_style(layout.opacity))
+                    .style(menu_container_style(layout.opacity, layout.radius))
             )
             .on_release(none_message)
         )

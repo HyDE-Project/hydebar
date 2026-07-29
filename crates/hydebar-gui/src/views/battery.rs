@@ -30,7 +30,7 @@ pub fn render_battery_indicator(
         .style(move |theme: &Theme| container::Style {
             text_color: Some(match indicator_state {
                 IndicatorState::Success => theme.palette().success,
-                IndicatorState::Warning => theme.extended_palette().danger.weak.color,
+                IndicatorState::Warning => theme.palette().warning,
                 IndicatorState::Danger => theme.palette().danger,
                 IndicatorState::Normal => theme.palette().text
             }),

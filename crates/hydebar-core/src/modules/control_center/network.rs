@@ -109,7 +109,7 @@ impl NetworkData {
                                 .style(move |theme: &Theme| container::Style {
                                     text_color: match state {
                                         (ConnectivityState::Full, IndicatorState::Warning) => {
-                                            Some(theme.extended_palette().danger.weak.color)
+                                            Some(theme.palette().warning)
                                         }
                                         (ConnectivityState::Full, _) => None,
                                         _ => Some(theme.palette().danger)

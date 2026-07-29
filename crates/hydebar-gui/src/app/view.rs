@@ -52,6 +52,7 @@ impl App {
             bar_position: self.config.position,
             style: self.appearance().style,
             opacity,
+            radius: self.appearance().pill_radius(),
             menu_backdrop: self.appearance().menu.backdrop,
             content_height: None
         }

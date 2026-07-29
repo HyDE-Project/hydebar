@@ -89,7 +89,7 @@ where
                 text_color: if thresholds.value > thresholds.warn
                     && thresholds.value < thresholds.alert
                 {
-                    Some(theme.extended_palette().danger.weak.color)
+                    Some(theme.palette().warning)
                 } else if thresholds.value >= thresholds.alert {
                     Some(theme.palette().danger)
                 } else {

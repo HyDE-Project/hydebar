@@ -82,8 +82,17 @@ fn build_extended_palette(appearance: &Appearance, palette: Palette) -> palette:
             appearance.warning_color.get_text().unwrap_or(palette.text)
         ),
         danger:     build_danger_pair(&appearance.danger_color, palette.text, default_danger),
-        is_dark:    true
+        is_dark:    palette_is_dark(palette.background)
     }
+}
+
+/// Whether `background` reads as a dark surface.
+///
+/// The extended palette derives its hover and disabled shades towards or away
+/// from white depending on this answer; stating "dark" for every theme hands a
+/// light HyDE palette shades derived the wrong way round.
+fn palette_is_dark(background: Color) -> bool {
+    0.2126 * background.r + 0.7152 * background.g + 0.0722 * background.b < 0.5
 }
 
 fn build_pair(
@@ -269,6 +278,20 @@ mod tests {
         assert_eq!(palette.success.weak.color, Color::from_rgb8(10, 80, 10));
         assert_eq!(palette.danger.strong.color, Color::from_rgb8(200, 40, 40));
         assert!(palette.is_dark);
+    }
+
+    /// A light HyDE theme hands the bar a light island; the derived shades
+    /// have to follow it instead of staying on the dark side for ever.
+    #[test]
+    fn a_light_background_yields_a_light_palette() {
+        let appearance = Appearance {
+            background_color: AppearanceColor::Simple(HexColor::rgb(235, 235, 230)),
+            ..Appearance::default()
+        };
+
+        let theme = hydebar_theme(&appearance);
+
+        assert!(!theme.extended_palette().is_dark);
     }
 
     #[test]
