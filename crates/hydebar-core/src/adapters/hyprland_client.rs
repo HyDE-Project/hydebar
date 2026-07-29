@@ -1,4 +1,5 @@
 mod config;
+mod dispatch;
 mod listeners;
 mod sync_ops;
 mod util;
@@ -14,7 +15,6 @@ use hydebar_proto::ports::hyprland::{
 use hyprland::{
     ctl::switch_xkb_layout::SwitchXKBLayoutCmdTypes,
     data::{Client, Devices, Monitors, Workspace, Workspaces},
-    dispatch::{Dispatch, DispatchType, MonitorIdentifier, WorkspaceIdentifierWithSpecial},
     keyword::Keyword,
     shared::{HyprData, HyprDataActive, HyprDataActiveOptional}
 };
@@ -173,14 +173,10 @@ impl HyprlandPort for HyprlandClient {
 
     fn change_workspace(&self, workspace: HyprlandWorkspaceSelector) -> Result<(), HyprlandError> {
         self.execute_with_retry(CHANGE_WORKSPACE_OP, move || {
-            let identifier = match &workspace {
-                HyprlandWorkspaceSelector::Id(id) => WorkspaceIdentifierWithSpecial::Id(*id),
-                HyprlandWorkspaceSelector::Name(name) => {
-                    WorkspaceIdentifierWithSpecial::Name(name.as_str())
-                }
-            };
-            Dispatch::call(DispatchType::Workspace(identifier))
-                .map_err(|err| HyprlandClient::backend_error(CHANGE_WORKSPACE_OP, err))
+            dispatch::dispatch_in_any_dialect(|dialect| {
+                dispatch::focus_workspace(dialect, &workspace)
+            })
+            .map_err(|err| HyprlandClient::backend_error(CHANGE_WORKSPACE_OP, err))
         })
     }
 
@@ -191,17 +187,11 @@ impl HyprlandPort for HyprlandClient {
     ) -> Result<(), HyprlandError> {
         let workspace_name = workspace_name.to_string();
         self.execute_with_retry(TOGGLE_SPECIAL_OP, move || {
-            let monitor_identifier = match &monitor {
-                HyprlandMonitorSelector::Id(id) => {
-                    MonitorIdentifier::Id((*id).try_into().unwrap_or(i128::MAX))
-                }
-                HyprlandMonitorSelector::Name(name) => MonitorIdentifier::Name(name.as_str())
-            };
-            Dispatch::call(DispatchType::FocusMonitor(monitor_identifier))
-                .and_then(|_| {
-                    Dispatch::call(DispatchType::ToggleSpecialWorkspace(Some(
-                        workspace_name.clone()
-                    )))
+            dispatch::dispatch_in_any_dialect(|dialect| dispatch::focus_monitor(dialect, &monitor))
+                .and_then(|()| {
+                    dispatch::dispatch_in_any_dialect(|dialect| {
+                        dispatch::toggle_special_workspace(dialect, &workspace_name)
+                    })
                 })
                 .map_err(|err| HyprlandClient::backend_error(TOGGLE_SPECIAL_OP, err))
         })
