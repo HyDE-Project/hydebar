@@ -142,32 +142,11 @@ impl<'de> Deserialize<'de> for ModuleName {
             where
                 E: serde::de::Error
             {
-                Ok(match value {
-                    "AppLauncher" => ModuleName::AppLauncher,
-                    "Updates" => ModuleName::Updates,
-                    "Clipboard" => ModuleName::Clipboard,
-                    "Workspaces" => ModuleName::Workspaces,
-                    "WindowTitle" => ModuleName::WindowTitle,
-                    "SystemInfo" => ModuleName::SystemInfo,
-                    "KeyboardLayout" => ModuleName::KeyboardLayout,
-                    "KeyboardSubmap" => ModuleName::KeyboardSubmap,
-                    "Tray" => ModuleName::Tray,
-                    "Clock" => ModuleName::Clock,
-                    "Battery" => ModuleName::Battery,
-                    "Privacy" => ModuleName::Privacy,
-                    "ControlCenter" => ModuleName::ControlCenter,
-                    "Audio" => ModuleName::Audio,
-                    "Network" => ModuleName::Network,
-                    "Bluetooth" => ModuleName::Bluetooth,
-                    "PowerProfile" => ModuleName::PowerProfile,
-                    "Settings" => ModuleName::Settings,
-                    "Themes" => ModuleName::Themes,
-                    "MediaPlayer" => ModuleName::MediaPlayer,
-                    "Notifications" => ModuleName::Notifications,
-                    "Screenshot" => ModuleName::Screenshot,
-                    "IdleInhibitor" => ModuleName::IdleInhibitor,
-                    other => ModuleName::Custom(other.to_string())
-                })
+                Ok(ModuleName::BUILT_IN
+                    .iter()
+                    .find(|module| module.as_str() == value)
+                    .cloned()
+                    .unwrap_or_else(|| ModuleName::Custom(value.to_string())))
             }
         }
 
@@ -422,6 +401,21 @@ mod tests {
 
         assert_eq!(name, ModuleName::Themes);
         assert_eq!(name.as_str(), "Themes");
+    }
+
+    /// A hand-kept name list once forgot `Wallpaper`, turning the built-in
+    /// module into an undefined custom one and discarding the whole user
+    /// configuration at the validation step. Every shipped module must read
+    /// back as itself.
+    #[test]
+    fn every_built_in_module_reads_back_as_it_is_written() {
+        for module in &ModuleName::BUILT_IN {
+            let name: ModuleName =
+                Deserialize::deserialize(StrDeserializer::<DeError>::new(module.as_str()))
+                    .expect("built-in name");
+
+            assert_eq!(&name, module);
+        }
     }
 
     /// The user's own `[[CustomModule]] name = "theme"` must keep being a
