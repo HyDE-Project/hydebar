@@ -23,8 +23,13 @@ use super::{Module, OnModulePress};
 use crate::{
     components::icons::{IconTheme, Icons, icon},
     config::{AppearanceStyle, BarLayer, Position},
-    menu::MenuType
+    menu::MenuType,
+    services::hyprland_notify::{Notice, compositor_color, notify, post_to_bus}
 };
+
+/// How long the notice announcing a new notification source stays up, in
+/// milliseconds.
+const ANNOUNCE_DURATION: u32 = 4000;
 
 /// Smallest bar height the menu will step down to, in pixels.
 const MIN_HEIGHT: f32 = 16.0;
@@ -88,6 +93,31 @@ pub enum Message {
     SelectSlot(Option<Slot>),
     /// Show the modules of another section.
     SelectSection(Section)
+}
+
+/// Announces the notification source the user just picked, through that
+/// very source.
+///
+/// A setting whose effect is invisible until something else happens is a
+/// setting nobody can tell they changed. Sending one notice the moment the
+/// choice is made answers the only question the choice raises — where will
+/// my notifications appear now — by showing it.
+pub fn announce_source(source: NotificationSource, config: &Config) {
+    let message = format!("notifications are now shown by {}", source.label());
+
+    if source.hands_to_compositor() {
+        notify(
+            Notice::Info,
+            ANNOUNCE_DURATION,
+            &compositor_color(config.appearance.primary_color.clone()),
+            config.appearance.font_size_px(),
+            &message
+        );
+
+        return;
+    }
+
+    post_to_bus(&message);
 }
 
 impl Message {
@@ -292,6 +322,31 @@ impl Settings {
         }
 
         Task::none()
+    }
+
+    /// Announces the notification source the user just picked, through that
+    /// very source.
+    ///
+    /// A setting whose effect is invisible until something else happens is a
+    /// setting nobody can tell they changed. Sending one notice the moment the
+    /// choice is made answers the only question the choice raises — where will
+    /// my notifications appear now — by showing it.
+    pub fn announce_source(source: NotificationSource, config: &Config) {
+        let message = format!("notifications are now shown by {}", source.label());
+
+        if source.hands_to_compositor() {
+            notify(
+                Notice::Info,
+                ANNOUNCE_DURATION,
+                &compositor_color(config.appearance.primary_color.clone()),
+                config.appearance.font_size_px(),
+                &message
+            );
+
+            return;
+        }
+
+        post_to_bus(&message);
     }
 
     /// File the choices are written to.

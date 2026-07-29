@@ -9,6 +9,22 @@ use super::super::{
 };
 use crate::get_log_spec;
 
+/// Builds the notice announcing `source`, for the bar to paint itself.
+fn announcement(
+    source: hydebar_proto::config::NotificationSource
+) -> hydebar_core::services::notifications::Notification {
+    hydebar_core::services::notifications::Notification {
+        id:        0,
+        app_name:  "hydebar".to_owned(),
+        icon:      String::new(),
+        summary:   "Notifications".to_owned(),
+        body:      format!("now shown by {}", source.label()),
+        urgency:   hydebar_core::services::notifications::Urgency::Normal,
+        timestamp: std::time::SystemTime::now(),
+        actions:   Vec::new()
+    }
+}
+
 impl App {
     /// Handles the messages this module owns.
     pub(super) fn update_lifecycle(&mut self, message: Message) -> Task<Message> {
@@ -83,9 +99,36 @@ impl App {
                 } = update;
 
                 let config = self.adopted(config);
+                let source_changed =
+                    self.config.notifications.source != config.notifications.source;
 
                 info!("New config applied: {config:?}");
                 debug!("Config impact: {impact:?}");
+
+                if source_changed {
+                    // Announced here rather than where the choice was made: the
+                    // notice has to be painted the new way, and until the
+                    // reload has landed the bar would still paint it the old
+                    // one — which is exactly the question the notice answers.
+                    //
+                    // The bar's own popups are drawn directly rather than sent
+                    // through the bus: the bar only takes the bus name once the
+                    // new subscription starts, so a notice sent this instant
+                    // would reach whoever still held it, or nobody at all.
+                    if config.notifications.source.draws_popups() {
+                        self.notification_popups.push(
+                            hydebar_core::notifications_popup::Popup::new(
+                                &announcement(config.notifications.source),
+                                std::time::Instant::now()
+                            )
+                        );
+                    } else {
+                        hydebar_core::modules::settings::announce_source(
+                            config.notifications.source,
+                            &config
+                        );
+                    }
+                }
 
                 let mut tasks = Vec::new();
 

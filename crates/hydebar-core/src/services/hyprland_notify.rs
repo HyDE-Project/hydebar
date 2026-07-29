@@ -139,7 +139,7 @@ const NOTIFIER: &str = "hydebar";
 /// daemon the session started — and the session's daemon otherwise. Either way
 /// the notice is drawn by the thing the user chose, which is the whole point of
 /// the setting.
-fn post_to_bus(message: &str) {
+pub fn post_to_bus(message: &str) {
     let sent = Command::new("notify-send")
         .args([
             "--app-name",

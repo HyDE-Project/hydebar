@@ -184,7 +184,11 @@ pub(crate) fn notifications_settings(
         id,
         namespace: NOTIFICATIONS_NAMESPACE.to_string(),
         size: Some((Some(NOTIFICATIONS_WIDTH), None)),
-        layer: Layer::Top,
+        // Above everything the bar draws, menus included: a notification that
+        // arrives while a menu is open has to be seen, and a menu is the one
+        // surface wide enough to hide it. Taking no pointer input is what makes
+        // this safe — the surface is painted and nothing else.
+        layer: Layer::Overlay,
         keyboard_interactivity: KeyboardInteractivity::None,
         input_zone: draw_only(),
         output: on_output(wl_output),
