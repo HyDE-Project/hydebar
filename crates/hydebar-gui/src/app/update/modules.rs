@@ -114,10 +114,10 @@ impl App {
                 self.privacy.update(msg);
                 Task::none()
             }
-            Message::Settings(message) => {
-                self.settings.update(
+            Message::ControlCenter(message) => {
+                self.control_center.update(
                     message,
-                    &self.config.settings,
+                    &self.config.control_center,
                     &mut self.outputs,
                     &self.config
                 );

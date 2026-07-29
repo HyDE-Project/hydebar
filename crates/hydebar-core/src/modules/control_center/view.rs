@@ -1,9 +1,9 @@
 use iced::{Element, window::Id};
 
-use super::state::{Message, Settings};
+use super::state::{ControlCenter, Message};
 use crate::{
     components::icons::IconTheme,
-    config::{Position, SettingsModuleConfig},
+    config::{ControlCenterModuleConfig, Position},
     modules::OnModulePress
 };
 
@@ -17,10 +17,10 @@ mod tests;
 
 pub use quick_button::quick_setting_button;
 
-pub trait SettingsViewExt {
+pub trait ControlCenterViewExt {
     type ViewData<'a>;
 
-    fn settings_view<M>(
+    fn control_center_view<M>(
         &self,
         data: Self::ViewData<'_>
     ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)>
@@ -30,17 +30,17 @@ pub trait SettingsViewExt {
     fn menu_view(
         &self,
         id: Id,
-        config: &SettingsModuleConfig,
+        config: &ControlCenterModuleConfig,
         opacity: f32,
         position: Position,
         icons: &IconTheme
     ) -> Element<'_, Message>;
 }
 
-impl SettingsViewExt for Settings {
+impl ControlCenterViewExt for ControlCenter {
     type ViewData<'a> = &'a IconTheme;
 
-    fn settings_view<M>(
+    fn control_center_view<M>(
         &self,
         icons: Self::ViewData<'_>
     ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)>
@@ -53,7 +53,7 @@ impl SettingsViewExt for Settings {
     fn menu_view(
         &self,
         id: Id,
-        config: &SettingsModuleConfig,
+        config: &ControlCenterModuleConfig,
         opacity: f32,
         position: Position,
         icons: &IconTheme

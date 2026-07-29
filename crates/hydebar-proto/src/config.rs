@@ -3,6 +3,7 @@
 mod appearance;
 mod battery;
 mod clock;
+mod control_center;
 mod custom_module;
 mod icons;
 mod idle_inhibitor;
@@ -11,7 +12,6 @@ mod keyboard_layout;
 mod media_player;
 mod modules;
 mod serde_helpers;
-mod settings;
 mod system_info;
 mod themes;
 mod updates;
@@ -33,6 +33,7 @@ pub use appearance::{
 };
 pub use battery::BatteryModuleConfig;
 pub use clock::ClockModuleConfig;
+pub use control_center::ControlCenterModuleConfig;
 pub use custom_module::{CustomMenuEntry, CustomModuleDef, CustomModuleSource};
 pub use icons::IconsConfig;
 pub use idle_inhibitor::IdleInhibitorModuleConfig;
@@ -42,7 +43,6 @@ pub use media_player::MediaPlayerModuleConfig;
 pub use modules::{BarLayer, ModuleDef, ModuleName, Modules, Outputs, Position};
 use serde::Deserialize;
 pub use serde_helpers::RegexCfg;
-pub use settings::SettingsModuleConfig;
 pub use system_info::{
     MemoryFormat, SystemIndicator, SystemInfoCpu, SystemInfoDisk, SystemInfoMemory,
     SystemInfoTemperature, SystemModuleConfig
@@ -85,10 +85,10 @@ pub struct Config {
     pub battery:             BatteryModuleConfig,
     #[serde(default)]
     pub clock:               ClockModuleConfig,
-    #[serde(default, alias = "idle_inhibitor")]
-    pub idle_inhibitor:      IdleInhibitorModuleConfig,
     #[serde(default)]
-    pub settings:            SettingsModuleConfig,
+    pub idle_inhibitor:      IdleInhibitorModuleConfig,
+    #[serde(default, alias = "settings")]
+    pub control_center:      ControlCenterModuleConfig,
     #[serde(default, deserialize_with = "themes::deserialize_theme_or_appearance")]
     pub appearance:          Appearance,
     #[serde(default)]
@@ -122,7 +122,7 @@ impl Default for Config {
             battery:             BatteryModuleConfig::default(),
             clock:               ClockModuleConfig::default(),
             idle_inhibitor:      IdleInhibitorModuleConfig::default(),
-            settings:            SettingsModuleConfig::default(),
+            control_center:      ControlCenterModuleConfig::default(),
             appearance:          Appearance::default(),
             media_player:        MediaPlayerModuleConfig::default(),
             keyboard_layout:     KeyboardLayoutModuleConfig::default(),

@@ -32,7 +32,7 @@ impl App {
             ModuleEvent::Weather(message) => Some(Message::Weather(message)),
             ModuleEvent::Battery(message) => Some(Message::Battery(message)),
             ModuleEvent::Privacy(message) => Some(Message::Privacy(message)),
-            ModuleEvent::Settings(message) => Some(Message::Settings(message)),
+            ModuleEvent::ControlCenter(message) => Some(Message::ControlCenter(message)),
             ModuleEvent::MediaPlayer(message) => Some(Message::MediaPlayer(message)),
             ModuleEvent::Notifications(message) => Some(Message::Notifications(message)),
             ModuleEvent::Custom {

@@ -5,7 +5,7 @@ use iced::{
 
 use crate::{
     components::icons::{IconTheme, Icons, icon},
-    config::SettingsModuleConfig,
+    config::ControlCenterModuleConfig,
     style::ghost_button_style,
     utils
 };
@@ -39,7 +39,7 @@ impl PowerMessage {
 
 pub fn power_menu<'a>(
     opacity: f32,
-    config: &SettingsModuleConfig,
+    config: &ControlCenterModuleConfig,
     icons: &IconTheme
 ) -> Element<'a, PowerMessage> {
     column!(

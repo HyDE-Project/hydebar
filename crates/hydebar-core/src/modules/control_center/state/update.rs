@@ -4,13 +4,13 @@ use log::{info, warn};
 use tokio::runtime::Handle;
 
 use super::super::{
-    Message, Settings, SubMenu, audio::AudioMessage, bluetooth::BluetoothMessage,
-    brightness::BrightnessMessage, commands::SettingsCommandExt, network::NetworkMessage,
+    ControlCenter, Message, SubMenu, audio::AudioMessage, bluetooth::BluetoothMessage,
+    brightness::BrightnessMessage, commands::ControlCenterCommandExt, network::NetworkMessage,
     upower::UPowerMessage
 };
 use crate::{
     ModuleEventSender,
-    config::SettingsModuleConfig,
+    config::ControlCenterModuleConfig,
     menu::MenuType,
     outputs::Outputs,
     password_dialog,
@@ -24,7 +24,7 @@ use crate::{
     }
 };
 
-impl Settings {
+impl ControlCenter {
     pub(crate) fn runtime(&self) -> Option<Handle> {
         self.runtime.as_ref().cloned()
     }
@@ -55,7 +55,7 @@ impl Settings {
     pub fn update(
         &mut self,
         message: Message,
-        config: &SettingsModuleConfig,
+        config: &ControlCenterModuleConfig,
         outputs: &mut Outputs,
         main_config: &crate::config::Config
     ) {
@@ -65,7 +65,7 @@ impl Settings {
                 self.password_dialog = None;
                 let _ = outputs.toggle_menu::<Message>(
                     id,
-                    MenuType::Settings,
+                    MenuType::ControlCenter,
                     button_ui_ref,
                     main_config
                 );

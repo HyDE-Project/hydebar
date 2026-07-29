@@ -6,7 +6,7 @@
 
 use iced::Element;
 
-use super::{Module, OnModulePress, settings::Message as SettingsMessage};
+use super::{Module, OnModulePress, control_center::Message as ControlCenterMessage};
 use crate::components::icons::{IconTheme, Icons, icon};
 
 /// Bar entry rendering the idle inhibitor state as a toggle.
@@ -27,7 +27,7 @@ impl IdleInhibitor {
 
 impl<M> Module<M> for IdleInhibitor
 where
-    M: 'static + Clone + From<SettingsMessage>
+    M: 'static + Clone + From<ControlCenterMessage>
 {
     /// Whether the session is currently kept awake, plus the glyph table.
     type ViewData<'a> = (bool, &'a IconTheme);
@@ -40,7 +40,7 @@ where
         Some((
             icon(icons, Self::state_icon(inhibited)).into(),
             Some(OnModulePress::Action(Box::new(M::from(
-                SettingsMessage::ToggleInhibitIdle
+                ControlCenterMessage::ToggleInhibitIdle
             ))))
         ))
     }
@@ -57,10 +57,10 @@ mod tests {
         inhibited: bool,
         icons: &IconTheme
     ) -> (
-        Element<'static, SettingsMessage>,
-        Option<OnModulePress<SettingsMessage>>
+        Element<'static, ControlCenterMessage>,
+        Option<OnModulePress<ControlCenterMessage>>
     ) {
-        <IdleInhibitor as Module<SettingsMessage>>::view(&IdleInhibitor, (inhibited, icons))
+        <IdleInhibitor as Module<ControlCenterMessage>>::view(&IdleInhibitor, (inhibited, icons))
             .expect("the idle inhibitor module always renders")
     }
 
@@ -104,7 +104,7 @@ mod tests {
 
         match action {
             Some(OnModulePress::Action(message)) => {
-                assert!(matches!(*message, SettingsMessage::ToggleInhibitIdle));
+                assert!(matches!(*message, ControlCenterMessage::ToggleInhibitIdle));
             }
             _ => panic!("expected the idle inhibitor toggle action")
         }
@@ -118,7 +118,7 @@ mod tests {
         let mut module = IdleInhibitor;
 
         let result: Result<(), ModuleError> =
-            <IdleInhibitor as Module<SettingsMessage>>::register(&mut module, &ctx, ());
+            <IdleInhibitor as Module<ControlCenterMessage>>::register(&mut module, &ctx, ());
         assert!(result.is_ok());
     }
 }

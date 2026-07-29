@@ -4,7 +4,7 @@ use serde::Deserialize;
 
 /// Settings menu commands and toggles.
 #[derive(Deserialize, Default, Clone, Debug, PartialEq, Eq)]
-pub struct SettingsModuleConfig {
+pub struct ControlCenterModuleConfig {
     pub lock_cmd:               Option<String>,
     #[serde(default = "default_shutdown_cmd")]
     pub shutdown_cmd:           String,

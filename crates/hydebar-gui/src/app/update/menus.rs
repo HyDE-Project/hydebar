@@ -2,7 +2,7 @@
 
 use hydebar_core::{
     menu::MenuType,
-    modules::{self, settings::brightness::BrightnessMessage},
+    modules::{self, control_center::brightness::BrightnessMessage},
     services::brightness::BrightnessCommand
 };
 use iced::Task;
@@ -29,16 +29,18 @@ impl App {
                             self.tray.submenus.clear();
                         }
                     }
-                    MenuType::Settings => {
-                        self.settings.sub_menu = None;
+                    MenuType::ControlCenter => {
+                        self.control_center.sub_menu = None;
 
-                        if let Some(brightness) = self.settings.brightness.as_mut() {
+                        if let Some(brightness) = self.control_center.brightness.as_mut() {
                             use hydebar_core::services::Service;
                             cmd.push(brightness.command(BrightnessCommand::Refresh).map(
                                 |event| {
-                                    Message::Settings(modules::settings::Message::Brightness(
-                                        BrightnessMessage::Event(event)
-                                    ))
+                                    Message::ControlCenter(
+                                        modules::control_center::Message::Brightness(
+                                            BrightnessMessage::Event(event)
+                                        )
+                                    )
                                 }
                             ));
                         }

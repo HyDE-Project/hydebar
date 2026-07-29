@@ -15,6 +15,6 @@ pub use bluetooth::BluetoothMessage;
 pub use brightness::BrightnessMessage;
 pub use network::NetworkMessage;
 pub use power::PowerMessage;
-pub use state::{Message, Settings, SubMenu};
+pub use state::{ControlCenter, Message, SubMenu};
 pub use upower::UPowerMessage;
-pub use view::{SettingsViewExt, quick_setting_button};
+pub use view::{ControlCenterViewExt, quick_setting_button};

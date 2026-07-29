@@ -47,7 +47,7 @@ pub enum ModuleName {
     Clock,
     Battery,
     Privacy,
-    Settings,
+    ControlCenter,
     MediaPlayer,
     Notifications,
     Screenshot,
@@ -86,7 +86,7 @@ impl<'de> Deserialize<'de> for ModuleName {
                     "Clock" => ModuleName::Clock,
                     "Battery" => ModuleName::Battery,
                     "Privacy" => ModuleName::Privacy,
-                    "Settings" => ModuleName::Settings,
+                    "ControlCenter" => ModuleName::ControlCenter,
                     "MediaPlayer" => ModuleName::MediaPlayer,
                     "Notifications" => ModuleName::Notifications,
                     "Screenshot" => ModuleName::Screenshot,
@@ -131,7 +131,7 @@ impl Default for Modules {
                 ModuleName::WindowTitle,
             ])],
             right:  vec![
-                ModuleDef::Group(vec![ModuleName::Updates, ModuleName::Settings]),
+                ModuleDef::Group(vec![ModuleName::Updates, ModuleName::ControlCenter]),
                 ModuleDef::Group(vec![
                     ModuleName::Privacy,
                     ModuleName::Tray,
@@ -196,7 +196,7 @@ mod tests {
         assert_eq!(
             modules.right,
             vec![
-                ModuleDef::Group(vec![ModuleName::Updates, ModuleName::Settings]),
+                ModuleDef::Group(vec![ModuleName::Updates, ModuleName::ControlCenter]),
                 ModuleDef::Group(vec![
                     ModuleName::Privacy,
                     ModuleName::Tray,

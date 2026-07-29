@@ -5,7 +5,7 @@ use iced::{
     widget::{Space, column, container, row}
 };
 
-use crate::modules::settings::state::Message;
+use crate::modules::control_center::state::Message;
 
 pub(super) fn quick_settings_section<'a>(
     buttons: Vec<(Element<'a, Message>, Option<Element<'a, Message>>)>,

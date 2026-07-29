@@ -13,6 +13,7 @@ use hydebar_core::{
         battery::Battery,
         clipboard::Clipboard,
         clock::Clock,
+        control_center::ControlCenter,
         custom_module::Custom,
         idle_inhibitor::IdleInhibitor,
         keyboard_layout::KeyboardLayout,
@@ -21,7 +22,6 @@ use hydebar_core::{
         notifications::Notifications,
         privacy::Privacy,
         screenshot::Screenshot,
-        settings::Settings,
         system_info::SystemInfo,
         tray::{TrayMessage, TrayModule},
         updates::Updates,
@@ -71,7 +71,7 @@ pub struct App {
     pub clock: Clock,
     pub battery: Battery,
     pub privacy: Privacy,
-    pub settings: Settings,
+    pub control_center: ControlCenter,
     pub media_player: MediaPlayer,
     pub notifications: Notifications,
     pub screenshot: Screenshot,
@@ -119,7 +119,7 @@ pub enum Message {
     Clock(modules::clock::Message),
     Battery(modules::battery::Message),
     Privacy(modules::privacy::PrivacyMessage),
-    Settings(modules::settings::Message),
+    ControlCenter(modules::control_center::Message),
     MediaPlayer(modules::media_player::Message),
     Notifications(modules::notifications::NotificationsMessage),
     Screenshot(modules::screenshot::ScreenshotMessage),
@@ -134,9 +134,9 @@ pub enum Message {
     CustomUpdate(String, modules::custom_module::Message)
 }
 
-impl From<modules::settings::Message> for Message {
-    fn from(msg: modules::settings::Message) -> Self {
-        Message::Settings(msg)
+impl From<modules::control_center::Message> for Message {
+    fn from(msg: modules::control_center::Message) -> Self {
+        Message::ControlCenter(msg)
     }
 }
 
@@ -268,7 +268,7 @@ impl App {
             clock: Clock::default(),
             battery: Battery::default(),
             privacy: Privacy::default(),
-            settings: Settings::default(),
+            control_center: ControlCenter::default(),
             media_player: MediaPlayer::default(),
             notifications: Notifications::default(),
             screenshot: Screenshot::default(),
@@ -285,7 +285,7 @@ impl App {
         app.register_modules();
 
         if app.config.idle_inhibitor.start_activated {
-            app.settings.set_idle_inhibited(true);
+            app.control_center.set_idle_inhibited(true);
         }
 
         (app, task)

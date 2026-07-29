@@ -135,7 +135,7 @@ impl App {
             ModuleName::IdleInhibitor => Some(
                 self.config
                     .idle_inhibitor
-                    .tooltip(self.settings.is_idle_inhibited())
+                    .tooltip(self.control_center.is_idle_inhibited())
                     .map(str::to_owned)
             ),
             _ => None

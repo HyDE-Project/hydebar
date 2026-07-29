@@ -174,7 +174,7 @@ mod tests {
     use crate::{
         ModuleContext, ModuleEventSender,
         event_bus::{BusEvent, EventBus, EventReceiver, ModuleEvent},
-        modules::settings::Message
+        modules::control_center::Message
     };
 
     fn setup_forwarder() -> (Runtime, EventReceiver, ModuleEventSender<Message>) {
@@ -183,7 +183,7 @@ mod tests {
         let sender = bus.sender();
         let receiver = bus.receiver();
         let ctx = ModuleContext::new(sender, runtime.handle().clone());
-        let module_sender = ctx.module_sender(ModuleEvent::Settings);
+        let module_sender = ctx.module_sender(ModuleEvent::ControlCenter);
         (runtime, receiver, module_sender)
     }
 
@@ -196,7 +196,7 @@ mod tests {
 
         let event = receiver.try_recv().expect("event queued");
         match event {
-            Some(BusEvent::Module(ModuleEvent::Settings(Message::Audio(
+            Some(BusEvent::Module(ModuleEvent::ControlCenter(Message::Audio(
                 AudioMessage::Event(ServiceEvent::Error(()))
             )))) => {}
             other => panic!("unexpected event: {other:?}")
@@ -215,7 +215,7 @@ mod tests {
 
         let event = receiver.try_recv().expect("event queued");
         match event {
-            Some(BusEvent::Module(ModuleEvent::Settings(Message::Network(
+            Some(BusEvent::Module(ModuleEvent::ControlCenter(Message::Network(
                 NetworkMessage::Event(ServiceEvent::Error(received))
             )))) => {
                 assert_eq!(received.message(), error.message());

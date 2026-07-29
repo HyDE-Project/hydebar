@@ -46,7 +46,7 @@ pub enum ModuleEvent {
     Clock(modules::clock::Message),
     Battery(modules::battery::Message),
     Privacy(modules::privacy::PrivacyMessage),
-    Settings(modules::settings::Message),
+    ControlCenter(modules::control_center::Message),
     MediaPlayer(modules::media_player::Message),
     Notifications(modules::notifications::NotificationsMessage),
     Weather(modules::weather::Message),

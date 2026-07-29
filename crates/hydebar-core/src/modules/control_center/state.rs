@@ -8,7 +8,7 @@ use crate::{
     }
 };
 
-pub struct Settings {
+pub struct ControlCenter {
     pub(super) audio:           Option<AudioService>,
     pub brightness:             Option<BrightnessService>,
     pub(super) network:         Option<NetworkService>,
@@ -23,7 +23,7 @@ pub struct Settings {
     pub(super) idle_release:    Option<JoinHandle<()>>
 }
 
-impl Settings {
+impl ControlCenter {
     /// Whether the shared idle inhibitor currently keeps the session awake.
     ///
     /// Returns `false` when the compositor refused the inhibitor protocol, so
@@ -55,7 +55,7 @@ impl Settings {
     }
 }
 
-impl Default for Settings {
+impl Default for ControlCenter {
     fn default() -> Self {
         let idle_inhibitor = match IdleInhibitorManager::new() {
             Ok(manager) => Some(manager),

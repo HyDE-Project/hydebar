@@ -1,12 +1,12 @@
 //! Module trait wiring for the settings menu.
 
 use super::super::{
-    Message, Settings,
+    ControlCenter, Message,
     event_forwarders::{
         AudioEventForwarder, BluetoothEventForwarder, BrightnessEventForwarder,
         NetworkEventForwarder, UPowerEventForwarder
     },
-    view::SettingsViewExt
+    view::ControlCenterViewExt
 };
 use crate::{
     ModuleContext,
@@ -18,11 +18,11 @@ use crate::{
     }
 };
 
-impl<M> Module<M> for Settings
+impl<M> Module<M> for ControlCenter
 where
     M: 'static + Clone + From<Message>
 {
-    type ViewData<'a> = <Self as SettingsViewExt>::ViewData<'a>;
+    type ViewData<'a> = <Self as ControlCenterViewExt>::ViewData<'a>;
     type RegistrationData<'a> = ();
 
     fn register(
@@ -34,7 +34,7 @@ where
             task.abort();
         }
 
-        let sender = ctx.module_sender(ModuleEvent::Settings);
+        let sender = ctx.module_sender(ModuleEvent::ControlCenter);
 
         let mut tasks = Vec::new();
 
@@ -74,6 +74,6 @@ where
         &self,
         data: Self::ViewData<'_>
     ) -> Option<(iced::Element<'static, M>, Option<OnModulePress<M>>)> {
-        self.settings_view(data)
+        self.control_center_view(data)
     }
 }

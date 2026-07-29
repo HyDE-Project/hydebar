@@ -77,11 +77,11 @@ impl App {
                     self.config
                         .battery
                         .open_settings_on_click
-                        .then(|| OnModulePress::ToggleMenu(MenuType::Settings))
+                        .then(|| OnModulePress::ToggleMenu(MenuType::ControlCenter))
                 )
             }),
             ModuleName::Privacy => self.privacy.view(self.icons()),
-            ModuleName::Settings => self.settings.view(self.icons()),
+            ModuleName::ControlCenter => self.control_center.view(self.icons()),
             ModuleName::MediaPlayer => self
                 .media_player
                 .view((&self.config.media_player, self.icons())),
@@ -89,7 +89,7 @@ impl App {
             ModuleName::Screenshot => self.screenshot.view(self.icons()),
             ModuleName::IdleInhibitor => self
                 .idle_inhibitor
-                .view((self.settings.is_idle_inhibited(), self.icons()))
+                .view((self.control_center.is_idle_inhibited(), self.icons()))
         }
     }
 
@@ -130,7 +130,7 @@ impl App {
             ModuleName::Clock => None,
             ModuleName::Battery => None,
             ModuleName::Privacy => self.privacy.subscription(),
-            ModuleName::Settings => self.settings.subscription(),
+            ModuleName::ControlCenter => self.control_center.subscription(),
             ModuleName::MediaPlayer => self.media_player.subscription(),
             ModuleName::Notifications => self.notifications.subscription(),
             ModuleName::Screenshot => self.screenshot.subscription(),

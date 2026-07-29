@@ -12,21 +12,21 @@ use super::{
 };
 use crate::{
     components::icons::{IconTheme, Icons, icon},
-    config::{Position, SettingsModuleConfig},
-    modules::settings::{
+    config::{ControlCenterModuleConfig, Position},
+    modules::control_center::{
         power::power_menu,
-        state::{Message, Settings, SubMenu}
+        state::{ControlCenter, Message, SubMenu}
     },
     password_dialog,
     services::bluetooth::BluetoothState,
     style::settings_button_style
 };
 
-impl Settings {
+impl ControlCenter {
     pub(super) fn render_menu(
         &self,
         id: Id,
-        config: &SettingsModuleConfig,
+        config: &ControlCenterModuleConfig,
         opacity: f32,
         position: Position,
         icons: &IconTheme

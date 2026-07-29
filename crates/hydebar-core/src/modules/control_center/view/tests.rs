@@ -11,7 +11,7 @@ use super::{
 };
 use crate::{
     components::icons::{IconTheme, Icons},
-    modules::settings::state::{Message, SubMenu}
+    modules::control_center::state::{Message, SubMenu}
 };
 
 #[test]

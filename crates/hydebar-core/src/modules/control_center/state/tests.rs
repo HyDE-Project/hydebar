@@ -20,9 +20,9 @@ mod tests {
         let runtime = Runtime::new().expect("runtime");
         let bus = EventBus::new(NonZeroUsize::new(4).expect("capacity"));
         let ctx = ModuleContext::new(bus.sender(), runtime.handle().clone());
-        let mut settings = Settings::default();
+        let mut settings = ControlCenter::default();
 
-        <Settings as Module<Message>>::register(&mut settings, &ctx, ())
+        <ControlCenter as Module<Message>>::register(&mut settings, &ctx, ())
             .expect("register should succeed");
 
         assert!(settings.sender.is_some());
@@ -40,7 +40,7 @@ mod tests {
         let runtime = Runtime::new().expect("runtime");
         let bus = EventBus::new(NonZeroUsize::new(4).expect("capacity"));
         let ctx = ModuleContext::new(bus.sender(), runtime.handle().clone());
-        let mut settings = Settings::default();
+        let mut settings = ControlCenter::default();
 
         let cancelled = Arc::new(AtomicBool::new(false));
         let guard_flag = Arc::clone(&cancelled);
@@ -59,7 +59,7 @@ mod tests {
             future::pending::<()>().await;
         }));
 
-        <Settings as Module<Message>>::register(&mut settings, &ctx, ())
+        <ControlCenter as Module<Message>>::register(&mut settings, &ctx, ())
             .expect("register should succeed");
 
         assert!(cancelled.load(Ordering::SeqCst));

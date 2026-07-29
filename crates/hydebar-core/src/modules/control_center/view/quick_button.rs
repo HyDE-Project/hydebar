@@ -8,7 +8,7 @@ use iced::{
 
 use crate::{
     components::icons::{IconTheme, Icons, icon},
-    modules::settings::state::SubMenu,
+    modules::control_center::state::SubMenu,
     style::{quick_settings_button_style, quick_settings_submenu_button_style}
 };
 

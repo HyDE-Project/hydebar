@@ -73,7 +73,7 @@ impl App {
         );
         register(
             "settings",
-            modules::Module::<Message>::register(&mut self.settings, ctx, ())
+            modules::Module::<Message>::register(&mut self.control_center, ctx, ())
         );
         register(
             "media-player",

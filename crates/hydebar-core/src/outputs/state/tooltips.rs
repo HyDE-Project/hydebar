@@ -152,7 +152,7 @@ mod tests {
         let config = Config::default();
         let _menu: Task<()> = outputs.toggle_menu(
             id,
-            crate::menu::MenuType::Settings,
+            crate::menu::MenuType::ControlCenter,
             info("Memory").anchor,
             &config
         );
@@ -170,7 +170,7 @@ mod tests {
 
         let _menu: Task<()> = outputs.toggle_menu(
             id,
-            crate::menu::MenuType::Settings,
+            crate::menu::MenuType::ControlCenter,
             info("Memory").anchor,
             &config
         );

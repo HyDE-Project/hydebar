@@ -20,7 +20,7 @@ use crate::{
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub enum MenuType {
     Updates,
-    Settings,
+    ControlCenter,
     Tray(String),
     MediaPlayer,
     SystemInfo,

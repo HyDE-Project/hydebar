@@ -288,9 +288,9 @@ fn compute_impact(previous: &Config, next: &Config) -> ConfigImpact {
     mark_if_changed(&mut impact, ModuleName::Clock, &previous.clock, &next.clock);
     mark_if_changed(
         &mut impact,
-        ModuleName::Settings,
-        &previous.settings,
-        &next.settings
+        ModuleName::ControlCenter,
+        &previous.control_center,
+        &next.control_center
     );
     mark_if_changed(
         &mut impact,

@@ -10,11 +10,11 @@ use crate::{
     menu::MenuType,
     modules::{
         OnModulePress,
-        settings::state::{Message, Settings}
+        control_center::state::{ControlCenter, Message}
     }
 };
 
-impl Settings {
+impl ControlCenter {
     pub(super) fn render_bar<M>(
         &self,
         icons: &IconTheme
@@ -71,7 +71,7 @@ impl Settings {
                 .push_maybe(battery_indicator)
                 .spacing(8)
                 .into(),
-            Some(OnModulePress::ToggleMenu(MenuType::Settings))
+            Some(OnModulePress::ToggleMenu(MenuType::ControlCenter))
         ))
     }
 }

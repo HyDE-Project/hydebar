@@ -6,7 +6,7 @@ use super::{
     bluetooth::BluetoothMessage,
     brightness::BrightnessMessage,
     network::NetworkMessage,
-    state::{Message, Settings},
+    state::{ControlCenter, Message},
     upower::UPowerMessage
 };
 use crate::services::{
@@ -18,7 +18,7 @@ use crate::services::{
     upower::{PowerProfileCommand, UPowerService}
 };
 
-pub(super) trait SettingsCommandExt {
+pub(super) trait ControlCenterCommandExt {
     fn spawn_audio_command(&self, command: AudioCommand) -> bool;
     fn spawn_brightness_command(&self, command: BrightnessCommand) -> bool;
     fn spawn_network_command(&self, command: NetworkCommand) -> bool;
@@ -26,7 +26,7 @@ pub(super) trait SettingsCommandExt {
     fn spawn_upower_command(&self, command: PowerProfileCommand) -> bool;
 }
 
-impl SettingsCommandExt for Settings {
+impl ControlCenterCommandExt for ControlCenter {
     fn spawn_audio_command(&self, command: AudioCommand) -> bool {
         spawn_optional_event_command(OptionalEventCommandParams {
             runtime: self.runtime(),
@@ -201,7 +201,7 @@ mod tests {
 
     #[test]
     fn commands_fail_gracefully_without_runtime() {
-        let settings = Settings::default();
+        let settings = ControlCenter::default();
 
         assert!(!settings.spawn_audio_command(AudioCommand::ToggleSinkMute));
         assert!(!settings.spawn_bluetooth_command(BluetoothCommand::Toggle));

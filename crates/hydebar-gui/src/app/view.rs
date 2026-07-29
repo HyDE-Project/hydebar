@@ -3,7 +3,7 @@ use std::f32::consts::PI;
 use hydebar_core::{
     HEIGHT,
     menu::{MenuSize, MenuType, menu_wrapper},
-    modules::{custom_module, settings::SettingsViewExt},
+    modules::{control_center::ControlCenterViewExt, custom_module},
     outputs::HasOutput,
     style::{backdrop_color, darken_color, hydebar_theme},
     tooltip::tooltip_wrapper
@@ -179,17 +179,17 @@ impl App {
                         Message::None,
                         Message::CloseMenu(id)
                     ),
-                    Some((MenuType::Settings, button_ui_ref)) => menu_wrapper(
+                    Some((MenuType::ControlCenter, button_ui_ref)) => menu_wrapper(
                         id,
-                        self.settings
+                        self.control_center
                             .menu_view(
                                 id,
-                                &self.config.settings,
+                                &self.config.control_center,
                                 animated_opacity,
                                 self.config.position,
                                 self.icons()
                             )
-                            .map(Message::Settings),
+                            .map(Message::ControlCenter),
                         MenuSize::Medium,
                         *button_ui_ref,
                         self.config.position,
