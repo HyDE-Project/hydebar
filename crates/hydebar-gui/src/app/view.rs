@@ -53,9 +53,6 @@ impl App {
             style: self.appearance().style,
             opacity,
             menu_backdrop: self.appearance().menu.backdrop,
-            reserved_right: hydebar_core::outputs::notifications_strip_width(
-                self.appearance().scale_factor
-            ),
             content_height: None
         }
     }

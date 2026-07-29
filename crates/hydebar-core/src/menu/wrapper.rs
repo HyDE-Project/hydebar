@@ -30,11 +30,6 @@ pub struct MenuLayout {
     pub opacity:        f32,
     /// Opacity of the dimming behind the menu.
     pub menu_backdrop:  f32,
-    /// Strip along the right edge a menu must not reach into.
-    ///
-    /// The notification popups own it and are drawn above everything, so a menu
-    /// that overlapped it would be hidden by the next notification to arrive.
-    pub reserved_right: f32,
     /// Height the content needs, when the caller can measure it.
     ///
     /// Given one the box is capped to the share of the screen a menu may cover
@@ -95,12 +90,11 @@ pub fn menu_wrapper<Message: Clone + 'static>(
                 } else {
                     0.0
                 })
-                .left(MenuSize::left_offset_clear_of(
+                .left(MenuSize::left_offset(
                     width,
                     button_ui_ref.position.x,
                     viewport_width,
-                    layout.font_size,
-                    layout.reserved_right
+                    layout.font_size
                 ))
         })
         .width(Length::Fill)
