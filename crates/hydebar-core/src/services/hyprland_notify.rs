@@ -130,6 +130,10 @@ const NOTIFIER: &str = "hydebar";
 
 /// Sends `message` to whichever notification service holds the bus.
 ///
+/// Sent at ordinary urgency with an explicit lifetime: a daemon is entitled to
+/// keep a critical notice on screen until it is dismissed by hand, and a bar
+/// reporting that a button did not work has no business demanding that.
+///
 /// That is the bar's own service when the user asked for the bar's popups —
 /// the service takes the name for itself rather than yielding to whatever
 /// daemon the session started — and the session's daemon otherwise. Either way
@@ -137,7 +141,15 @@ const NOTIFIER: &str = "hydebar";
 /// the setting.
 fn post_to_bus(message: &str) {
     let sent = Command::new("notify-send")
-        .args(["--app-name", NOTIFIER, "--urgency", "critical", message])
+        .args([
+            "--app-name",
+            NOTIFIER,
+            "--urgency",
+            "normal",
+            "--expire-time",
+            &REFUSAL_DURATION.to_string(),
+            message
+        ])
         .spawn();
 
     if let Err(err) = sent {

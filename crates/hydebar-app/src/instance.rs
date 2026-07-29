@@ -321,6 +321,13 @@ mod tests {
 
     static COUNTER: AtomicU32 = AtomicU32::new(0);
 
+    /// Serialises the tests that take and release a lock.
+    ///
+    /// The lock is a file the whole process shares through the kernel, so two
+    /// of these running at once see each other's state and fail for reasons
+    /// that have nothing to do with what they assert.
+    static SERIAL: Mutex<()> = Mutex::new(());
+
     struct TempDir(PathBuf);
 
     impl TempDir {
@@ -371,6 +378,7 @@ mod tests {
 
     #[test]
     fn an_unheld_lock_is_acquired() {
+        let _serial = SERIAL.lock().unwrap_or_else(|err| err.into_inner());
         let dir = TempDir::new();
         let path = dir.lock_path();
 
@@ -466,6 +474,7 @@ mod tests {
 
     #[test]
     fn releasing_the_lock_frees_the_slot() {
+        let _serial = SERIAL.lock().unwrap_or_else(|err| err.into_inner());
         let dir = TempDir::new();
         let path = dir.lock_path();
 
