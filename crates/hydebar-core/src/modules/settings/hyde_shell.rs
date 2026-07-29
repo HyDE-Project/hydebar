@@ -6,17 +6,41 @@
 //! wallpaper, colours, the other clients — in HyDE's hands, and it means the
 //! bar stays correct when HyDE changes how a switch is performed.
 //!
+//! A theme switch is the one exception. It goes through the bar's own script
+//! (see [`theme_script`]), which runs the very same HyDE switch but leaves
+//! waybar's wallbash template out of it, so the bar that replaced waybar does
+//! not pay for restyling and restarting it on every switch.
+//!
 //! The commands are built here, as plain strings, so the shape of an invocation
 //! can be checked without a HyDE install present.
 
+use std::path::Path;
+
+use super::theme_script::{self, ScriptNotFound};
+
 /// Command switching the desktop to `theme`.
 ///
+/// # Errors
+///
+/// Returns [`ScriptNotFound`] when the switch script is not installed, in which
+/// case no command is issued at all — a half-performed switch would be worse
+/// than none.
+pub(super) fn switch_theme(theme: &str) -> Result<String, ScriptNotFound> {
+    let script = theme_script::locate()?;
+
+    Ok(switch_theme_with(&script, theme))
+}
+
+/// Command running `script` for `theme`.
+///
 /// Theme names carry spaces and accents (`Rosé Pine`), so the name is quoted
-/// rather than interpolated: unquoted, `hyde-shell` would see a theme named
-/// `Rosé` followed by a stray argument and fall back to the current theme.
-#[must_use]
-pub(super) fn switch_theme(theme: &str) -> String {
-    format!("hyde-shell theme.switch -s {}", quote(theme))
+/// rather than interpolated: unquoted, the script would see a theme named
+/// `Rosé` followed by a stray argument. `--` closes the option list, so a theme
+/// whose name starts with a dash is still a theme name. The script's own path
+/// is quoted for the same reason — it is discovered, not spelled out, and may
+/// sit under a directory with a space in it.
+fn switch_theme_with(script: &Path, theme: &str) -> String {
+    format!("{} -- {}", quote(&script.to_string_lossy()), quote(theme))
 }
 
 /// Command moving the desktop to the next wallpaper of the active theme.
@@ -41,16 +65,32 @@ mod tests {
     #[test]
     fn a_theme_name_is_passed_as_one_quoted_argument() {
         assert_eq!(
-            switch_theme("Gruvbox Retro"),
-            "hyde-shell theme.switch -s 'Gruvbox Retro'"
+            switch_theme_with(Path::new("/usr/bin/hydebar-theme-switch"), "Gruvbox Retro"),
+            "'/usr/bin/hydebar-theme-switch' -- 'Gruvbox Retro'"
         );
     }
 
     #[test]
     fn an_accented_theme_name_survives_quoting() {
         assert_eq!(
-            switch_theme("Rosé Pine"),
-            "hyde-shell theme.switch -s 'Rosé Pine'"
+            switch_theme_with(Path::new("/usr/bin/hydebar-theme-switch"), "Rosé Pine"),
+            "'/usr/bin/hydebar-theme-switch' -- 'Rosé Pine'"
+        );
+    }
+
+    #[test]
+    fn a_theme_name_starting_with_a_dash_stays_a_theme_name() {
+        assert_eq!(
+            switch_theme_with(Path::new("/usr/bin/hydebar-theme-switch"), "-l"),
+            "'/usr/bin/hydebar-theme-switch' -- '-l'"
+        );
+    }
+
+    #[test]
+    fn a_script_path_with_a_space_stays_one_argument() {
+        assert_eq!(
+            switch_theme_with(Path::new("/opt/my bar/theme-switch"), "Tokyo Night"),
+            "'/opt/my bar/theme-switch' -- 'Tokyo Night'"
         );
     }
 

@@ -8,6 +8,7 @@
 mod hyde_shell;
 mod layout;
 mod tab;
+mod theme_script;
 mod view;
 mod writer;
 
@@ -299,11 +300,13 @@ impl Settings {
     /// everything else lands in the configuration file and comes back through
     /// the reload.
     ///
-    /// The HyDE choices are not about the bar at all: they are handed to
-    /// `hyde-shell`, and the desktop state is re-read whenever the page is
-    /// opened. A theme switch takes long enough that re-reading straight away
-    /// would still show the old name, so the picked theme is recorded here and
-    /// confirmed by the next read.
+    /// The HyDE choices are not about the bar at all: they are handed to the
+    /// desktop's own scripts, and the desktop state is re-read whenever the
+    /// page is opened. A theme switch takes long enough that re-reading
+    /// straight away would still show the old name, so the picked theme is
+    /// recorded here and confirmed by the next read — and only once the switch
+    /// was actually started, so a missing switch script leaves the shown name
+    /// truthful.
     pub fn update(&mut self, message: Message, config: &Config) {
         match message {
             Message::SelectTab(tab) => {
@@ -313,10 +316,13 @@ impl Settings {
 
                 self.tab = tab;
             }
-            Message::SwitchHydeTheme(theme) => {
-                launcher::execute_command(hyde_shell::switch_theme(&theme));
-                self.hyde.theme = Some(theme);
-            }
+            Message::SwitchHydeTheme(theme) => match hyde_shell::switch_theme(&theme) {
+                Ok(command) => {
+                    launcher::execute_command(command);
+                    self.hyde.theme = Some(theme);
+                }
+                Err(error) => warn!("cannot switch the HyDE theme: {error}")
+            },
             Message::NextHydeWallpaper => {
                 launcher::execute_command(hyde_shell::next_wallpaper());
             }

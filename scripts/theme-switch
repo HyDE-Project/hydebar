@@ -1,0 +1,204 @@
+#!/usr/bin/env bash
+#
+# Switch the HyDE desktop theme, leaving waybar alone.
+#
+# A HyDE theme switch is a chain: theme.switch.sh writes the new theme into
+# staterc and rewrites the GTK/Qt/X settings, then hands over to wallpaper.sh,
+# which caches the wallpaper and starts color.set.sh; color.set.sh renders every
+# wallbash template and runs the exec command each template declares on its
+# first line.
+#
+# Exactly one link in that chain belongs to waybar: the template
+# ".../wallbash/theme/waybar.dcol", whose first line is
+#
+#     $HOME/.config/waybar/theme.css|pgrep -x waybar >/dev/null 2>&1 && hyde-shell waybar --update
+#
+# so rendering it regenerates waybar's stylesheet and, when waybar happens to be
+# running, restarts it. A theme that ships its own "waybar.theme" takes the same
+# path through the deploy list. Nothing else in theme.switch.sh, wallpaper.sh,
+# wallbash.sh or color.set.sh mentions waybar.
+#
+# This script therefore runs the stock switch unchanged and only excludes that
+# one template, through the WALLBASH_SKIP_TEMPLATE hook color.set.sh already
+# honours. Everything else - staterc, the wallpaper, the palette, the GTK, Qt,
+# Hyprland and dconf notifications, the other consumers - happens exactly as it
+# does without this script.
+
+set -euo pipefail
+
+readonly PROGRAM_NAME="${0##*/}"
+
+# Templates whose target is waybar. Matched by color.set.sh as a bash regex
+# against the full template path.
+readonly WAYBAR_TEMPLATE_PATTERN='/waybar\.(dcol|theme)$'
+
+warn() {
+	printf '%s: warning: %s\n' "$PROGRAM_NAME" "$*" >&2
+}
+
+die() {
+	printf '%s: error: %s\n' "$PROGRAM_NAME" "$*" >&2
+	exit 1
+}
+
+usage() {
+	cat <<EOF
+Usage:
+  $PROGRAM_NAME <theme>        switch the desktop to <theme>
+  $PROGRAM_NAME -s <theme>     same, spelled the way theme.switch.sh spells it
+  $PROGRAM_NAME -l             list the installed themes, one per line
+  $PROGRAM_NAME -h             show this help
+
+Performs the same switch as 'hyde-shell theme.switch', except that waybar's
+wallbash template is skipped, so waybar is neither restyled nor restarted.
+EOF
+}
+
+config_home() {
+	printf '%s' "${XDG_CONFIG_HOME:-$HOME/.config}"
+}
+
+state_home() {
+	printf '%s' "${XDG_STATE_HOME:-$HOME/.local/state}"
+}
+
+themes_root() {
+	printf '%s' "$(config_home)/hyde/themes"
+}
+
+# Installed theme names, ordered the way HyDE orders them: by the number in the
+# optional '.sort' file first, by name second.
+list_themes() {
+	local root entries=() directory sort_key
+	root="$(themes_root)"
+
+	[[ -d $root ]] || die "no HyDE themes directory at '$root'; is HyDE installed?"
+
+	while IFS= read -r -d '' directory; do
+		sort_key=0
+		if [[ -r "$directory/.sort" ]]; then
+			sort_key="$(head -n 1 "$directory/.sort")"
+		fi
+		entries+=("${sort_key}|${directory##*/}")
+	done < <(find -H "$root" -mindepth 1 -maxdepth 1 -type d -print0)
+
+	((${#entries[@]})) || die "no themes installed in '$root'"
+
+	printf '%s\n' "${entries[@]}" | sort -t '|' -k1,1n -k2,2 | cut -d '|' -f2-
+}
+
+assert_theme_installed() {
+	local theme="$1" root
+	root="$(themes_root)"
+
+	[[ -d $root ]] || die "no HyDE themes directory at '$root'; is HyDE installed?"
+
+	if [[ ! -d "$root/$theme" ]]; then
+		printf '%s: error: no theme named %s in %s\n' "$PROGRAM_NAME" "'$theme'" "'$root'" >&2
+		printf 'installed themes:\n' >&2
+		list_themes >&2
+		exit 1
+	fi
+}
+
+# Path of the hyde-shell dispatcher, which is the entry point to every HyDE
+# script and the only HyDE path this script needs to know.
+hyde_shell_path() {
+	local candidate
+
+	if candidate="$(command -v hyde-shell 2>/dev/null)"; then
+		printf '%s' "$candidate"
+		return 0
+	fi
+
+	for candidate in \
+		"$HOME/.local/bin/hyde-shell" \
+		/usr/local/bin/hyde-shell \
+		/usr/bin/hyde-shell; do
+		if [[ -x $candidate ]]; then
+			printf '%s' "$candidate"
+			return 0
+		fi
+	done
+
+	return 1
+}
+
+# color.set.sh re-reads the HyDE state files inside its template loop, so a
+# WALLBASH_SKIP_TEMPLATE set there wins over the one exported here.
+warn_on_skip_override() {
+	local file
+
+	for file in "$(state_home)/hyde/state" "$(state_home)/hyde/config"; do
+		[[ -r $file ]] || continue
+		if grep -qE '^[[:space:]]*(export[[:space:]]+)?WALLBASH_SKIP_TEMPLATE=' "$file"; then
+			warn "'$file' sets WALLBASH_SKIP_TEMPLATE and overrides the waybar exclusion; waybar may still be restarted"
+		fi
+	done
+}
+
+switch_to() {
+	local theme="$1" hyde_shell bin_directory theme_switch
+
+	hyde_shell="$(hyde_shell_path)" ||
+		die "hyde-shell not found in PATH, ~/.local/bin, /usr/local/bin or /usr/bin; is HyDE installed?"
+
+	hyde_shell="$(realpath "$hyde_shell" 2>/dev/null || printf '%s' "$hyde_shell")"
+	bin_directory="$(dirname "$hyde_shell")"
+	theme_switch="$bin_directory/../lib/hyde/theme.switch.sh"
+
+	assert_theme_installed "$theme"
+	warn_on_skip_override
+
+	export WALLBASH_SKIP_TEMPLATE="$WAYBAR_TEMPLATE_PATTERN"
+	export PATH="$bin_directory:$PATH"
+
+	if [[ -r $theme_switch ]]; then
+		exec bash "$theme_switch" -s "$theme"
+	fi
+
+	exec "$hyde_shell" theme.switch -s "$theme"
+}
+
+main() {
+	local theme=""
+
+	while (($#)); do
+		case "$1" in
+		-h | --help)
+			usage
+			return 0
+			;;
+		-l | --list)
+			list_themes
+			return 0
+			;;
+		-s | --set)
+			[[ $# -ge 2 ]] || die "'$1' needs a theme name"
+			theme="$2"
+			shift 2
+			;;
+		--)
+			shift
+			[[ $# -ge 1 ]] || die "'--' needs a theme name after it"
+			[[ -z $theme ]] || die "only one theme can be switched to at a time"
+			theme="$1"
+			shift
+			;;
+		-*)
+			die "unknown option '$1'; run '$PROGRAM_NAME --help'"
+			;;
+		*)
+			[[ -z $theme ]] || die "only one theme can be switched to at a time"
+			theme="$1"
+			shift
+			;;
+		esac
+	done
+
+	[[ -n $theme ]] || die "no theme given; run '$PROGRAM_NAME --help'"
+
+	switch_to "$theme"
+}
+
+main "$@"

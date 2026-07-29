@@ -9,8 +9,8 @@ records the exact sequence, what each step costs, which outputs hydebar actually
 and which files hydebar must watch in order to recolour without a restart.
 
 Command entry point used by the bar today:
-`crates/hydebar-core/src/modules/settings/hyde_shell.rs:19` →
-`hyde-shell theme.switch -s '<theme>'`.
+`crates/hydebar-core/src/modules/settings/hyde_shell.rs` → `scripts/theme-switch '<theme>'`,
+which runs the sequence below with waybar's wallbash template excluded — see §6.
 
 ---
 
@@ -360,3 +360,59 @@ coalescing window (~50 ms) before repainting.
 **Do not watch** `~/.config/waybar/*` once stage 3 is done, and never depend on a consumer
 script having run — every exec command in step 32 is backgrounded and disowned, so ordering
 between them is not guaranteed.
+
+---
+
+## 6. `scripts/theme-switch` — the switch the bar performs
+
+The bar no longer calls `hyde-shell theme.switch`. It calls `scripts/theme-switch`, which
+performs the very same switch minus waybar.
+
+**Why a script and not the dispatcher.** Nothing in `theme.switch.sh`, `wallpaper.sh`,
+`wallbash.sh` or `color.set.sh` mentions waybar — grep them and the only hits are unrelated
+(`gpuinfo.sh` help text, `hyprsunset.sh --sigproc`). The whole waybar involvement is one
+wallbash template, `~/.local/share/wallbash/theme/waybar.dcol`, whose first line is
+
+```
+$HOME/.config/waybar/theme.css|pgrep -x waybar > /dev/null 2>&1 && hyde-shell waybar --update
+```
+
+Rendering it writes waybar's `theme.css` and, whenever waybar happens to be running, runs
+`hyde-shell waybar --update`, which rewrites `style.css` and the `includes/` files twice and
+then restarts waybar (`waybar.py:555-562`, `:1285-1329`). A theme that ships its own
+`waybar.theme` reaches the same template through the `enableWallDcol=0` deploy list
+(`color.set.sh:249-256`). Forking `theme.switch.sh` would therefore produce a byte-identical
+copy: the difference has to be made where the template is rendered, not where the switch
+starts.
+
+**How it is made.** `color.set.sh:134-141` already honours `WALLBASH_SKIP_TEMPLATE`, a list
+of bash regexes matched against each template path. The script exports
+
+```
+WALLBASH_SKIP_TEMPLATE='/waybar\.(dcol|theme)$'
+```
+
+and then execs the stock switch. A scalar environment variable is read back as a one-element
+array, and it survives the whole chain — `theme.switch.sh` → `wallpaper.sh` →
+`wallpaper/core.sh` → `color.set.sh` → `parallel` — down to `fn_wallbash`. Of the 63
+templates on this machine exactly two match, both of them waybar's; the other 61, the palette,
+`staterc`, the wallpaper, the GTK/Qt/dconf/Hyprland notifications and every other consumer are
+untouched. The one way to lose the exclusion is a `WALLBASH_SKIP_TEMPLATE` of one's own in
+`~/.local/state/hyde/{state,config}`, which `fn_wallbash` re-sources per template; the script
+warns when it finds one.
+
+On top of that the script validates the theme name against
+`$XDG_CONFIG_HOME/hyde/themes` and prints the installed themes on a miss, where the stock
+script silently falls back to the current theme, and it answers `-l` with the theme list in
+HyDE's own order. It resolves HyDE through `hyde-shell` — `PATH` first, then
+`~/.local/bin`, `/usr/local/bin`, `/usr/bin` — and derives `theme.switch.sh` from there, so
+no path of a particular machine is baked in.
+
+**Where the bar finds it.** `modules/settings/theme_script.rs` searches, in order:
+`$HYDEBAR_THEME_SWITCH`, `<binary directory>/hydebar-theme-switch`,
+`<binary directory>/../share/hydebar/scripts/theme-switch`,
+`$XDG_DATA_HOME/hydebar/scripts/theme-switch`, the same path under `/usr/local/share` and
+`/usr/share`, and finally `<binary directory>/../../scripts/theme-switch` for a checkout.
+The first executable file wins; when none exists the switch is not attempted at all and the
+log names every path that was tried. `install.sh` installs the script as
+`$PREFIX/bin/hydebar-theme-switch`, next to the bar.
