@@ -26,12 +26,12 @@ use super::wayland::MAIN_NAMESPACE;
 
 /// Alpha at or below which a pixel of the bar is not worth blurring behind.
 ///
-/// The bar paints its own background nearly clear — the HyDE theme states it
-/// at one hundredth of a unit, the built-in themes at nothing at all — and only
-/// the islands drawn on top of it are meant to read as surfaces. Blurring
-/// behind every pixel the surface covers would smear a band across the whole
-/// width of the screen wherever the bar passes over a window.
-const IGNORED_ALPHA: f32 = 0.1;
+/// Set low enough that the whole strip is blurred, islands and the space
+/// between them alike: a bar blurred only under its islands reads as a row of
+/// pills floating over a sharp wallpaper, which is not what a blurred bar looks
+/// like anywhere else on the desktop. Anything fully clear is still skipped, so
+/// a bar configured with no background at all costs the compositor nothing.
+const IGNORED_ALPHA: f32 = 0.0;
 
 /// One rule, stated in every syntax the compositor has had.
 ///
@@ -157,7 +157,7 @@ mod tests {
         );
         assert_eq!(
             ignore_alpha.keyword,
-            "ignore_alpha 0.1, match:namespace ^(hydebar-main-layer)$"
+            "ignore_alpha 0, match:namespace ^(hydebar-main-layer)$"
         );
     }
 
@@ -173,7 +173,7 @@ mod tests {
         assert_eq!(
             ignore_alpha.lua,
             "hl.layer_rule({ name = \"hydebar_ignore_alpha\", match = { namespace = \
-             \"^(hydebar-main-layer)$\" }, ignore_alpha = 0.1 })"
+             \"^(hydebar-main-layer)$\" }, ignore_alpha = 0 })"
         );
     }
 
@@ -184,7 +184,7 @@ mod tests {
         assert_eq!(blur.positional, "blur, ^(hydebar-main-layer)$");
         assert_eq!(
             ignore_alpha.positional,
-            "ignore_alpha 0.1, ^(hydebar-main-layer)$"
+            "ignore_alpha 0, ^(hydebar-main-layer)$"
         );
     }
 
@@ -203,11 +203,10 @@ mod tests {
     }
 
     #[test]
-    fn the_ignored_alpha_sits_between_the_bar_background_and_an_island() {
-        // the HyDE theme states the bar background at 0.01 and an island at
-        // 0.8: the strip must be skipped and the islands must not be
-        assert!(IGNORED_ALPHA > 0.01);
-        assert!(IGNORED_ALPHA < 0.8);
+    fn the_whole_strip_is_blurred_not_only_the_islands() {
+        // the HyDE theme states the bar background at 0.01: a threshold above
+        // it would leave the space between the islands sharp
+        assert!(IGNORED_ALPHA < 0.01);
     }
 
     #[test]
