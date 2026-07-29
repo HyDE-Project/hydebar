@@ -5,7 +5,23 @@
 //! foreign thing on the desktop. Everything here is what the compositor already
 //! knows about itself, so nothing has to be configured twice.
 
-use std::process::Command;
+use std::{
+    process::Command,
+    sync::{Mutex, PoisonError},
+    time::{Duration, Instant}
+};
+
+/// How long one reading of the look keeps answering for the compositor.
+///
+/// A single theme reload asks for the look more than once — the watcher reads
+/// it for the theme and the window re-reads it to adopt the screen — and each
+/// uncached reading costs four spawned processes. The compositor's own look
+/// changes on the pace of a config edit, so a moment of staleness is
+/// invisible while the duplicate spawns are not.
+const FRESH_FOR: Duration = Duration::from_secs(1);
+
+/// The last look read, and when it was read.
+static LAST_READ: Mutex<Option<(Instant, CompositorLook)>> = Mutex::new(None);
 
 /// Look the compositor draws its own windows with.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
@@ -24,9 +40,27 @@ impl CompositorLook {
     /// Reads the look from the compositor.
     ///
     /// Anything the compositor does not answer for is left unset, and the bar
-    /// keeps whatever its own configuration says.
+    /// keeps whatever its own configuration says. A reading taken within
+    /// [`FRESH_FOR`] answers again instead of asking the compositor over.
     #[must_use]
     pub fn read() -> Self {
+        let now = Instant::now();
+        let mut last = LAST_READ.lock().unwrap_or_else(PoisonError::into_inner);
+
+        if let Some((at, look)) = *last
+            && now.duration_since(at) < FRESH_FOR
+        {
+            return look;
+        }
+
+        let look = Self::query_compositor();
+        *last = Some((now, look));
+
+        look
+    }
+
+    /// Asks the compositor for every part of the look.
+    fn query_compositor() -> Self {
         Self {
             rounding:   query("decoration:rounding").and_then(|answer| parse_number(&answer)),
             gaps_out:   query("general:gaps_out").and_then(|answer| parse_gap(&answer)),
@@ -137,5 +171,33 @@ mod tests {
         assert_eq!(look.gaps_out, None);
         assert_eq!(look.gaps_in, None);
         assert_eq!(look.animations, None);
+    }
+
+    /// One test rather than two: the reading shares one process-wide slot, and
+    /// two tests racing over it would see each other's entries.
+    #[test]
+    fn a_fresh_reading_answers_again_and_a_stale_one_is_retaken() {
+        let sentinel = CompositorLook {
+            rounding: Some(42.0),
+            ..CompositorLook::default()
+        };
+
+        *LAST_READ.lock().expect("lock") = Some((Instant::now(), sentinel));
+        assert_eq!(CompositorLook::read(), sentinel);
+
+        let long_ago = Instant::now()
+            .checked_sub(FRESH_FOR * 2)
+            .expect("the clock reaches back beyond the freshness window");
+        *LAST_READ.lock().expect("lock") = Some((long_ago, sentinel));
+        let _ = CompositorLook::read();
+
+        let (taken_at, _) = LAST_READ
+            .lock()
+            .expect("lock")
+            .expect("a reading was just recorded");
+        assert!(
+            taken_at.elapsed() < FRESH_FOR,
+            "a stale reading must be retaken from the compositor"
+        );
     }
 }
