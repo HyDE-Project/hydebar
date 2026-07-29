@@ -199,6 +199,82 @@ impl App {
                         Message::None,
                         Message::CloseMenu(id)
                     ),
+                    Some((MenuType::Audio, button_ui_ref)) => menu_wrapper(
+                        id,
+                        self.control_center
+                            .audio_menu(
+                                id,
+                                &self.config.control_center,
+                                animated_opacity,
+                                self.config.position,
+                                self.icons()
+                            )
+                            .map(Message::ControlCenter),
+                        MenuSize::Medium,
+                        *button_ui_ref,
+                        self.config.position,
+                        self.appearance().style,
+                        animated_opacity,
+                        self.appearance().menu.backdrop,
+                        Message::None,
+                        Message::CloseMenu(id)
+                    ),
+                    Some((MenuType::Network, button_ui_ref)) => menu_wrapper(
+                        id,
+                        self.control_center
+                            .network_menu(
+                                id,
+                                &self.config.control_center,
+                                animated_opacity,
+                                self.icons()
+                            )
+                            .map(Message::ControlCenter),
+                        MenuSize::Medium,
+                        *button_ui_ref,
+                        self.config.position,
+                        self.appearance().style,
+                        animated_opacity,
+                        self.appearance().menu.backdrop,
+                        Message::None,
+                        Message::CloseMenu(id)
+                    ),
+                    Some((MenuType::Bluetooth, button_ui_ref)) => menu_wrapper(
+                        id,
+                        self.control_center
+                            .bluetooth_menu(
+                                id,
+                                &self.config.control_center,
+                                animated_opacity,
+                                self.icons()
+                            )
+                            .map(Message::ControlCenter),
+                        MenuSize::Medium,
+                        *button_ui_ref,
+                        self.config.position,
+                        self.appearance().style,
+                        animated_opacity,
+                        self.appearance().menu.backdrop,
+                        Message::None,
+                        Message::CloseMenu(id)
+                    ),
+                    Some((MenuType::PowerProfile, button_ui_ref)) => menu_wrapper(
+                        id,
+                        self.control_center
+                            .power_profile_menu(
+                                animated_opacity,
+                                &self.config.control_center,
+                                self.icons()
+                            )
+                            .map(Message::ControlCenter),
+                        MenuSize::Small,
+                        *button_ui_ref,
+                        self.config.position,
+                        self.appearance().style,
+                        animated_opacity,
+                        self.appearance().menu.backdrop,
+                        Message::None,
+                        Message::CloseMenu(id)
+                    ),
                     Some((MenuType::MediaPlayer, button_ui_ref)) => menu_wrapper(
                         id,
                         self.media_player

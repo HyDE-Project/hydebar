@@ -11,6 +11,7 @@ mod bar;
 mod helpers;
 mod menu;
 mod quick_button;
+mod standalone;
 
 #[cfg(test)]
 mod tests;

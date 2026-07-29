@@ -21,6 +21,14 @@ use crate::{
 pub enum MenuType {
     Updates,
     ControlCenter,
+    /// Menu of the standalone audio module.
+    Audio,
+    /// Menu of the standalone network module.
+    Network,
+    /// Menu of the standalone bluetooth module.
+    Bluetooth,
+    /// Menu of the standalone power profile module.
+    PowerProfile,
     Tray(String),
     MediaPlayer,
     SystemInfo,
