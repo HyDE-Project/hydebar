@@ -62,7 +62,16 @@
             inherit buildInputs runtimeDependencies ldLibraryPath;
 
             postInstall = ''
+              # The crate builds as 'hydebar-app'; the bar is installed under
+              # the name everything else refers to it by.
+              if [ -f "$out/bin/hydebar-app" ]; then
+                mv "$out/bin/hydebar-app" "$out/bin/hydebar"
+              fi
               wrapProgram "$out/bin/hydebar" --prefix LD_LIBRARY_PATH : "${ldLibraryPath}"
+
+              # The theme switch script, in the shared-data spot the bar
+              # searches relative to its own binary.
+              install -Dm755 ${./scripts/theme-switch} "$out/share/hydebar/scripts/theme-switch"
             '';
           };
 
