@@ -51,6 +51,14 @@ pub struct Appearance {
     /// desktop. Fields present in the configuration always win.
     #[serde(default = "default_follow_hyde")]
     pub follow_hyde:              bool,
+    /// Whether the text size and the bar height follow the screen.
+    ///
+    /// Enabled the bar measures the output it lands on and picks sizes that
+    /// stay readable there, which is what a fresh install wants. Disabled the
+    /// configured sizes are used verbatim, which is what a bar tuned to match
+    /// another one wants.
+    #[serde(default)]
+    pub auto_scale:               bool,
     #[serde(default)]
     pub style:                    AppearanceStyle,
     #[serde(deserialize_with = "opacity_deserializer", default = "default_opacity")]
@@ -96,6 +104,7 @@ impl Default for Appearance {
             radius:                   None,
             height:                   None,
             follow_hyde:              default_follow_hyde(),
+            auto_scale:               false,
             scale_factor:             1.0,
             style:                    AppearanceStyle::default(),
             opacity:                  default_opacity(),

@@ -30,7 +30,7 @@ use hydebar_core::{
         window_title::WindowTitle,
         workspaces::Workspaces
     },
-    outputs::Outputs,
+    outputs::{AutoMetrics, Outputs},
     position_button::ButtonUIRef,
     style::AppearanceTransition,
     tooltip::TooltipInfo
@@ -55,6 +55,8 @@ pub struct App {
     pub(super) appearance_transition: AppearanceTransition,
     pub(super) module_context: ModuleContext,
     pub(super) icons: IconTheme,
+    /// Sizes the screen calls for, once an output has reported itself.
+    pub(super) auto_metrics: Option<AutoMetrics>,
     pub config: Arc<Config>,
     pub outputs: Outputs,
     pub navigation_mode: bool,
@@ -206,6 +208,35 @@ impl App {
         self.appearance_transition.current()
     }
 
+    /// Appearance the configuration asks for, with the sizes the screen calls
+    /// for filled in.
+    ///
+    /// Automatic scaling is opt in: a bar tuned to match another one keeps the
+    /// sizes it was given, and only a configuration asking for it follows the
+    /// screen.
+    pub fn scaled_appearance(&self) -> Appearance {
+        let mut appearance = self.config.appearance.clone();
+
+        if let (true, Some(metrics)) = (appearance.auto_scale, self.auto_metrics) {
+            appearance.font_size = Some(metrics.font_size);
+            appearance.height = Some(metrics.height);
+        }
+
+        appearance
+    }
+
+    /// Rebuilds everything derived from the appearance after the sizes changed.
+    pub(super) fn refresh_appearance(&mut self) {
+        let appearance = self.scaled_appearance();
+
+        self.icons =
+            IconTheme::from_config(&self.config.icons).with_size(appearance.font_size_px());
+
+        let blend_palette = appearance.animations.enabled;
+        self.appearance_transition
+            .set_target(appearance, blend_palette);
+    }
+
     /// Glyph table to render module icons with this frame.
     ///
     /// Rebuilt whenever the configuration changes so `[icons]` overrides take
@@ -262,6 +293,7 @@ impl App {
             module_context,
             icons: IconTheme::from_config(&config.icons)
                 .with_size(config.appearance.font_size_px()),
+            auto_metrics: None,
             outputs,
             navigation_mode: false,
             focused_module_index: None,

@@ -110,6 +110,7 @@ fn blend_appearance(from: &Appearance, to: &Appearance, t: f32) -> Appearance {
         radius:                   to.radius,
         height:                   to.height,
         follow_hyde:              to.follow_hyde,
+        auto_scale:               to.auto_scale,
         scale_factor:             to.scale_factor,
         style:                    to.style,
         opacity:                  blend_f32(from.opacity, to.opacity, t),

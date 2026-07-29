@@ -60,6 +60,8 @@ pub enum Message {
     SetOpacity(f32),
     /// Follow the theme published by the HyDE Project, or stop following it.
     SetFollowHyde(bool),
+    /// Take the text size and the bar height from the screen, or stop.
+    SetAutoScale(bool),
     /// Show another page of the window.
     SelectTab(Tab),
     /// Rearrange the modules of the bar.
@@ -77,6 +79,7 @@ impl Message {
             Self::SetFontSize(_) => &["appearance", "font_size"],
             Self::SetOpacity(_) => &["appearance", "opacity"],
             Self::SetFollowHyde(_) => &["appearance", "follow_hyde"],
+            Self::SetAutoScale(_) => &["appearance", "auto_scale"],
             Self::SelectTab(_) | Self::EditLayout(_) => &[]
         }
     }
@@ -103,6 +106,7 @@ impl Message {
             Self::SetFontSize(size) => (*size).into(),
             Self::SetOpacity(opacity) => (*opacity).into(),
             Self::SetFollowHyde(follow) => (*follow).into(),
+            Self::SetAutoScale(auto) => (*auto).into(),
             Self::SelectTab(_) | Self::EditLayout(_) => SettingValue::Flag(false)
         }
     }

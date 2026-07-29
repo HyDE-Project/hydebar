@@ -101,6 +101,16 @@ pub(super) fn view(config: &Config, opacity: f32) -> Element<'_, Message> {
             opacity
         ))
         .push(choice_row(
+            "Scale to the screen",
+            vec![
+                ("On", true, appearance.auto_scale),
+                ("Off", false, !appearance.auto_scale),
+            ],
+            Message::SetAutoScale,
+            font_size,
+            opacity
+        ))
+        .push(choice_row(
             "Follow HyDE theme",
             vec![
                 ("On", true, appearance.follow_hyde),
@@ -120,14 +130,15 @@ pub(super) fn view(config: &Config, opacity: f32) -> Element<'_, Message> {
 pub(super) fn desired_width(font_size: f32) -> f32 {
     let gap = ROW_GAP_EM * font_size;
 
-    let rows: [(&str, &[&str]); 7] = [
+    let rows: [(&str, &[&str]); 8] = [
         ("Position", &["Top", "Bottom"]),
         ("Layer", &["Bottom", "Top", "Overlay"]),
         ("Style", &["Islands", "Solid", "Gradient"]),
         ("Height", &["\u{2212}", "000", "+"]),
         ("Font size", &["\u{2212}", "000", "+"]),
         ("Opacity", &["\u{2212}", "0.00", "+"]),
-        ("Follow HyDE theme", &["On", "Off"])
+        ("Follow HyDE theme", &["On", "Off"]),
+        ("Scale to the screen", &["On", "Off"])
     ];
 
     rows.into_iter()

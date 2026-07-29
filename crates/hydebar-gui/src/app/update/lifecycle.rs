@@ -1,6 +1,5 @@
 //! Frame ticks, bus drains and configuration reloads.
 
-use hydebar_core::components::icons::IconTheme;
 use iced::Task;
 use log::{debug, error, info, warn};
 
@@ -82,12 +81,7 @@ impl App {
                 }
 
                 self.config = config;
-                self.icons = IconTheme::from_config(&self.config.icons)
-                    .with_size(self.config.appearance.font_size_px());
-
-                let blend_palette = self.config.appearance.animations.enabled;
-                self.appearance_transition
-                    .set_target(self.config.appearance.clone(), blend_palette);
+                self.refresh_appearance();
 
                 self.register_modules();
 
