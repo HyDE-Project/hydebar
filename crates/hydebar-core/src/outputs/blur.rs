@@ -2,17 +2,23 @@
 //!
 //! A layer surface is not blurred because it asks the Wayland compositor for
 //! it: the protocol has no such request. Hyprland blurs a surface only when a
-//! `layerrule` in its configuration names the namespace the surface was
-//! created with, so a bar that ships no rule of its own is at the mercy of
-//! whatever the desktop happens to have written down. The HyDE Project blurs
-//! the namespaces of the programs it ships and nothing else, and its rules
-//! moved from `windowrules.conf` to a Lua configuration during the Hyprland
-//! 0.55 migration, which drops any rule a user had added beside them.
+//! layer rule in its configuration names the namespace the surface was created
+//! with, so a bar that ships no rule of its own is at the mercy of whatever the
+//! desktop happens to have written down. The HyDE Project blurs the namespaces
+//! of the programs it ships and nothing else, and its rules moved from
+//! `windowrules.conf` to a Lua configuration during the Hyprland 0.55
+//! migration, which drops any rule a user had added beside them.
 //!
 //! So the bar states the rule itself, once, before the first surface is
-//! created. `hyprctl keyword` adds it to the running configuration the same
-//! way the configuration file would, which leaves the desktop configuration
-//! untouched and works on a machine that has never heard of the bar.
+//! created. That leaves the desktop configuration untouched and works on a
+//! machine that has never heard of the bar.
+//!
+//! How the rule is handed over depends on how the session was configured. A
+//! Hyprland reading a Lua configuration refuses `hyprctl keyword` outright —
+//! it answers `keyword can't work with non-legacy parsers` — and takes rules
+//! only through `hyprctl eval`, which runs a line of Lua against the running
+//! configuration. A Hyprland reading the older configuration format has no
+//! evaluator at all. Both spellings are therefore offered, the Lua one first.
 
 use std::process::Command;
 
@@ -27,17 +33,19 @@ use super::wayland::MAIN_NAMESPACE;
 /// width of the screen wherever the bar passes over a window.
 const IGNORED_ALPHA: f32 = 0.1;
 
-/// One rule, stated in both the syntaxes the compositor has had.
+/// One rule, stated in every syntax the compositor has had.
 ///
-/// Hyprland 0.53 replaced the positional rule syntax with a named one and kept
-/// the old spelling working only for a while, so the rule is offered in the
-/// current spelling first and in the old one when the compositor refuses it.
+/// The Lua form is what a session configured in Lua takes; the two keyword
+/// forms are what the older configuration parser takes, the named one from
+/// Hyprland 0.53 and the positional one from before it.
 #[derive(Debug, PartialEq, Eq)]
-pub(crate) struct Rule {
-    /// The rule as Hyprland 0.53 and later state it.
-    pub(crate) current: String,
-    /// The rule as Hyprland stated it before 0.53.
-    pub(crate) legacy:  String
+struct Rule {
+    /// The rule as a line of Lua, for a session with the Lua parser.
+    lua:        String,
+    /// The rule as Hyprland 0.53 and later spell it for the keyword command.
+    keyword:    String,
+    /// The rule as Hyprland spelled it before 0.53.
+    positional: String
 }
 
 /// Rules that make the compositor blur what shows through `namespace`.
@@ -46,17 +54,25 @@ pub(crate) struct Rule {
 /// tooltips and the notifications live on surfaces that span the screen so
 /// their content can be placed anywhere on it, and a blur rule matching those
 /// would blur the whole desktop for as long as one of them is up.
-pub(crate) fn rules(namespace: &str) -> [Rule; 2] {
+fn rules(namespace: &str) -> [Rule; 2] {
     let matched = format!("^({namespace})$");
 
     [
         Rule {
-            current: format!("blur true, match:namespace {matched}"),
-            legacy:  format!("blur, {matched}")
+            lua:        format!(
+                "hl.layer_rule({{ name = \"hydebar_blur\", match = {{ namespace = \"{matched}\" \
+                 }}, blur = true }})"
+            ),
+            keyword:    format!("blur true, match:namespace {matched}"),
+            positional: format!("blur, {matched}")
         },
         Rule {
-            current: format!("ignore_alpha {IGNORED_ALPHA}, match:namespace {matched}"),
-            legacy:  format!("ignore_alpha {IGNORED_ALPHA}, {matched}")
+            lua:        format!(
+                "hl.layer_rule({{ name = \"hydebar_ignore_alpha\", match = {{ namespace = \
+                 \"{matched}\" }}, ignore_alpha = {IGNORED_ALPHA} }})"
+            ),
+            keyword:    format!("ignore_alpha {IGNORED_ALPHA}, match:namespace {matched}"),
+            positional: format!("ignore_alpha {IGNORED_ALPHA}, {matched}")
         }
     ]
 }
@@ -64,8 +80,8 @@ pub(crate) fn rules(namespace: &str) -> [Rule; 2] {
 /// Reads whether the compositor took a rule.
 ///
 /// It answers `ok` and nothing else when it did; a refusal carries the reason,
-/// which is worth nothing here beyond meaning the other spelling is due.
-pub(crate) fn accepted(answer: &str) -> bool {
+/// which is worth nothing here beyond meaning the next spelling is due.
+fn accepted(answer: &str) -> bool {
     answer.trim().eq_ignore_ascii_case("ok")
 }
 
@@ -74,10 +90,10 @@ fn on_hyprland() -> bool {
     std::env::var_os("HYPRLAND_INSTANCE_SIGNATURE").is_some()
 }
 
-/// Hands one rule to the compositor, returning its answer.
-fn keyword(rule: &str) -> Option<String> {
+/// Runs one control command, returning what the compositor answered.
+fn hyprctl(command: &str, argument: &str) -> Option<String> {
     let output = Command::new("hyprctl")
-        .args(["keyword", "layerrule", rule])
+        .args([command, argument])
         .output()
         .ok()?;
 
@@ -87,14 +103,29 @@ fn keyword(rule: &str) -> Option<String> {
         .then(|| String::from_utf8_lossy(&output.stdout).into_owned())
 }
 
-/// States one rule, falling back to the old spelling when the current one is
-/// refused.
-fn state(rule: &Rule) {
-    if keyword(&rule.current).is_some_and(|answer| accepted(&answer)) {
-        return;
+/// Hands one rule over in whichever spelling the session takes.
+///
+/// The evaluator is tried first because a session that has one refuses the
+/// keyword command outright, while a session that has none simply answers that
+/// it does not know the command, which costs a moment and nothing else.
+fn state(rule: &Rule) -> bool {
+    for (command, argument) in [
+        ("eval", rule.lua.as_str()),
+        ("keyword", rule.keyword.as_str()),
+        ("keyword", rule.positional.as_str())
+    ] {
+        let spelled = if command == "keyword" {
+            format!("layerrule {argument}")
+        } else {
+            argument.to_owned()
+        };
+
+        if hyprctl(command, &spelled).is_some_and(|answer| accepted(&answer)) {
+            return true;
+        }
     }
 
-    keyword(&rule.legacy);
+    false
 }
 
 /// Asks the compositor to blur what shows through the bar.
@@ -121,12 +152,28 @@ mod tests {
         let [blur, ignore_alpha] = rules("hydebar-main-layer");
 
         assert_eq!(
-            blur.current,
+            blur.keyword,
             "blur true, match:namespace ^(hydebar-main-layer)$"
         );
         assert_eq!(
-            ignore_alpha.current,
+            ignore_alpha.keyword,
             "ignore_alpha 0.1, match:namespace ^(hydebar-main-layer)$"
+        );
+    }
+
+    #[test]
+    fn a_lua_session_is_handed_a_line_of_lua() {
+        let [blur, ignore_alpha] = rules("hydebar-main-layer");
+
+        assert_eq!(
+            blur.lua,
+            "hl.layer_rule({ name = \"hydebar_blur\", match = { namespace = \
+             \"^(hydebar-main-layer)$\" }, blur = true })"
+        );
+        assert_eq!(
+            ignore_alpha.lua,
+            "hl.layer_rule({ name = \"hydebar_ignore_alpha\", match = { namespace = \
+             \"^(hydebar-main-layer)$\" }, ignore_alpha = 0.1 })"
         );
     }
 
@@ -134,8 +181,11 @@ mod tests {
     fn every_rule_is_also_stated_the_way_hyprland_used_to() {
         let [blur, ignore_alpha] = rules("hydebar-main-layer");
 
-        assert_eq!(blur.legacy, "blur, ^(hydebar-main-layer)$");
-        assert_eq!(ignore_alpha.legacy, "ignore_alpha 0.1, ^(hydebar-main-layer)$");
+        assert_eq!(blur.positional, "blur, ^(hydebar-main-layer)$");
+        assert_eq!(
+            ignore_alpha.positional,
+            "ignore_alpha 0.1, ^(hydebar-main-layer)$"
+        );
     }
 
     #[test]
@@ -143,10 +193,12 @@ mod tests {
         // a rule matching the menu, tooltip or notification surface would blur
         // the whole desktop, all three span the screen
         for rule in rules(MAIN_NAMESPACE) {
-            assert!(rule.current.contains("^(hydebar-main-layer)$"));
-            assert!(!rule.current.contains("hydebar-menu-layer"));
-            assert!(!rule.current.contains("hydebar-tooltip-layer"));
-            assert!(!rule.current.contains("hydebar-notifications-layer"));
+            for spelling in [&rule.lua, &rule.keyword, &rule.positional] {
+                assert!(spelling.contains("^(hydebar-main-layer)$"));
+                assert!(!spelling.contains("hydebar-menu-layer"));
+                assert!(!spelling.contains("hydebar-tooltip-layer"));
+                assert!(!spelling.contains("hydebar-notifications-layer"));
+            }
         }
     }
 
@@ -163,6 +215,9 @@ mod tests {
         assert!(accepted("ok"));
         assert!(accepted("ok\n"));
         assert!(accepted("OK"));
+        assert!(!accepted(
+            "keyword can't work with non-legacy parsers. Use eval."
+        ));
         assert!(!accepted("Config error: invalid rule"));
         assert!(!accepted(""));
     }

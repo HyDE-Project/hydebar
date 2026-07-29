@@ -123,7 +123,7 @@ pub(crate) fn main_settings(
 
     SctkLayerSurfaceSettings {
         id,
-        namespace: "hydebar-main-layer".to_string(),
+        namespace: MAIN_NAMESPACE.to_string(),
         size: Some((None, Some(height as u32))),
         layer: surface_layer(layer),
         keyboard_interactivity: if menu_keyboard_focus {
@@ -196,6 +196,11 @@ pub(crate) fn notifications_settings(
     }
 }
 
+/// Creates every surface an output is drawn on.
+///
+/// The blur is asked for first: the compositor reads its layer rules when a
+/// surface is mapped, so a rule stated afterwards would only reach the surface
+/// the next time the bar is started.
 pub(crate) fn create_layer_surfaces<Message: 'static>(
     style: AppearanceStyle,
     wl_output: Option<WlOutput>,
@@ -205,6 +210,8 @@ pub(crate) fn create_layer_surfaces<Message: 'static>(
     configured_height: Option<f32>,
     layer: BarLayer
 ) -> LayerSurfaceCreation<Message> {
+    super::blur::request();
+
     let main_id = Id::unique();
     let menu_id = Id::unique();
     let tooltip_id = Id::unique();

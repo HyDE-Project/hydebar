@@ -1,5 +1,6 @@
 //! Output management façade, re-exporting the collection state and helpers.
 
+mod blur;
 mod config;
 pub mod scaling;
 mod state;
