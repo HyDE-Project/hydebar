@@ -82,7 +82,8 @@ impl App {
                 }
 
                 self.config = config;
-                self.icons = IconTheme::from_config(&self.config.icons);
+                self.icons = IconTheme::from_config(&self.config.icons)
+                    .with_size(self.config.appearance.font_size_px());
 
                 let blend_palette = self.config.appearance.animations.enabled;
                 self.appearance_transition

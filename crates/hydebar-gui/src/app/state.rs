@@ -260,7 +260,8 @@ impl App {
             last_frame: None,
             appearance_transition: AppearanceTransition::new(config.appearance.clone()),
             module_context,
-            icons: IconTheme::from_config(&config.icons),
+            icons: IconTheme::from_config(&config.icons)
+                .with_size(config.appearance.font_size_px()),
             outputs,
             navigation_mode: false,
             focused_module_index: None,

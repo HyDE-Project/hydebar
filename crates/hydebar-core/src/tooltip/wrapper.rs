@@ -66,7 +66,7 @@ pub fn tooltip_wrapper<'a, Message: 'a>(
     let width = estimated_width(&info.text, appearance.font_size_px(), padding[1]);
 
     container(
-        container(text(info.text.clone()))
+        container(text(info.text.clone()).size(appearance.font_size_px()))
             .padding(padding)
             .style(tooltip_container_style(
                 appearance.menu.opacity,
