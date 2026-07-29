@@ -275,6 +275,20 @@ impl App {
                         Message::None,
                         Message::CloseMenu(id)
                     ),
+                    Some((MenuType::Settings, button_ui_ref)) => menu_wrapper(
+                        id,
+                        self.settings
+                            .menu_view(&self.config, animated_opacity, self.icons())
+                            .map(Message::Settings),
+                        MenuSize::Large,
+                        *button_ui_ref,
+                        self.config.position,
+                        self.appearance().style,
+                        animated_opacity,
+                        self.appearance().menu.backdrop,
+                        Message::None,
+                        Message::CloseMenu(id)
+                    ),
                     Some((MenuType::MediaPlayer, button_ui_ref)) => menu_wrapper(
                         id,
                         self.media_player

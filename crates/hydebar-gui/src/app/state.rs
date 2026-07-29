@@ -22,6 +22,7 @@ use hydebar_core::{
         notifications::Notifications,
         privacy::Privacy,
         screenshot::Screenshot,
+        settings::Settings,
         system_info::SystemInfo,
         tray::{TrayMessage, TrayModule},
         updates::Updates,
@@ -76,6 +77,7 @@ pub struct App {
     pub notifications: Notifications,
     pub screenshot: Screenshot,
     pub idle_inhibitor: IdleInhibitor,
+    pub settings: Settings,
     pub weather: Weather
 }
 
@@ -120,6 +122,7 @@ pub enum Message {
     Battery(modules::battery::Message),
     Privacy(modules::privacy::PrivacyMessage),
     ControlCenter(modules::control_center::Message),
+    Settings(modules::settings::Message),
     MediaPlayer(modules::media_player::Message),
     Notifications(modules::notifications::NotificationsMessage),
     Screenshot(modules::screenshot::ScreenshotMessage),
@@ -137,6 +140,12 @@ pub enum Message {
 impl From<modules::control_center::Message> for Message {
     fn from(msg: modules::control_center::Message) -> Self {
         Message::ControlCenter(msg)
+    }
+}
+
+impl From<modules::settings::Message> for Message {
+    fn from(msg: modules::settings::Message) -> Self {
+        Message::Settings(msg)
     }
 }
 
@@ -243,7 +252,7 @@ impl App {
         let module_context = ModuleContext::new(event_sender, runtime_handle);
         let hyprland_clone = Arc::clone(&hyprland);
         let mut app = App {
-            config_path,
+            config_path: config_path.clone(),
             logger,
             _hyprland: hyprland,
             config_manager,
@@ -273,6 +282,7 @@ impl App {
             notifications: Notifications::default(),
             screenshot: Screenshot::default(),
             idle_inhibitor: IdleInhibitor,
+            settings: Settings::new(config_path.clone()),
             weather: Weather::new(
                 config.weather.location.clone(),
                 config.weather.api_key.clone(),

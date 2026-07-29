@@ -123,6 +123,10 @@ impl App {
                 );
                 Task::none()
             }
+            Message::Settings(msg) => {
+                msg.apply(self.settings.config_path());
+                Task::none()
+            }
             Message::MediaPlayer(msg) => {
                 self.media_player.update(msg);
                 Task::none()

@@ -31,6 +31,7 @@ sysinfo.workspace = true
 tokio.workspace = true
 tokio-stream.workspace = true
 toml.workspace = true
+toml_edit.workspace = true
 udev.workspace = true
 uuid.workspace = true
 wayland-client.workspace = true

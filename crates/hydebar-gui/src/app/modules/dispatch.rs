@@ -86,6 +86,7 @@ impl App {
             ModuleName::Network => self.control_center.network_bar(self.icons()),
             ModuleName::Bluetooth => self.control_center.bluetooth_bar(self.icons()),
             ModuleName::PowerProfile => self.control_center.power_profile_bar(self.icons()),
+            ModuleName::Settings => self.settings.view(self.icons()),
             ModuleName::MediaPlayer => self
                 .media_player
                 .view((&self.config.media_player, self.icons())),
@@ -142,6 +143,7 @@ impl App {
             ModuleName::MediaPlayer => self.media_player.subscription(),
             ModuleName::Notifications => self.notifications.subscription(),
             ModuleName::Screenshot => self.screenshot.subscription(),
+            ModuleName::Settings => None,
             ModuleName::IdleInhibitor => Module::<Message>::subscription(&self.idle_inhibitor)
         }
     }

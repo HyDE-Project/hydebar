@@ -29,6 +29,8 @@ pub enum MenuType {
     Bluetooth,
     /// Menu of the standalone power profile module.
     PowerProfile,
+    /// Window configuring the bar itself.
+    Settings,
     Tray(String),
     MediaPlayer,
     SystemInfo,
