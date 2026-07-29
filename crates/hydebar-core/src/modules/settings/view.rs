@@ -25,11 +25,15 @@ const WINDOW_GAP_EM: f32 = 1.0;
 
 impl Settings {
     /// Renders the settings window against the running `config`.
+    ///
+    /// `content_width` is the room the window body may spend, so pages that
+    /// list many entries can wrap instead of overflowing.
     pub fn menu_view<'a>(
         &self,
         config: &'a Config,
         opacity: f32,
-        icons: &IconTheme
+        icons: &IconTheme,
+        content_width: f32
     ) -> Element<'a, Message> {
         let font_size = config.appearance.font_size.unwrap_or(DEFAULT_FONT_SIZE);
         let active = self.tab();
@@ -54,7 +58,7 @@ impl Settings {
 
         let page = match active {
             Tab::Appearance => appearance::view(config, opacity),
-            Tab::Modules => modules::view(config, opacity, font_size)
+            Tab::Modules => modules::view(config, opacity, font_size, content_width)
         };
 
         Column::new()

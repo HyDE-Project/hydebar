@@ -10,11 +10,14 @@ const SMALL_WIDTH_EM: f32 = 25.0;
 const MEDIUM_WIDTH_EM: f32 = 35.0;
 /// Preferred width of a large menu, in multiples of the themed text size.
 const LARGE_WIDTH_EM: f32 = 45.0;
-/// Preferred width of a wide menu, in multiples of the themed text size.
+/// Smallest a wide menu may be, in multiples of the themed text size.
 ///
 /// Used by the windows that list things side by side, the module editor above
-/// all, where three columns have to fit next to each other.
-const WIDE_WIDTH_EM: f32 = 70.0;
+/// all, where a row of entries needs room to breathe.
+const WIDE_MIN_WIDTH_EM: f32 = 45.0;
+
+/// Share of the output width a wide menu asks for.
+const WIDE_WIDTH_SHARE: f32 = 0.42;
 
 /// Narrowest a menu may become, in multiples of the themed text size.
 const MIN_WIDTH_EM: f32 = 18.0;
@@ -39,12 +42,12 @@ pub enum MenuSize {
 
 impl MenuSize {
     /// Preferred width in multiples of the themed text size.
-    const fn width_em(self) -> f32 {
+    const fn width_em(self) -> Option<f32> {
         match self {
-            Self::Small => SMALL_WIDTH_EM,
-            Self::Medium => MEDIUM_WIDTH_EM,
-            Self::Large => LARGE_WIDTH_EM,
-            Self::Wide => WIDE_WIDTH_EM
+            Self::Small => Some(SMALL_WIDTH_EM),
+            Self::Medium => Some(MEDIUM_WIDTH_EM),
+            Self::Large => Some(LARGE_WIDTH_EM),
+            Self::Wide => None
         }
     }
 
@@ -55,7 +58,10 @@ impl MenuSize {
     /// allowed to cover.
     #[must_use]
     pub fn width(self, font_size: f32, viewport_width: f32) -> f32 {
-        let preferred = self.width_em() * font_size;
+        let preferred = match self.width_em() {
+            Some(em) => em * font_size,
+            None => (viewport_width * WIDE_WIDTH_SHARE).max(WIDE_MIN_WIDTH_EM * font_size)
+        };
         let floor = MIN_WIDTH_EM * font_size;
         let ceiling = (viewport_width * MAX_WIDTH_SHARE).max(1.0);
 
@@ -99,7 +105,19 @@ mod tests {
         let width = MenuSize::Wide.width(10.0, 600.0);
 
         assert!(width <= 600.0 * MAX_WIDTH_SHARE);
-        assert_eq!(width, 540.0);
+        assert_eq!(width, WIDE_MIN_WIDTH_EM * 10.0);
+    }
+
+    #[test]
+    fn a_wide_menu_grows_with_the_screen() {
+        assert_eq!(MenuSize::Wide.width(10.0, 3840.0), 3840.0 * 0.42);
+        assert_eq!(MenuSize::Wide.width(10.0, 1920.0), 1920.0 * 0.42);
+    }
+
+    #[test]
+    fn a_wide_menu_never_shrinks_below_its_floor() {
+        assert_eq!(MenuSize::Wide.width(10.0, 800.0), WIDE_MIN_WIDTH_EM * 10.0);
+        assert!(MenuSize::Wide.width(10.0, 400.0) <= 400.0 * MAX_WIDTH_SHARE);
     }
 
     #[test]

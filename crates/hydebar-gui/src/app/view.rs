@@ -23,6 +23,12 @@ use super::{
 };
 use crate::centerbox;
 
+/// Inner padding of a menu box, in multiples of the themed text size.
+///
+/// Mirrors the padding the menu wrapper applies, so a page can tell how much
+/// room its content actually has.
+const MENU_PADDING_EM: f32 = 1.6;
+
 impl App {
     pub fn title(&self, _id: Id) -> String {
         String::from("hydebar")
@@ -42,6 +48,13 @@ impl App {
 
     pub fn scale_factor(&self, _id: Id) -> f64 {
         self.appearance().scale_factor
+    }
+
+    /// Room the body of a menu box may spend, once its padding is taken off.
+    fn menu_content_width(&self, size: MenuSize, viewport_width: f32) -> f32 {
+        let font_size = self.appearance().font_size_px();
+
+        (size.width(font_size, viewport_width) - MENU_PADDING_EM * font_size * 2.0).max(font_size)
     }
 
     /// Theme facts a menu needs to place itself, at the given animated opacity.
@@ -268,7 +281,12 @@ impl App {
                     Some((MenuType::Settings, button_ui_ref)) => menu_wrapper(
                         id,
                         self.settings
-                            .menu_view(&self.config, animated_opacity, self.icons())
+                            .menu_view(
+                                &self.config,
+                                animated_opacity,
+                                self.icons(),
+                                self.menu_content_width(MenuSize::Wide, button_ui_ref.viewport.0)
+                            )
                             .map(Message::Settings),
                         MenuSize::Wide,
                         *button_ui_ref,
