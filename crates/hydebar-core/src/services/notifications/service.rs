@@ -14,7 +14,8 @@ use zbus::{
 };
 
 use super::{
-    Notification, NotificationEvent, NotificationStorage, NotificationsError, NotificationsServer
+    Notification, NotificationEvent, NotificationStorage, NotificationsError, NotificationsServer,
+    takeover
 };
 use crate::services::{ReadOnlyService, ServiceEvent};
 
@@ -157,6 +158,36 @@ impl ReadOnlyService for NotificationsService {
                     {
                         Ok(RequestNameReply::PrimaryOwner) => {
                             debug!("the bar now serves the notification bus");
+                        }
+                        Ok(RequestNameReply::InQueue) => {
+                            // The holder refuses to be replaced, so the request
+                            // only joined a queue that never advances. The user
+                            // asked for the bar's popups, so the daemon serving
+                            // instead of it has to go — but only when it can be
+                            // proved to be a service of its own, never a unit
+                            // that merely contains it.
+                            let Some(unit) = takeover::replaceable_unit(&connection).await else {
+                                error!(
+                                    "a notification daemon the bar cannot safely replace holds \
+                                     the bus; stop it to let the bar draw its own popups"
+                                );
+                                return;
+                            };
+
+                            if !takeover::stop(&unit) {
+                                error!("{unit} holds the notification bus and would not stop");
+                                return;
+                            }
+
+                            if let Err(err) = connection
+                                .request_name_with_flags("org.freedesktop.Notifications", flags)
+                                .await
+                            {
+                                error!("the notification bus stayed out of reach: {err}");
+                                return;
+                            }
+
+                            debug!("took the notification bus over from {unit}");
                         }
                         Ok(reply) => {
                             // The name is held by a daemon that refuses to be

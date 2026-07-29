@@ -5,6 +5,7 @@ mod model;
 mod server;
 mod service;
 mod storage;
+mod takeover;
 
 #[cfg(test)]
 mod tests;
