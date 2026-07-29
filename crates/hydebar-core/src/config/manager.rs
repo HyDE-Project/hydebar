@@ -32,6 +32,18 @@ impl ConfigImpact {
     pub fn affects_module(&self, module: &ModuleName) -> bool {
         self.affected_modules.contains(module)
     }
+
+    /// Whether the update moves any module's background work.
+    ///
+    /// Registration starts and stops pollers, D-Bus listeners and spawned
+    /// commands, and tears the running ones down first. Only a layout change,
+    /// a custom-module change or a module whose own configuration moved can
+    /// call for that; a reload that merely recolours the bar — which is what
+    /// every desktop theme switch amounts to — must leave the listeners alone.
+    #[must_use]
+    pub fn moves_module_registration(&self) -> bool {
+        self.layout_changed || self.custom_modules_changed || !self.affected_modules.is_empty()
+    }
 }
 
 /// Applied configuration along with its computed impact.
@@ -304,6 +316,12 @@ fn compute_impact(previous: &Config, next: &Config) -> ConfigImpact {
         &previous.keyboard_layout,
         &next.keyboard_layout
     );
+    mark_if_changed(
+        &mut impact,
+        ModuleName::Notifications,
+        &previous.notifications,
+        &next.notifications
+    );
 
     if previous.custom_modules != next.custom_modules {
         impact.custom_modules_changed = true;
@@ -355,5 +373,61 @@ fn update_custom_module_impact(
                 .affected_modules
                 .insert(ModuleName::Custom((*name).to_string()));
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use hydebar_proto::config::{ModuleDef, NotificationSource};
+
+    use super::*;
+
+    /// A desktop theme switch arrives as a reload where only the appearance
+    /// moved; it must not read as a reason to restart module listeners.
+    #[test]
+    fn a_recolour_does_not_move_module_registration() {
+        let previous = Config::default();
+        let mut next = Config::default();
+        next.appearance.opacity = 0.5;
+
+        let impact = compute_impact(&previous, &next);
+
+        assert!(impact.appearance_changed);
+        assert!(!impact.moves_module_registration());
+    }
+
+    #[test]
+    fn a_layout_change_moves_module_registration() {
+        let previous = Config::default();
+        let mut next = Config::default();
+        next.modules.left.push(ModuleDef::Single(ModuleName::Tray));
+
+        assert!(compute_impact(&previous, &next).moves_module_registration());
+    }
+
+    #[test]
+    fn a_module_whose_configuration_moved_moves_registration() {
+        let previous = Config::default();
+        let mut next = Config::default();
+        next.clock.format = "%H:%M".to_owned();
+
+        let impact = compute_impact(&previous, &next);
+
+        assert!(impact.affects_module(&ModuleName::Clock));
+        assert!(impact.moves_module_registration());
+    }
+
+    /// Claiming or releasing the notification bus happens at registration
+    /// time, so a change of source has to reach it.
+    #[test]
+    fn a_notification_source_change_moves_registration() {
+        let previous = Config::default();
+        let mut next = Config::default();
+        next.notifications.source = NotificationSource::Builtin;
+
+        let impact = compute_impact(&previous, &next);
+
+        assert!(impact.affects_module(&ModuleName::Notifications));
+        assert!(impact.moves_module_registration());
     }
 }

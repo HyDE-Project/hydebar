@@ -161,7 +161,9 @@ impl App {
                 self.themes.refresh();
                 let resize = self.refresh_appearance();
 
-                self.register_modules();
+                if impact.moves_module_registration() {
+                    self.register_modules();
+                }
 
                 if impact.log_level_changed {
                     self.logger
