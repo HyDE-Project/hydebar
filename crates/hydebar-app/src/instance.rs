@@ -391,6 +391,7 @@ mod tests {
 
     #[test]
     fn a_lock_held_by_a_live_process_is_detected() {
+        let _serial = SERIAL.lock().unwrap_or_else(|err| err.into_inner());
         let dir = TempDir::new();
         let path = dir.lock_path();
 
@@ -411,6 +412,7 @@ mod tests {
 
     #[test]
     fn a_stale_lock_whose_process_is_gone_is_taken_over() {
+        let _serial = SERIAL.lock().unwrap_or_else(|err| err.into_inner());
         let dir = TempDir::new();
         let path = dir.lock_path();
         let stale = dead_pid();
@@ -427,6 +429,7 @@ mod tests {
 
     #[test]
     fn the_takeover_signals_the_owner_and_waits_for_the_lock() {
+        let _serial = SERIAL.lock().unwrap_or_else(|err| err.into_inner());
         let dir = TempDir::new();
         let path = dir.lock_path();
 
@@ -455,6 +458,7 @@ mod tests {
 
     #[test]
     fn an_owner_that_never_quits_aborts_the_takeover() {
+        let _serial = SERIAL.lock().unwrap_or_else(|err| err.into_inner());
         let dir = TempDir::new();
         let path = dir.lock_path();
 
