@@ -2381,6 +2381,7 @@ dependencies = [
  "masterror",
  "regex",
  "serde",
+ "serde_json",
  "serde_with",
  "tempfile",
  "tokio-stream",

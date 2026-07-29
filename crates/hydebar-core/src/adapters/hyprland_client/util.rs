@@ -43,5 +43,4 @@ pub(crate) mod tests {
             Duration::from_millis(100)
         );
     }
-
 }

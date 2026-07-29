@@ -25,21 +25,24 @@ pub(crate) fn load_candidate(
     apply_candidate(config, manager)
 }
 
-/// Reloads the configuration while overlaying the theme produced by `theme`.
+/// Reloads the configuration while overlaying what HyDE answers for.
 ///
-/// The desktop theme is not part of the configuration file, so a theme switch
-/// has to re-run the very same load the file watcher runs. Taking the theme as
-/// a closure is what lets the theme watcher overlay the directory it actually
-/// watches instead of whatever the environment happens to say.
-pub(crate) fn load_candidate_with<F>(
+/// The desktop theme and the bar layout are not part of the configuration
+/// file, so a switch of either has to re-run the very same load the file
+/// watcher runs. Taking them as closures is what lets the theme watcher
+/// overlay the directory it actually watches instead of whatever the
+/// environment happens to say.
+pub(crate) fn load_candidate_with<F, G>(
     path: &Path,
     manager: &ConfigManager,
-    theme: F
+    theme: F,
+    layout: G
 ) -> Result<ConfigApplied, ConfigUpdateError>
 where
-    F: FnOnce() -> HydeTheme
+    F: FnOnce() -> HydeTheme,
+    G: FnOnce(&[String]) -> Option<hydebar_proto::config::Modules>
 {
-    let config = read_config_with(path, theme).map_err(convert_read_error)?;
+    let config = read_config_with(path, theme, layout).map_err(convert_read_error)?;
 
     apply_candidate(config, manager)
 }

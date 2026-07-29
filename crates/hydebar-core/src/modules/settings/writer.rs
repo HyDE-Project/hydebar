@@ -30,7 +30,9 @@ impl fmt::Display for SettingsWriteError {
             Self::Parse(err) => write!(f, "the configuration file is not valid TOML: {err}"),
             Self::NotATable {
                 path
-            } => write!(f, "`{path}` is not a table and cannot hold a setting")
+            } => {
+                write!(f, "`{path}` is not a table and cannot hold a setting")
+            }
         }
     }
 }

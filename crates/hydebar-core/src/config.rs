@@ -5,7 +5,10 @@ use std::{
 };
 
 pub use hydebar_proto::config::*;
-use hydebar_proto::theme_source::{self, HydeTheme};
+use hydebar_proto::{
+    bar_layout,
+    theme_source::{self, HydeTheme}
+};
 
 pub mod manager;
 pub mod theme_watch;
@@ -199,19 +202,24 @@ fn ensure_parent_exists(path: &Path) -> Result<(), ConfigLoadError> {
 }
 
 pub(crate) fn read_config(path: &Path) -> Result<Config, ConfigReadError> {
-    read_config_with(path, theme_source::load)
+    read_config_with(path, theme_source::load, bar_layout::load)
 }
 
-/// Reads the configuration and overlays the theme produced by `theme`.
+/// Reads the configuration and overlays what HyDE answers for.
 ///
-/// The theme is a closure rather than a value because reading it touches the
-/// disk and a configuration that opts out of following HyDE must not pay for
-/// it. Injecting it also lets a watcher overlay the theme from the directory it
-/// is watching, which is the only way a test can observe a theme switch without
-/// mutating the environment of the whole process.
-pub(crate) fn read_config_with<F>(path: &Path, theme: F) -> Result<Config, ConfigReadError>
+/// The theme and the layout are closures rather than values because reading
+/// them touches the disk and a configuration that opts out of following HyDE
+/// must not pay for either. Injecting them also lets a watcher overlay the
+/// directory it is watching, which is the only way a test can observe a theme
+/// switch without mutating the environment of the whole process.
+pub(crate) fn read_config_with<F, G>(
+    path: &Path,
+    theme: F,
+    layout: G
+) -> Result<Config, ConfigReadError>
 where
-    F: FnOnce() -> HydeTheme
+    F: FnOnce() -> HydeTheme,
+    G: FnOnce(&[String]) -> Option<Modules>
 {
     let mut content = String::new();
     File::open(path)
@@ -222,30 +230,56 @@ where
         })?;
 
     toml::from_str(&content)
-        .map(|config| follow_hyde_theme(config, theme))
+        .map(|config| follow_hyde(config, declares_modules(&content), theme, layout))
         .map_err(|source| ConfigReadError::Parse {
             path: path.to_path_buf(),
             source
         })
 }
 
-/// Overlays the HyDE theme onto a freshly parsed configuration.
+/// Whether the file writes a module layout of its own.
 ///
-/// The overlay runs *after* the file has been parsed and only fills fields the
+/// Presence is what matters, not content: a hand-written `[modules]` section
+/// is manual control and pins the layout, however much it happens to coincide
+/// with anything HyDE has on file.
+fn declares_modules(content: &str) -> bool {
+    toml::from_str::<toml::Table>(content)
+        .map(|table| table.contains_key("modules"))
+        .unwrap_or(false)
+}
+
+/// Overlays the HyDE theme and bar layout onto a freshly parsed configuration.
+///
+/// The overlay runs *after* the file has been parsed and only fills what the
 /// user left unset, which is what fixes the precedence for good: what is
 /// written in `~/.config/hydebar/config.toml` wins, what HyDE says fills the
-/// rest, and the bar's own defaults answer for whatever is left. No theme
-/// switch can undo a value the user wrote.
+/// rest, and the bar's own defaults answer for whatever is left. No theme or
+/// layout switch can undo a value the user wrote.
 ///
-/// Runs on every read, so a hot reload picks up a theme switch that happened
-/// while the bar was running. Opting out with `appearance.follow_hyde = false`
-/// skips reading the theme entirely.
-fn follow_hyde_theme<F>(mut config: Config, theme: F) -> Config
+/// Runs on every read, so a hot reload picks up a switch that happened while
+/// the bar was running. Opting out with `appearance.follow_hyde = false`
+/// skips reading HyDE entirely.
+fn follow_hyde<F, G>(mut config: Config, manual_layout: bool, theme: F, layout: G) -> Config
 where
-    F: FnOnce() -> HydeTheme
+    F: FnOnce() -> HydeTheme,
+    G: FnOnce(&[String]) -> Option<Modules>
 {
-    if config.appearance.follow_hyde {
-        config.appearance.apply_hyde_theme(&theme());
+    if !config.appearance.follow_hyde {
+        return config;
+    }
+
+    config.appearance.apply_hyde_theme(&theme());
+
+    if !manual_layout {
+        let custom_names: Vec<String> = config
+            .custom_modules
+            .iter()
+            .map(|definition| definition.name.clone())
+            .collect();
+
+        if let Some(modules) = layout(&custom_names) {
+            config.modules = modules;
+        }
     }
 
     config
@@ -311,5 +345,74 @@ mod tests {
             } => assert_eq!(path, config_path),
             other => panic!("unexpected error: {other:?}")
         }
+    }
+
+    fn hyde_layout(_custom_names: &[String]) -> Option<Modules> {
+        Some(Modules {
+            left:   vec![ModuleDef::Single(ModuleName::Clock)],
+            center: Vec::new(),
+            right:  Vec::new()
+        })
+    }
+
+    /// A configuration that writes no module layout takes the one HyDE has on
+    /// file, exactly as the bar HyDE started with would.
+    #[test]
+    fn an_undeclared_layout_follows_the_desktop() {
+        let temp_dir = TempDir::new().expect("failed to create temp dir");
+        let config_path = temp_dir.path().join("config.toml");
+        fs::write(&config_path, "position = \"Top\"\n").expect("config");
+
+        let config =
+            read_config_with(&config_path, HydeTheme::default, hyde_layout).expect("config reads");
+
+        assert_eq!(
+            config.modules.left,
+            vec![ModuleDef::Single(ModuleName::Clock)]
+        );
+        assert!(config.modules.center.is_empty());
+    }
+
+    /// A hand-written `[modules]` section is manual control and no desktop
+    /// layout may displace it.
+    #[test]
+    fn a_declared_layout_outranks_the_desktop() {
+        let temp_dir = TempDir::new().expect("failed to create temp dir");
+        let config_path = temp_dir.path().join("config.toml");
+        fs::write(&config_path, "[modules]\nleft = [\"Battery\"]\n").expect("config");
+
+        let config =
+            read_config_with(&config_path, HydeTheme::default, hyde_layout).expect("config reads");
+
+        assert_eq!(
+            config.modules.left,
+            vec![ModuleDef::Single(ModuleName::Battery)]
+        );
+    }
+
+    /// Opting out of following HyDE opts out of its layout with it.
+    #[test]
+    fn opting_out_of_hyde_keeps_the_default_layout() {
+        let temp_dir = TempDir::new().expect("failed to create temp dir");
+        let config_path = temp_dir.path().join("config.toml");
+        fs::write(&config_path, "[appearance]\nfollow_hyde = false\n").expect("config");
+
+        let config =
+            read_config_with(&config_path, HydeTheme::default, hyde_layout).expect("config reads");
+
+        assert_eq!(config.modules, Modules::default());
+    }
+
+    /// A desktop with no readable layout leaves the default in place.
+    #[test]
+    fn a_missing_desktop_layout_leaves_the_default() {
+        let temp_dir = TempDir::new().expect("failed to create temp dir");
+        let config_path = temp_dir.path().join("config.toml");
+        fs::write(&config_path, "position = \"Top\"\n").expect("config");
+
+        let config =
+            read_config_with(&config_path, HydeTheme::default, |_| None).expect("config reads");
+
+        assert_eq!(config.modules, Modules::default());
     }
 }

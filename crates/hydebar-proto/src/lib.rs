@@ -1,3 +1,4 @@
+pub mod bar_layout;
 pub mod compositor_look;
 pub mod config;
 pub mod hyde_dirs;

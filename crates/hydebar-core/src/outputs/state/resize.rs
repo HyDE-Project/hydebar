@@ -29,9 +29,10 @@ impl Outputs {
     ///
     /// The layer travels with the height: the surface rises to the overlay when
     /// the first popup arrives and parks in the background once the last one is
-    /// gone. The compositor stacks a surface that changes layer above everything
-    /// already there, so rising at that moment — after any menu was raised — is
-    /// what puts a popup above an open menu instead of behind it.
+    /// gone. The compositor stacks a surface that changes layer above
+    /// everything already there, so rising at that moment — after any menu
+    /// was raised — is what puts a popup above an open menu instead of
+    /// behind it.
     pub fn resize_notifications<Message: 'static>(&mut self, height: u32) -> Task<Message> {
         let height = height.max(PARKED_HEIGHT);
         let layer = if height > PARKED_HEIGHT {

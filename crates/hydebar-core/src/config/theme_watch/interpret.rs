@@ -95,10 +95,14 @@ async fn reload(
 ) -> Result<ConfigApplied, ConfigUpdateError> {
     let read = tokio::task::spawn_blocking(move || {
         let dirs = roots.dirs.clone();
+        let layout_dirs = dirs.clone();
 
-        load_candidate_with(&config_path, &manager, || {
-            theme_source::load_from(&dirs, &CompositorLook::read())
-        })
+        load_candidate_with(
+            &config_path,
+            &manager,
+            || theme_source::load_from(&dirs, &CompositorLook::read()),
+            |custom_names| hydebar_proto::bar_layout::load_from(&layout_dirs, custom_names)
+        )
     })
     .await;
 

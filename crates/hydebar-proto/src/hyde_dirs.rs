@@ -167,6 +167,15 @@ impl HydeDirs {
     pub fn env_theme(&self) -> PathBuf {
         self.data.join("hyde").join("env-theme")
     }
+
+    /// Bar layouts HyDE ships, `~/.local/share/waybar/layouts`.
+    ///
+    /// The directory carries the name of the bar HyDE shipped with before this
+    /// one; the path is read as found because that is where the layouts are.
+    #[must_use]
+    pub fn bar_layouts_dir(&self) -> PathBuf {
+        self.data.join("waybar").join("layouts")
+    }
 }
 
 /// Resolves an XDG root, falling back to a path relative to the home directory.

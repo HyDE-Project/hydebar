@@ -13,7 +13,9 @@ use super::{Message, Spinner};
 use crate::components::page::{
     metrics::{chip_width, indicator_width, status_row_width, text_width, wrap_chips_into_rows},
     style,
-    widgets::{ThemeChip, grid, group, note, page, rows as row_stack, section, status_row, theme_chip}
+    widgets::{
+        ThemeChip, grid, group, note, page, rows as row_stack, section, status_row, theme_chip
+    }
 };
 
 /// Theme chips a row is sized to hold.
