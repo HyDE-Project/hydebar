@@ -10,15 +10,6 @@ const SMALL_WIDTH_EM: f32 = 25.0;
 const MEDIUM_WIDTH_EM: f32 = 35.0;
 /// Preferred width of a large menu, in multiples of the themed text size.
 const LARGE_WIDTH_EM: f32 = 45.0;
-/// Smallest a wide menu may be, in multiples of the themed text size.
-///
-/// Used by the windows that list things side by side, the module editor above
-/// all, where a row of entries needs room to breathe.
-const WIDE_MIN_WIDTH_EM: f32 = 45.0;
-
-/// Share of the output width a wide menu asks for.
-const WIDE_WIDTH_SHARE: f32 = 0.42;
-
 /// Narrowest a menu may become, in multiples of the themed text size.
 const MIN_WIDTH_EM: f32 = 18.0;
 
@@ -31,13 +22,13 @@ const MAX_HEIGHT_SHARE: f32 = 0.85;
 const EDGE_MARGIN_EM: f32 = 0.8;
 
 /// How wide a menu asks to be.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum MenuSize {
     Small,
     Medium,
     Large,
-    /// As wide as the output comfortably allows.
-    Wide
+    /// Exactly as wide as the content it holds, measured by the caller.
+    Content(f32)
 }
 
 impl MenuSize {
@@ -47,20 +38,20 @@ impl MenuSize {
             Self::Small => Some(SMALL_WIDTH_EM),
             Self::Medium => Some(MEDIUM_WIDTH_EM),
             Self::Large => Some(LARGE_WIDTH_EM),
-            Self::Wide => None
+            Self::Content(_) => None
         }
     }
 
     /// Width of the menu box on an output `viewport_width` pixels across.
     ///
-    /// The preferred width scales with `font_size`, so a larger theme yields a
-    /// larger menu, and never outgrows the share of the screen a menu is
-    /// allowed to cover.
+    /// A menu stated in text sizes grows with the theme; a menu stated by its
+    /// content takes exactly the width its longest row needs. Either way the
+    /// screen only caps the result, it never stretches it.
     #[must_use]
     pub fn width(self, font_size: f32, viewport_width: f32) -> f32 {
-        let preferred = match self.width_em() {
-            Some(em) => em * font_size,
-            None => (viewport_width * WIDE_WIDTH_SHARE).max(WIDE_MIN_WIDTH_EM * font_size)
+        let preferred = match self {
+            Self::Content(content) => content,
+            _ => self.width_em().unwrap_or(MEDIUM_WIDTH_EM) * font_size
         };
         let floor = MIN_WIDTH_EM * font_size;
         let ceiling = (viewport_width * MAX_WIDTH_SHARE).max(1.0);
@@ -101,23 +92,23 @@ mod tests {
     }
 
     #[test]
-    fn a_narrow_screen_caps_the_width() {
-        let width = MenuSize::Wide.width(10.0, 600.0);
-
-        assert!(width <= 600.0 * MAX_WIDTH_SHARE);
-        assert_eq!(width, WIDE_MIN_WIDTH_EM * 10.0);
+    fn a_content_sized_menu_takes_exactly_its_content() {
+        assert_eq!(MenuSize::Content(742.0).width(10.0, 3840.0), 742.0);
     }
 
     #[test]
-    fn a_wide_menu_grows_with_the_screen() {
-        assert_eq!(MenuSize::Wide.width(10.0, 3840.0), 3840.0 * 0.42);
-        assert_eq!(MenuSize::Wide.width(10.0, 1920.0), 1920.0 * 0.42);
+    fn a_content_sized_menu_is_capped_by_the_screen() {
+        let width = MenuSize::Content(5000.0).width(10.0, 1000.0);
+
+        assert_eq!(width, 1000.0 * MAX_WIDTH_SHARE);
     }
 
     #[test]
-    fn a_wide_menu_never_shrinks_below_its_floor() {
-        assert_eq!(MenuSize::Wide.width(10.0, 800.0), WIDE_MIN_WIDTH_EM * 10.0);
-        assert!(MenuSize::Wide.width(10.0, 400.0) <= 400.0 * MAX_WIDTH_SHARE);
+    fn a_tiny_content_still_gets_a_readable_width() {
+        assert_eq!(
+            MenuSize::Content(10.0).width(10.0, 3840.0),
+            MIN_WIDTH_EM * 10.0
+        );
     }
 
     #[test]

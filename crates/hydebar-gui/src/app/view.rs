@@ -285,10 +285,13 @@ impl App {
                                 &self.config,
                                 animated_opacity,
                                 self.icons(),
-                                self.menu_content_width(MenuSize::Wide, button_ui_ref.viewport.0)
+                                self.menu_content_width(
+                                    MenuSize::Content(self.settings.content_width(&self.config)),
+                                    button_ui_ref.viewport.0
+                                )
                             )
                             .map(Message::Settings),
-                        MenuSize::Wide,
+                        MenuSize::Content(self.settings.content_width(&self.config)),
                         *button_ui_ref,
                         self.menu_layout(animated_opacity),
                         Message::None,

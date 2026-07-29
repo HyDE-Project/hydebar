@@ -10,7 +10,10 @@ use iced::{
     widget::{Column, Row, container, text}
 };
 
-use super::widgets::{ROW_GAP_EM, choice_button};
+use super::{
+    metrics::{button_row_width, button_width, text_width},
+    widgets::{ROW_GAP_EM, choice_button}
+};
 use crate::modules::settings::{
     Message,
     layout::{LayoutEdit, Section, available}
@@ -23,17 +26,6 @@ const PAGE_GAP_EM: f32 = 1.2;
 /// Padding inside the box drawn around an island, in multiples of the text
 /// size.
 const ISLAND_PADDING_EM: f32 = 0.4;
-
-/// Width one character of a label takes, in multiples of the text size.
-const GLYPH_ADVANCE_EM: f32 = 0.62;
-
-/// Width a button spends on its own padding, in multiples of the text size.
-const BUTTON_EXTRA_EM: f32 = 2.4;
-
-/// Width a button carrying `label` is expected to take.
-fn button_width(label: &str, font_size: f32) -> f32 {
-    (label.chars().count() as f32 * GLYPH_ADVANCE_EM + BUTTON_EXTRA_EM) * font_size
-}
 
 /// Splits `labels` into rows that fit inside `available` pixels.
 ///
@@ -340,4 +332,30 @@ mod tests {
     fn a_wider_label_is_expected_to_take_more_room() {
         assert!(button_width("Clock", 10.0) < button_width("KeyboardLayout", 10.0));
     }
+}
+
+/// Buttons every entry row carries, at their widest.
+const ENTRY_CONTROLS: [&str; 6] = [
+    "\u{2191}", "\u{2193}", "\u{2192}", "split", "join", "\u{2715}"
+];
+
+/// Longest row of this page, which is how wide the window has to be.
+///
+/// The catalogue is left out on purpose: it wraps into whatever width the
+/// entries settle on, so letting it vote would make the window as wide as the
+/// list of every module the bar ships.
+#[must_use]
+pub(super) fn desired_width(config: &Config, font_size: f32) -> f32 {
+    let gap = ROW_GAP_EM * font_size;
+    let controls = button_row_width(ENTRY_CONTROLS.into_iter(), font_size, gap * 0.5);
+
+    Section::ALL
+        .into_iter()
+        .flat_map(|section| match section {
+            Section::Left => config.modules.left.iter(),
+            Section::Center => config.modules.center.iter(),
+            Section::Right => config.modules.right.iter()
+        })
+        .map(|entry| text_width(&entry_label(entry), font_size) + gap + controls)
+        .fold(0.0_f32, f32::max)
 }

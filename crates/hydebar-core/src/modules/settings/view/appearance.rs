@@ -2,7 +2,10 @@
 
 use iced::{Element, Length, widget::Column};
 
-use super::widgets::{choice_row, stepper_row};
+use super::{
+    metrics::{button_row_width, text_width},
+    widgets::{ROW_GAP_EM, choice_row, stepper_row}
+};
 use crate::{
     config::{Appearance, AppearanceStyle, BarLayer, Config, DEFAULT_FONT_SIZE, Position},
     modules::settings::{Message, Settings}
@@ -110,4 +113,28 @@ pub(super) fn view(config: &Config, opacity: f32) -> Element<'_, Message> {
         .width(Length::Fill)
         .spacing(PAGE_GAP_EM * font_size)
         .into()
+}
+
+/// Longest row of this page, which is how wide the window has to be.
+#[must_use]
+pub(super) fn desired_width(font_size: f32) -> f32 {
+    let gap = ROW_GAP_EM * font_size;
+
+    let rows: [(&str, &[&str]); 7] = [
+        ("Position", &["Top", "Bottom"]),
+        ("Layer", &["Bottom", "Top", "Overlay"]),
+        ("Style", &["Islands", "Solid", "Gradient"]),
+        ("Height", &["\u{2212}", "000", "+"]),
+        ("Font size", &["\u{2212}", "000", "+"]),
+        ("Opacity", &["\u{2212}", "0.00", "+"]),
+        ("Follow HyDE theme", &["On", "Off"])
+    ];
+
+    rows.into_iter()
+        .map(|(label, controls)| {
+            text_width(label, font_size)
+                + gap
+                + button_row_width(controls.iter().copied(), font_size, gap)
+        })
+        .fold(0.0_f32, f32::max)
 }

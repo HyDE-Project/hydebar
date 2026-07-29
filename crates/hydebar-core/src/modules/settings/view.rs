@@ -4,6 +4,7 @@
 //! shows the truth after a reload instead of a copy that drifted.
 
 mod appearance;
+mod metrics;
 mod modules;
 mod widgets;
 
@@ -68,5 +69,27 @@ impl Settings {
             .width(Length::Fill)
             .spacing(WINDOW_GAP_EM * font_size)
             .into()
+    }
+
+    /// Width the longest row of the current page needs.
+    ///
+    /// The window asks for exactly this much and no more: the screen only ever
+    /// caps it, it never stretches it.
+    #[must_use]
+    pub fn content_width(&self, config: &Config) -> f32 {
+        let font_size = config.appearance.font_size.unwrap_or(DEFAULT_FONT_SIZE);
+        let tabs = Tab::ALL.into_iter().map(Tab::label).collect::<Vec<_>>();
+
+        let header =
+            metrics::text_width("Bar settings", font_size) + ROW_GAP_EM * font_size + font_size;
+        let tab_row =
+            metrics::button_row_width(tabs.into_iter(), font_size, ROW_GAP_EM * font_size);
+
+        let page = match self.tab() {
+            Tab::Appearance => appearance::desired_width(font_size),
+            Tab::Modules => modules::desired_width(config, font_size)
+        };
+
+        header.max(tab_row).max(page) + metrics::ROW_SLACK_EM * font_size
     }
 }
