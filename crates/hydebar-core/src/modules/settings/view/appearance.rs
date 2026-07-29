@@ -55,11 +55,10 @@ const SECTIONS: [(&str, &[(&str, &[&str])]); 3] = [
             ("Height", &["\u{2212}", "000", "+"]),
             ("Side padding", &["\u{2212}", "000", "+"]),
             ("Font size", &["\u{2212}", "000", "+"]),
-            ("Opacity", &["\u{2212}", "0.00", "+"]),
-            ("Scale to the screen", &["On", "Off"])
+            ("Opacity", &["\u{2212}", "0.00", "+"])
         ]
     ),
-    (DESKTOP, &[("Follow HyDE theme", &["On", "Off"])])
+    (DESKTOP, &[])
 ];
 
 /// Label of the row the notification source is picked on.
@@ -182,45 +181,24 @@ pub(super) fn view(config: &Config, opacity: f32, magnification: f32) -> Element
             Message::SetOpacity(Settings::opacity_above(appearance.opacity)),
             font_size,
             opacity
-        ))
-        .push(choice_row(
-            "Scale to the screen",
-            vec![
-                ("On", true, appearance.auto_scale),
-                ("Off", false, !appearance.auto_scale),
-            ],
-            Message::SetAutoScale,
-            font_size,
-            opacity
         ));
 
-    let desktop = row_stack(font_size)
-        .push(choice_row(
-            "Follow HyDE theme",
-            vec![
-                ("On", true, appearance.follow_hyde),
-                ("Off", false, !appearance.follow_hyde),
-            ],
-            Message::SetFollowHyde,
-            font_size,
-            opacity
-        ))
-        .push(choice_row(
-            NOTIFICATIONS,
-            NotificationSource::ALL
-                .into_iter()
-                .map(|source| {
-                    (
-                        source.label(),
-                        source,
-                        config.notifications.source == source
-                    )
-                })
-                .collect(),
-            Message::SetNotificationSource,
-            font_size,
-            opacity
-        ));
+    let desktop = row_stack(font_size).push(choice_row(
+        NOTIFICATIONS,
+        NotificationSource::ALL
+            .into_iter()
+            .map(|source| {
+                (
+                    source.label(),
+                    source,
+                    config.notifications.source == source
+                )
+            })
+            .collect(),
+        Message::SetNotificationSource,
+        font_size,
+        opacity
+    ));
 
     page(font_size)
         .push(section(PLACEMENT, placement.into(), font_size))
@@ -327,10 +305,35 @@ mod tests {
     }
 
     #[test]
-    fn every_section_carries_a_title_and_at_least_one_row() {
-        for (title, section_rows) in SECTIONS {
+    fn every_section_carries_a_title() {
+        for (title, _) in SECTIONS {
             assert!(!title.is_empty());
-            assert!(!section_rows.is_empty());
+        }
+    }
+
+    #[test]
+    fn the_desktop_section_holds_only_the_row_named_elsewhere() {
+        // its single row is the notification source, whose choices come from
+        // the source list rather than from the table, and the row count adds it
+        // back on its own
+        let desktop = SECTIONS
+            .iter()
+            .find(|(title, _)| *title == DESKTOP)
+            .expect("the desktop section is drawn");
+
+        assert!(desktop.1.is_empty());
+    }
+
+    #[test]
+    fn nothing_the_bar_decides_for_itself_is_offered() {
+        // following the desktop theme and scaling to the screen are not
+        // choices: the bar does both, always, and a switch that pretended
+        // otherwise would be a switch the bar ignores
+        for (_, section_rows) in SECTIONS {
+            for (label, _) in section_rows {
+                assert_ne!(*label, "Follow HyDE theme");
+                assert_ne!(*label, "Scale to the screen");
+            }
         }
     }
 
