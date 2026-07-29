@@ -14,11 +14,10 @@
 //! affected field at its default. A settings page that showed an error where a
 //! theme name belongs would be worse than one that shows nothing.
 //!
-//! The assignment parser lives in [`staterc`], the directory listing in
-//! [`themes`], and the snapshot with its entry points in [`state`].
+//! The assignment parser lives in [`crate::shell_vars`], the directory listing
+//! in [`themes`], and the snapshot with its entry points in [`state`].
 
 mod state;
-mod staterc;
 mod themes;
 
 pub use state::{HydeState, load, load_from};

@@ -19,7 +19,7 @@ use log::{debug, error, info};
 
 use super::{
     ConfigEvent, WatchLoopOutcome,
-    interpret::{handle_watch_event, process_event_batches}
+    interpret::{handle_watch_event, interpret_event, process_event_batches}
 };
 use crate::config::ConfigManager;
 
@@ -102,7 +102,7 @@ impl Recipe for ConfigWatcher {
 
                     match process_event_batches(
                         event_stream.as_mut(),
-                        file_name.as_os_str(),
+                        |event| interpret_event(event, file_name.as_os_str()),
                         move |event| {
                             let mut sender = sender_template.clone();
                             let path = path_clone.clone();
@@ -132,6 +132,11 @@ impl Recipe for ConfigWatcher {
     }
 }
 
+/// Watches the bar configuration file and republishes it on every change.
+///
+/// The watch sits on the parent directory rather than on the file itself
+/// because editors and generators replace a file instead of writing into it,
+/// which would silently detach an inode level watch.
 pub fn subscription(path: &Path, manager: Arc<ConfigManager>) -> Subscription<ConfigEvent> {
     from_recipe(ConfigWatcher {
         path: path.to_path_buf(),

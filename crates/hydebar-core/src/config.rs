@@ -5,9 +5,10 @@ use std::{
 };
 
 pub use hydebar_proto::config::*;
-use hydebar_proto::theme_source;
+use hydebar_proto::theme_source::{self, HydeTheme};
 
 pub mod manager;
+pub mod theme_watch;
 pub mod watch;
 
 use log::{info, warn};
@@ -15,6 +16,7 @@ pub use manager::{
     ConfigApplied, ConfigDegradation, ConfigImpact, ConfigManager, ConfigUpdateError
 };
 use shellexpand::full;
+pub use theme_watch::{ThemeRoots, ThemeWatchTarget, theme_subscription};
 pub use watch::{ConfigEvent, subscription};
 
 #[derive(Debug)]
@@ -197,6 +199,20 @@ fn ensure_parent_exists(path: &Path) -> Result<(), ConfigLoadError> {
 }
 
 pub(crate) fn read_config(path: &Path) -> Result<Config, ConfigReadError> {
+    read_config_with(path, theme_source::load)
+}
+
+/// Reads the configuration and overlays the theme produced by `theme`.
+///
+/// The theme is a closure rather than a value because reading it touches the
+/// disk and a configuration that opts out of following HyDE must not pay for
+/// it. Injecting it also lets a watcher overlay the theme from the directory it
+/// is watching, which is the only way a test can observe a theme switch without
+/// mutating the environment of the whole process.
+pub(crate) fn read_config_with<F>(path: &Path, theme: F) -> Result<Config, ConfigReadError>
+where
+    F: FnOnce() -> HydeTheme
+{
     let mut content = String::new();
     File::open(path)
         .and_then(|mut file| file.read_to_string(&mut content))
@@ -206,7 +222,7 @@ pub(crate) fn read_config(path: &Path) -> Result<Config, ConfigReadError> {
         })?;
 
     toml::from_str(&content)
-        .map(follow_hyde_theme)
+        .map(|config| follow_hyde_theme(config, theme))
         .map_err(|source| ConfigReadError::Parse {
             path: path.to_path_buf(),
             source
@@ -215,12 +231,21 @@ pub(crate) fn read_config(path: &Path) -> Result<Config, ConfigReadError> {
 
 /// Overlays the HyDE theme onto a freshly parsed configuration.
 ///
+/// The overlay runs *after* the file has been parsed and only fills fields the
+/// user left unset, which is what fixes the precedence for good: what is
+/// written in `~/.config/hydebar/config.toml` wins, what HyDE says fills the
+/// rest, and the bar's own defaults answer for whatever is left. No theme
+/// switch can undo a value the user wrote.
+///
 /// Runs on every read, so a hot reload picks up a theme switch that happened
 /// while the bar was running. Opting out with `appearance.follow_hyde = false`
 /// skips reading the theme entirely.
-fn follow_hyde_theme(mut config: Config) -> Config {
+fn follow_hyde_theme<F>(mut config: Config, theme: F) -> Config
+where
+    F: FnOnce() -> HydeTheme
+{
     if config.appearance.follow_hyde {
-        config.appearance.apply_hyde_theme(&theme_source::load());
+        config.appearance.apply_hyde_theme(&theme());
     }
 
     config

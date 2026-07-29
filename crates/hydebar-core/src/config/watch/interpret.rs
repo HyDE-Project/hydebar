@@ -15,15 +15,13 @@ use super::{
 };
 use crate::config::{ConfigManager, ConfigUpdateError};
 
-pub(super) fn interpret_event<E: WatchedEvent>(event: &E, target_name: &OsStr) -> Option<Event> {
-    let name = event.file_name()?;
-
-    if name != target_name {
-        return None;
-    }
-
-    let mask = event.mask();
-
+/// Classifies an inotify mask without looking at the file it belongs to.
+///
+/// The name check is the only part that differs between the watchers, so the
+/// mask rules live on their own: a watcher following a whole set of files
+/// reuses the very same notion of "replaced" the single file watcher uses,
+/// instead of restating it and drifting away from it.
+pub(crate) fn classify_mask(mask: EventMask) -> Option<Event> {
     let is_removed = mask.contains(EventMask::DELETE) || mask.contains(EventMask::MOVED_FROM);
 
     if is_removed && !mask.intersects(EventMask::CREATE | EventMask::MODIFY | EventMask::MOVED_TO)
@@ -44,15 +42,34 @@ pub(super) fn interpret_event<E: WatchedEvent>(event: &E, target_name: &OsStr) -
     }
 }
 
-pub(super) async fn process_event_batches<S, E, Err, F, Fut>(
+/// Reports how an event on the watched directory affects `target_name`.
+pub(crate) fn interpret_event<E: WatchedEvent>(event: &E, target_name: &OsStr) -> Option<Event> {
+    let name = event.file_name()?;
+
+    if name != target_name {
+        return None;
+    }
+
+    classify_mask(event.mask())
+}
+
+/// Drives a watch stream, folding every batch into at most one reload.
+///
+/// `classify` decides whether an event concerns the watcher at all, which is
+/// what lets a single loop serve both the configuration file and the set of
+/// files the desktop theme is spread across. Collapsing a batch into one call
+/// matters because a theme switch rewrites several files at once and the bar
+/// should repaint once, not once per file.
+pub(crate) async fn process_event_batches<S, E, Err, C, F, Fut>(
     mut stream: Pin<&mut S>,
-    target_name: &OsStr,
+    classify: C,
     mut handler: F
 ) -> WatchLoopOutcome
 where
     S: Stream<Item = Vec<Result<E, Err>>>,
     E: WatchedEvent + std::fmt::Debug,
     Err: Display,
+    C: Fn(&E) -> Option<Event>,
     F: FnMut(Event) -> Fut,
     Fut: Future<Output = Result<(), SendError>>
 {
@@ -64,7 +81,7 @@ where
                 Ok(event) => {
                     debug!("Event: {event:?}");
 
-                    match interpret_event(&event, target_name) {
+                    match classify(&event) {
                         Some(kind) => {
                             file_event = Some(kind);
                         }
@@ -92,7 +109,8 @@ where
     WatchLoopOutcome::StreamEnded
 }
 
-pub(super) async fn handle_watch_event(
+/// Applies a watch event to the configuration and reports the outcome.
+pub(crate) async fn handle_watch_event(
     output: &mut Sender<ConfigEvent>,
     path: &Path,
     event: Event,

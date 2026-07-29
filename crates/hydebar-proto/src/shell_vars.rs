@@ -1,9 +1,15 @@
-//! Parser for the shell assignments HyDE keeps its desktop state in.
+//! Parser for the shell assignments HyDE keeps most of its settings in.
 //!
-//! The file is sourced by shell scripts rather than parsed by them, so it is a
-//! flat list of `KEY="value"` lines. Only that shape is understood: expansions,
-//! command substitutions and anything else a shell would evaluate are left
-//! alone, because the bar reads the file and never runs it.
+//! Every HyDE file the bar reads — `~/.local/state/hyde/staterc`,
+//! `~/.config/hyde/config.toml`, `~/.local/share/hyde/env-theme` and the
+//! `~/.cache/hyde/*.dcol` palettes — is a flat list of `KEY="value"` lines that
+//! the scripts `source` rather than parse. One grammar therefore covers all of
+//! them, which is why this lives beside the readers instead of inside any one
+//! of them.
+//!
+//! Only that shape is understood: expansions, command substitutions and
+//! anything else a shell would evaluate are left alone, because the bar reads
+//! the files and never runs them.
 
 /// Values a flag is written as when HyDE means "on".
 ///
@@ -16,7 +22,7 @@ const TRUTHY: [&str; 4] = ["1", "true", "yes", "on"];
 /// The last assignment wins, mirroring what sourcing the file in a shell would
 /// leave behind: HyDE appends rather than rewrites when it records a change.
 #[must_use]
-pub(super) fn value_of(source: &str, key: &str) -> Option<String> {
+pub(crate) fn value_of(source: &str, key: &str) -> Option<String> {
     let mut found = None;
 
     for line in source.lines() {
@@ -37,10 +43,20 @@ pub(super) fn value_of(source: &str, key: &str) -> Option<String> {
 /// An absent key reads as off, which is what a HyDE install that never enabled
 /// the feature looks like.
 #[must_use]
-pub(super) fn flag(source: &str, key: &str) -> bool {
+pub(crate) fn flag(source: &str, key: &str) -> bool {
     value_of(source, key)
         .map(|value| TRUTHY.contains(&value.to_ascii_lowercase().as_str()))
         .unwrap_or(false)
+}
+
+/// Value assigned to `key`, read as a number.
+///
+/// HyDE writes numbers as quoted strings (`enableWallDcol="1"`), so a caller
+/// that needs the number would otherwise repeat the unquote-then-parse dance at
+/// every call site and get the "written by hand as `1 `" case subtly wrong.
+#[must_use]
+pub(crate) fn number<T: std::str::FromStr>(source: &str, key: &str) -> Option<T> {
+    value_of(source, key).and_then(|value| value.trim().parse().ok())
 }
 
 /// Splits a line into the name it assigns and the raw value, if it assigns one.
@@ -185,5 +201,23 @@ export HYDE_THEME_DIR="/home/user/.config/hyde/themes/Gruvbox Retro"
         assert!(!flag("enableWallDcol=\"0\"", "enableWallDcol"));
         assert!(!flag("enableWallDcol=\"false\"", "enableWallDcol"));
         assert!(!flag("", "enableWallDcol"));
+    }
+
+    #[test]
+    fn a_quoted_number_is_read_as_a_number() {
+        assert_eq!(number::<u8>(STATERC, "enableWallDcol"), Some(1));
+        assert_eq!(
+            number::<f32>("BAR_FONT_SIZE=\" 10.5 \"", "BAR_FONT_SIZE"),
+            Some(10.5)
+        );
+    }
+
+    #[test]
+    fn a_value_that_is_not_a_number_reads_as_missing() {
+        assert_eq!(
+            number::<f32>("BAR_FONT_SIZE=\"nil\"", "BAR_FONT_SIZE"),
+            None
+        );
+        assert_eq!(number::<u8>("", "enableWallDcol"), None);
     }
 }

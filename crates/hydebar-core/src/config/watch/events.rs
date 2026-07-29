@@ -16,12 +16,12 @@ pub enum ConfigEvent {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum Event {
+pub(crate) enum Event {
     Changed,
     Removed
 }
 
-pub(super) trait WatchedEvent {
+pub(crate) trait WatchedEvent {
     fn file_name(&self) -> Option<&OsStr>;
 
     fn mask(&self) -> EventMask;
@@ -38,7 +38,7 @@ impl WatchedEvent for inotify::Event<OsString> {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum WatchLoopOutcome {
+pub(crate) enum WatchLoopOutcome {
     StreamEnded,
     HandlerClosed
 }

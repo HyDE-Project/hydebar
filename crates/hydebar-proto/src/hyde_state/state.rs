@@ -5,7 +5,8 @@ use std::{
     path::{Path, PathBuf}
 };
 
-use super::{staterc, themes};
+use super::themes;
+use crate::shell_vars as staterc;
 
 /// Key the active theme is recorded under.
 const THEME_KEY: &str = "HYDE_THEME";
