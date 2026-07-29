@@ -7,6 +7,7 @@ mod appearance;
 mod hyde;
 mod metrics;
 mod modules;
+mod style;
 mod widgets;
 
 use iced::{
@@ -14,16 +15,18 @@ use iced::{
     widget::{Column, Row, text}
 };
 
-use self::widgets::{ROW_GAP_EM, choice_button};
+use self::widgets::choice_button;
 use super::{Message, Settings, Tab};
 use crate::{
     components::icons::{IconTheme, Icons, icon},
     config::{Config, DEFAULT_FONT_SIZE}
 };
 
-/// Gap between the header, the tabs and the page, in multiples of the text
-/// size.
-const WINDOW_GAP_EM: f32 = 1.0;
+/// Title drawn beside the icon at the top of the window.
+///
+/// Named once so the header the window measures is the header it draws: a title
+/// changed in one place only would size the window for the other one.
+const TITLE: &str = "Bar settings";
 
 impl Settings {
     /// Renders the settings window against the running `config`.
@@ -42,11 +45,11 @@ impl Settings {
 
         let header = Row::new()
             .push(icon(icons, Icons::Settings))
-            .push(text("Bar settings").size(font_size).width(Length::Fill))
-            .spacing(ROW_GAP_EM * font_size)
+            .push(text(TITLE).size(font_size).width(Length::Fill))
+            .spacing(style::row_gap(font_size))
             .align_y(Alignment::Center);
 
-        let mut tabs = Row::new().spacing(ROW_GAP_EM * font_size);
+        let mut tabs = Row::new().spacing(style::group_gap(font_size));
 
         for tab in Tab::ALL {
             tabs = tabs.push(choice_button(
@@ -66,14 +69,9 @@ impl Settings {
                 font_size,
                 self.section(),
                 self.selected(),
-                self.content_width(config) - metrics::ROW_SLACK_EM * font_size
+                self.page_width(config)
             ),
-            Tab::Hyde => hyde::view(
-                self.hyde(),
-                opacity,
-                font_size,
-                self.content_width(config) - metrics::ROW_SLACK_EM * font_size
-            )
+            Tab::Hyde => hyde::view(self.hyde(), opacity, font_size, self.page_width(config))
         };
 
         Column::new()
@@ -81,8 +79,19 @@ impl Settings {
             .push(tabs)
             .push(page)
             .width(Length::Fill)
-            .spacing(WINDOW_GAP_EM * font_size)
+            .spacing(style::window_gap(font_size))
             .into()
+    }
+
+    /// Width a page is actually given to draw into, slack excluded.
+    ///
+    /// The grids that wrap — the theme list and the module catalogue — have to
+    /// wrap against the room they get rather than against the room the window
+    /// asks for, or they would fit one chip too many and run past the edge.
+    fn page_width(&self, config: &Config) -> f32 {
+        let font_size = config.appearance.font_size.unwrap_or(DEFAULT_FONT_SIZE);
+
+        self.content_width(config) - metrics::ROW_SLACK_EM * font_size
     }
 
     /// Width the longest row of the current page needs.
@@ -94,10 +103,14 @@ impl Settings {
         let font_size = config.appearance.font_size.unwrap_or(DEFAULT_FONT_SIZE);
         let tabs = Tab::ALL.into_iter().map(Tab::label).collect::<Vec<_>>();
 
-        let header =
-            metrics::text_width("Bar settings", font_size) + ROW_GAP_EM * font_size + font_size;
-        let tab_row =
-            metrics::button_row_width(tabs.into_iter(), font_size, ROW_GAP_EM * font_size);
+        let header = metrics::text_width(TITLE, font_size)
+            + style::row_gap(font_size)
+            + style::icon_width(font_size);
+        let tab_row = metrics::button_row_width(
+            tabs.into_iter(),
+            style::control_size(font_size),
+            style::group_gap(font_size)
+        );
 
         let page = match self.tab() {
             Tab::Appearance => appearance::desired_width(font_size),
@@ -117,18 +130,110 @@ impl Settings {
     pub fn content_height(&self, config: &Config) -> f32 {
         let font_size = config.appearance.font_size.unwrap_or(DEFAULT_FONT_SIZE);
 
-        let header = metrics::ROW_HEIGHT_EM * font_size;
-        let tabs = metrics::ROW_HEIGHT_EM * font_size;
+        let header = style::row_height(font_size);
+        let tabs = style::row_height(font_size);
         let page = match self.tab() {
             Tab::Appearance => appearance::desired_height(font_size),
             Tab::Modules => modules::desired_height(config, font_size, self.section()),
-            Tab::Hyde => hyde::desired_height(
-                self.hyde(),
-                font_size,
-                self.content_width(config) - metrics::ROW_SLACK_EM * font_size
-            )
+            Tab::Hyde => hyde::desired_height(self.hyde(), font_size, self.page_width(config))
         };
 
-        header + tabs + page + WINDOW_GAP_EM * font_size * 3.0
+        header + tabs + page + style::window_gap(font_size) * style::WINDOW_GAP_COUNT
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use hydebar_proto::hyde_state::HydeState;
+
+    use super::*;
+    use crate::modules::settings::{Section, Tab};
+
+    #[test]
+    fn every_page_derives_its_height_from_the_shared_row_pitch() {
+        let font_size = 16.0;
+        let config = Config::default();
+        let state = HydeState::default();
+        assert_eq!(
+            appearance::desired_height(font_size),
+            style::page_height(appearance::rows(), font_size)
+        );
+        assert_eq!(
+            modules::desired_height(&config, font_size, Section::Left),
+            style::page_height(modules::rows(&config, Section::Left), font_size)
+        );
+        assert_eq!(
+            hyde::desired_height(&state, font_size, 400.0),
+            style::page_height(hyde::rows(&state, font_size, 400.0), font_size)
+        );
+    }
+
+    #[test]
+    fn every_page_reserves_the_shared_label_column() {
+        let font_size = 16.0;
+        let state = HydeState::default();
+        let column = style::label_width(font_size);
+
+        assert!(appearance::desired_width(font_size) > column);
+        assert!(hyde::desired_width(&state, font_size) > column);
+    }
+
+    #[test]
+    fn a_larger_text_size_makes_every_page_taller() {
+        let config = Config::default();
+        let state = HydeState::default();
+
+        assert!(appearance::desired_height(20.0) > appearance::desired_height(16.0));
+        assert!(
+            modules::desired_height(&config, 20.0, Section::Left)
+                > modules::desired_height(&config, 16.0, Section::Left)
+        );
+        assert!(
+            hyde::desired_height(&state, 20.0, 400.0) > hyde::desired_height(&state, 16.0, 400.0)
+        );
+    }
+
+    #[test]
+    fn the_window_reserves_a_row_for_its_header_and_for_its_tabs() {
+        let config = Config::default();
+        let settings = Settings::default();
+        let font_size = config.appearance.font_size.unwrap_or(DEFAULT_FONT_SIZE);
+
+        assert!(
+            settings.content_height(&config)
+                >= 2.0 * style::row_height(font_size) + appearance::desired_height(font_size)
+        );
+    }
+
+    #[test]
+    fn a_page_draws_into_less_room_than_the_window_asks_for() {
+        let config = Config::default();
+        let settings = Settings::default();
+
+        assert!(settings.page_width(&config) < settings.content_width(&config));
+    }
+
+    #[test]
+    fn the_header_fits_the_title_it_draws() {
+        let font_size = 16.0;
+        let config = Config::default();
+        let settings = Settings::default();
+
+        assert!(settings.content_width(&config) >= metrics::text_width(TITLE, font_size));
+    }
+
+    #[test]
+    fn every_tab_asks_for_a_positive_size() {
+        let config = Config::default();
+
+        for tab in Tab::ALL {
+            let settings = Settings {
+                tab,
+                ..Settings::default()
+            };
+
+            assert!(settings.content_width(&config) > 0.0);
+            assert!(settings.content_height(&config) > 0.0);
+        }
     }
 }

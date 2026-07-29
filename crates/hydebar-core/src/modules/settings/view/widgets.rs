@@ -1,19 +1,22 @@
 //! Row shapes shared by the pages of the settings window.
+//!
+//! Every shape reads its sizes from [`super::style`] and every caller passes
+//! the page text size rather than a scaled one, so a row drawn on one tab is
+//! the same height, carries the same text size and starts its controls at the
+//! same x as the matching row on the next tab.
 
 use iced::{
     Alignment, Background, Border, Element, Length, Theme,
     widget::{Column, Row, button, container, text}
 };
 
+use super::style;
 use crate::{modules::settings::Message, style::settings_button_style};
 
-/// Padding of a button inside the window, in multiples of the text size.
-const BUTTON_PADDING_EM: [f32; 2] = [0.6, 1.2];
-
-/// Gap between the controls of a row, in multiples of the text size.
-pub(super) const ROW_GAP_EM: f32 = 0.8;
-
 /// Renders a compact button carrying `label`.
+///
+/// `font_size` is the page text size, not the button's: the button scales it
+/// down itself so no caller can hand it a size of its own invention.
 ///
 /// An `active` button is tinted with the accent colour, which is how the window
 /// shows the choice currently in force.
@@ -24,10 +27,12 @@ pub(super) fn choice_button<'a>(
     font_size: f32,
     opacity: f32
 ) -> Element<'a, Message> {
-    button(text(label).size(font_size))
+    let control = style::control_size(font_size);
+
+    button(text(label).size(control))
         .padding([
-            BUTTON_PADDING_EM[0] * font_size,
-            BUTTON_PADDING_EM[1] * font_size
+            style::BUTTON_PADDING_EM[0] * control,
+            style::BUTTON_PADDING_EM[1] * control
         ])
         .on_press(message)
         .style(move |theme: &Theme, status| {
@@ -53,7 +58,7 @@ pub(super) fn choice_row<'a, T>(
 where
     T: Clone + 'a
 {
-    let mut buttons = Row::new().spacing(ROW_GAP_EM * font_size);
+    let mut buttons = controls(font_size);
 
     for (name, choice, active) in choices {
         buttons = buttons.push(choice_button(
@@ -65,30 +70,25 @@ where
         ));
     }
 
-    Row::new()
-        .push(text(label).size(font_size).width(Length::Fill))
-        .push(buttons)
-        .align_y(Alignment::Center)
-        .width(Length::Fill)
-        .into()
+    labelled_row(label, buttons.into(), font_size)
 }
 
 /// Renders a label followed by a value the window only reports.
 ///
 /// A fact the bar does not own is drawn as text rather than as a control, so
-/// the page never offers a button that quietly does nothing when pressed.
+/// the page never offers a button that quietly does nothing when pressed. The
+/// value takes the control text size all the same, so a reporting row lines up
+/// with an acting one.
 pub(super) fn status_row<'a>(
     label: &'a str,
     value: String,
     font_size: f32
 ) -> Element<'a, Message> {
-    Row::new()
-        .push(text(label).size(font_size).width(Length::Fill))
-        .push(text(value).size(font_size))
-        .spacing(ROW_GAP_EM * font_size)
-        .align_y(Alignment::Center)
-        .width(Length::Fill)
-        .into()
+    labelled_row(
+        label,
+        text(value).size(style::control_size(font_size)).into(),
+        font_size
+    )
 }
 
 /// Renders a label with a value that steps down and up.
@@ -100,19 +100,21 @@ pub(super) fn stepper_row<'a>(
     font_size: f32,
     opacity: f32
 ) -> Element<'a, Message> {
-    Row::new()
-        .push(text(label).size(font_size).width(Length::Fill))
-        .push(choice_button("−", down, false, font_size, opacity))
+    let control = style::control_size(font_size);
+
+    let stepper = controls(font_size)
+        .push(choice_button("\u{2212}", down, false, font_size, opacity))
         .push(
-            container(text(current).size(font_size))
-                .padding([BUTTON_PADDING_EM[0] * font_size, 0.5 * font_size])
+            container(text(current).size(control))
+                .padding([
+                    style::BUTTON_PADDING_EM[0] * control,
+                    style::BUTTON_PADDING_EM[1] * control
+                ])
                 .align_x(Alignment::Center)
         )
-        .push(choice_button("+", up, false, font_size, opacity))
-        .spacing(ROW_GAP_EM * font_size)
-        .align_y(Alignment::Center)
-        .width(Length::Fill)
-        .into()
+        .push(choice_button("+", up, false, font_size, opacity));
+
+    labelled_row(label, stepper.into(), font_size)
 }
 
 /// Renders a chip standing for a module placed on the bar.
@@ -127,8 +129,13 @@ pub(super) fn chip<'a>(
     font_size: f32,
     opacity: f32
 ) -> Element<'a, Message> {
-    button(text(label).size(font_size))
-        .padding([0.35 * font_size, 0.7 * font_size])
+    let control = style::control_size(font_size);
+
+    button(text(label).size(control))
+        .padding([
+            style::CHIP_PADDING_EM[0] * control,
+            style::CHIP_PADDING_EM[1] * control
+        ])
         .on_press(message)
         .style(move |theme: &Theme, _status| {
             let palette = theme.extended_palette();
@@ -145,35 +152,115 @@ pub(super) fn chip<'a>(
                 } else {
                     palette.background.base.text
                 },
-                border: Border::default().rounded(font_size * 0.45),
+                border: Border::default().rounded(style::corner_radius(font_size)),
                 ..button::Style::default()
             }
         })
         .into()
 }
 
-/// Renders a caption above a group of controls.
-pub(super) fn caption<'a>(label: &'a str, font_size: f32) -> Element<'a, Message> {
-    text(label).size(font_size * 0.8).into()
-}
-
-/// Renders a labelled group of actions, so a button never stands alone without
-/// saying what it acts on.
-pub(super) fn action_group<'a>(
-    label: &'a str,
-    actions: Vec<Element<'a, Message>>,
+/// Renders a note: a sentence a page states in place of a control it cannot
+/// offer, such as a section that holds nothing yet.
+///
+/// Drawn smaller than a value so it reads as an aside rather than as something
+/// the bar is reporting.
+pub(super) fn note<'a>(
+    label: impl text::IntoFragment<'a>,
     font_size: f32
 ) -> Element<'a, Message> {
-    let mut row = Row::new().spacing(ROW_GAP_EM * font_size * 0.5);
+    text(label).size(style::caption_size(font_size)).into()
+}
 
-    for action in actions {
-        row = row.push(action);
-    }
+/// Renders the heading of a section.
+///
+/// Every heading on every tab comes from here, so no page can invent a heading
+/// of its own size or weight.
+fn section_title<'a>(label: impl text::IntoFragment<'a>, font_size: f32) -> Element<'a, Message> {
+    text(label)
+        .size(style::section_title_size(font_size))
+        .into()
+}
 
+/// Renders a titled section: the heading, then what it holds.
+///
+/// A page is a stack of these and nothing else, which is what makes the three
+/// tabs read as one window.
+pub(super) fn section<'a>(
+    title: impl text::IntoFragment<'a>,
+    content: Element<'a, Message>,
+    font_size: f32
+) -> Element<'a, Message> {
     Column::new()
-        .push(caption(label, font_size))
-        .push(row)
-        .spacing(ROW_GAP_EM * font_size * 0.35)
+        .push(section_title(title, font_size))
+        .push(content)
+        .spacing(style::caption_gap(font_size))
+        .width(Length::Fill)
+        .into()
+}
+
+/// Starts the column a page is stacked in.
+///
+/// Handed out ready-spaced and ready-padded so a page states what it holds and
+/// never how far apart it holds it.
+pub(super) fn page<'a>(font_size: f32) -> Column<'a, Message> {
+    Column::new()
+        .spacing(style::section_gap(font_size))
+        .padding(style::page_padding(font_size))
+        .width(Length::Fill)
+}
+
+/// Starts the column the rows of one section are stacked in.
+pub(super) fn rows<'a>(font_size: f32) -> Column<'a, Message> {
+    Column::new()
+        .spacing(style::page_gap(font_size))
+        .width(Length::Fill)
+}
+
+/// Starts the column a wrapping grid of chips is stacked in.
+///
+/// Chips sit closer together than rows do, in both directions, so a grid reads
+/// as one block rather than as a stack of unrelated rows.
+pub(super) fn grid<'a>(font_size: f32) -> Column<'a, Message> {
+    Column::new()
+        .spacing(style::group_gap(font_size))
+        .width(Length::Fill)
+}
+
+/// Starts the row the controls of one setting sit in.
+pub(super) fn controls<'a>(font_size: f32) -> Row<'a, Message> {
+    Row::new()
+        .spacing(style::row_gap(font_size))
+        .align_y(Alignment::Center)
+}
+
+/// Starts the row items that belong together sit in, such as the chips of an
+/// island or the buttons of one action.
+pub(super) fn group<'a>(font_size: f32) -> Row<'a, Message> {
+    Row::new()
+        .spacing(style::group_gap(font_size))
+        .align_y(Alignment::Center)
+}
+
+/// Renders a labelled row whose label is not known until it is drawn, such as
+/// the number of an island.
+///
+/// Shares the label column with every other row on every other tab, so the
+/// islands of the module page line up with the steppers of the appearance page.
+pub(super) fn labelled_row<'a>(
+    label: impl text::IntoFragment<'a>,
+    content: Element<'a, Message>,
+    font_size: f32
+) -> Element<'a, Message> {
+    Row::new()
+        .push(
+            text(label)
+                .size(font_size)
+                .width(Length::Fixed(style::label_width(font_size)))
+        )
+        .push(content)
+        .spacing(style::row_gap(font_size))
+        .align_y(Alignment::Center)
+        .width(Length::Fill)
         .into()
 }
 
@@ -184,7 +271,7 @@ pub(super) fn card<'a>(
     opacity: f32
 ) -> Element<'a, Message> {
     container(content)
-        .padding(0.8 * font_size)
+        .padding(style::card_padding(font_size))
         .width(Length::Fill)
         .style(move |theme: &Theme| container::Style {
             background: Some(Background::Color(
@@ -193,9 +280,36 @@ pub(super) fn card<'a>(
                     .background
                     .weak
                     .color
-                    .scale_alpha(opacity * 0.5)
+                    .scale_alpha(opacity * style::CARD_FILL_ALPHA)
             )),
-            border: Border::default().rounded(font_size * 0.5),
+            border: Border::default().rounded(style::corner_radius(font_size)),
+            ..container::Style::default()
+        })
+        .into()
+}
+
+/// Renders an outlined box around `content`.
+///
+/// The outline carries the same padding and the same corner as a card, so an
+/// island on the module page sits on the same grid as the card below it.
+pub(super) fn outlined<'a>(
+    content: Element<'a, Message>,
+    font_size: f32,
+    opacity: f32
+) -> Element<'a, Message> {
+    container(content)
+        .padding(style::card_padding(font_size))
+        .style(move |theme: &Theme| container::Style {
+            border: Border {
+                width:  style::BORDER_WIDTH,
+                radius: style::corner_radius(font_size).into(),
+                color:  theme
+                    .extended_palette()
+                    .secondary
+                    .strong
+                    .color
+                    .scale_alpha(opacity)
+            },
             ..container::Style::default()
         })
         .into()

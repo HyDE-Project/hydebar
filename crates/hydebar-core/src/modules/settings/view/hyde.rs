@@ -11,25 +11,16 @@
 //! that cannot act is worse than a line that simply states the truth.
 
 use hydebar_proto::hyde_state::HydeState;
-use iced::{
-    Element, Length,
-    widget::{Column, Row, text}
-};
+use iced::Element;
 
 use super::{
-    metrics::{ROW_HEIGHT_EM, button_width, text_width, wrap_into_rows},
-    widgets::{ROW_GAP_EM, action_group, caption, chip, choice_button, status_row}
+    metrics::{button_width, chip_width, status_row_width, text_width, wrap_chips_into_rows},
+    style,
+    widgets::{
+        chip, choice_button, grid, group, note, page, rows as row_stack, section, status_row
+    }
 };
 use crate::modules::settings::Message;
-
-/// Gap between the rows of the page, in multiples of the text size.
-const PAGE_GAP_EM: f32 = 1.0;
-
-/// Size a theme button is drawn at, relative to the page text size.
-///
-/// The themes are a long list, so they are drawn a little smaller than the rest
-/// of the page to keep the window from growing taller than the screen.
-const THEME_FONT_SCALE: f32 = 0.85;
 
 /// Theme buttons a row is sized to hold.
 ///
@@ -41,15 +32,36 @@ const THEMES_PER_ROW: f32 = 3.0;
 /// Label of the button asking HyDE for another wallpaper.
 const NEXT_WALLPAPER: &str = "next wallpaper";
 
+/// Title of the section reporting what the desktop is set to.
+const DESKTOP: &str = "Desktop";
+
+/// Title of the section listing the installed themes.
+const THEMES: &str = "Themes";
+
+/// Title of the section holding the wallpaper action.
+const WALLPAPER: &str = "Wallpaper";
+
 /// Shown in place of the theme name while HyDE has recorded none.
 const UNKNOWN: &str = "unknown";
 
 /// Shown in place of the theme list while none are installed.
 const NO_THEMES: &str = "no HyDE themes found on this machine";
 
+/// Labels of the rows this page reports a value on.
+///
+/// Written down once so the width the page asks for and the label column it is
+/// held to are measured against the very strings that are drawn.
+const STATUS_LABELS: [&str; 3] = ["Active theme", "Wallpaper colours", "Shader"];
+
+/// Sections this page draws.
+const SECTION_COUNT: f32 = 3.0;
+
+/// Rows the wallpaper section holds.
+const WALLPAPER_ROWS: f32 = 1.0;
+
 /// Renders the HyDE page against the desktop state last read from disk.
 ///
-/// `available_width` is how wide the page may draw, so the theme buttons wrap
+/// `available_width` is how wide the page may draw, so the theme chips wrap
 /// inside the window instead of running past its edge.
 pub(super) fn view<'a>(
     state: &HydeState,
@@ -57,43 +69,43 @@ pub(super) fn view<'a>(
     font_size: f32,
     available_width: f32
 ) -> Element<'a, Message> {
-    let theme_font = font_size * THEME_FONT_SCALE;
-    let gap = ROW_GAP_EM * font_size;
-
-    Column::new()
+    let desktop = row_stack(font_size)
         .push(status_row(
-            "Active theme",
+            STATUS_LABELS[0],
             state.theme.clone().unwrap_or_else(|| UNKNOWN.to_owned()),
             font_size
         ))
-        .push(themes(state, opacity, font_size, available_width))
         .push(status_row(
-            "Wallpaper colours",
+            STATUS_LABELS[1],
             switch_label(state.wallpaper_colors).to_owned(),
             font_size
         ))
         .push(status_row(
-            "Shader",
+            STATUS_LABELS[2],
             state.shader.clone().unwrap_or_else(|| UNKNOWN.to_owned()),
             font_size
-        ))
-        .push(action_group(
-            "Wallpaper",
-            vec![choice_button(
-                NEXT_WALLPAPER,
-                Message::NextHydeWallpaper,
-                false,
-                theme_font,
-                opacity
-            )],
+        ));
+
+    let wallpaper = group(font_size).push(choice_button(
+        NEXT_WALLPAPER,
+        Message::NextHydeWallpaper,
+        false,
+        font_size,
+        opacity
+    ));
+
+    page(font_size)
+        .push(section(DESKTOP, desktop.into(), font_size))
+        .push(section(
+            THEMES,
+            themes(state, opacity, font_size, available_width),
             font_size
         ))
-        .width(Length::Fill)
-        .spacing(gap)
+        .push(section(WALLPAPER, wallpaper.into(), font_size))
         .into()
 }
 
-/// Renders the installed themes as a grid of buttons.
+/// Renders the installed themes as a grid of chips.
 ///
 /// The theme in force is drawn as picked, so the grid doubles as the answer to
 /// "which one am I on" without the page repeating the name twice.
@@ -104,22 +116,14 @@ fn themes<'a>(
     available_width: f32
 ) -> Element<'a, Message> {
     if state.themes.is_empty() {
-        return Column::new()
-            .push(caption("Themes", font_size))
-            .push(text(NO_THEMES).size(font_size * THEME_FONT_SCALE))
-            .spacing(ROW_GAP_EM * font_size * 0.35)
-            .into();
+        return note(NO_THEMES, font_size);
     }
 
-    let theme_font = font_size * THEME_FONT_SCALE;
-    let gap = ROW_GAP_EM * font_size * 0.5;
-    let mut grid = Column::new()
-        .push(caption("Themes", font_size))
-        .spacing(gap)
-        .width(Length::Fill);
+    let gap = style::group_gap(font_size);
+    let mut block = grid(font_size);
 
-    for indices in wrap_into_rows(&state.themes, available_width, theme_font, gap) {
-        let mut row = Row::new().spacing(gap).width(Length::Fill);
+    for indices in wrap_chips_into_rows(&state.themes, available_width, font_size, gap) {
+        let mut row = group(font_size);
 
         for index in indices {
             let name = &state.themes[index];
@@ -128,15 +132,15 @@ fn themes<'a>(
                 name.clone(),
                 Message::SwitchHydeTheme(name.clone()),
                 state.is_active(name),
-                theme_font,
+                font_size,
                 opacity
             ));
         }
 
-        grid = grid.push(row);
+        block = block.push(row);
     }
 
-    grid.into()
+    block.into()
 }
 
 /// Names the state of a switch the page reports but does not operate.
@@ -150,10 +154,23 @@ fn theme_rows(state: &HydeState, font_size: f32, available_width: f32) -> f32 {
         return 1.0;
     }
 
-    let theme_font = font_size * THEME_FONT_SCALE;
-    let gap = ROW_GAP_EM * font_size * 0.5;
+    wrap_chips_into_rows(
+        &state.themes,
+        available_width,
+        font_size,
+        style::group_gap(font_size)
+    )
+    .len() as f32
+}
 
-    wrap_into_rows(&state.themes, available_width, theme_font, gap).len() as f32
+/// Rows this page draws when laid out `available_width` wide, its section
+/// headings counted in.
+#[must_use]
+pub(super) fn rows(state: &HydeState, font_size: f32, available_width: f32) -> f32 {
+    SECTION_COUNT * style::SECTION_TITLE_ROWS
+        + STATUS_LABELS.len() as f32
+        + theme_rows(state, font_size, available_width)
+        + WALLPAPER_ROWS
 }
 
 /// Longest line of this page, which is how wide the window has to be.
@@ -164,31 +181,31 @@ fn theme_rows(state: &HydeState, font_size: f32, available_width: f32) -> f32 {
 /// wider than the screen.
 #[must_use]
 pub(super) fn desired_width(state: &HydeState, font_size: f32) -> f32 {
-    let gap = ROW_GAP_EM * font_size;
-    let theme_font = font_size * THEME_FONT_SCALE;
-
     let statuses = [
-        ("Active theme", state.theme.as_deref().unwrap_or(UNKNOWN)),
-        ("Wallpaper colours", switch_label(state.wallpaper_colors)),
-        ("Shader", state.shader.as_deref().unwrap_or(UNKNOWN))
+        state.theme.as_deref().unwrap_or(UNKNOWN),
+        switch_label(state.wallpaper_colors),
+        state.shader.as_deref().unwrap_or(UNKNOWN)
     ]
     .into_iter()
-    .map(|(label, value)| text_width(label, font_size) + gap + text_width(value, font_size))
+    .map(|value| status_row_width(value, font_size))
     .fold(0.0_f32, f32::max);
 
+    let control = style::control_size(font_size);
+    let gap = style::group_gap(font_size);
+
     let grid = if state.themes.is_empty() {
-        text_width(NO_THEMES, theme_font)
+        text_width(NO_THEMES, style::caption_size(font_size))
     } else {
         let widest = state
             .themes
             .iter()
-            .map(|name| button_width(name, theme_font))
+            .map(|name| chip_width(name, control))
             .fold(0.0_f32, f32::max);
 
         widest * THEMES_PER_ROW + gap * (THEMES_PER_ROW - 1.0)
     };
 
-    let wallpaper = button_width(NEXT_WALLPAPER, theme_font);
+    let wallpaper = button_width(NEXT_WALLPAPER, control);
 
     statuses.max(grid).max(wallpaper)
 }
@@ -196,13 +213,7 @@ pub(super) fn desired_width(state: &HydeState, font_size: f32) -> f32 {
 /// Height this page needs when drawn `available_width` wide.
 #[must_use]
 pub(super) fn desired_height(state: &HydeState, font_size: f32, available_width: f32) -> f32 {
-    let row = ROW_HEIGHT_EM * font_size + PAGE_GAP_EM * font_size;
-
-    let statuses = row * 3.0;
-    let grid = row * (theme_rows(state, font_size, available_width) + 1.0);
-    let wallpaper = row * 2.0;
-
-    statuses + grid + wallpaper
+    style::page_height(rows(state, font_size, available_width), font_size)
 }
 
 #[cfg(test)]
@@ -269,11 +280,44 @@ mod tests {
             &["Nord", "Mocha", "Latte", "Decay Green", "Edge Runner"],
             None
         );
-        let rows = wrap_into_rows(&themes.themes, 200.0, 16.0 * THEME_FONT_SCALE, 8.0);
+        let rows = wrap_chips_into_rows(&themes.themes, 200.0, 16.0, 8.0);
 
         assert_eq!(
             rows.iter().map(Vec::len).sum::<usize>(),
             themes.themes.len()
+        );
+    }
+
+    #[test]
+    fn every_row_label_fits_the_shared_label_column() {
+        let font_size = 16.0;
+
+        for label in STATUS_LABELS {
+            assert!(
+                text_width(label, font_size) <= style::label_width(font_size),
+                "{label} overflows the label column"
+            );
+        }
+    }
+
+    #[test]
+    fn the_page_reserves_a_heading_for_every_section_it_draws() {
+        let themes = state(&["Nord"], Some("Nord"));
+
+        assert_eq!(
+            rows(&themes, 16.0, 400.0),
+            SECTION_COUNT + STATUS_LABELS.len() as f32 + 1.0 + WALLPAPER_ROWS
+        );
+    }
+
+    #[test]
+    fn the_page_height_follows_the_shared_row_pitch() {
+        let font_size = 16.0;
+        let themes = state(&["Nord", "Mocha"], Some("Nord"));
+
+        assert_eq!(
+            desired_height(&themes, font_size, 400.0),
+            style::page_height(rows(&themes, font_size, 400.0), font_size)
         );
     }
 }

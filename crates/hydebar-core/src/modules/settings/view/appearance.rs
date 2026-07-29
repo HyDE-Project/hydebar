@@ -1,10 +1,11 @@
 //! Appearance page of the settings window.
 
-use iced::{Element, Length, widget::Column};
+use iced::Element;
 
 use super::{
-    metrics::{ROW_HEIGHT_EM, button_row_width, text_width},
-    widgets::{ROW_GAP_EM, choice_row, stepper_row}
+    metrics::row_width,
+    style,
+    widgets::{choice_row, page, rows as row_stack, section, stepper_row}
 };
 use crate::{
     config::{
@@ -17,8 +18,48 @@ use crate::{
 /// Height the bar falls back to while the configuration names none.
 const FALLBACK_HEIGHT: f32 = 34.0;
 
-/// Gap between the rows of the page, in multiples of the text size.
-const PAGE_GAP_EM: f32 = 1.2;
+/// Title of the section deciding where on the screen the bar sits.
+const PLACEMENT: &str = "Placement";
+
+/// Title of the section deciding how large and how solid the bar is drawn.
+const SIZE: &str = "Size and colour";
+
+/// Title of the section about the desktop the bar sits on.
+const DESKTOP: &str = "Desktop";
+
+/// Every section of the page, as its title and the rows it holds.
+///
+/// Each row is written down as its label and the controls beside it, so the
+/// width the page asks for and the number of rows it reserves height for both
+/// come from the same list: a row added to the page without an entry here would
+/// be measured out of existence.
+const SECTIONS: [(&str, &[(&str, &[&str])]); 3] = [
+    (
+        PLACEMENT,
+        &[
+            ("Position", &["Top", "Bottom"]),
+            ("Layer", &["Bottom", "Top", "Overlay"])
+        ]
+    ),
+    (
+        SIZE,
+        &[
+            ("Style", &["Islands", "Solid", "Gradient"]),
+            ("Height", &["\u{2212}", "000", "+"]),
+            ("Side padding", &["\u{2212}", "000", "+"]),
+            ("Font size", &["\u{2212}", "000", "+"]),
+            ("Opacity", &["\u{2212}", "0.00", "+"]),
+            ("Scale to the screen", &["On", "Off"])
+        ]
+    ),
+    (DESKTOP, &[("Follow HyDE theme", &["On", "Off"])])
+];
+
+/// Label of the row the notification source is picked on.
+///
+/// Kept out of [`SECTIONS`] because its choices are named by the source list
+/// itself rather than written down here.
+const NOTIFICATIONS: &str = "Notifications";
 
 /// Renders the appearance page against the running `config`.
 ///
@@ -42,7 +83,7 @@ pub(super) fn view(config: &Config, opacity: f32, magnification: f32) -> Element
     let height = appearance.height.unwrap_or(FALLBACK_HEIGHT) / magnification;
     let side_padding = appearance.bar_padding()[1] / magnification;
 
-    Column::new()
+    let placement = row_stack(font_size)
         .push(choice_row(
             "Position",
             vec![
@@ -71,7 +112,9 @@ pub(super) fn view(config: &Config, opacity: f32, magnification: f32) -> Element
             Message::SetLayer,
             font_size,
             opacity
-        ))
+        ));
+
+    let size = row_stack(font_size)
         .push(choice_row(
             "Style",
             vec![
@@ -136,9 +179,21 @@ pub(super) fn view(config: &Config, opacity: f32, magnification: f32) -> Element
             Message::SetAutoScale,
             font_size,
             opacity
+        ));
+
+    let desktop = row_stack(font_size)
+        .push(choice_row(
+            "Follow HyDE theme",
+            vec![
+                ("On", true, appearance.follow_hyde),
+                ("Off", false, !appearance.follow_hyde),
+            ],
+            Message::SetFollowHyde,
+            font_size,
+            opacity
         ))
         .push(choice_row(
-            "Notifications",
+            NOTIFICATIONS,
             NotificationSource::ALL
                 .into_iter()
                 .map(|source| {
@@ -152,20 +207,24 @@ pub(super) fn view(config: &Config, opacity: f32, magnification: f32) -> Element
             Message::SetNotificationSource,
             font_size,
             opacity
-        ))
-        .push(choice_row(
-            "Follow HyDE theme",
-            vec![
-                ("On", true, appearance.follow_hyde),
-                ("Off", false, !appearance.follow_hyde),
-            ],
-            Message::SetFollowHyde,
-            font_size,
-            opacity
-        ))
-        .width(Length::Fill)
-        .spacing(PAGE_GAP_EM * font_size)
+        ));
+
+    page(font_size)
+        .push(section(PLACEMENT, placement.into(), font_size))
+        .push(section(SIZE, size.into(), font_size))
+        .push(section(DESKTOP, desktop.into(), font_size))
         .into()
+}
+
+/// Rows this page draws, its section headings counted in.
+///
+/// The notification row is the one that is not written down in [`SECTIONS`], so
+/// it is added here rather than baked into a literal that could drift.
+#[must_use]
+pub(super) fn rows() -> f32 {
+    let settings: usize = SECTIONS.iter().map(|(_, rows)| rows.len()).sum();
+
+    SECTIONS.len() as f32 * style::SECTION_TITLE_ROWS + settings as f32 + 1.0
 }
 
 /// Longest row of this page, which is how wide the window has to be.
@@ -175,84 +234,55 @@ pub(super) fn view(config: &Config, opacity: f32, magnification: f32) -> Element
 /// otherwise be cut off by a window sized for the old list.
 #[must_use]
 pub(super) fn desired_width(font_size: f32) -> f32 {
-    let gap = ROW_GAP_EM * font_size;
+    let notifications = row_width(
+        NotificationSource::ALL
+            .into_iter()
+            .map(NotificationSource::label),
+        font_size
+    );
 
-    let rows: [(&str, &[&str]); 9] = [
-        ("Position", &["Top", "Bottom"]),
-        ("Layer", &["Bottom", "Top", "Overlay"]),
-        ("Style", &["Islands", "Solid", "Gradient"]),
-        ("Height", &["\u{2212}", "000", "+"]),
-        ("Side padding", &["\u{2212}", "000", "+"]),
-        ("Font size", &["\u{2212}", "000", "+"]),
-        ("Opacity", &["\u{2212}", "0.00", "+"]),
-        ("Follow HyDE theme", &["On", "Off"]),
-        ("Scale to the screen", &["On", "Off"])
-    ];
-
-    let notifications = text_width("Notifications", font_size)
-        + gap
-        + button_row_width(
-            NotificationSource::ALL
-                .into_iter()
-                .map(|source| source.label()),
-            font_size,
-            gap
-        );
-
-    rows.into_iter()
-        .map(|(label, controls)| {
-            text_width(label, font_size)
-                + gap
-                + button_row_width(controls.iter().copied(), font_size, gap)
-        })
+    SECTIONS
+        .into_iter()
+        .flat_map(|(_, rows)| rows.iter())
+        .map(|(_, controls)| row_width(controls.iter().copied(), font_size))
         .fold(notifications, f32::max)
 }
 
 /// Height this page needs.
+#[must_use]
 pub(super) fn desired_height(font_size: f32) -> f32 {
-    const ROWS: f32 = 10.0;
-
-    ROWS * (ROW_HEIGHT_EM * font_size + PAGE_GAP_EM * font_size)
+    style::page_height(rows(), font_size)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{super::metrics::text_width, *};
 
-    /// Width the notification row alone asks for at `font_size`.
-    fn notification_row_width(font_size: f32) -> f32 {
-        let gap = ROW_GAP_EM * font_size;
-
-        text_width("Notifications", font_size)
-            + gap
-            + button_row_width(
-                NotificationSource::ALL
-                    .into_iter()
-                    .map(|source| source.label()),
-                font_size,
-                gap
-            )
+    /// Every label this page draws in the shared label column.
+    fn labels() -> Vec<&'static str> {
+        SECTIONS
+            .into_iter()
+            .flat_map(|(_, rows)| rows.iter().map(|(label, _)| *label))
+            .chain(std::iter::once(NOTIFICATIONS))
+            .collect()
     }
 
     #[test]
     fn the_window_is_wide_enough_for_every_notification_source() {
         let font_size = 16.0;
+        let notifications = row_width(
+            NotificationSource::ALL
+                .into_iter()
+                .map(NotificationSource::label),
+            font_size
+        );
 
-        assert!(desired_width(font_size) >= notification_row_width(font_size));
+        assert!(desired_width(font_size) >= notifications);
     }
 
     #[test]
     fn the_notification_row_is_measured_from_all_three_sources() {
-        let font_size = 16.0;
-        let gap = ROW_GAP_EM * font_size;
-
         assert_eq!(NotificationSource::ALL.len(), 3);
-        assert_eq!(
-            notification_row_width(font_size),
-            text_width("Notifications", font_size)
-                + gap
-                + button_row_width(["Built in", "Hyprland", "System daemon"], font_size, gap)
-        );
     }
 
     #[test]
@@ -262,5 +292,40 @@ mod tests {
         for source in NotificationSource::ALL {
             assert!(desired_width(font_size) >= text_width(source.label(), font_size));
         }
+    }
+
+    #[test]
+    fn every_row_label_fits_the_shared_label_column() {
+        let font_size = 16.0;
+
+        for label in labels() {
+            assert!(
+                text_width(label, font_size) <= style::label_width(font_size),
+                "{label} overflows the label column"
+            );
+        }
+    }
+
+    #[test]
+    fn the_page_reserves_a_row_for_every_row_and_every_heading_it_draws() {
+        assert_eq!(rows(), labels().len() as f32 + SECTIONS.len() as f32);
+    }
+
+    #[test]
+    fn every_section_carries_a_title_and_at_least_one_row() {
+        for (title, section_rows) in SECTIONS {
+            assert!(!title.is_empty());
+            assert!(!section_rows.is_empty());
+        }
+    }
+
+    #[test]
+    fn the_page_height_follows_the_shared_row_pitch() {
+        let font_size = 16.0;
+
+        assert_eq!(
+            desired_height(font_size),
+            style::page_height(rows(), font_size)
+        );
     }
 }
