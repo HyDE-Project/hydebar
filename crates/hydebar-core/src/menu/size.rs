@@ -74,8 +74,30 @@ impl MenuSize {
     /// screen: a module near either edge keeps its menu fully visible.
     #[must_use]
     pub fn left_offset(width: f32, anchor_x: f32, viewport_width: f32, font_size: f32) -> f32 {
+        Self::left_offset_clear_of(width, anchor_x, viewport_width, font_size, 0.0)
+    }
+
+    /// Same, with a strip of `reserved` pixels kept free along the right edge.
+    ///
+    /// The notification popups live in that strip and are drawn above every
+    /// other surface, so a menu that reached into it would be covered by the
+    /// very notification the user is waiting to read. Moving the menu is the
+    /// right half of the fix: a notification that dodged the menu instead would
+    /// appear somewhere new each time and stop being findable.
+    ///
+    /// The menu is only pushed aside as far as it has to be, and never past the
+    /// left margin: on a screen too narrow to hold both, a menu that is legible
+    /// beats a strip that is empty.
+    #[must_use]
+    pub fn left_offset_clear_of(
+        width: f32,
+        anchor_x: f32,
+        viewport_width: f32,
+        font_size: f32,
+        reserved: f32
+    ) -> f32 {
         let margin = EDGE_MARGIN_EM * font_size;
-        let rightmost = (viewport_width - width - margin).max(margin);
+        let rightmost = (viewport_width - width - margin - reserved).max(margin);
 
         (anchor_x - width / 2.0).clamp(margin, rightmost)
     }
