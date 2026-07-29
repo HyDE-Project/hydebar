@@ -1,4 +1,4 @@
-//! Commands the settings window drives the HyDE desktop with.
+//! Commands the theme module drives the HyDE desktop with.
 //!
 //! HyDE exposes every desktop action through the `hyde-shell` dispatcher, so
 //! the bar asks for a change the same way the user's own keybindings do instead
@@ -22,7 +22,7 @@ mod theme_script;
 
 use std::{path::Path, sync::Arc};
 
-use theme_script::ScriptNotFound;
+pub use theme_script::ScriptNotFound;
 
 use crate::utils::launcher;
 
@@ -55,6 +55,12 @@ fn switch_theme_with(script: &Path, theme: &str) -> String {
 #[must_use]
 pub fn next_wallpaper() -> String {
     "hyde-shell wallpaper --next".to_owned()
+}
+
+/// Command asking the desktop for the previous wallpaper of the theme in force.
+#[must_use]
+pub fn previous_wallpaper() -> String {
+    "hyde-shell wallpaper --previous".to_owned()
 }
 
 /// Wraps `value` so a shell passes it on as a single, literal argument.
@@ -110,6 +116,7 @@ mod tests {
     #[test]
     fn the_wallpaper_command_asks_for_the_next_one() {
         assert_eq!(next_wallpaper(), "hyde-shell wallpaper --next");
+        assert_eq!(previous_wallpaper(), "hyde-shell wallpaper --previous");
     }
 }
 

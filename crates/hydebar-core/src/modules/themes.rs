@@ -1,4 +1,10 @@
-//! Bar module choosing the desktop theme.
+//! Bar module driving the desktop theme.
+//!
+//! Everything about the look of the desktop lives here: the installed themes,
+//! the one in force, the facts HyDE reports about the wallpaper, and the two
+//! actions that change either — switching the theme and asking for the next
+//! wallpaper. The settings window is about the bar and holds none of it, so
+//! there is one surface to look at rather than two that have to agree.
 //!
 //! The themes belong to the [HyDE Project](https://github.com/HyDE-Project)
 //! rather than to the bar, so nothing chosen here is written into the bar's own
@@ -10,9 +16,7 @@
 //! This is also the one place that knows a switch is running. A HyDE switch
 //! rewrites the wallpaper, the palette and every generated stylesheet, and
 //! takes seconds doing it; the module holds that wait, refuses a second switch
-//! on top of it, and publishes the indicator that both its own menu and the
-//! settings window draw. One owner rather than two is what keeps the two
-//! surfaces from ever disagreeing about whether the desktop is busy.
+//! on top of it, and owns the indicator its menu and its bar entry draw.
 
 mod progress;
 mod view;
@@ -24,7 +28,6 @@ use hydebar_proto::{
 use iced::{Element, Task};
 use log::{error, info};
 pub use progress::{FRAME_INTERVAL, Spinner};
-pub(crate) use view::active_label;
 
 use super::{Module, OnModulePress};
 use crate::{
@@ -65,7 +68,14 @@ pub enum Message {
     /// otherwise: the bar has no other reason to redraw itself while it waits
     /// on a desktop script, and a wait nobody can see reads as a press that was
     /// never taken.
-    Tick
+    Tick,
+    /// Ask HyDE for the next wallpaper of the theme in force.
+    NextWallpaper,
+    /// Report that the wallpaper change has ended.
+    WallpaperChanged {
+        /// Why the change failed, when it did.
+        failure: Option<String>
+    }
 }
 
 /// What a press on a theme chip leads to.
@@ -233,6 +243,21 @@ impl Themes {
             Message::Tick => {
                 if self.switching.is_some() {
                     self.spinner.advance();
+                }
+            }
+            Message::NextWallpaper => {
+                return Task::perform(hyde_shell::run(hyde_shell::next_wallpaper()), |failure| {
+                    Message::WallpaperChanged {
+                        failure
+                    }
+                });
+            }
+            Message::WallpaperChanged {
+                failure
+            } => {
+                if let Some(reason) = failure {
+                    error!("the wallpaper could not be changed: {reason}");
+                    report(config, "the desktop refused to change the wallpaper");
                 }
             }
         }
@@ -464,6 +489,43 @@ mod tests {
 
         assert_eq!(themes.switching(), Some("Gruvbox Retro"));
         assert_eq!(themes.spinner(), Spinner::default());
+    }
+
+    /// The wallpaper action and the theme switch are two different desktop
+    /// commands, and only the switch is the one the module refuses to run twice
+    /// over; asking for a wallpaper must therefore neither start a wait nor end
+    /// one that is running.
+    #[test]
+    fn asking_for_the_next_wallpaper_does_not_disturb_a_running_switch() {
+        let mut themes = waiting_on("Tokyo Night");
+
+        let _ = themes.update(Message::NextWallpaper, &Config::default());
+
+        assert_eq!(themes.switching(), Some("Tokyo Night"));
+        assert!(themes.is_waiting());
+    }
+
+    #[test]
+    fn asking_for_the_next_wallpaper_starts_no_wait_of_its_own() {
+        let mut themes = Themes::default();
+
+        let _ = themes.update(Message::NextWallpaper, &Config::default());
+
+        assert!(!themes.is_waiting());
+    }
+
+    #[test]
+    fn a_refused_wallpaper_change_leaves_the_module_as_it_found_it() {
+        let mut themes = waiting_on("Tokyo Night");
+
+        let _ = themes.update(
+            Message::WallpaperChanged {
+                failure: Some("the script died".to_owned())
+            },
+            &Config::default()
+        );
+
+        assert_eq!(themes.switching(), Some("Tokyo Night"));
     }
 
     #[test]

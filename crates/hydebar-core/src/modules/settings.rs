@@ -15,7 +15,7 @@ use std::path::{Path, PathBuf};
 use hydebar_proto::config::{Config, ModuleDef, Modules, NotificationSource};
 use iced::{Element, Task};
 pub use layout::{LayoutEdit, Section, Slot};
-use log::{error, warn};
+use log::warn;
 pub use tab::Tab;
 pub use writer::{SettingValue, SettingsWriteError, write_setting};
 
@@ -23,9 +23,7 @@ use super::{Module, OnModulePress};
 use crate::{
     components::icons::{IconTheme, Icons, icon},
     config::{AppearanceStyle, BarLayer, Position},
-    menu::MenuType,
-    services::hyprland_notify::report,
-    utils::hyde_shell
+    menu::MenuType
 };
 
 /// Smallest bar height the menu will step down to, in pixels.
@@ -89,14 +87,7 @@ pub enum Message {
     /// Pick the module the editor acts on, or drop the pick.
     SelectSlot(Option<Slot>),
     /// Show the modules of another section.
-    SelectSection(Section),
-    /// Ask HyDE for the next wallpaper of the active theme.
-    NextHydeWallpaper,
-    /// Report that the wallpaper change has ended.
-    HydeWallpaperChanged {
-        /// Why the change failed, when it did.
-        failure: Option<String>
-    }
+    SelectSection(Section)
 }
 
 impl Message {
@@ -116,11 +107,7 @@ impl Message {
             Self::SelectTab(_)
             | Self::EditLayout(_)
             | Self::SelectSlot(_)
-            | Self::SelectSection(_)
-            | Self::NextHydeWallpaper
-            | Self::HydeWallpaperChanged {
-                ..
-            } => &[]
+            | Self::SelectSection(_) => &[]
         }
     }
 
@@ -156,11 +143,7 @@ impl Message {
             Self::SelectTab(_)
             | Self::EditLayout(_)
             | Self::SelectSlot(_)
-            | Self::SelectSection(_)
-            | Self::NextHydeWallpaper
-            | Self::HydeWallpaperChanged {
-                ..
-            } => SettingValue::Flag(false)
+            | Self::SelectSection(_) => SettingValue::Flag(false)
         }
     }
 
@@ -286,32 +269,11 @@ impl Settings {
 
     /// Applies a choice made in the window.
     ///
-    /// Picking a tab is the only choice about the bar kept in memory;
-    /// everything else lands in the configuration file and comes back through
-    /// the reload.
-    ///
-    /// The wallpaper is the one thing here that is not about the bar: it is
-    /// handed to the desktop's own script, and nothing about the outcome is
-    /// assumed — a change the desktop refused is reported rather than drawn as
-    /// if it had happened.
+    /// Picking a tab is the only choice kept in memory; everything else lands
+    /// in the configuration file and comes back through the reload.
     pub fn update(&mut self, message: Message, config: &Config) -> Task<Message> {
         match message {
             Message::SelectTab(tab) => self.tab = tab,
-            Message::NextHydeWallpaper => {
-                return Task::perform(hyde_shell::run(hyde_shell::next_wallpaper()), |failure| {
-                    Message::HydeWallpaperChanged {
-                        failure
-                    }
-                });
-            }
-            Message::HydeWallpaperChanged {
-                failure
-            } => {
-                if let Some(reason) = failure {
-                    error!("the wallpaper could not be changed: {reason}");
-                    report(config, "the desktop refused to change the wallpaper");
-                }
-            }
             Message::SelectSlot(slot) => self.selected = slot,
             Message::SelectSection(section) => {
                 self.section = section;

@@ -15,12 +15,12 @@
 //!   asked: the handler ends every recorded group with nothing but atomic loads
 //!   and `kill`, both of which a signal handler may use, and then wakes a
 //!   thread that ends the process once the graceful path has had its chance.
-//! * [`supervised`] asks the kernel to kill the child when the bar disappears,
-//!   which is the only layer that survives `SIGKILL`, a panic in the graphics
-//!   driver or a power-loss-shaped crash of the event loop.
+//! * [`claim_orphans`] keeps a listener whose shell has gone inside the bar's
+//!   own subtree instead of letting the service manager adopt it, so the two
+//!   layers above still have something they can reach.
 //!
 //! A bar that still finds strays from an earlier run — one started before this
-//! machinery existed, or one whose kernel level backstop was defeated — sweeps
+//! machinery existed, or one left by a bar that was killed outright — sweeps
 //! them up at startup through [`sweep_orphans`]. Recognition is by the launch
 //! stamp [`LAUNCH_VAR`] carries into every supervised process and, through the
 //! inherited environment, into everything those processes start; no command
@@ -194,39 +194,42 @@ pub fn in_own_group(command: &mut Command) -> &mut Command {
 
 /// Prepares a command whose process must not outlive the bar.
 ///
-/// On top of the group of its own the child is stamped with the launch id, so
-/// a later bar can recognise it, and armed with a parent death signal, so the
-/// kernel kills it the moment the bar is gone however abruptly that happens.
+/// The child gets a process group of its own, so [`terminate_group`] reaches
+/// every descendant, and is stamped with the launch id, so a later bar can
+/// recognise what an earlier one left behind.
 ///
-/// The death signal is tied to the thread that performs the spawn, which for
-/// every caller here is a runtime worker living as long as the process. A
-/// command that must survive the bar — anything the user launches from a menu —
-/// therefore goes through [`in_own_group`] instead.
+/// The kernel offers a third guard — a signal delivered to the child once its
+/// parent is gone — and it is deliberately not used. That signal is armed
+/// against the *thread* that performed the spawn rather than against the
+/// process, and the bar spawns from runtime threads that come and go: a pool
+/// thread retiring while the bar runs on killed perfectly healthy modules and
+/// took their icons off the bar with them. It is also dropped the moment the
+/// child forks, so it never reached the helpers a listener starts, which are
+/// the processes that actually pile up.
+///
+/// What replaces it is [`claim_orphans`]: a listener that outlives the task
+/// watching it comes back to the bar instead of being adopted away, so the
+/// registry and the sweep still see it.
 pub fn supervised(command: &mut Command) -> &mut Command {
-    let parent = unsafe { libc::getpid() };
-
-    in_own_group(command).env(LAUNCH_VAR, launch_id());
-
-    unsafe {
-        command.pre_exec(move || arm_parent_death(parent));
-    }
-
-    command
+    in_own_group(command).env(LAUNCH_VAR, launch_id())
 }
 
-/// Asks the kernel to kill this process once its parent is gone.
+/// Makes the bar the parent every orphaned descendant returns to.
 ///
-/// Called between `fork` and `exec`, where only a handful of operations are
-/// legal; the parent check closes the window in which the bar dies after the
-/// fork but before the request is registered, in which case no signal would
-/// ever arrive and the child would be a stray from birth.
-fn arm_parent_death(parent: i32) -> io::Result<()> {
-    if unsafe { libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGKILL) } != 0 {
+/// Without this a listener whose shell exits hands its helpers to the service
+/// manager, which has no idea they belong to a bar and never ends them; they
+/// then outlive every mechanism here, because nothing can reach a process it
+/// cannot find. Claiming them keeps the whole family inside the bar's own
+/// subtree for as long as the bar runs, which is what makes [`sweep_orphans`]
+/// and the termination handler complete rather than best effort.
+///
+/// # Errors
+///
+/// Returns the failure reported by the operating system, which on a kernel too
+/// old to know the request means the bar keeps the behaviour it had before.
+pub fn claim_orphans() -> io::Result<()> {
+    if unsafe { libc::prctl(libc::PR_SET_CHILD_SUBREAPER, 1) } != 0 {
         return Err(io::Error::last_os_error());
-    }
-
-    if unsafe { libc::getppid() } != parent {
-        unsafe { libc::_exit(0) };
     }
 
     Ok(())
@@ -990,34 +993,36 @@ mod tests {
         let _ = stranger.wait().await;
     }
 
-    /// The kernel level backstop: the child is killed the moment the thread
-    /// that started it is gone, without anything in this process acting.
-    #[test]
-    fn a_supervised_child_does_not_outlive_the_one_that_started_it() {
-        let parent = unsafe { libc::getpid() };
-
+    /// A supervised module keeps running when the thread that started it goes.
+    ///
+    /// This is the failure a kernel level death signal introduced: armed
+    /// against the spawning thread rather than the process, it killed healthy
+    /// modules whenever a runtime worker retired, and the bar lost its icons.
+    #[tokio::test]
+    async fn a_supervised_child_outlives_the_thread_that_started_it() {
+        let handle = tokio::runtime::Handle::current();
         let mut child = thread::spawn(move || {
-            let mut command = std::process::Command::new("bash");
+            let _entered = handle.enter();
+            let mut command = Command::new("bash");
             command
                 .arg("-c")
                 .arg("while :; do sleep 30 & wait; done")
-                .stdout(Stdio::null())
-                .process_group(0);
+                .stdout(Stdio::null());
 
-            unsafe {
-                command.pre_exec(move || arm_parent_death(parent));
-            }
-
-            command.spawn().expect("listener")
+            supervised(&mut command).spawn().expect("listener")
         })
         .join()
         .expect("the spawning thread finishes");
 
+        let pid = child.id().expect("a running listener");
+        tokio::time::sleep(Duration::from_millis(200)).await;
+
         assert!(
-            wait_until_gone(child.id()),
-            "the child survived the thread that started it"
+            is_running(pid),
+            "the module died with the thread that started it"
         );
 
-        let _ = child.wait();
+        let _ = terminate_group(pid);
+        let _ = child.wait().await;
     }
 }

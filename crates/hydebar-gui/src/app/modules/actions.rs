@@ -34,6 +34,15 @@ impl App {
                     }
                 }
             }
+            ModuleName::Wallpaper => ModuleActions {
+                left: Some(OnModulePress::Action(Box::new(Message::Wallpaper(
+                    hydebar_core::modules::wallpaper::Message::Next
+                )))),
+                right: Some(OnModulePress::Action(Box::new(Message::Wallpaper(
+                    hydebar_core::modules::wallpaper::Message::Previous
+                )))),
+                ..ModuleActions::default()
+            },
             _ => ModuleActions {
                 left,
                 right: self.displaced_menu(module_name),

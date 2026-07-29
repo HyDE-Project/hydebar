@@ -38,7 +38,7 @@ const SYSTEM_DATA_DIRECTORIES: [&str; 2] = ["/usr/local/share", "/usr/share"];
 /// The error carries every path that was tried, because the fix is always to
 /// put the script in one of them — or to point [`OVERRIDE_VARIABLE`] at it.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct ScriptNotFound {
+pub struct ScriptNotFound {
     /// Paths that were probed, in the order they were probed.
     candidates: Vec<PathBuf>
 }

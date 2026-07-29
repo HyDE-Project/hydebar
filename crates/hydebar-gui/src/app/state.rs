@@ -28,6 +28,7 @@ use hydebar_core::{
         themes::Themes,
         tray::{TrayMessage, TrayModule},
         updates::Updates,
+        wallpaper::Wallpaper,
         weather::Weather,
         window_title::WindowTitle,
         workspaces::Workspaces
@@ -89,6 +90,7 @@ pub struct App {
     /// Bar entry choosing the desktop theme, and the one holder of a running
     /// switch.
     pub themes: Themes,
+    pub wallpaper: Wallpaper,
     pub weather: Weather,
     /// Notifications currently shown as popups.
     pub notification_popups: Vec<notifications_popup::Popup>,
@@ -162,6 +164,7 @@ pub enum Message {
     ControlCenter(modules::control_center::Message),
     Settings(modules::settings::Message),
     Themes(modules::themes::Message),
+    Wallpaper(modules::wallpaper::Message),
     MediaPlayer(modules::media_player::Message),
     Notifications(modules::notifications::NotificationsMessage),
     Screenshot(modules::screenshot::ScreenshotMessage),
@@ -387,6 +390,7 @@ impl App {
             idle_inhibitor: IdleInhibitor,
             settings: Settings::new(config_path.clone()),
             themes: Themes::new(),
+            wallpaper: Wallpaper::new(),
             notification_popups: Vec::new(),
             attention: Attention::default(),
             weather: Weather::new(

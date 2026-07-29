@@ -1,19 +1,29 @@
-//! Menu of the theme module: the installed themes, and which one is happening.
+//! Menu of the theme module: the desktop's look, and every way of changing it.
 //!
-//! The grid drawn here is the only theme grid the bar has. The settings window
-//! used to carry one of its own and now points at this module instead, so there
-//! is one list, one set of chip states and one wait indicator rather than two
-//! that have to be kept in step.
+//! The menu is the only place the bar draws any of this. It states what the
+//! desktop is on, lists what it could be on, reports the wallpaper facts HyDE
+//! owns, and carries the one wallpaper action HyDE takes an instruction for.
+//! The settings window used to hold a page of its own and no longer does, so
+//! there is one list, one set of chip states and one wait indicator rather than
+//! two that have to be kept in step.
+//!
+//! Facts HyDE owns but does not take an instruction for, such as whether the
+//! colours are pulled from the wallpaper, are drawn as plain text: a control
+//! that cannot act is worse than a line that simply states the truth.
 
 use hydebar_proto::hyde_state::HydeState;
 use iced::Element;
 
 use super::{Message, Spinner};
 use crate::components::page::{
-    metrics::{chip_width, indicator_width, status_row_width, text_width, wrap_chips_into_rows},
+    metrics::{
+        button_width, chip_width, indicator_width, status_row_width, text_width,
+        wrap_chips_into_rows
+    },
     style,
     widgets::{
-        ThemeChip, grid, group, note, page, rows as row_stack, section, status_row, theme_chip
+        ThemeChip, choice_button, grid, group, note, page, rows as row_stack, section, status_row,
+        theme_chip
     }
 };
 
@@ -84,6 +94,16 @@ pub(super) fn view<'a>(
             font_size
         ))
         .into()
+}
+
+/// Names the state of a switch the menu reports but does not operate.
+fn switch_label(enabled: bool) -> &'static str {
+    if enabled { "On" } else { "Off" }
+}
+
+/// Names the shader HyDE has applied, or says it has recorded none.
+fn shader_label(state: &HydeState) -> String {
+    state.shader.clone().unwrap_or_else(|| UNKNOWN.to_owned())
 }
 
 /// Renders the installed themes as a grid of chips.
@@ -161,7 +181,7 @@ fn chip_state(
 /// asked for is drawn beside it rather than in its place, because until the
 /// switch has finished the desktop is still on the old one and a menu that
 /// already named the new one would be reporting something that may yet fail.
-pub(crate) fn active_label(state: &HydeState, switching: Option<&str>) -> String {
+fn active_label(state: &HydeState, switching: Option<&str>) -> String {
     let active = state.theme.as_deref().unwrap_or(UNKNOWN);
 
     match switching {
@@ -414,6 +434,32 @@ mod tests {
             desired_width(&state, None, font_size)
                 >= status_row_width(&active_label(&state, None), font_size)
                     + indicator_width(font_size)
+        );
+    }
+
+    #[test]
+    fn a_wallpaper_switch_is_reported_as_on_or_off() {
+        assert_eq!(switch_label(true), "On");
+        assert_eq!(switch_label(false), "Off");
+    }
+
+    #[test]
+    fn a_desktop_without_a_shader_says_so_rather_than_drawing_a_blank() {
+        assert_eq!(shader_label(&HydeState::default()), UNKNOWN);
+        assert_eq!(shader_label(&state(&["Nord"], Some("Nord"))), "wallbash");
+    }
+
+    #[test]
+    fn the_menu_reserves_a_row_for_every_line_it_draws() {
+        let themes = state(&["Nord"], Some("Nord"));
+        let font_size = 16.0;
+        let width = desired_width(&themes, None, font_size);
+
+        assert_eq!(
+            rows(&themes, font_size, width),
+            SECTION_COUNT * style::SECTION_TITLE_ROWS
+                + ACTIVE_ROWS
+                + theme_rows(&themes, font_size, width)
         );
     }
 

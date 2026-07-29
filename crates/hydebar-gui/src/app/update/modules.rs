@@ -222,6 +222,11 @@ impl App {
 
                 self.themes.update(msg, &config).map(Message::Themes)
             }
+            Message::Wallpaper(msg) => {
+                let config = Arc::clone(&self.config);
+
+                self.wallpaper.update(msg, &config).map(Message::Wallpaper)
+            }
             Message::MediaPlayer(msg) => {
                 self.media_player.update(msg);
                 Task::none()

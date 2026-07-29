@@ -8,7 +8,10 @@ use iced::{
     stream
 };
 use log::{debug, error};
-use zbus::Connection;
+use zbus::{
+    Connection,
+    fdo::{RequestNameFlags, RequestNameReply}
+};
 
 use super::{
     Notification, NotificationEvent, NotificationStorage, NotificationsError, NotificationsServer
@@ -134,21 +137,55 @@ impl ReadOnlyService for NotificationsService {
                         return;
                     }
 
-                    // Request well-known name
-                    if let Err(err) = connection
-                        .request_name("org.freedesktop.Notifications")
+                    // Take the well known name, replacing whoever holds it.
+                    //
+                    // A session usually starts a notification daemon of its
+                    // own, and it is already holding this name by the time the
+                    // bar comes up. Asking politely therefore fails every time
+                    // and the bar silently draws nothing while the old daemon
+                    // keeps painting its own popups — which is exactly what the
+                    // user did not ask for when they chose the bar's own.
+                    // Replacement is also offered in return, so a daemon
+                    // started afterwards can take the name back rather than
+                    // fail the same way.
+                    let flags =
+                        RequestNameFlags::ReplaceExisting | RequestNameFlags::AllowReplacement;
+
+                    match connection
+                        .request_name_with_flags("org.freedesktop.Notifications", flags)
                         .await
                     {
-                        error!("Failed to request D-Bus name: {err}");
-                        let _ = output
-                            .send(ServiceEvent::Error(NotificationsError::DBusConnection(
-                                err.to_string()
-                            )))
-                            .await;
-                        return;
+                        Ok(RequestNameReply::PrimaryOwner) => {
+                            debug!("the bar now serves the notification bus");
+                        }
+                        Ok(reply) => {
+                            // The name is held by a daemon that refuses to be
+                            // replaced, so the request only joined a queue. The
+                            // bar would then draw nothing while the old daemon
+                            // keeps painting its own popups, and the user would
+                            // have no idea why the setting did nothing — so say
+                            // it plainly rather than wait in a queue forever.
+                            error!(
+                                "another notification daemon holds the bus and refuses to be \
+                                 replaced ({reply:?}); stop it to let the bar draw its own popups"
+                            );
+                            let _ = output
+                                .send(ServiceEvent::Error(NotificationsError::DBusConnection(
+                                    "the notification bus is held by another daemon".to_owned()
+                                )))
+                                .await;
+                            return;
+                        }
+                        Err(err) => {
+                            error!("Failed to request D-Bus name: {err}");
+                            let _ = output
+                                .send(ServiceEvent::Error(NotificationsError::DBusConnection(
+                                    err.to_string()
+                                )))
+                                .await;
+                            return;
+                        }
                     }
-
-                    debug!("Notifications D-Bus service registered");
 
                     // Forward every accepted notification to the bar
                     while let Some(event) = announced.next().await {

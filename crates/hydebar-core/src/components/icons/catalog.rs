@@ -79,12 +79,13 @@ pub enum Icons {
     IdleInhibitorActive,
     IdleInhibitorInactive,
     Settings,
-    Themes
+    Themes,
+    Wallpaper
 }
 
 impl Icons {
     /// Every icon that can be overridden from the configuration.
-    pub const ALL: [Icons; 77] = [
+    pub const ALL: [Icons; 78] = [
         Icons::None,
         Icons::AppLauncher,
         Icons::Clipboard,
@@ -161,7 +162,8 @@ impl Icons {
         Icons::IdleInhibitorActive,
         Icons::IdleInhibitorInactive,
         Icons::Settings,
-        Icons::Themes
+        Icons::Themes,
+        Icons::Wallpaper
     ];
 
     /// Key used to address the icon inside the `[icons]` configuration table.
@@ -244,7 +246,8 @@ impl Icons {
             Icons::IdleInhibitorActive => "idle_inhibitor_active",
             Icons::IdleInhibitorInactive => "idle_inhibitor_inactive",
             Icons::Settings => "settings",
-            Icons::Themes => "themes"
+            Icons::Themes => "themes",
+            Icons::Wallpaper => "wallpaper"
         }
     }
 
@@ -334,7 +337,8 @@ impl Icons {
             Icons::IdleInhibitorActive => "\u{f0176}",
             Icons::IdleInhibitorInactive => "\u{f06ca}",
             Icons::Settings => "\u{f0493}",
-            Icons::Themes => "\u{f00e1}"
+            Icons::Themes => "\u{f00e1}",
+            Icons::Wallpaper => "\u{f0b7c}"
         }
     }
 }

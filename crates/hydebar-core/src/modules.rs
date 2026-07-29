@@ -23,6 +23,7 @@ pub mod system_info;
 pub mod themes;
 pub mod tray;
 pub mod updates;
+pub mod wallpaper;
 pub mod weather;
 pub mod window_title;
 pub mod workspaces;

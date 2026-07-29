@@ -54,6 +54,7 @@ pub enum ModuleName {
     PowerProfile,
     Settings,
     Themes,
+    Wallpaper,
     MediaPlayer,
     Notifications,
     Screenshot,
@@ -63,7 +64,7 @@ pub enum ModuleName {
 
 impl ModuleName {
     /// Every module the bar ships, in the order the editor lists them.
-    pub const BUILT_IN: [ModuleName; 23] = [
+    pub const BUILT_IN: [ModuleName; 24] = [
         ModuleName::AppLauncher,
         ModuleName::Updates,
         ModuleName::Clipboard,
@@ -83,6 +84,7 @@ impl ModuleName {
         ModuleName::PowerProfile,
         ModuleName::Settings,
         ModuleName::Themes,
+        ModuleName::Wallpaper,
         ModuleName::MediaPlayer,
         ModuleName::Notifications,
         ModuleName::Screenshot,
@@ -112,6 +114,7 @@ impl ModuleName {
             ModuleName::PowerProfile => "PowerProfile",
             ModuleName::Settings => "Settings",
             ModuleName::Themes => "Themes",
+            ModuleName::Wallpaper => "Wallpaper",
             ModuleName::MediaPlayer => "MediaPlayer",
             ModuleName::Notifications => "Notifications",
             ModuleName::Screenshot => "Screenshot",

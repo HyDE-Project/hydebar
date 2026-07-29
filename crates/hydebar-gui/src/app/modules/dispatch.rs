@@ -126,6 +126,7 @@ impl App {
             ModuleName::PowerProfile => self.control_center.power_profile_bar(self.icons()),
             ModuleName::Settings => self.settings.view(self.icons()),
             ModuleName::Themes => self.themes.view(self.icons()),
+            ModuleName::Wallpaper => self.wallpaper.view(self.icons()),
             ModuleName::MediaPlayer => self
                 .media_player
                 .view((&self.config.media_player, self.icons())),
@@ -173,6 +174,7 @@ impl App {
             ModuleName::Tray => self.tray.subscription(),
             ModuleName::Clock => None,
             ModuleName::Themes => None,
+            ModuleName::Wallpaper => None,
             ModuleName::Battery => None,
             ModuleName::Privacy => self.privacy.subscription(),
             ModuleName::ControlCenter

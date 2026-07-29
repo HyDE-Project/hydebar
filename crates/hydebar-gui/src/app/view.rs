@@ -296,15 +296,14 @@ impl App {
                                 &self.config,
                                 animated_opacity,
                                 self.icons(),
-                                self.magnification,
-                                &self.themes
+                                self.magnification
                             )
                             .map(Message::Settings),
-                        MenuSize::Content(self.settings.content_width(&self.config, &self.themes)),
+                        MenuSize::Content(self.settings.content_width(&self.config)),
                         *button_ui_ref,
                         self.measured_menu_layout(
                             animated_opacity,
-                            self.settings.content_height(&self.config, &self.themes)
+                            self.settings.content_height(&self.config)
                         ),
                         Message::None,
                         Message::CloseMenu(id)

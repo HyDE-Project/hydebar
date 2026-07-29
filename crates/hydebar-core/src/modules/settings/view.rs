@@ -4,7 +4,6 @@
 //! shows the truth after a reload instead of a copy that drifted.
 
 mod appearance;
-mod hyde;
 mod modules;
 
 use iced::{
@@ -18,8 +17,7 @@ use crate::{
         icons::{IconTheme, Icons, icon},
         page::{metrics, style, widgets::choice_button}
     },
-    config::{Config, DEFAULT_FONT_SIZE},
-    modules::themes::Themes
+    config::{Config, DEFAULT_FONT_SIZE}
 };
 
 /// Title drawn beside the icon at the top of the window.
@@ -38,8 +36,7 @@ impl Settings {
         config: &'a Config,
         opacity: f32,
         icons: &IconTheme,
-        magnification: f32,
-        themes: &Themes
+        magnification: f32
     ) -> Element<'a, Message> {
         let font_size = config.appearance.font_size.unwrap_or(DEFAULT_FONT_SIZE);
         let active = self.tab();
@@ -70,14 +67,7 @@ impl Settings {
                 font_size,
                 self.section(),
                 self.selected(),
-                self.page_width(config, themes)
-            ),
-            Tab::Hyde => hyde::view(
-                themes.hyde(),
-                themes.switching(),
-                themes.spinner(),
-                opacity,
-                font_size
+                self.page_width(config)
             )
         };
 
@@ -92,13 +82,13 @@ impl Settings {
 
     /// Width a page is actually given to draw into, slack excluded.
     ///
-    /// The grids that wrap — the theme list and the module catalogue — have to
-    /// wrap against the room they get rather than against the room the window
-    /// asks for, or they would fit one chip too many and run past the edge.
-    fn page_width(&self, config: &Config, themes: &Themes) -> f32 {
+    /// The grid that wraps — the module catalogue — has to wrap against the
+    /// room it gets rather than against the room the window asks for, or it
+    /// would fit one chip too many and run past the edge.
+    fn page_width(&self, config: &Config) -> f32 {
         let font_size = config.appearance.font_size.unwrap_or(DEFAULT_FONT_SIZE);
 
-        self.content_width(config, themes) - metrics::ROW_SLACK_EM * font_size
+        self.content_width(config) - metrics::ROW_SLACK_EM * font_size
     }
 
     /// Width the longest row of the current page needs.
@@ -106,7 +96,7 @@ impl Settings {
     /// The window asks for exactly this much and no more: the screen only ever
     /// caps it, it never stretches it.
     #[must_use]
-    pub fn content_width(&self, config: &Config, themes: &Themes) -> f32 {
+    pub fn content_width(&self, config: &Config) -> f32 {
         let font_size = config.appearance.font_size.unwrap_or(DEFAULT_FONT_SIZE);
         let tabs = Tab::ALL.into_iter().map(Tab::label).collect::<Vec<_>>();
 
@@ -121,8 +111,7 @@ impl Settings {
 
         let page = match self.tab() {
             Tab::Appearance => appearance::desired_width(font_size),
-            Tab::Modules => modules::desired_width(config, font_size, self.section()),
-            Tab::Hyde => hyde::desired_width(themes.hyde(), themes.switching(), font_size)
+            Tab::Modules => modules::desired_width(config, font_size, self.section())
         };
 
         header.max(tab_row).max(page) + metrics::ROW_SLACK_EM * font_size
@@ -134,15 +123,14 @@ impl Settings {
     /// and scroll the rest: a page taller than the screen would otherwise have
     /// its last rows cut off by the edge.
     #[must_use]
-    pub fn content_height(&self, config: &Config, themes: &Themes) -> f32 {
+    pub fn content_height(&self, config: &Config) -> f32 {
         let font_size = config.appearance.font_size.unwrap_or(DEFAULT_FONT_SIZE);
 
         let header = style::row_height(font_size);
         let tabs = style::row_height(font_size);
         let page = match self.tab() {
             Tab::Appearance => appearance::desired_height(font_size),
-            Tab::Modules => modules::desired_height(config, font_size, self.section()),
-            Tab::Hyde => hyde::desired_height(font_size)
+            Tab::Modules => modules::desired_height(config, font_size, self.section())
         };
 
         header + tabs + page + style::window_gap(font_size) * style::WINDOW_GAP_COUNT
@@ -166,20 +154,16 @@ mod tests {
             modules::desired_height(&config, font_size, Section::Left),
             style::page_height(modules::rows(&config, Section::Left), font_size)
         );
-        assert_eq!(
-            hyde::desired_height(font_size),
-            style::page_height(hyde::rows(), font_size)
-        );
     }
 
     #[test]
     fn every_page_reserves_the_shared_label_column() {
         let font_size = 16.0;
-        let state = Themes::default();
+        let config = Config::default();
         let column = style::label_width(font_size);
 
         assert!(appearance::desired_width(font_size) > column);
-        assert!(hyde::desired_width(state.hyde(), None, font_size) > column);
+        assert!(modules::desired_width(&config, font_size, Section::Left) > column);
     }
 
     #[test]
@@ -191,7 +175,6 @@ mod tests {
             modules::desired_height(&config, 20.0, Section::Left)
                 > modules::desired_height(&config, 16.0, Section::Left)
         );
-        assert!(hyde::desired_height(20.0) > hyde::desired_height(16.0));
     }
 
     #[test]
@@ -201,7 +184,7 @@ mod tests {
         let font_size = config.appearance.font_size.unwrap_or(DEFAULT_FONT_SIZE);
 
         assert!(
-            settings.content_height(&config, &Themes::default())
+            settings.content_height(&config)
                 >= 2.0 * style::row_height(font_size) + appearance::desired_height(font_size)
         );
     }
@@ -211,9 +194,7 @@ mod tests {
         let config = Config::default();
         let settings = Settings::default();
 
-        let themes = Themes::default();
-
-        assert!(settings.page_width(&config, &themes) < settings.content_width(&config, &themes));
+        assert!(settings.page_width(&config) < settings.content_width(&config));
     }
 
     #[test]
@@ -222,10 +203,7 @@ mod tests {
         let config = Config::default();
         let settings = Settings::default();
 
-        assert!(
-            settings.content_width(&config, &Themes::default())
-                >= metrics::text_width(TITLE, font_size)
-        );
+        assert!(settings.content_width(&config) >= metrics::text_width(TITLE, font_size));
     }
 
     #[test]
@@ -238,10 +216,8 @@ mod tests {
                 ..Settings::default()
             };
 
-            let themes = Themes::default();
-
-            assert!(settings.content_width(&config, &themes) > 0.0);
-            assert!(settings.content_height(&config, &themes) > 0.0);
+            assert!(settings.content_width(&config) > 0.0);
+            assert!(settings.content_height(&config) > 0.0);
         }
     }
 }

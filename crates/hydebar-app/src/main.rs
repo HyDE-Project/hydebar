@@ -100,6 +100,10 @@ fn reap_and_guard_children() {
         debug!("ended {swept} processes left behind by an earlier run");
     }
 
+    if let Err(err) = hydebar_core::utils::process_group::claim_orphans() {
+        error!("failed to claim orphaned children, some may escape the bar: {err}");
+    }
+
     if let Err(err) = hydebar_core::utils::process_group::install_termination_handler() {
         error!("failed to arm the process reaper, a signalled exit may leave children: {err}");
     }

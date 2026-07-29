@@ -101,16 +101,48 @@ pub fn notify(notice: Notice, duration: u32, color: &str, font_size: f32, messag
 /// noticed: the surface that asked for it draws the desktop as it is, so a
 /// refused change simply leaves that surface unchanged and reads as the press
 /// having been missed.
+///
+/// Which surface it appears on follows the notification source the user chose.
+/// Handing every notice to the compositor regardless would put a stray
+/// compositor bubble on a desktop that asked for the bar's own popups, or for
+/// the daemon it already runs — the bar's own messages have no more right to
+/// pick a channel than anyone else's.
 pub fn report(config: &Config, message: &str) {
     warn!("{message}");
 
-    notify(
-        Notice::Error,
-        REFUSAL_DURATION,
-        &compositor_color(config.appearance.primary_color.clone()),
-        config.appearance.font_size_px(),
-        message
-    );
+    if config.notifications.source.hands_to_compositor() {
+        notify(
+            Notice::Error,
+            REFUSAL_DURATION,
+            &compositor_color(config.appearance.primary_color.clone()),
+            config.appearance.font_size_px(),
+            message
+        );
+
+        return;
+    }
+
+    post_to_bus(message);
+}
+
+/// Name the bar posts its own notices under.
+const NOTIFIER: &str = "hydebar";
+
+/// Sends `message` to whichever notification service holds the bus.
+///
+/// That is the bar's own service when the user asked for the bar's popups —
+/// the service takes the name for itself rather than yielding to whatever
+/// daemon the session started — and the session's daemon otherwise. Either way
+/// the notice is drawn by the thing the user chose, which is the whole point of
+/// the setting.
+fn post_to_bus(message: &str) {
+    let sent = Command::new("notify-send")
+        .args(["--app-name", NOTIFIER, "--urgency", "critical", message])
+        .spawn();
+
+    if let Err(err) = sent {
+        warn!("the notice could not be posted to the notification bus: {err}");
+    }
 }
 
 #[cfg(test)]

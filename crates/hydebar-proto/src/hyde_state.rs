@@ -6,13 +6,13 @@
 //! are simply the directories under the HyDE configuration root.
 //!
 //! The bar reads both so it can show the desktop as it is rather than as the
-//! bar's own configuration remembers it, and so a page of the settings window
-//! can offer the themes that actually exist on this machine.
+//! bar's own configuration remembers it, and so the theme module can offer the
+//! themes that actually exist on this machine.
 //!
 //! Like [`crate::theme_source`], the reader never fails: a missing file, an
 //! unreadable directory or a line it cannot understand simply leaves the
-//! affected field at its default. A settings page that showed an error where a
-//! theme name belongs would be worse than one that shows nothing.
+//! affected field at its default. A menu that showed an error where a theme
+//! name belongs would be worse than one that shows nothing.
 //!
 //! The assignment parser lives in [`crate::shell_vars`], the directory listing
 //! in [`themes`], and the snapshot with its entry points in [`state`].
