@@ -6,7 +6,7 @@
 //! the Waybar `interval` plus `signal` contract, so scripts written for
 //! `pkill -RTMIN+N waybar` work unchanged.
 
-use std::{future::pending, sync::Arc, time::Duration};
+use std::{future::pending, process::Stdio, sync::Arc, time::Duration};
 
 use log::error;
 use tokio::{
@@ -87,16 +87,26 @@ async fn next_refresh(refresh: Option<&mut Signal>) {
 /// `published` carries the payload the bar is already showing. A run that
 /// reprints it publishes nothing, since the repaint every event triggers would
 /// produce an identical frame.
+///
+/// The run happens in a process group of its own so that a reload landing while
+/// the command is still working ends it instead of orphaning it: a script that
+/// blocks on the network, run every few seconds, would otherwise pile up one
+/// stranded copy per reload.
 async fn run_once(
     module_name: &str,
     command: &str,
     sender: &ModuleEventSender<Message>,
     published: &mut Option<CustomListenData>
 ) -> Result<(), CustomListenerError> {
-    let output = Command::new("bash")
+    let mut spawner = Command::new("bash");
+    spawner
         .arg("-c")
         .arg(command)
-        .output()
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+
+    let output = crate::utils::process_group::guarded_output(&mut spawner)
         .await
         .map_err(|err| CustomListenerError::Command(CustomCommandError::Spawn(Arc::new(err))))?;
 

@@ -114,6 +114,21 @@ impl Appearance {
         self.radius.unwrap_or(DEFAULT_RADIUS)
     }
 
+    /// Multiplies every size of this appearance by `factor`.
+    ///
+    /// Applied before the renderer starts, so the text size it adopts as its
+    /// default is already the magnified one: every label of the bar grows with
+    /// the screen without having to state a size of its own.
+    /// The side padding follows: a padding the user wrote is stated in the
+    /// same pixels as the height beside it, so it has to grow with the bar or
+    /// a magnified bar would hug the screen edge.
+    pub fn magnify(&mut self, factor: f32) {
+        self.font_size = Some(self.font_size_px() * factor);
+        self.height = self.height.map(|height| height * factor);
+        self.radius = self.radius.map(|radius| radius * factor);
+        self.side_padding = self.side_padding.map(|padding| padding * factor);
+    }
+
     /// Returns the text size the bar renders with, in pixels.
     ///
     /// Falls back to [`DEFAULT_FONT_SIZE`] whenever neither the configuration
@@ -145,11 +160,18 @@ impl Appearance {
 
     /// Returns the outer margin around the island pills, as
     /// `[vertical, horizontal]` pixels.
+    ///
+    /// The horizontal half is [`Appearance::side_padding`] whenever it is
+    /// known, which is what lines the outermost islands up with the windows
+    /// below the bar; without it the margin falls back to the font-derived
+    /// [`BAR_PADDING_EM`], the only measure a bar that never reached the
+    /// compositor has.
     #[must_use]
     pub fn bar_padding(&self) -> [f32; 2] {
         [
             self.spacing(BAR_PADDING_EM[0]),
-            self.spacing(BAR_PADDING_EM[1])
+            self.side_padding
+                .unwrap_or_else(|| self.spacing(BAR_PADDING_EM[1]))
         ]
     }
 
@@ -244,5 +266,37 @@ mod tests {
         assert_eq!(themed.module_gap(), 4.0);
         assert_eq!(themed.group_gap(), 20.0);
         assert_eq!(themed.icon_label_gap(), 4.0);
+    }
+
+    #[test]
+    fn a_known_side_padding_replaces_the_font_derived_one() {
+        let aligned = Appearance {
+            font_size: Some(10.0),
+            side_padding: Some(6.0),
+            ..Appearance::default()
+        };
+
+        assert_eq!(aligned.bar_padding(), [3.0, 6.0]);
+    }
+
+    #[test]
+    fn magnifying_grows_the_side_padding_with_the_bar() {
+        let mut appearance = Appearance {
+            side_padding: Some(6.0),
+            ..Appearance::default()
+        };
+
+        appearance.magnify(2.0);
+
+        assert_eq!(appearance.side_padding, Some(12.0));
+    }
+
+    #[test]
+    fn magnifying_leaves_an_unknown_side_padding_unknown() {
+        let mut appearance = Appearance::default();
+
+        appearance.magnify(2.0);
+
+        assert_eq!(appearance.side_padding, None);
     }
 }

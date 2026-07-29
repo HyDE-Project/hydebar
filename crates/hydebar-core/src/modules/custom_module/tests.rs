@@ -1,4 +1,4 @@
-use std::{num::NonZeroUsize, sync::Arc, time::Duration};
+use std::{num::NonZeroUsize, path::Path, sync::Arc, time::Duration};
 
 use tokio::{
     io::{self, AsyncBufReadExt, AsyncWriteExt, BufReader},
@@ -6,7 +6,7 @@ use tokio::{
 };
 
 use super::{
-    listener::{forward_custom_updates, send_event},
+    listener::{forward_custom_updates, run_custom_listener, send_event},
     poller::{real_time_signal, run_custom_poller},
     *
 };
@@ -458,4 +458,162 @@ async fn changing_the_schedule_restarts_the_module() {
     .expect("two scheduled runs");
 
     assert_eq!(polled, vec!["1", "2"]);
+}
+
+/// Builds a command that parks a helper of its own and never finishes.
+///
+/// The helper is a grandchild of the bar, which is exactly the process a plain
+/// kill of the shell would leave behind. Recording its identifier lets a test
+/// watch for the whole family instead of only the shell.
+fn parking_command(pid_file: &Path) -> String {
+    let path = pid_file.display();
+
+    format!("sleep 300 & printf '%s' \"$!\" > {path}.tmp; mv {path}.tmp {path}; wait")
+}
+
+/// Waits until the command has recorded the identifier of its helper.
+async fn recorded_helper(pid_file: &Path) -> u32 {
+    loop {
+        if let Ok(contents) = std::fs::read_to_string(pid_file)
+            && let Ok(pid) = contents.trim().parse::<u32>()
+        {
+            return pid;
+        }
+
+        sleep(Duration::from_millis(10)).await;
+    }
+}
+
+/// Reports whether the process still exists.
+fn is_alive(pid: u32) -> bool {
+    unsafe { libc::kill(pid as i32, 0) == 0 }
+}
+
+/// Waits until the process is gone for good.
+async fn awaits_death(pid: u32) {
+    while is_alive(pid) {
+        sleep(Duration::from_millis(10)).await;
+    }
+}
+
+#[tokio::test]
+async fn an_aborted_listener_task_leaves_no_process_behind() {
+    let bus = EventBus::new(NonZeroUsize::new(8).expect("non-zero"));
+    let context = ModuleContext::new(bus.sender(), tokio::runtime::Handle::current());
+
+    let workdir = tempfile::tempdir().expect("temporary directory");
+    let pid_file = workdir.path().join("helper.pid");
+    let command = parking_command(&pid_file);
+
+    let listener = tokio::spawn(run_custom_listener(
+        Arc::from("streaming"),
+        Arc::from(command.as_str()),
+        custom_sender(&context, "streaming")
+    ));
+
+    let helper = timeout(Duration::from_secs(5), recorded_helper(&pid_file))
+        .await
+        .expect("the command records its helper");
+
+    listener.abort();
+
+    timeout(Duration::from_secs(5), awaits_death(helper))
+        .await
+        .expect("the helper dies with the aborted listener");
+}
+
+#[tokio::test]
+async fn an_aborted_poller_task_leaves_no_process_behind() {
+    let bus = EventBus::new(NonZeroUsize::new(8).expect("non-zero"));
+    let context = ModuleContext::new(bus.sender(), tokio::runtime::Handle::current());
+
+    let workdir = tempfile::tempdir().expect("temporary directory");
+    let pid_file = workdir.path().join("helper.pid");
+    let command = parking_command(&pid_file);
+
+    let poller = tokio::spawn(run_custom_poller(
+        Arc::from("scheduled"),
+        Arc::from(command.as_str()),
+        Some(Duration::from_millis(50)),
+        None,
+        custom_sender(&context, "scheduled")
+    ));
+
+    let helper = timeout(Duration::from_secs(5), recorded_helper(&pid_file))
+        .await
+        .expect("the command records its helper");
+
+    poller.abort();
+
+    timeout(Duration::from_secs(5), awaits_death(helper))
+        .await
+        .expect("the helper dies with the aborted poller");
+}
+
+#[tokio::test]
+async fn dropping_the_module_leaves_no_process_behind() {
+    let bus = EventBus::new(NonZeroUsize::new(8).expect("non-zero"));
+    let context = ModuleContext::new(bus.sender(), tokio::runtime::Handle::current());
+
+    let workdir = tempfile::tempdir().expect("temporary directory");
+    let pid_file = workdir.path().join("helper.pid");
+
+    let definition = CustomModuleDef {
+        name: String::from("dropped"),
+        command: String::new(),
+        listen_cmd: Some(parking_command(&pid_file)),
+        ..CustomModuleDef::default()
+    };
+
+    let mut custom = Custom::default();
+    <Custom as Module<Message>>::register(&mut custom, &context, Some(&definition))
+        .expect("register");
+
+    let helper = timeout(Duration::from_secs(5), recorded_helper(&pid_file))
+        .await
+        .expect("the command records its helper");
+
+    drop(custom);
+
+    timeout(Duration::from_secs(5), awaits_death(helper))
+        .await
+        .expect("the helper dies with the module that started it");
+}
+
+#[tokio::test]
+async fn re_registering_a_module_leaves_no_process_behind() {
+    let bus = EventBus::new(NonZeroUsize::new(8).expect("non-zero"));
+    let context = ModuleContext::new(bus.sender(), tokio::runtime::Handle::current());
+
+    let workdir = tempfile::tempdir().expect("temporary directory");
+    let pid_file = workdir.path().join("helper.pid");
+
+    let first = CustomModuleDef {
+        name: String::from("replaced"),
+        command: String::new(),
+        listen_cmd: Some(parking_command(&pid_file)),
+        ..CustomModuleDef::default()
+    };
+
+    let mut custom = Custom::default();
+    <Custom as Module<Message>>::register(&mut custom, &context, Some(&first))
+        .expect("first register");
+
+    let helper = timeout(Duration::from_secs(5), recorded_helper(&pid_file))
+        .await
+        .expect("the command records its helper");
+
+    let second = CustomModuleDef {
+        name: String::from("replaced"),
+        command: String::new(),
+        listen_cmd: Some(String::from("sleep 300")),
+        ..CustomModuleDef::default()
+    };
+
+    <Custom as Module<Message>>::register(&mut custom, &context, Some(&second))
+        .expect("second register");
+
+    timeout(Duration::from_secs(5), awaits_death(helper))
+        .await
+        .expect("the helper of the replaced listener dies");
 }

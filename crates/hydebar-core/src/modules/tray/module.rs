@@ -31,6 +31,19 @@ where
         Ok(())
     }
 
+    /// Drops the status notifier listener once the tray leaves the bar.
+    ///
+    /// The listener owns the `StatusNotifierWatcher` name on D-Bus and receives
+    /// every icon and menu change every tray application publishes. A bar
+    /// without a tray area renders none of it, and holding the well known name
+    /// would also keep other trays from taking over.
+    fn deregister(&mut self) {
+        self.abort_listener_handles();
+
+        self.service = None;
+        self.sender = None;
+    }
+
     fn view(
         &self,
         (_id, _opacity): Self::ViewData<'_>

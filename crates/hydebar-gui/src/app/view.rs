@@ -4,6 +4,7 @@ use hydebar_core::{
     HEIGHT,
     menu::{MenuLayout, MenuSize, MenuType, menu_wrapper},
     modules::{control_center::ControlCenterViewExt, custom_module},
+    notifications_popup,
     outputs::HasOutput,
     style::{backdrop_color, darken_color, hydebar_theme},
     tooltip::tooltip_wrapper
@@ -22,12 +23,6 @@ use super::{
     state::{App, Message}
 };
 use crate::centerbox;
-
-/// Inner padding of a menu box, in multiples of the themed text size.
-///
-/// Mirrors the padding the menu wrapper applies, so a page can tell how much
-/// room its content actually has.
-const MENU_PADDING_EM: f32 = 1.6;
 
 impl App {
     pub fn title(&self, _id: Id) -> String {
@@ -50,13 +45,6 @@ impl App {
         self.appearance().scale_factor
     }
 
-    /// Room the body of a menu box may spend, once its padding is taken off.
-    fn menu_content_width(&self, size: MenuSize, viewport_width: f32) -> f32 {
-        let font_size = self.appearance().font_size_px();
-
-        (size.width(font_size, viewport_width) - MENU_PADDING_EM * font_size * 2.0).max(font_size)
-    }
-
     /// Theme facts a menu needs to place itself, at the given animated opacity.
     fn menu_layout(&self, opacity: f32) -> MenuLayout {
         MenuLayout {
@@ -64,7 +52,16 @@ impl App {
             bar_position: self.config.position,
             style: self.appearance().style,
             opacity,
-            menu_backdrop: self.appearance().menu.backdrop
+            menu_backdrop: self.appearance().menu.backdrop,
+            content_height: None
+        }
+    }
+
+    /// Placement of a menu whose content height the caller measured.
+    fn measured_menu_layout(&self, opacity: f32, content_height: f32) -> MenuLayout {
+        MenuLayout {
+            content_height: Some(content_height),
+            ..self.menu_layout(opacity)
         }
     }
 
@@ -285,15 +282,15 @@ impl App {
                                 &self.config,
                                 animated_opacity,
                                 self.icons(),
-                                self.menu_content_width(
-                                    MenuSize::Content(self.settings.content_width(&self.config)),
-                                    button_ui_ref.viewport.0
-                                )
+                                self.magnification
                             )
                             .map(Message::Settings),
                         MenuSize::Content(self.settings.content_width(&self.config)),
                         *button_ui_ref,
-                        self.menu_layout(animated_opacity),
+                        self.measured_menu_layout(
+                            animated_opacity,
+                            self.settings.content_height(&self.config)
+                        ),
                         Message::None,
                         Message::CloseMenu(id)
                     ),
@@ -377,6 +374,11 @@ impl App {
                     None => Row::new().into()
                 }
             }
+            Some(HasOutput::Notifications) => notifications_popup::view(
+                &self.notification_popups,
+                self.appearance(),
+                self.config.position
+            ),
             Some(HasOutput::Tooltip) => match self.outputs.tooltip(id) {
                 Some(info) => tooltip_wrapper(info, self.config.position, self.appearance()),
                 None => Row::new().into()

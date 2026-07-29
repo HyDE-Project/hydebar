@@ -83,6 +83,14 @@ where
         Ok(())
     }
 
+    /// Stops sampling the machine once the readout leaves the bar.
+    ///
+    /// Reading every CPU, disk and interface costs real work, so a layout that
+    /// dropped the module must not keep paying for it every few seconds.
+    fn deregister(&mut self) {
+        self.polling.abort();
+    }
+
     fn view(
         &self,
         (config, appearance, icons): Self::ViewData<'_>

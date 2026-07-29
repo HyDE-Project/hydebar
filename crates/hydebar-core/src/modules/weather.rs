@@ -213,6 +213,19 @@ impl Weather {
         }
     }
 
+    /// Aborts the refresh loop, keeping the last reading in place.
+    ///
+    /// The loop issues a network request per tick, so a bar whose clock does
+    /// not display weather must not keep one running: nothing would ever read
+    /// the answer.
+    pub fn stop(&mut self) {
+        if let Some(task) = self.task.take() {
+            task.abort();
+        }
+
+        self.sender = None;
+    }
+
     /// Update weather state from GUI message
     pub fn update(&mut self, message: Message) {
         match message {

@@ -6,6 +6,7 @@
 
 mod animation;
 mod color;
+mod compositor;
 mod hyde;
 mod menu;
 mod metrics;

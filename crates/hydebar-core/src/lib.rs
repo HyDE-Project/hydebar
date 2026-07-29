@@ -11,6 +11,7 @@ pub mod format_cycle;
 pub mod menu;
 pub mod module_context;
 pub mod modules;
+pub mod notifications_popup;
 pub mod outputs;
 pub mod password_dialog;
 pub mod position_button;

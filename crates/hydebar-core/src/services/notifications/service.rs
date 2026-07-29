@@ -2,7 +2,11 @@
 
 use std::sync::Arc;
 
-use iced::{Subscription, futures::SinkExt, stream};
+use iced::{
+    Subscription,
+    futures::{SinkExt, StreamExt, channel::mpsc::unbounded},
+    stream
+};
 use log::{debug, error};
 use zbus::Connection;
 
@@ -112,7 +116,8 @@ impl ReadOnlyService for NotificationsService {
                     };
 
                     // Create notifications server
-                    let server = NotificationsServer::new(Arc::clone(&storage));
+                    let (announce, mut announced) = unbounded();
+                    let server = NotificationsServer::new(Arc::clone(&storage), announce);
 
                     // Register D-Bus interface
                     if let Err(err) = connection
@@ -145,9 +150,12 @@ impl ReadOnlyService for NotificationsService {
 
                     debug!("Notifications D-Bus service registered");
 
-                    // Keep connection alive
-                    loop {
-                        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+                    // Forward every accepted notification to the bar
+                    while let Some(event) = announced.next().await {
+                        if output.send(ServiceEvent::Update(event)).await.is_err() {
+                            debug!("the bar stopped listening for notifications");
+                            break;
+                        }
                     }
                 }
             )

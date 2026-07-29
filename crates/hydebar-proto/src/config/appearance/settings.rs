@@ -44,6 +44,15 @@ pub struct Appearance {
     /// bar, for example `38.0` for the height the HyDE waybar theme reserves.
     #[serde(default)]
     pub height:                   Option<f32>,
+    /// Padding kept between the screen edge and the outermost island, in
+    /// pixels.
+    ///
+    /// Left unset the bar takes the gap the compositor keeps outside its
+    /// windows, so the leftmost module starts on the same column a window does
+    /// and the rightmost one ends on the same column. Set it to pin the padding
+    /// to a value of its own, whatever the compositor is configured with.
+    #[serde(default)]
+    pub side_padding:             Option<f32>,
     /// Whether the appearance follows the theme published by the HyDE Project.
     ///
     /// Enabled by default: every field the user did not set explicitly is taken
@@ -104,6 +113,7 @@ impl Default for Appearance {
             font_size:                None,
             radius:                   None,
             height:                   None,
+            side_padding:             None,
             follow_hyde:              default_follow_hyde(),
             auto_scale:               default_auto_scale(),
             scale_factor:             1.0,
@@ -240,6 +250,19 @@ mod tests {
         let with_height: Appearance =
             toml::from_str("height = 38.0").expect("height should deserialize");
         assert_eq!(with_height.height, Some(38.0));
+    }
+
+    #[test]
+    fn side_padding_defaults_to_none_and_deserializes() {
+        assert!(Appearance::default().side_padding.is_none());
+
+        let without_padding: Appearance =
+            toml::from_str("").expect("empty appearance table should deserialize");
+        assert!(without_padding.side_padding.is_none());
+
+        let with_padding: Appearance =
+            toml::from_str("side_padding = 8.0").expect("side_padding should deserialize");
+        assert_eq!(with_padding.side_padding, Some(8.0));
     }
 
     #[test]

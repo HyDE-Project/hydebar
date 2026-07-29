@@ -298,6 +298,19 @@ where
         Ok(())
     }
 
+    /// Drops the compositor event stream once the module leaves the bar.
+    ///
+    /// The listener holds an open Hyprland socket and republishes on every
+    /// window and workspace change; a layout without workspaces would repaint
+    /// the bar for each of them and show nothing new.
+    fn deregister(&mut self) {
+        if let Some(task) = self.task.take() {
+            task.abort();
+        }
+
+        self.sender = None;
+    }
+
     fn view(
         &self,
         (outputs, id, config, appearance): Self::ViewData<'_>

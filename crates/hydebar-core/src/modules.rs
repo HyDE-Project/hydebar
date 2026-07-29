@@ -96,6 +96,19 @@ pub trait Module<Message> {
         Ok(())
     }
 
+    /// Releases the background work [`register`] started.
+    ///
+    /// The bar calls this instead of `register` for every module the layout
+    /// stopped drawing. Without it a module dropped from the configuration on a
+    /// hot reload would keep its poller and its listeners alive for the rest of
+    /// the session, burning wakeups for a readout nobody can see.
+    ///
+    /// The default is a no-op, which is correct for the modules that own no
+    /// task at all.
+    ///
+    /// [`register`]: Module::register
+    fn deregister(&mut self) {}
+
     fn view(
         &self,
         data: Self::ViewData<'_>

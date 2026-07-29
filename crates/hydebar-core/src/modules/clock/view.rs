@@ -4,7 +4,10 @@ use iced::{
 };
 
 use super::{CalendarState, Message};
-use crate::components::icons::{IconTheme, Icons, icon};
+use crate::components::{
+    icons::{IconTheme, Icons, icon},
+    scale
+};
 
 const WEEKDAYS: [&str; 7] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -19,9 +22,11 @@ pub fn build_calendar_menu_view<'a>(
         button(icon(icons, Icons::LeftChevron))
             .on_press(Message::PreviousMonth)
             .style(nav_button_style),
-        container(text(format!("{} {}", state.month_name(), state.year())).size(18))
-            .width(Length::Fill)
-            .align_x(Alignment::Center),
+        container(
+            text(format!("{} {}", state.month_name(), state.year())).size(scale::scaled(18.0))
+        )
+        .width(Length::Fill)
+        .align_x(Alignment::Center),
         button(icon(icons, Icons::RightChevron))
             .on_press(Message::NextMonth)
             .style(nav_button_style),
@@ -33,7 +38,7 @@ pub fn build_calendar_menu_view<'a>(
         WEEKDAYS
             .iter()
             .map(|day| {
-                container(text(*day).size(12))
+                container(text(*day).size(scale::scaled(12.0)))
                     .width(Length::Fixed(36.))
                     .height(Length::Shrink)
                     .align_x(Alignment::Center)
@@ -48,7 +53,7 @@ pub fn build_calendar_menu_view<'a>(
         let week_row = Row::with_children(
             week.iter()
                 .map(|day_info| {
-                    let day_text = text(day_info.day.to_string()).size(14);
+                    let day_text = text(day_info.day.to_string()).size(scale::scaled(14.0));
                     let in_month = day_info.in_month;
                     let is_today = day_info.is_today;
 

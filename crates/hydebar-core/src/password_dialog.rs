@@ -6,7 +6,10 @@ use iced::{
 };
 
 use crate::{
-    components::icons::{IconTheme, Icons, icon},
+    components::{
+        icons::{IconTheme, Icons, icon},
+        scale
+    },
     style::{confirm_button_style, outline_button_style, text_input_style}
 };
 
@@ -26,15 +29,15 @@ pub fn view<'a>(
 ) -> Element<'a, Message> {
     column!(
         row!(
-            icon(icons, Icons::WifiLock4).size(32),
-            text("Authentication required").size(22),
+            icon(icons, Icons::WifiLock4).size(scale::scaled(32.0)),
+            text("Authentication required").size(scale::scaled(22.0)),
         )
         .spacing(16)
         .align_y(Alignment::Center),
         text(format!("Insert password to connect to: {wifi_ssid}")),
         text_input("", current_password)
             .secure(true)
-            .size(16)
+            .size(scale::scaled(16.0))
             .padding([8, 16])
             .style(text_input_style)
             .on_input(Message::PasswordChanged)

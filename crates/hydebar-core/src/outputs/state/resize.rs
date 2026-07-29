@@ -11,9 +11,25 @@ use iced::{
 };
 
 use super::Outputs;
-use crate::{config::AppearanceStyle, outputs::wayland::layer_height};
+use crate::{
+    config::AppearanceStyle,
+    outputs::wayland::{NOTIFICATIONS_WIDTH, layer_height}
+};
 
 impl Outputs {
+    /// Re-states the height of every notification surface.
+    ///
+    /// Grown to what the popups need and shrunk back once they are gone, so the
+    /// strip never covers more of the screen than it is drawing on.
+    pub fn resize_notifications<Message: 'static>(&mut self, height: u32) -> Task<Message> {
+        let tasks = self
+            .notification_ids()
+            .map(|id| set_size(id, Some(NOTIFICATIONS_WIDTH), Some(height.max(1))))
+            .collect::<Vec<_>>();
+
+        Task::batch(tasks)
+    }
+
     /// Re-states the height of every bar surface.
     ///
     /// Both the size and the exclusive zone are sent: the first decides how

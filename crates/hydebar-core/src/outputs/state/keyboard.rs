@@ -58,6 +58,13 @@ impl Outputs {
             .filter_map(|(_, shell_info, _)| shell_info.as_ref().map(|shell| shell.id))
     }
 
+    /// Identifiers of every notification surface currently on screen.
+    pub fn notification_ids(&self) -> impl Iterator<Item = Id> + '_ {
+        self.0.iter().filter_map(|(_, shell_info, _)| {
+            shell_info.as_ref().map(|shell| shell.notifications_id)
+        })
+    }
+
     /// Returns the first main window Id if any outputs exist.
     pub fn first_main_window_id(&self) -> Option<Id> {
         self.0

@@ -1,218 +1,199 @@
 //! Module editor page of the settings window.
 //!
-//! Entries are rearranged with buttons rather than by dragging: a keyboard, a
-//! trackpad and a voice control all reach a button, while a drag needs a
-//! pointer held down along a path.
+//! The page is a small picture of the bar: three rows, the modules in the order
+//! they are drawn, islands boxed together. At rest it says only what the bar
+//! looks like. Picking a module opens a card that names it, says where it sits,
+//! and offers its actions in labelled groups, so the page stays short while
+//! every action is spelled out when it matters.
+//!
+//! Reordering is done with buttons rather than by dragging: a drag needs a
+//! pointer held along a path, which a keyboard, a trackpad in accessibility
+//! mode and a voice control cannot produce.
 
-use hydebar_proto::config::{Config, ModuleDef, ModuleName};
+use hydebar_proto::config::Config;
 use iced::{
     Alignment, Border, Element, Length, Theme,
     widget::{Column, Row, container, text}
 };
 
 use super::{
-    metrics::{button_row_width, button_width, text_width},
-    widgets::{ROW_GAP_EM, choice_button}
+    metrics::{ROW_HEIGHT_EM, button_width, wrap_into_rows},
+    widgets::{ROW_GAP_EM, action_group, caption, card, chip, choice_button}
 };
 use crate::modules::settings::{
     Message,
-    layout::{LayoutEdit, Section, available}
+    layout::{Entry, LayoutEdit, Section, Slot, available}
 };
 
-/// Gap between the rows of a section, in multiples of the text size.
-const SECTION_GAP_EM: f32 = 0.5;
-/// Gap between the sections, in multiples of the text size.
-const PAGE_GAP_EM: f32 = 1.2;
+/// Gap between the rows of the page, in multiples of the text size.
+const PAGE_GAP_EM: f32 = 0.8;
+
+/// Label of the action moving a module one place earlier.
+const MOVE_EARLIER: &str = "\u{2190} move left";
+/// Label of the action moving a module one place later.
+const MOVE_LATER: &str = "move right \u{2192}";
+/// Label of the action moving a module to the section on the left.
+const TO_LEFT: &str = "to Left";
+/// Label of the action moving a module to the section on the right.
+const TO_RIGHT: &str = "to Right";
+/// Label of the action joining a module to the island beside it.
+const MERGE: &str = "merge with the left";
+/// Label of the action breaking a module out of its island.
+const BREAK_OUT: &str = "break out";
+/// Label of the action taking a module off the bar.
+const REMOVE: &str = "take off the bar";
+
 /// Padding inside the box drawn around an island, in multiples of the text
 /// size.
-const ISLAND_PADDING_EM: f32 = 0.4;
+const ISLAND_PADDING_EM: f32 = 0.3;
 
-/// Splits `labels` into rows that fit inside `available` pixels.
-///
-/// Widths are estimated rather than measured: the layout engine reports sizes
-/// only after the fact, and a row that wraps one entry too early costs far less
-/// than one that runs off the window.
-fn wrap_into_rows(labels: &[String], available: f32, font_size: f32, gap: f32) -> Vec<Vec<usize>> {
-    let mut rows: Vec<Vec<usize>> = Vec::new();
-    let mut used = 0.0;
+/// Groups the entries of a section into the islands they form.
+fn islands(entries: &[Entry]) -> Vec<Vec<usize>> {
+    let mut islands: Vec<Vec<usize>> = Vec::new();
 
-    for (index, label) in labels.iter().enumerate() {
-        let width = button_width(label, font_size);
-        let fits = used + width <= available;
-
-        match rows.last_mut() {
-            Some(row) if fits => {
-                row.push(index);
-                used += width + gap;
-            }
-            _ => {
-                rows.push(vec![index]);
-                used = width + gap;
-            }
+    for (index, entry) in entries.iter().enumerate() {
+        match (entry.joined, islands.last_mut()) {
+            (true, Some(island)) => island.push(index),
+            _ => islands.push(vec![index])
         }
     }
 
-    rows
+    islands
 }
 
-/// Names the modules an entry holds, joined for a single line.
-fn entry_label(entry: &ModuleDef) -> String {
-    match entry {
-        ModuleDef::Single(name) => name.as_str().to_owned(),
-        ModuleDef::Group(group) => group
-            .iter()
-            .map(ModuleName::as_str)
-            .collect::<Vec<_>>()
-            .join(" · ")
-    }
+/// Island the module at `index` belongs to, counted from one.
+fn island_of(entries: &[Entry], index: usize) -> usize {
+    islands(entries)
+        .into_iter()
+        .position(|island| island.contains(&index))
+        .map_or(1, |position| position + 1)
 }
 
-/// Renders one entry with the buttons acting on it.
-fn entry_row<'a>(
-    section: Section,
-    index: usize,
-    entry: &ModuleDef,
-    last: bool,
+/// Renders the card describing the picked module and its actions.
+fn detail<'a>(
+    slot: Slot,
+    entries: &[Entry],
     font_size: f32,
     opacity: f32
 ) -> Element<'a, Message> {
-    let grouped = matches!(entry, ModuleDef::Group(_));
+    let Some(entry) = entries.get(slot.index) else {
+        return text("that module is gone").size(font_size * 0.85).into();
+    };
 
-    let mut buttons = Row::new().spacing(ROW_GAP_EM * font_size * 0.5);
-
-    buttons = buttons.push(choice_button(
-        "↑",
-        Message::EditLayout(LayoutEdit::MoveUp {
-            section,
-            index
-        }),
-        false,
-        font_size,
-        opacity
-    ));
-    buttons = buttons.push(choice_button(
-        "↓",
-        Message::EditLayout(LayoutEdit::MoveDown {
-            section,
-            index
-        }),
-        false,
-        font_size,
-        opacity
-    ));
-    buttons = buttons.push(choice_button(
-        "→",
-        Message::EditLayout(LayoutEdit::MoveToNextSection {
-            section,
-            index
-        }),
-        false,
-        font_size,
-        opacity
-    ));
-
-    if grouped {
-        buttons = buttons.push(choice_button(
-            "split",
-            Message::EditLayout(LayoutEdit::Ungroup {
-                section,
-                index
-            }),
+    let gap = ROW_GAP_EM * font_size;
+    let button = |label: &'static str, edit: LayoutEdit| {
+        choice_button(
+            label,
+            Message::EditLayout(edit),
             false,
-            font_size,
+            font_size * 0.8,
             opacity
-        ));
-    } else if !last {
-        buttons = buttons.push(choice_button(
-            "join",
-            Message::EditLayout(LayoutEdit::GroupWithNext {
-                section,
-                index
-            }),
-            false,
-            font_size,
-            opacity
+        )
+    };
+
+    let heading = Row::new()
+        .push(text(entry.module.as_str().to_owned()).size(font_size))
+        .push(
+            text(format!(
+                "{} section · island {} · position {} of {}",
+                section_name(slot.section),
+                island_of(entries, slot.index),
+                slot.index + 1,
+                entries.len()
+            ))
+            .size(font_size * 0.75)
+        )
+        .spacing(gap * 0.6)
+        .align_y(Alignment::Center);
+
+    let mut groups = Row::new().spacing(gap).align_y(Alignment::Start);
+
+    let mut order = Vec::new();
+
+    if slot.index > 0 {
+        order.push(button(MOVE_EARLIER, LayoutEdit::MoveEarlier(slot)));
+    }
+
+    if slot.index + 1 < entries.len() {
+        order.push(button(MOVE_LATER, LayoutEdit::MoveLater(slot)));
+    }
+
+    if order.is_empty() {
+        order.push(text("alone in this section").size(font_size * 0.75).into());
+    }
+
+    groups = groups.push(action_group("Order", order, font_size));
+
+    let mut sections = Vec::new();
+
+    if let Some(before) = slot.section.before() {
+        sections.push(button(
+            section_button_label(before),
+            LayoutEdit::MoveToPreviousSection(slot)
         ));
     }
 
-    buttons = buttons.push(choice_button(
-        "✕",
-        Message::EditLayout(LayoutEdit::Remove {
-            section,
-            index
-        }),
-        false,
-        font_size,
-        opacity
-    ));
+    if let Some(after) = slot.section.after() {
+        sections.push(button(
+            section_button_label(after),
+            LayoutEdit::MoveToNextSection(slot)
+        ));
+    }
 
-    let row = Row::new()
-        .push(text(entry_label(entry)).size(font_size).width(Length::Fill))
-        .push(buttons)
-        .align_y(Alignment::Center)
-        .spacing(ROW_GAP_EM * font_size)
-        .width(Length::Fill);
+    groups = groups.push(action_group("Move to section", sections, font_size));
 
-    if grouped {
-        container(row)
-            .padding(ISLAND_PADDING_EM * font_size)
-            .style(move |theme: &Theme| container::Style {
-                border: Border {
-                    width:  1.0,
-                    radius: (font_size * 0.4).into(),
-                    color:  theme
-                        .extended_palette()
-                        .secondary
-                        .strong
-                        .color
-                        .scale_alpha(opacity)
-                },
-                ..container::Style::default()
-            })
-            .width(Length::Fill)
-            .into()
+    let island = if slot.index == 0 {
+        vec![text("first in the section").size(font_size * 0.75).into()]
+    } else if entry.joined {
+        vec![button(BREAK_OUT, LayoutEdit::ToggleJoin(slot))]
     } else {
-        container(row).width(Length::Fill).into()
+        vec![button(MERGE, LayoutEdit::ToggleJoin(slot))]
+    };
+
+    groups = groups.push(action_group("Island", island, font_size));
+    groups = groups.push(action_group(
+        "Remove",
+        vec![button(REMOVE, LayoutEdit::Remove(slot))],
+        font_size
+    ));
+
+    card(
+        Column::new()
+            .push(heading)
+            .push(groups)
+            .spacing(gap * 0.7)
+            .width(Length::Fill)
+            .into(),
+        font_size,
+        opacity
+    )
+}
+
+/// Label of the button moving a module into `section`.
+const fn section_button_label(section: Section) -> &'static str {
+    match section {
+        Section::Left => TO_LEFT,
+        Section::Center => "to Center",
+        Section::Right => TO_RIGHT
     }
 }
 
-/// Renders one column of the editor.
-fn section_column<'a>(
-    section: Section,
-    entries: &[ModuleDef],
-    font_size: f32,
-    opacity: f32
-) -> Element<'a, Message> {
-    let mut column = Column::new()
-        .push(text(section.label()).size(font_size))
-        .spacing(SECTION_GAP_EM * font_size)
-        .width(Length::Fill);
-
-    if entries.is_empty() {
-        column = column.push(text("empty").size(font_size * 0.9));
+/// Name of a section as the card spells it.
+fn section_name(section: Section) -> &'static str {
+    match section {
+        Section::Left => "Left",
+        Section::Center => "Center",
+        Section::Right => "Right"
     }
-
-    for (index, entry) in entries.iter().enumerate() {
-        column = column.push(entry_row(
-            section,
-            index,
-            entry,
-            index + 1 == entries.len(),
-            font_size,
-            opacity
-        ));
-    }
-
-    column.into()
 }
 
-/// Renders the modules that can still be added, each landing in `target`.
+/// Renders the modules that can still be added.
 ///
-/// The buttons wrap onto as many rows as `available` pixels of width call for,
-/// so a long catalogue never runs past the edge of the window.
-fn available_rows<'a>(
+/// The chips wrap onto as many rows as the width allows, so a long catalogue
+/// never runs past the edge of the window.
+fn catalogue<'a>(
     config: &Config,
-    target: Section,
+    section: Section,
     font_size: f32,
     opacity: f32,
     available_width: f32
@@ -224,138 +205,292 @@ fn available_rows<'a>(
         .collect::<Vec<_>>();
 
     let modules = available(&config.modules, &custom);
+
+    if modules.is_empty() {
+        return caption("Every module is already on the bar", font_size);
+    }
+
+    let gap = ROW_GAP_EM * font_size * 0.3;
+    let chip_font = font_size * 0.8;
     let labels = modules
         .iter()
         .map(|module| module.as_str().to_owned())
         .collect::<Vec<_>>();
 
-    let button_font = font_size * 0.9;
-    let gap = ROW_GAP_EM * font_size * 0.5;
+    let mut rows = Column::new().spacing(gap).width(Length::Fill);
 
-    let mut column = Column::new()
-        .push(text("Add to the left section").size(font_size))
-        .spacing(SECTION_GAP_EM * font_size)
-        .width(Length::Fill);
-
-    for indices in wrap_into_rows(&labels, available_width, button_font, gap) {
+    for indices in wrap_into_rows(&labels, available_width, chip_font, gap) {
         let mut row = Row::new().spacing(gap).width(Length::Fill);
 
         for index in indices {
-            row = row.push(choice_button(
+            row = row.push(chip(
                 labels[index].clone(),
                 Message::EditLayout(LayoutEdit::Add {
-                    section: target,
-                    module:  modules[index].clone()
+                    section,
+                    module: modules[index].clone()
                 }),
                 false,
-                button_font,
+                chip_font,
                 opacity
             ));
         }
 
-        column = column.push(row);
+        rows = rows.push(row);
+    }
+
+    Column::new()
+        .push(caption(
+            match section {
+                Section::Left => "Add to the Left section",
+                Section::Center => "Add to the Center section",
+                Section::Right => "Add to the Right section"
+            },
+            font_size
+        ))
+        .push(rows)
+        .spacing(gap)
+        .width(Length::Fill)
+        .into()
+}
+
+/// Renders the row of section tabs.
+fn section_tabs<'a>(active: Section, font_size: f32, opacity: f32) -> Element<'a, Message> {
+    let mut row = Row::new().spacing(ROW_GAP_EM * font_size * 0.5);
+
+    for section in Section::ALL {
+        row = row.push(choice_button(
+            section.label(),
+            Message::SelectSection(section),
+            section == active,
+            font_size * 0.85,
+            opacity
+        ));
+    }
+
+    row.into()
+}
+
+/// Renders the islands of one section, one island per line.
+fn section_islands<'a>(
+    section: Section,
+    entries: &[Entry],
+    selected: Option<Slot>,
+    font_size: f32,
+    opacity: f32
+) -> Element<'a, Message> {
+    let gap = ROW_GAP_EM * font_size;
+    let mut column = Column::new().spacing(gap * 0.5).width(Length::Fill);
+
+    if entries.is_empty() {
+        return caption("This section is empty", font_size);
+    }
+
+    for (number, island) in islands(entries).into_iter().enumerate() {
+        let mut chips = Row::new().spacing(gap * 0.3).align_y(Alignment::Center);
+
+        for index in island {
+            let picked = selected
+                == Some(Slot {
+                    section,
+                    index
+                });
+
+            chips = chips.push(chip(
+                entries[index].module.as_str().to_owned(),
+                Message::SelectSlot(if picked {
+                    None
+                } else {
+                    Some(Slot {
+                        section,
+                        index
+                    })
+                }),
+                picked,
+                font_size * 0.85,
+                opacity
+            ));
+        }
+
+        column = column.push(
+            Row::new()
+                .push(
+                    text(format!("island {}", number + 1))
+                        .size(font_size * 0.75)
+                        .width(Length::Fixed(button_width("island 00", font_size * 0.75)))
+                )
+                .push(
+                    container(chips)
+                        .padding(ISLAND_PADDING_EM * font_size)
+                        .style(move |theme: &Theme| container::Style {
+                            border: Border {
+                                width:  1.0,
+                                radius: (font_size * 0.55).into(),
+                                color:  theme
+                                    .extended_palette()
+                                    .secondary
+                                    .strong
+                                    .color
+                                    .scale_alpha(opacity)
+                            },
+                            ..container::Style::default()
+                        })
+                )
+                .spacing(gap * 0.5)
+                .align_y(Alignment::Center)
+                .width(Length::Fill)
+        );
     }
 
     column.into()
 }
 
-/// Renders the module editor against the running `config`, given the width its
-/// content may spend.
+/// Renders the module editor against the running `config`.
 pub(super) fn view(
     config: &Config,
     opacity: f32,
     font_size: f32,
+    section: Section,
+    selected: Option<Slot>,
     available_width: f32
 ) -> Element<'_, Message> {
+    let entries = section.entries(&config.modules);
+
     let mut page = Column::new()
+        .push(section_tabs(section, font_size, opacity))
+        .push(section_islands(
+            section, &entries, selected, font_size, opacity
+        ))
         .spacing(PAGE_GAP_EM * font_size)
         .width(Length::Fill);
 
-    for section in Section::ALL {
-        let entries = match section {
-            Section::Left => &config.modules.left,
-            Section::Center => &config.modules.center,
-            Section::Right => &config.modules.right
-        };
+    page = match selected {
+        Some(slot) if slot.section == section => {
+            page.push(detail(slot, &entries, font_size, opacity))
+        }
+        _ => page.push(caption(
+            "Pick a module to move, group or remove it",
+            font_size
+        ))
+    };
 
-        page = page.push(section_column(section, entries, font_size, opacity));
-    }
-
-    page.push(available_rows(
+    page.push(catalogue(
         config,
-        Section::Left,
+        section,
         font_size,
         opacity,
         available_width
     ))
-    .push(
-        text("↑ ↓ reorder · → move to the next section · join and split make islands")
-            .size(font_size * 0.85)
-    )
     .into()
+}
+
+/// Labels of the actions the card can offer, so the width is measured against
+/// the very strings that are drawn.
+const ACTION_LABELS: [&str; 6] = [MOVE_EARLIER, MOVE_LATER, TO_LEFT, TO_RIGHT, MERGE, REMOVE];
+
+/// Longest line of this page, which is how wide the window has to be.
+///
+/// Only the lines that are actually drawn are measured: the section tabs, the
+/// widest island of the section on show, and the widest the action card can
+/// become. The catalogue is left out on purpose, since it wraps into whatever
+/// width the rest settles on.
+#[must_use]
+pub(super) fn desired_width(config: &Config, font_size: f32, section: Section) -> f32 {
+    let gap = ROW_GAP_EM * font_size;
+    let entries = section.entries(&config.modules);
+
+    let tabs = Section::ALL
+        .into_iter()
+        .map(|section| button_width(section.label(), font_size * 0.85) + gap * 0.5)
+        .sum::<f32>();
+
+    let widest_island = islands(&entries)
+        .into_iter()
+        .map(|island| {
+            let chips: f32 = island
+                .into_iter()
+                .map(|index| {
+                    button_width(entries[index].module.as_str(), font_size * 0.85) + gap * 0.3
+                })
+                .sum();
+
+            button_width("island 00", font_size * 0.75) + gap * 0.5 + chips
+        })
+        .fold(0.0_f32, f32::max);
+
+    let card = ACTION_LABELS
+        .into_iter()
+        .map(|label| button_width(label, font_size * 0.8) + gap)
+        .sum::<f32>();
+
+    tabs.max(widest_island).max(card)
 }
 
 #[cfg(test)]
 mod tests {
+    use hydebar_proto::config::{ModuleDef, ModuleName, Modules};
+
     use super::*;
 
-    #[test]
-    fn a_row_that_fits_stays_a_single_row() {
-        let labels = vec!["Clock".to_owned(), "Tray".to_owned()];
-
-        assert_eq!(wrap_into_rows(&labels, 1000.0, 10.0, 4.0), vec![vec![0, 1]]);
+    fn entries(left: Vec<ModuleDef>) -> Vec<Entry> {
+        Section::Left.entries(&Modules {
+            left,
+            center: Vec::new(),
+            right: Vec::new()
+        })
     }
 
     #[test]
-    fn a_long_catalogue_wraps_onto_several_rows() {
-        let labels = (0..8).map(|i| format!("Module{i}")).collect::<Vec<_>>();
+    fn neighbouring_joined_modules_form_one_island() {
+        let section = entries(vec![
+            ModuleDef::Group(vec![ModuleName::Clock, ModuleName::Tray]),
+            ModuleDef::Single(ModuleName::Battery),
+        ]);
 
-        let rows = wrap_into_rows(&labels, 200.0, 10.0, 4.0);
-
-        assert!(rows.len() > 1);
-        assert_eq!(rows.iter().map(Vec::len).sum::<usize>(), labels.len());
+        assert_eq!(islands(&section), vec![vec![0, 1], vec![2]]);
     }
 
     #[test]
-    fn an_entry_wider_than_the_row_still_gets_a_row() {
-        let labels = vec!["AnExtremelyLongModuleName".to_owned()];
+    fn a_section_of_singles_is_a_row_of_islands() {
+        let section = entries(vec![
+            ModuleDef::Single(ModuleName::Clock),
+            ModuleDef::Single(ModuleName::Tray),
+        ]);
 
-        assert_eq!(wrap_into_rows(&labels, 10.0, 10.0, 4.0), vec![vec![0]]);
+        assert_eq!(islands(&section), vec![vec![0], vec![1]]);
     }
 
     #[test]
-    fn an_empty_catalogue_yields_no_rows() {
-        assert!(wrap_into_rows(&[], 500.0, 10.0, 4.0).is_empty());
+    fn an_empty_section_has_no_islands() {
+        assert!(islands(&[]).is_empty());
     }
 
     #[test]
-    fn a_wider_label_is_expected_to_take_more_room() {
-        assert!(button_width("Clock", 10.0) < button_width("KeyboardLayout", 10.0));
+    fn a_module_knows_which_island_it_sits_in() {
+        let section = entries(vec![
+            ModuleDef::Group(vec![ModuleName::Clock, ModuleName::Tray]),
+            ModuleDef::Single(ModuleName::Battery),
+        ]);
+
+        assert_eq!(island_of(&section, 0), 1);
+        assert_eq!(island_of(&section, 1), 1);
+        assert_eq!(island_of(&section, 2), 2);
+    }
+
+    #[test]
+    fn a_missing_module_is_reported_as_the_first_island() {
+        assert_eq!(island_of(&[], 3), 1);
     }
 }
 
-/// Buttons every entry row carries, at their widest.
-const ENTRY_CONTROLS: [&str; 6] = [
-    "\u{2191}", "\u{2193}", "\u{2192}", "split", "join", "\u{2715}"
-];
+/// Height this page needs for `section`.
+pub(super) fn desired_height(config: &Config, font_size: f32, section: Section) -> f32 {
+    let row = ROW_HEIGHT_EM * font_size + PAGE_GAP_EM * font_size;
+    let entries = section.entries(&config.modules);
 
-/// Longest row of this page, which is how wide the window has to be.
-///
-/// The catalogue is left out on purpose: it wraps into whatever width the
-/// entries settle on, so letting it vote would make the window as wide as the
-/// list of every module the bar ships.
-#[must_use]
-pub(super) fn desired_width(config: &Config, font_size: f32) -> f32 {
-    let gap = ROW_GAP_EM * font_size;
-    let controls = button_row_width(ENTRY_CONTROLS.into_iter(), font_size, gap * 0.5);
+    let tabs = row;
+    let islands = islands(&entries).len().max(1) as f32 * row;
+    let card = row * 3.0;
+    let catalogue = row * 2.0;
 
-    Section::ALL
-        .into_iter()
-        .flat_map(|section| match section {
-            Section::Left => config.modules.left.iter(),
-            Section::Center => config.modules.center.iter(),
-            Section::Right => config.modules.right.iter()
-        })
-        .map(|entry| text_width(&entry_label(entry), font_size) + gap + controls)
-        .fold(0.0_f32, f32::max)
+    tabs + islands + card + catalogue
 }

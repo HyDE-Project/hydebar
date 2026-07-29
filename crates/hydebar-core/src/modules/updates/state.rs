@@ -239,6 +239,20 @@ where
         Ok(())
     }
 
+    /// Stops the scheduled check once the indicator leaves the bar.
+    ///
+    /// Each check spawns a shell command that talks to the package manager, so
+    /// an unplaced module would keep forking a process every hour for a badge
+    /// nobody renders.
+    fn deregister(&mut self) {
+        for task in self.tasks.drain(..) {
+            task.abort();
+        }
+
+        self.registration = None;
+        self.sender = None;
+    }
+
     fn view(
         &self,
         (config, icons): Self::ViewData<'_>

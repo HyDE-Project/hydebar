@@ -8,6 +8,7 @@ use iced::{
 pub mod audio;
 pub mod bluetooth;
 pub mod brightness;
+pub mod hyprland_notify;
 pub mod idle_inhibitor;
 pub mod mpris;
 pub mod network;

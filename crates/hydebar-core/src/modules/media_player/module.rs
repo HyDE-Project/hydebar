@@ -11,7 +11,10 @@ use tokio::task::yield_now;
 use super::{MediaPlayer, MediaPlayerPublisher};
 use crate::{
     ModuleContext,
-    components::icons::{IconTheme, Icons, icon},
+    components::{
+        icons::{IconTheme, Icons, icon},
+        scale
+    },
     config::MediaPlayerModuleConfig,
     event_bus::ModuleEvent,
     menu::MenuType,
@@ -75,6 +78,20 @@ where
         Ok(())
     }
 
+    /// Drops the MPRIS listener once the player leaves the bar.
+    ///
+    /// Every property change of every running player crosses D-Bus into this
+    /// task, so leaving it connected keeps the bar repainting to the beat of a
+    /// track it does not display.
+    fn deregister(&mut self) {
+        for task in self.tasks.drain(..) {
+            task.abort();
+        }
+
+        self.service = None;
+        self.sender = None;
+    }
+
     fn view(
         &self,
         (config, icons): Self::ViewData<'_>
@@ -86,7 +103,7 @@ where
                     icon(icons, Icons::MusicNote),
                     text(Self::get_title(&s[0], config))
                         .wrapping(text::Wrapping::WordOrGlyph)
-                        .size(12)
+                        .size(scale::scaled(12.0))
                 ]
                 .align_y(Vertical::Center)
                 .spacing(8)

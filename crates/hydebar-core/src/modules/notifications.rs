@@ -7,7 +7,10 @@ use log::error;
 use super::{Module, ModuleError, OnModulePress};
 use crate::{
     ModuleContext, ModuleEventSender,
-    components::icons::{IconTheme, Icons, icon},
+    components::{
+        icons::{IconTheme, Icons, icon},
+        scale
+    },
     event_bus::ModuleEvent,
     menu::MenuType,
     services::{
@@ -84,7 +87,7 @@ impl Notifications {
 
         // Header with DND toggle
         let header = Row::new()
-            .push(text("Notifications").size(16))
+            .push(text("Notifications").size(scale::scaled(16.0)))
             .push(
                 button(text(if is_dnd { "DND: ON" } else { "DND: OFF" }))
                     .on_press(NotificationsMessage::ToggleDND)
@@ -97,7 +100,7 @@ impl Notifications {
 
         // Notification list
         if notifications.is_empty() {
-            content = content.push(text("No notifications").size(14));
+            content = content.push(text("No notifications").size(scale::scaled(14.0)));
         } else {
             let mut list = Column::new().spacing(4);
 
@@ -179,8 +182,8 @@ fn notification_item<M>(notification: Notification, icons: &IconTheme) -> Elemen
 where
     M: 'static + Clone + From<NotificationsMessage>
 {
-    let summary = text(notification.summary.clone()).size(14);
-    let body = text(notification.body.clone()).size(12);
+    let summary = text(notification.summary.clone()).size(scale::scaled(14.0));
+    let body = text(notification.body.clone()).size(scale::scaled(12.0));
 
     let content = Column::new()
         .push(

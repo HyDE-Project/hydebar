@@ -30,6 +30,7 @@ use hydebar_core::{
         window_title::WindowTitle,
         workspaces::Workspaces
     },
+    notifications_popup,
     outputs::{AutoMetrics, Outputs},
     position_button::ButtonUIRef,
     style::AppearanceTransition,
@@ -55,6 +56,8 @@ pub struct App {
     pub(super) appearance_transition: AppearanceTransition,
     pub(super) module_context: ModuleContext,
     pub(super) icons: IconTheme,
+    /// Factor the screen calls for, folded into every configuration loaded.
+    pub(super) magnification: f32,
     /// Sizes the screen calls for, once an output has reported itself.
     pub(super) auto_metrics: Option<AutoMetrics>,
     pub config: Arc<Config>,
@@ -80,7 +83,9 @@ pub struct App {
     pub screenshot: Screenshot,
     pub idle_inhibitor: IdleInhibitor,
     pub settings: Settings,
-    pub weather: Weather
+    pub weather: Weather,
+    /// Notifications currently shown as popups.
+    pub notification_popups: Vec<notifications_popup::Popup>
 }
 
 #[derive(Debug, Clone)]
@@ -102,6 +107,8 @@ pub enum Message {
     /// Carries the hint to show and the placement of the module it belongs to,
     /// or nothing at all once the pointer moves away.
     ModuleTooltip(Id, Option<TooltipInfo>),
+    /// Take down the popups whose time is up.
+    ExpirePopups,
     CloseMenu(Id),
     CloseAllMenus,
     ActivateNavigationMode,
@@ -208,18 +215,29 @@ impl App {
         self.appearance_transition.current()
     }
 
-    /// Appearance the configuration asks for, with the sizes the screen calls
-    /// for filled in.
+    /// Returns `config` with the magnification of this screen folded in.
     ///
-    /// Automatic scaling is opt in: a bar tuned to match another one keeps the
-    /// sizes it was given, and only a configuration asking for it follows the
-    /// screen.
-    pub fn scaled_appearance(&self) -> Appearance {
-        let mut appearance = self.config.appearance.clone();
-
-        if let (true, Some(metrics)) = (appearance.auto_scale, self.auto_metrics) {
-            appearance.scale_factor *= f64::from(metrics.scale);
+    /// A configuration read from disk carries the sizes the user wrote, not the
+    /// sizes this screen needs; folding the factor in on every load is what
+    /// keeps a saved setting from throwing the whole bar back to its unscaled
+    /// size.
+    pub(super) fn magnified(&self, config: Arc<Config>) -> Arc<Config> {
+        if self.magnification <= 1.0 {
+            return config;
         }
+
+        let mut magnified = (*config).clone();
+        magnified.appearance.magnify(self.magnification);
+
+        Arc::new(magnified)
+    }
+
+    /// Appearance the bar renders with.
+    ///
+    /// The magnification the screen calls for is already folded into the
+    /// configuration before the renderer starts, so nothing is added here.
+    pub fn scaled_appearance(&self) -> Appearance {
+        let appearance = self.config.appearance.clone();
 
         appearance
     }
@@ -232,6 +250,8 @@ impl App {
     /// contents are drawn at the new one.
     pub(super) fn refresh_appearance(&mut self) -> Task<Message> {
         let appearance = self.scaled_appearance();
+
+        hydebar_core::components::scale::set_base(appearance.font_size_px());
 
         self.icons =
             IconTheme::from_config(&self.config.icons).with_size(appearance.font_size_px());
@@ -304,6 +324,7 @@ impl App {
             icons: IconTheme::from_config(&config.icons)
                 .with_size(config.appearance.font_size_px()),
             auto_metrics: None,
+            magnification: hydebar_core::components::scale::screen_factor(),
             outputs,
             navigation_mode: false,
             focused_module_index: None,
@@ -326,6 +347,7 @@ impl App {
             screenshot: Screenshot::default(),
             idle_inhibitor: IdleInhibitor,
             settings: Settings::new(config_path.clone()),
+            notification_popups: Vec::new(),
             weather: Weather::new(
                 config.weather.location.clone(),
                 config.weather.api_key.clone(),

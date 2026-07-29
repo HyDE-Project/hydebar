@@ -42,7 +42,7 @@ async fn consume_network_events_stops_on_error() {
 }
 
 #[tokio::test]
-async fn state_error_transitions_to_init_after_delay() {
+async fn state_error_transitions_to_init_without_holding_the_loop() {
     let (mut sender, _receiver) = mpsc::channel(1);
 
     let state = timeout(
@@ -50,6 +50,6 @@ async fn state_error_transitions_to_init_after_delay() {
         NetworkService::start_listening(State::Error, &mut sender)
     )
     .await
-    .expect("network listener should complete after delay");
+    .expect("network listener should complete without waiting");
     assert!(matches!(state, State::Init));
 }

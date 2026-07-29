@@ -15,6 +15,13 @@ use super::super::{
     state::{App, Message}
 };
 
+/// How often the popups on screen are checked for expiry.
+///
+/// Only ticks while something is on screen, so an idle bar keeps costing
+/// nothing: the frame clock the rest of the bar rides on stops when nothing
+/// animates, and a popup would otherwise never be taken down.
+const POPUP_TICK_MS: u64 = 250;
+
 impl App {
     /// of interpolating on a polling timer.
     fn frame_subscription(&self) -> Subscription<Message> {
@@ -92,6 +99,21 @@ impl App {
         subscriptions.extend(self.modules_subscriptions(&self.config.modules.left));
         subscriptions.extend(self.modules_subscriptions(&self.config.modules.center));
         subscriptions.extend(self.modules_subscriptions(&self.config.modules.right));
+
+        if self.config.notifications.source.owns_the_bus() {
+            use hydebar_core::modules::Module;
+
+            if let Some(notifications) = Module::<Message>::subscription(&self.notifications) {
+                subscriptions.push(notifications);
+            }
+        }
+
+        if hydebar_core::notifications_popup::needs_expiry_clock(&self.notification_popups) {
+            subscriptions.push(
+                iced::time::every(std::time::Duration::from_millis(POPUP_TICK_MS))
+                    .map(|_| Message::ExpirePopups)
+            );
+        }
 
         Subscription::batch(subscriptions)
     }

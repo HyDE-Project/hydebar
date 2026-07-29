@@ -27,9 +27,15 @@ const FLUSH_GRACE: Duration = Duration::from_millis(200);
 /// prone to crashing once the layer surfaces are gone. Exiting on a short timer
 /// keeps the hand over predictable: the surfaces are already destroyed, and
 /// closing the process releases the single instance lock at once.
+///
+/// The commands the modules started are ended first. `std::process::exit` runs
+/// no destructor, so nothing else would reach the listener shells: they would
+/// survive the bar that started them, and every takeover would add another set
+/// of loops spawning helpers on a timer.
 pub(super) fn exit_after_flush() {
     thread::spawn(|| {
         thread::sleep(FLUSH_GRACE);
+        hydebar_core::utils::process_group::terminate_all();
         info!("surfaces removed, exiting");
         std::process::exit(0);
     });

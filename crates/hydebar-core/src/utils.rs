@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 pub mod launcher;
+pub mod process_group;
 
 pub enum IndicatorState {
     Normal,

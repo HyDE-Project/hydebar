@@ -53,13 +53,22 @@ impl CommandError {
     }
 }
 
+/// Asks the package manager what is out of date.
+///
+/// The check runs hourly from a task that registration aborts and restarts, so
+/// it is spawned into a process group of its own: a `checkupdates` still
+/// talking to a mirror when the configuration reloads would otherwise outlive
+/// the task that started it, once per reload.
 pub(super) async fn check_for_updates(command: &str) -> Result<Vec<Update>, CommandError> {
-    let output = process::Command::new("bash")
+    let mut spawner = process::Command::new("bash");
+    spawner
         .arg("-c")
         .arg(command)
+        .stdin(Stdio::null())
         .stdout(Stdio::piped())
-        .output()
-        .await?;
+        .stderr(Stdio::piped());
+
+    let output = crate::utils::process_group::guarded_output(&mut spawner).await?;
 
     if !output.status.success() {
         return Err(CommandError::Status(output.status));

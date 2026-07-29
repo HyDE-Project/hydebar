@@ -109,6 +109,7 @@ fn blend_appearance(from: &Appearance, to: &Appearance, t: f32) -> Appearance {
         font_size:                to.font_size,
         radius:                   to.radius,
         height:                   to.height,
+        side_padding:             to.side_padding,
         follow_hyde:              to.follow_hyde,
         auto_scale:               to.auto_scale,
         scale_factor:             to.scale_factor,

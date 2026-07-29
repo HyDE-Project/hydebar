@@ -158,6 +158,16 @@ where
         Ok(())
     }
 
+    /// Drops the keyboard event stream once the layout indicator leaves the
+    /// bar.
+    fn deregister(&mut self) {
+        if let Some(task) = self.task.take() {
+            task.abort();
+        }
+
+        self.sender = None;
+    }
+
     fn view(
         &self,
         config: Self::ViewData<'_>

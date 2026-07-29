@@ -11,6 +11,7 @@ mod keybindings;
 mod keyboard_layout;
 mod media_player;
 mod modules;
+mod notifications;
 mod serde_helpers;
 mod system_info;
 mod themes;
@@ -41,6 +42,7 @@ pub use keybindings::{GlobalKeybindings, Keybindings, MenuKeybindings};
 pub use keyboard_layout::KeyboardLayoutModuleConfig;
 pub use media_player::MediaPlayerModuleConfig;
 pub use modules::{BarLayer, ModuleDef, ModuleName, Modules, Outputs, Position};
+pub use notifications::{NotificationSource, NotificationsConfig};
 use serde::Deserialize;
 pub use serde_helpers::RegexCfg;
 pub use system_info::{
@@ -102,7 +104,9 @@ pub struct Config {
     #[serde(default)]
     pub weather:             WeatherModuleConfig,
     #[serde(default)]
-    pub icons:               IconsConfig
+    pub icons:               IconsConfig,
+    #[serde(default)]
+    pub notifications:       NotificationsConfig
 }
 
 impl Default for Config {
@@ -130,7 +134,8 @@ impl Default for Config {
             menu_keyboard_focus: default_menu_keyboard_focus(),
             keybindings:         Keybindings::default(),
             weather:             WeatherModuleConfig::default(),
-            icons:               IconsConfig::default()
+            icons:               IconsConfig::default(),
+            notifications:       NotificationsConfig::default()
         }
     }
 }

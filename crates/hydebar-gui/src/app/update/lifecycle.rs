@@ -20,6 +20,10 @@ impl App {
                     .unwrap_or_default();
                 self.last_frame = Some(now);
 
+                let popups_before = self.notification_popups.len();
+                hydebar_core::notifications_popup::prune(&mut self.notification_popups, now);
+                let popups_changed = popups_before != self.notification_popups.len();
+
                 let menus_animating = self
                     .outputs
                     .tick_menu_animations(&self.config.appearance.animations, elapsed);
@@ -29,7 +33,11 @@ impl App {
                     self.last_frame = None;
                 }
 
-                Task::none()
+                if popups_changed {
+                    self.fit_notification_surface()
+                } else {
+                    Task::none()
+                }
             }
             Message::BusFlushed(outcome) => {
                 if outcome.had_error() {
@@ -55,6 +63,8 @@ impl App {
                     config,
                     impact
                 } = update;
+
+                let config = self.magnified(config);
 
                 info!("New config applied: {config:?}");
                 debug!("Config impact: {impact:?}");

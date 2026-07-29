@@ -52,6 +52,7 @@ impl Outputs {
                 main_id,
                 menu_id,
                 tooltip_id,
+                notifications_id,
                 task
             } = create_layer_surfaces(
                 style,
@@ -75,7 +76,8 @@ impl Outputs {
                         Some(shell_info) => destroy_layer_surfaces(
                             shell_info.id,
                             shell_info.menu.id,
-                            shell_info.tooltip_id
+                            shell_info.tooltip_id,
+                            shell_info.notifications_id
                         ),
                         _ => Task::none()
                     }
@@ -93,7 +95,8 @@ impl Outputs {
                     scale_factor: config.appearance.scale_factor,
                     height: config.appearance.height,
                     tooltip_id,
-                    tooltip: None
+                    tooltip: None,
+                    notifications_id
                 }),
                 Some(wl_output)
             ));
@@ -106,7 +109,8 @@ impl Outputs {
                         Some(shell_info) => destroy_layer_surfaces(
                             shell_info.id,
                             shell_info.menu.id,
-                            shell_info.tooltip_id
+                            shell_info.tooltip_id,
+                            shell_info.notifications_id
                         ),
                         _ => Task::none()
                     }
@@ -155,7 +159,8 @@ impl Outputs {
                     destroy_layer_surfaces(
                         shell_info.id,
                         shell_info.menu.id,
-                        shell_info.tooltip_id
+                        shell_info.tooltip_id,
+                        shell_info.notifications_id
                     )
                 } else {
                     Task::none()
@@ -170,6 +175,7 @@ impl Outputs {
                         main_id,
                         menu_id,
                         tooltip_id,
+                        notifications_id,
                         task
                     } = create_layer_surfaces(
                         style,
@@ -191,7 +197,8 @@ impl Outputs {
                             scale_factor: config.appearance.scale_factor,
                             height: config.appearance.height,
                             tooltip_id,
-                            tooltip: None
+                            tooltip: None,
+                            notifications_id
                         }),
                         None
                     ));
@@ -224,7 +231,12 @@ impl Outputs {
             .iter_mut()
             .filter_map(|(_, shell_info, _)| shell_info.take())
             .map(|shell_info| {
-                destroy_layer_surfaces(shell_info.id, shell_info.menu.id, shell_info.tooltip_id)
+                destroy_layer_surfaces(
+                    shell_info.id,
+                    shell_info.menu.id,
+                    shell_info.tooltip_id,
+                    shell_info.notifications_id
+                )
             })
             .collect::<Vec<_>>();
 

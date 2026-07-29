@@ -73,16 +73,25 @@ where
     Ok(())
 }
 
+/// Streams a `listen_cmd` and publishes every payload it prints.
+///
+/// The command runs in a process group of its own, guarded for as long as this
+/// future lives. Aborting the task — which is how a configuration reload
+/// replaces a module — drops the guard and ends the shell together with every
+/// helper it spawned; releasing the guard only after the child has been reaped
+/// keeps that true even when the abort lands during the final wait.
 pub(super) async fn run_custom_listener(
     module_name: Arc<str>,
     command: Arc<str>,
     sender: ModuleEventSender<Message>
 ) -> Result<(), CustomListenerError> {
-    let mut child = Command::new("bash")
+    let mut spawner = Command::new("bash");
+    spawner
         .arg("-c")
         .arg(command.as_ref())
-        .stdout(Stdio::piped())
-        .spawn()
+        .stdout(Stdio::piped());
+
+    let (mut child, mut guard) = crate::utils::process_group::spawn_guarded(&mut spawner)
         .map_err(|err| CustomListenerError::Command(CustomCommandError::Spawn(Arc::new(err))))?;
 
     let stdout = child.stdout.take().ok_or(CustomListenerError::Command(
@@ -95,6 +104,10 @@ pub(super) async fn run_custom_listener(
 
     match child.wait().await {
         Ok(status) => {
+            if let Some(guard) = guard.as_mut() {
+                guard.release();
+            }
+
             info!("Custom module '{module_name}' listener exited with status: {status}");
             if status.success() {
                 Ok(())

@@ -9,7 +9,10 @@ use log::{debug, error};
 use super::{Module, ModuleError, OnModulePress};
 use crate::{
     ModuleContext,
-    components::icons::{IconTheme, Icons, icon},
+    components::{
+        icons::{IconTheme, Icons, icon},
+        scale
+    },
     menu::MenuType
 };
 
@@ -172,7 +175,7 @@ impl Screenshot {
         let mut content = Column::new().spacing(8).padding(12);
 
         // Screenshot section
-        content = content.push(text("Screenshot").size(16));
+        content = content.push(text("Screenshot").size(scale::scaled(16.0)));
 
         let screenshot_buttons = Column::new()
             .push(
@@ -212,7 +215,7 @@ impl Screenshot {
         content = content.push(screenshot_buttons);
 
         // Recording section
-        content = content.push(text("Recording").size(16));
+        content = content.push(text("Recording").size(scale::scaled(16.0)));
 
         let recording_button = if self.is_recording {
             button(

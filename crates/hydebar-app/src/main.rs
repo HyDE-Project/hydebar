@@ -6,6 +6,7 @@
 mod error;
 mod executor;
 mod instance;
+mod startup_scale;
 
 use std::{
     backtrace::Backtrace, borrow::Cow, num::NonZeroUsize, panic, path::PathBuf, process::ExitCode,
@@ -116,6 +117,26 @@ fn run(runtime_handle: Handle) -> Result<(), MainError> {
     let instance_lock = instance::acquire()?;
     debug!("instance lock held at {:?}", instance_lock.path());
 
+    let mut raw_config = raw_config;
+
+    if raw_config.appearance.auto_scale
+        && let Some(screen) = startup_scale::focused_screen()
+    {
+        let magnification = screen.magnification();
+
+        if magnification > 1.0 {
+            debug!("magnifying the bar {magnification} times for this screen");
+            hydebar_core::components::scale::set_screen_factor(magnification);
+            raw_config.appearance.magnify(magnification);
+        }
+    }
+
+    raw_config
+        .appearance
+        .follow_compositor(&hydebar_proto::compositor_look::CompositorLook::read());
+
+    hydebar_core::components::scale::set_base(raw_config.appearance.font_size_px());
+
     let config = Arc::new(raw_config);
     let config_manager = Arc::new(ConfigManager::new((*config).clone()));
 
@@ -170,6 +191,8 @@ fn run(runtime_handle: Handle) -> Result<(), MainError> {
         .default_font(font)
         .run()
         .map_err(MainError::from);
+
+    hydebar_core::utils::process_group::terminate_all();
 
     drop(instance_lock);
 

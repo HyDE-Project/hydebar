@@ -29,6 +29,19 @@ const TOOLTIP_NAMESPACE: &str = "hydebar-tooltip-layer";
 /// as a menu surface covers it.
 const MENU_NAMESPACE: &str = "hydebar-menu-layer";
 
+/// Namespace of the surface the notification popups are drawn on.
+///
+/// Kept apart from the menus for the same reason as the tooltips: a compositor
+/// rule attached to a menu must not fire because a notification arrived.
+const NOTIFICATIONS_NAMESPACE: &str = "hydebar-notifications-layer";
+
+/// Width of the strip the popups live on, in physical pixels.
+///
+/// Deliberately narrow and anchored to one corner rather than covering the
+/// screen: a full screen surface on a layer above the desktop swallows every
+/// click meant for the windows underneath it.
+pub(crate) const NOTIFICATIONS_WIDTH: u32 = 520;
+
 /// Maps the configured bar layer onto the compositor layer it is created on.
 fn surface_layer(layer: BarLayer) -> Layer {
     match layer {
@@ -40,10 +53,11 @@ fn surface_layer(layer: BarLayer) -> Layer {
 }
 
 pub(crate) struct LayerSurfaceCreation<Message> {
-    pub(crate) main_id:    Id,
-    pub(crate) menu_id:    Id,
-    pub(crate) tooltip_id: Id,
-    pub(crate) task:       Task<Message>
+    pub(crate) main_id:          Id,
+    pub(crate) menu_id:          Id,
+    pub(crate) tooltip_id:       Id,
+    pub(crate) notifications_id: Id,
+    pub(crate) task:             Task<Message>
 }
 
 /// Returns the height the bar layer-surface is created with, in physical
@@ -122,8 +136,25 @@ pub(crate) fn create_layer_surfaces<Message: 'static>(
         size: Some((None, None)),
         layer: Layer::Background,
         keyboard_interactivity: KeyboardInteractivity::None,
-        output: wl_output.map_or(IcedOutput::Active, IcedOutput::Output),
+        output: wl_output
+            .clone()
+            .map_or(IcedOutput::Active, IcedOutput::Output),
         anchor: Anchor::TOP | Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT,
+        ..Default::default()
+    });
+
+    let notifications_id = Id::unique();
+    let notifications_task = get_layer_surface(SctkLayerSurfaceSettings {
+        id: notifications_id,
+        namespace: NOTIFICATIONS_NAMESPACE.to_string(),
+        size: Some((Some(NOTIFICATIONS_WIDTH), None)),
+        layer: Layer::Top,
+        keyboard_interactivity: KeyboardInteractivity::None,
+        output: wl_output.map_or(IcedOutput::Active, IcedOutput::Output),
+        anchor: match position {
+            Position::Top => Anchor::TOP,
+            Position::Bottom => Anchor::BOTTOM
+        } | Anchor::RIGHT,
         ..Default::default()
     });
 
@@ -131,19 +162,22 @@ pub(crate) fn create_layer_surfaces<Message: 'static>(
         main_id,
         menu_id,
         tooltip_id,
-        task: Task::batch(vec![main_task, menu_task, tooltip_task])
+        notifications_id,
+        task: Task::batch(vec![main_task, menu_task, tooltip_task, notifications_task])
     }
 }
 
 pub(crate) fn destroy_layer_surfaces<Message: 'static>(
     main_id: Id,
     menu_id: Id,
-    tooltip_id: Id
+    tooltip_id: Id,
+    notifications_id: Id
 ) -> Task<Message> {
     Task::batch(vec![
         destroy_layer_surface(main_id),
         destroy_layer_surface(menu_id),
         destroy_layer_surface(tooltip_id),
+        destroy_layer_surface(notifications_id),
     ])
 }
 

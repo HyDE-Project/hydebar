@@ -8,6 +8,7 @@ use tokio_stream::StreamExt;
 
 use crate::{
     ModuleContext, ModuleEventSender,
+    components::scale,
     config::{WindowTitleConfig, WindowTitleMode},
     event_bus::ModuleEvent,
     utils::truncate_text
@@ -167,6 +168,18 @@ where
         Ok(())
     }
 
+    /// Drops the compositor event stream once the title leaves the bar.
+    ///
+    /// Focus changes are among the most frequent events a session produces, so
+    /// a listener nobody renders is the most expensive one to leave running.
+    fn deregister(&mut self) {
+        if let Some(task) = self.task.take() {
+            task.abort();
+        }
+
+        self.sender = None;
+    }
+
     fn view(
         &self,
         _: Self::ViewData<'_>
@@ -174,7 +187,7 @@ where
         self.value.as_ref().map(|value| {
             (
                 text(value.clone())
-                    .size(12)
+                    .size(scale::scaled(12.0))
                     .wrapping(text::Wrapping::WordOrGlyph)
                     .into(),
                 None

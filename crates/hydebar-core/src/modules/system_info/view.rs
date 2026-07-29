@@ -5,7 +5,10 @@ use iced::{
 
 use super::{Message, data::SystemInfoData};
 use crate::{
-    components::icons::{IconTheme, Icons, icon},
+    components::{
+        icons::{IconTheme, Icons, icon},
+        scale
+    },
     config::{Appearance, MemoryFormat, SystemIndicator, SystemModuleConfig},
     menu::MenuType,
     modules::OnModulePress
@@ -18,7 +21,7 @@ fn info_element<'a>(
     value: String
 ) -> Element<'a, Message> {
     row!(
-        container(icon(icons, info_icon).size(22)).center_x(Length::Fixed(32.)),
+        container(icon(icons, info_icon).size(scale::scaled(22.0))).center_x(Length::Fixed(32.)),
         text(label).width(Length::Fill),
         text(value)
     )
@@ -111,7 +114,7 @@ fn format_speed(speed: u32) -> (u32, &'static str) {
 /// Render the module menu displaying detailed system metrics.
 pub fn build_menu_view<'a>(data: &'a SystemInfoData, icons: &IconTheme) -> Element<'a, Message> {
     column![
-        text("System Info").size(20),
+        text("System Info").size(scale::scaled(20.0)),
         rule::horizontal(1),
         Column::new()
             .width(Length::Fill)
@@ -142,7 +145,7 @@ pub fn build_menu_view<'a>(data: &'a SystemInfoData, icons: &IconTheme) -> Eleme
                         .iter()
                         .map(|(mount_point, usage)| {
                             row!(
-                                container(icon(icons, Icons::Drive).size(22))
+                                container(icon(icons, Icons::Drive).size(scale::scaled(22.0)))
                                     .center_x(Length::Fixed(32.)),
                                 text(format!("Disk Usage {mount_point}")).width(Length::Fill),
                                 text(format!("{usage}%"))

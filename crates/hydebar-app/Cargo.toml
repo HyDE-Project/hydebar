@@ -5,6 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+serde_json.workspace = true
 clap.workspace = true
 flexi_logger.workspace = true
 hydebar-core = { path = "../hydebar-core" }

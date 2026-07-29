@@ -2,21 +2,36 @@
 
 use std::time::SystemTime;
 
+use iced::futures::channel::mpsc::UnboundedSender;
 use log::debug;
 use zbus::interface;
 
-use super::{Notification, NotificationStorage, Urgency};
+use super::{Notification, NotificationEvent, NotificationStorage, Urgency};
 
 /// D-Bus org.freedesktop.Notifications server implementation
 pub struct NotificationsServer {
-    storage: std::sync::Arc<std::sync::Mutex<NotificationStorage>>
+    storage:  std::sync::Arc<std::sync::Mutex<NotificationStorage>>,
+    /// Where an accepted notification is announced.
+    ///
+    /// Storing one is not enough: the bar has to be told, otherwise a
+    /// notification arrives, is filed away and never shows up on the screen.
+    announce: UnboundedSender<NotificationEvent>
 }
 
 impl NotificationsServer {
-    pub fn new(storage: std::sync::Arc<std::sync::Mutex<NotificationStorage>>) -> Self {
+    pub fn new(
+        storage: std::sync::Arc<std::sync::Mutex<NotificationStorage>>,
+        announce: UnboundedSender<NotificationEvent>
+    ) -> Self {
         Self {
-            storage
+            storage,
+            announce
         }
+    }
+
+    /// Announces `event`, ignoring a listener that has gone away.
+    fn announce(&self, event: NotificationEvent) {
+        let _ = self.announce.unbounded_send(event);
     }
 }
 
@@ -86,8 +101,17 @@ impl NotificationsServer {
             storage.remove(replaces_id);
             replaces_id
         } else {
-            storage.add(notification)
+            storage.add(notification.clone())
         };
+
+        drop(storage);
+
+        self.announce(NotificationEvent::Received(Notification {
+            id,
+            ..notification
+        }));
+
+        let storage = self.storage.lock().unwrap();
 
         // Play sound if enabled
         if storage.sounds_enabled() {
@@ -99,8 +123,8 @@ impl NotificationsServer {
 
     /// Close notification
     fn close_notification(&mut self, id: u32) {
-        let mut storage = self.storage.lock().unwrap();
-        storage.remove(id);
+        self.storage.lock().unwrap().remove(id);
+        self.announce(NotificationEvent::Closed(id));
     }
 }
 

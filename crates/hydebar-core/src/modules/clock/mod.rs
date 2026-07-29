@@ -7,7 +7,7 @@ pub use calendar::{CalendarData, CalendarError, CalendarState, DayInfo};
 use chrono::{DateTime, Local};
 use iced::Element;
 use log::error;
-use tokio::{task::JoinHandle, time::interval};
+use tokio::{task::JoinHandle, time::sleep};
 
 use crate::{
     ModuleContext, ModuleEventSender,
@@ -85,6 +85,29 @@ fn render_all(formats: &[String], now: DateTime<Local>) -> Vec<String> {
         .collect()
 }
 
+/// Time left until the next multiple of `period` on the wall clock.
+///
+/// A plain `interval` starts counting from whenever the bar happened to launch,
+/// so a minute clock started at `12:00:30` would flip its display half a minute
+/// late for the rest of the session. Sleeping to the boundary instead keeps the
+/// displayed minute correct while still costing exactly one wakeup per period.
+///
+/// Landing exactly on a boundary yields a whole period rather than zero, so the
+/// caller never spins publishing the same value twice.
+fn duration_until_next_tick(now: DateTime<Local>, period: Duration) -> Duration {
+    let period_nanos = i128::try_from(period.as_nanos()).unwrap_or(i128::MAX);
+
+    if period_nanos <= 0 {
+        return Duration::ZERO;
+    }
+
+    let elapsed =
+        i128::from(now.timestamp()) * 1_000_000_000 + i128::from(now.timestamp_subsec_nanos());
+    let remaining = period_nanos - elapsed.rem_euclid(period_nanos);
+
+    Duration::from_nanos(u64::try_from(remaining).unwrap_or(u64::MAX))
+}
+
 /// Clock module - business logic only, no GUI!
 #[derive(Debug)]
 pub struct Clock {
@@ -141,16 +164,16 @@ impl Clock {
         }
 
         if let Some(sender) = self.sender.clone() {
-            let interval_duration = self.tick_interval;
+            let period = self.tick_interval;
             let update_sender = sender.clone();
             let formats: Vec<String> = config.formats().map(str::to_owned).collect();
 
             self.task = Some(ctx.runtime_handle().spawn(async move {
-                let mut ticker = interval(interval_duration);
                 let mut rendered: Option<Vec<String>> = None;
 
                 loop {
-                    ticker.tick().await;
+                    sleep(duration_until_next_tick(Local::now(), period)).await;
+
                     let now = Local::now();
                     let next = render_all(&formats, now);
 
@@ -166,6 +189,18 @@ impl Clock {
                 }
             }));
         }
+    }
+
+    /// Aborts the tick loop, leaving the last rendered time in place.
+    ///
+    /// Registration is the only way back, so the bar can park the clock while
+    /// the layout does not show it without dropping the module state.
+    pub fn stop(&mut self) {
+        if let Some(task) = self.task.take() {
+            task.abort();
+        }
+
+        self.sender = None;
     }
 
     /// Update clock state from GUI message
@@ -196,13 +231,16 @@ impl Clock {
 
     /// Determine tick interval from every format the module can render.
     ///
-    /// The fastest format wins so switching to an alternative never leaves the
-    /// clock ticking too slowly for the seconds it displays.
+    /// A clock showing seconds has to wake once per second; one showing only
+    /// minutes gains nothing from waking more often than once per minute, and
+    /// every extra wakeup repaints the whole bar. The fastest format wins so
+    /// switching to an alternative never leaves the clock ticking too slowly
+    /// for the seconds it displays.
     fn determine_interval(config: &ClockModuleConfig) -> Duration {
         if config.formats().any(Self::format_shows_seconds) {
             Duration::from_secs(1)
         } else {
-            Duration::from_secs(5)
+            Duration::from_secs(60)
         }
     }
 
@@ -230,6 +268,14 @@ where
     ) -> Result<(), ModuleError> {
         self.register(ctx, config);
         Ok(())
+    }
+
+    /// Stops the tick loop once the clock leaves the bar.
+    ///
+    /// A tick repaints every surface the bar owns, which is pure waste when no
+    /// section renders the time any more.
+    fn deregister(&mut self) {
+        self.stop();
     }
 
     /// Renders the clock in its active format.
@@ -282,7 +328,69 @@ mod tests {
     #[test]
     fn determine_interval_without_seconds() {
         let interval = Clock::determine_interval(&config("%H:%M", &[]));
-        assert_eq!(interval, Duration::from_secs(5));
+        assert_eq!(interval, Duration::from_secs(60));
+    }
+
+    fn at(hour: u32, minute: u32, second: u32, nanos: u32) -> DateTime<Local> {
+        use chrono::TimeZone;
+
+        Local
+            .with_ymd_and_hms(2026, 7, 29, hour, minute, second)
+            .single()
+            .expect("unambiguous local time")
+            + chrono::Duration::nanoseconds(i64::from(nanos))
+    }
+
+    #[test]
+    fn a_minute_clock_sleeps_only_to_the_next_minute_boundary() {
+        let delay = duration_until_next_tick(at(12, 34, 30, 0), Duration::from_secs(60));
+
+        assert_eq!(delay, Duration::from_secs(30));
+    }
+
+    #[test]
+    fn a_second_clock_sleeps_only_to_the_next_second_boundary() {
+        let delay = duration_until_next_tick(at(12, 34, 30, 250_000_000), Duration::from_secs(1));
+
+        assert_eq!(delay, Duration::from_millis(750));
+    }
+
+    #[test]
+    fn landing_on_a_boundary_waits_a_whole_period_instead_of_spinning() {
+        let delay = duration_until_next_tick(at(12, 34, 0, 0), Duration::from_secs(60));
+
+        assert_eq!(delay, Duration::from_secs(60));
+    }
+
+    #[test]
+    fn a_minute_clock_never_sleeps_longer_than_a_minute() {
+        for second in 0..60 {
+            let delay = duration_until_next_tick(at(12, 34, second, 0), Duration::from_secs(60));
+
+            assert!(delay <= Duration::from_secs(60));
+            assert!(delay > Duration::ZERO);
+        }
+    }
+
+    #[test]
+    fn a_minute_that_did_not_change_publishes_nothing() {
+        let formats = vec!["%H:%M".to_string()];
+        let first = render_all(&formats, at(12, 34, 0, 0));
+        let same_minute = render_all(&formats, at(12, 34, 59, 0));
+        let next_minute = render_all(&formats, at(12, 35, 0, 0));
+
+        assert_eq!(first, same_minute);
+        assert_ne!(first, next_minute);
+    }
+
+    #[test]
+    fn an_alternative_format_is_compared_alongside_the_active_one() {
+        let formats = vec!["%H:%M".to_string(), "%S".to_string()];
+
+        let first = render_all(&formats, at(12, 34, 10, 0));
+        let later = render_all(&formats, at(12, 34, 11, 0));
+
+        assert_ne!(first, later);
     }
 
     #[test]

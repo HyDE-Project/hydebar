@@ -9,7 +9,10 @@ use iced::{
 
 use super::state::{CheckState, Message, Updates};
 use crate::{
-    components::icons::{IconTheme, Icons, icon as icon_component},
+    components::{
+        icons::{IconTheme, Icons, icon as icon_component},
+        scale
+    },
     style::ghost_button_style
 };
 
@@ -101,7 +104,9 @@ fn build_updates_list<'a>(
 
 fn build_update_entry(update: &super::state::Update) -> Element<'_, Message> {
     column!(
-        text(update.package.as_str()).size(10).width(Length::Fill),
+        text(update.package.as_str())
+            .size(scale::scaled(10.0))
+            .width(Length::Fill),
         text(format!(
             "{} -> {}",
             truncated(&update.from, 18),
@@ -109,7 +114,7 @@ fn build_update_entry(update: &super::state::Update) -> Element<'_, Message> {
         ))
         .width(Length::Fill)
         .align_x(Horizontal::Right)
-        .size(10),
+        .size(scale::scaled(10.0)),
     )
     .into()
 }

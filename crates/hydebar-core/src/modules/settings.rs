@@ -5,6 +5,7 @@
 //! so the menu never holds state of its own: what it draws is always what the
 //! running configuration says.
 
+mod hyde_shell;
 mod layout;
 mod tab;
 mod view;
@@ -12,9 +13,12 @@ mod writer;
 
 use std::path::{Path, PathBuf};
 
-use hydebar_proto::config::{Config, ModuleDef, Modules};
+use hydebar_proto::{
+    config::{Config, ModuleDef, Modules, NotificationSource},
+    hyde_state::{self, HydeState}
+};
 use iced::Element;
-pub use layout::{LayoutEdit, Section};
+pub use layout::{LayoutEdit, Section, Slot};
 use log::warn;
 pub use tab::Tab;
 pub use writer::{SettingValue, SettingsWriteError, write_setting};
@@ -23,7 +27,8 @@ use super::{Module, OnModulePress};
 use crate::{
     components::icons::{IconTheme, Icons, icon},
     config::{AppearanceStyle, BarLayer, Position},
-    menu::MenuType
+    menu::MenuType,
+    utils::launcher
 };
 
 /// Smallest bar height the menu will step down to, in pixels.
@@ -32,6 +37,16 @@ const MIN_HEIGHT: f32 = 16.0;
 const MAX_HEIGHT: f32 = 96.0;
 /// Height added or removed by one press, in pixels.
 const HEIGHT_STEP: f32 = 2.0;
+
+/// Smallest side padding the menu will step down to, in pixels.
+///
+/// Zero is a deliberate choice rather than a floor: a bar told to sit flush
+/// with the screen edge is what a compositor without window gaps calls for.
+const MIN_SIDE_PADDING: f32 = 0.0;
+/// Largest side padding the menu will step up to, in pixels.
+const MAX_SIDE_PADDING: f32 = 96.0;
+/// Side padding added or removed by one press, in pixels.
+const SIDE_PADDING_STEP: f32 = 1.0;
 
 /// Smallest font size the menu will step down to, in pixels.
 const MIN_FONT_SIZE: f32 = 6.0;
@@ -54,6 +69,12 @@ pub enum Message {
     SetStyle(AppearanceStyle),
     /// Set the bar height, in pixels.
     SetHeight(f32),
+    /// Set the padding between the screen edge and the outermost island, in
+    /// pixels.
+    ///
+    /// Writing it pins the padding: the bar stops taking the gap the
+    /// compositor keeps around its windows.
+    SetSidePadding(f32),
     /// Set the default text size, in pixels.
     SetFontSize(f32),
     /// Set the opacity of the module pills.
@@ -62,10 +83,20 @@ pub enum Message {
     SetFollowHyde(bool),
     /// Take the text size and the bar height from the screen, or stop.
     SetAutoScale(bool),
+    /// Choose who draws the notification popups.
+    SetNotificationSource(NotificationSource),
     /// Show another page of the window.
     SelectTab(Tab),
     /// Rearrange the modules of the bar.
-    EditLayout(LayoutEdit)
+    EditLayout(LayoutEdit),
+    /// Pick the module the editor acts on, or drop the pick.
+    SelectSlot(Option<Slot>),
+    /// Show the modules of another section.
+    SelectSection(Section),
+    /// Ask HyDE to switch the desktop to the named theme.
+    SwitchHydeTheme(String),
+    /// Ask HyDE for the next wallpaper of the active theme.
+    NextHydeWallpaper
 }
 
 impl Message {
@@ -76,11 +107,18 @@ impl Message {
             Self::SetLayer(_) => &["layer"],
             Self::SetStyle(_) => &["appearance", "style"],
             Self::SetHeight(_) => &["appearance", "height"],
+            Self::SetSidePadding(_) => &["appearance", "side_padding"],
             Self::SetFontSize(_) => &["appearance", "font_size"],
             Self::SetOpacity(_) => &["appearance", "opacity"],
             Self::SetFollowHyde(_) => &["appearance", "follow_hyde"],
             Self::SetAutoScale(_) => &["appearance", "auto_scale"],
-            Self::SelectTab(_) | Self::EditLayout(_) => &[]
+            Self::SetNotificationSource(_) => &["notifications", "source"],
+            Self::SelectTab(_)
+            | Self::EditLayout(_)
+            | Self::SelectSlot(_)
+            | Self::SelectSection(_)
+            | Self::SwitchHydeTheme(_)
+            | Self::NextHydeWallpaper => &[]
         }
     }
 
@@ -103,11 +141,22 @@ impl Message {
                 AppearanceStyle::Gradient => "Gradient".into()
             },
             Self::SetHeight(height) => (*height).into(),
+            Self::SetSidePadding(padding) => (*padding).into(),
             Self::SetFontSize(size) => (*size).into(),
             Self::SetOpacity(opacity) => (*opacity).into(),
             Self::SetFollowHyde(follow) => (*follow).into(),
             Self::SetAutoScale(auto) => (*auto).into(),
-            Self::SelectTab(_) | Self::EditLayout(_) => SettingValue::Flag(false)
+            Self::SetNotificationSource(source) => match source {
+                NotificationSource::Builtin => "Builtin".into(),
+                NotificationSource::Compositor => "Compositor".into(),
+                NotificationSource::Daemon => "Daemon".into()
+            },
+            Self::SelectTab(_)
+            | Self::EditLayout(_)
+            | Self::SelectSlot(_)
+            | Self::SelectSection(_)
+            | Self::SwitchHydeTheme(_)
+            | Self::NextHydeWallpaper => SettingValue::Flag(false)
         }
     }
 
@@ -125,6 +174,35 @@ impl Message {
         if let Err(err) = write_setting(config_path, path, self.value()) {
             warn!("failed to store the setting: {err}");
         }
+    }
+}
+
+/// Keeps the pick on the module the edit acted on.
+///
+/// A module that moved would otherwise leave the pick pointing at whatever
+/// took its place, and the next button press would act on the wrong module.
+fn follow(edit: LayoutEdit, modules: &Modules) -> Option<Slot> {
+    let slot = edit.slot()?;
+
+    match edit {
+        LayoutEdit::Remove(_) => None,
+        LayoutEdit::MoveEarlier(_) => Some(Slot {
+            section: slot.section,
+            index:   slot.index.saturating_sub(1)
+        }),
+        LayoutEdit::MoveLater(_) => Some(Slot {
+            section: slot.section,
+            index:   slot.index + 1
+        }),
+        LayoutEdit::MoveToPreviousSection(_) => slot.section.before().map(|section| Slot {
+            section,
+            index: section.entries(modules).len().saturating_sub(1)
+        }),
+        LayoutEdit::MoveToNextSection(_) => slot.section.after().map(|section| Slot {
+            section,
+            index: 0
+        }),
+        _ => Some(slot)
     }
 }
 
@@ -165,7 +243,17 @@ pub struct Settings {
     /// File the choices are written to.
     config_path: PathBuf,
     /// Page the window currently shows.
-    tab:         Tab
+    tab:         Tab,
+    /// Module the editor acts on, once one is picked.
+    selected:    Option<Slot>,
+    /// Section the editor is showing.
+    section:     Section,
+    /// Desktop state the HyDE page draws.
+    ///
+    /// Kept here rather than read while rendering: the page is redrawn on every
+    /// frame of the open animation, and reading two files that often would put
+    /// the filesystem in the draw path.
+    hyde:        HydeState
 }
 
 impl Settings {
@@ -174,8 +262,29 @@ impl Settings {
     pub fn new(config_path: PathBuf) -> Self {
         Self {
             config_path,
-            tab: Tab::default()
+            tab: Tab::default(),
+            selected: None,
+            section: Section::Left,
+            hyde: hyde_state::load()
         }
+    }
+
+    /// Desktop state the HyDE page draws.
+    #[must_use]
+    pub fn hyde(&self) -> &HydeState {
+        &self.hyde
+    }
+
+    /// Section the editor is showing.
+    #[must_use]
+    pub fn section(&self) -> Section {
+        self.section
+    }
+
+    /// Module the editor acts on, once one is picked.
+    #[must_use]
+    pub fn selected(&self) -> Option<Slot> {
+        self.selected
     }
 
     /// Page the window currently shows.
@@ -186,14 +295,44 @@ impl Settings {
 
     /// Applies a choice made in the window.
     ///
-    /// Picking a tab is the only choice kept in memory; everything else lands
-    /// in the configuration file and comes back through the reload.
+    /// Picking a tab is the only choice about the bar kept in memory;
+    /// everything else lands in the configuration file and comes back through
+    /// the reload.
+    ///
+    /// The HyDE choices are not about the bar at all: they are handed to
+    /// `hyde-shell`, and the desktop state is re-read whenever the page is
+    /// opened. A theme switch takes long enough that re-reading straight away
+    /// would still show the old name, so the picked theme is recorded here and
+    /// confirmed by the next read.
     pub fn update(&mut self, message: Message, config: &Config) {
         match message {
-            Message::SelectTab(tab) => self.tab = tab,
+            Message::SelectTab(tab) => {
+                if tab == Tab::Hyde {
+                    self.hyde = hyde_state::load();
+                }
+
+                self.tab = tab;
+            }
+            Message::SwitchHydeTheme(theme) => {
+                launcher::execute_command(hyde_shell::switch_theme(&theme));
+                self.hyde.theme = Some(theme);
+            }
+            Message::NextHydeWallpaper => {
+                launcher::execute_command(hyde_shell::next_wallpaper());
+            }
+            Message::SelectSlot(slot) => self.selected = slot,
+            Message::SelectSection(section) => {
+                self.section = section;
+                self.selected = None;
+            }
             Message::EditLayout(edit) => {
                 let modules = layout::apply(&config.modules, &edit);
                 store_layout(&self.config_path, &modules);
+                self.selected = follow(edit, &modules);
+
+                if let Some(slot) = self.selected {
+                    self.section = slot.section;
+                }
             }
             other => other.apply(&self.config_path)
         }
@@ -215,6 +354,18 @@ impl Settings {
     #[must_use]
     pub fn height_above(current: f32) -> f32 {
         (current + HEIGHT_STEP).clamp(MIN_HEIGHT, MAX_HEIGHT)
+    }
+
+    /// Side padding one step below `current`, clamped to the supported range.
+    #[must_use]
+    pub fn side_padding_below(current: f32) -> f32 {
+        (current - SIDE_PADDING_STEP).clamp(MIN_SIDE_PADDING, MAX_SIDE_PADDING)
+    }
+
+    /// Side padding one step above `current`, clamped to the supported range.
+    #[must_use]
+    pub fn side_padding_above(current: f32) -> f32 {
+        (current + SIDE_PADDING_STEP).clamp(MIN_SIDE_PADDING, MAX_SIDE_PADDING)
     }
 
     /// Font size one step below `current`, clamped to the supported range.
@@ -273,6 +424,10 @@ mod tests {
             &["appearance", "style"]
         );
         assert_eq!(Message::SetHeight(38.0).path(), &["appearance", "height"]);
+        assert_eq!(
+            Message::SetSidePadding(8.0).path(),
+            &["appearance", "side_padding"]
+        );
         assert_eq!(
             Message::SetFontSize(10.0).path(),
             &["appearance", "font_size"]
@@ -333,6 +488,20 @@ mod tests {
         assert_eq!(Settings::height_below(38.0), 36.0);
         assert_eq!(Settings::height_below(MIN_HEIGHT), MIN_HEIGHT);
         assert_eq!(Settings::height_above(MAX_HEIGHT), MAX_HEIGHT);
+    }
+
+    #[test]
+    fn the_side_padding_steps_stay_inside_the_supported_range() {
+        assert_eq!(Settings::side_padding_above(8.0), 9.0);
+        assert_eq!(Settings::side_padding_below(8.0), 7.0);
+        assert_eq!(
+            Settings::side_padding_below(MIN_SIDE_PADDING),
+            MIN_SIDE_PADDING
+        );
+        assert_eq!(
+            Settings::side_padding_above(MAX_SIDE_PADDING),
+            MAX_SIDE_PADDING
+        );
     }
 
     #[test]

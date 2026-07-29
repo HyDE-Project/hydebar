@@ -113,6 +113,15 @@ where
         Ok(())
     }
 
+    /// Drops the submap event stream once the indicator leaves the bar.
+    fn deregister(&mut self) {
+        if let Some(task) = self.task.take() {
+            task.abort();
+        }
+
+        self.sender = None;
+    }
+
     fn view(
         &self,
         _: Self::ViewData<'_>

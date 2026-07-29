@@ -6,7 +6,10 @@ use iced::{
 
 use super::{Message, SubMenu, quick_setting_button};
 use crate::{
-    components::icons::{IconTheme, Icons, icon},
+    components::{
+        icons::{IconTheme, Icons, icon},
+        scale
+    },
     services::{
         ServiceEvent,
         network::{
@@ -243,7 +246,7 @@ impl NetworkData {
                 } else {
                     ""
                 })
-                .size(12),
+                .size(scale::scaled(12.0)),
                 button(icon(icons, Icons::Refresh))
                     .padding([4, 10])
                     .style(settings_button_style(opacity))
@@ -280,7 +283,7 @@ impl NetworkData {
                                         })
                                         .width(Length::Shrink),
                                         text(ac.ssid.clone()).width(Length::Fill),
-                                        text(format!("{}%", ac.strength)).size(12),
+                                        text(format!("{}%", ac.strength)).size(scale::scaled(12.0)),
                                     )
                                     .align_y(Alignment::Center)
                                     .spacing(8),

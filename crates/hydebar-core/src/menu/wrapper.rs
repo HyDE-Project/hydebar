@@ -21,15 +21,21 @@ const PADDING_EM: f32 = 1.6;
 #[derive(Debug, Clone, Copy)]
 pub struct MenuLayout {
     /// Themed text size, the unit every length here is stated in.
-    pub font_size:     f32,
+    pub font_size:      f32,
     /// Screen edge the bar is docked to.
-    pub bar_position:  Position,
+    pub bar_position:   Position,
     /// Style the bar is drawn in.
-    pub style:         AppearanceStyle,
+    pub style:          AppearanceStyle,
     /// Opacity of the menu box.
-    pub opacity:       f32,
+    pub opacity:        f32,
     /// Opacity of the dimming behind the menu.
-    pub menu_backdrop: f32
+    pub menu_backdrop:  f32,
+    /// Height the content needs, when the caller can measure it.
+    ///
+    /// Given one the box is capped to the share of the screen a menu may cover
+    /// and its content scrolls, so a long page is reachable instead of being
+    /// cut off by the edge of the screen.
+    pub content_height: Option<f32>
 }
 
 /// Wraps `content` into a menu box anchored under `button_ui_ref`.

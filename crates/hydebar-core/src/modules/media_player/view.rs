@@ -8,7 +8,10 @@ use iced::{
 
 use super::{MediaPlayer, Message};
 use crate::{
-    components::icons::{IconTheme, Icons, icon},
+    components::{
+        icons::{IconTheme, Icons, icon},
+        scale
+    },
     config::MediaPlayerModuleConfig,
     services::mpris::PlaybackStatus,
     style::settings_button_style
@@ -24,7 +27,7 @@ impl MediaPlayer {
         match &self.service {
             None => text("Not connected to MPRIS service").into(),
             Some(s) => column!(
-                text("Players").size(20),
+                text("Players").size(scale::scaled(20.0)),
                 rule::horizontal(1),
                 column(s.iter().map(|d| {
                     let title = text(Self::get_title(d, config))

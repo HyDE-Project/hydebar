@@ -7,7 +7,10 @@ use iced::{
 };
 
 use crate::{
-    components::icons::{IconTheme, Icons, icon},
+    components::{
+        icons::{IconTheme, Icons, icon},
+        scale
+    },
     modules::control_center::state::SubMenu,
     style::{quick_settings_button_style, quick_settings_submenu_button_style}
 };
@@ -23,10 +26,10 @@ pub fn quick_setting_button<'a, Msg: Clone + 'static>(
     opacity: f32
 ) -> Element<'a, Msg> {
     let main_content = row!(
-        icon(icons, icon_type).size(20),
+        icon(icons, icon_type).size(scale::scaled(20.0)),
         Column::new()
-            .push(text(title).size(12))
-            .push_maybe(subtitle.map(|s| text(s).size(10)))
+            .push(text(title).size(scale::scaled(12.0)))
+            .push_maybe(subtitle.map(|s| text(s).size(scale::scaled(10.0))))
             .spacing(4)
     )
     .spacing(8)

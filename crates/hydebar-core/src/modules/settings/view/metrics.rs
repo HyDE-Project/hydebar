@@ -11,6 +11,12 @@
 /// describes every glyph.
 const GLYPH_ADVANCE_EM: f32 = 0.66;
 
+/// Height one row of controls takes, in multiples of the text size.
+///
+/// A button is its label plus padding above and below, and rows are laid out
+/// with that height whether they carry a button or only a label.
+pub(super) const ROW_HEIGHT_EM: f32 = 2.4;
+
 /// Slack added to a measured row, in multiples of the text size.
 ///
 /// The estimate is deliberately a little generous: a row that asks for a few
@@ -51,9 +57,68 @@ where
     width + gap * (count - 1.0).max(0.0)
 }
 
+/// Groups `labels` into the rows they fill when laid out `available` wide.
+///
+/// Wrapping is computed rather than left to the layout engine because the rows
+/// have to be counted before they are drawn: the height of the window depends
+/// on how many of them there turn out to be. A label wider than the whole row
+/// still gets a row of its own, so nothing is silently dropped.
+#[must_use]
+pub(super) fn wrap_into_rows(
+    labels: &[String],
+    available: f32,
+    font_size: f32,
+    gap: f32
+) -> Vec<Vec<usize>> {
+    let mut rows: Vec<Vec<usize>> = Vec::new();
+    let mut used = 0.0;
+
+    for (index, label) in labels.iter().enumerate() {
+        let width = button_width(label, font_size);
+        let fits = used + width <= available;
+
+        match rows.last_mut() {
+            Some(row) if fits => {
+                row.push(index);
+                used += width + gap;
+            }
+            _ => {
+                rows.push(vec![index]);
+                used = width + gap;
+            }
+        }
+    }
+
+    rows
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_catalogue_that_fits_stays_a_single_row() {
+        let labels = vec!["Clock".to_owned(), "Tray".to_owned()];
+
+        assert_eq!(wrap_into_rows(&labels, 1000.0, 10.0, 4.0), vec![vec![0, 1]]);
+    }
+
+    #[test]
+    fn a_long_catalogue_wraps_onto_several_rows() {
+        let labels = (0..8).map(|i| format!("Module{i}")).collect::<Vec<_>>();
+
+        let rows = wrap_into_rows(&labels, 200.0, 10.0, 4.0);
+
+        assert!(rows.len() > 1);
+        assert_eq!(rows.iter().map(Vec::len).sum::<usize>(), labels.len());
+    }
+
+    #[test]
+    fn an_entry_wider_than_the_row_still_gets_a_row() {
+        let labels = vec!["AnExtremelyLongModuleName".to_owned()];
+
+        assert_eq!(wrap_into_rows(&labels, 10.0, 10.0, 4.0), vec![vec![0]]);
+    }
 
     #[test]
     fn a_longer_label_takes_more_room() {

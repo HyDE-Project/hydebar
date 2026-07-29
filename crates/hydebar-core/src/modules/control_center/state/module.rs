@@ -70,6 +70,25 @@ where
         Ok(())
     }
 
+    /// Disconnects the five hardware services once nothing on the bar shows
+    /// them.
+    ///
+    /// Audio, brightness, network, bluetooth and UPower each hold a D-Bus or
+    /// PulseAudio connection that reports on every volume step, every signal
+    /// strength sample and every battery reading. Together they are the single
+    /// largest idle cost the bar can carry, and a layout without any of their
+    /// readouts pays it for nothing.
+    ///
+    /// The idle inhibitor is untouched: it belongs to the compositor session
+    /// rather than to a service, and the module keeps rendering its state.
+    fn deregister(&mut self) {
+        for task in self.tasks.drain(..) {
+            task.abort();
+        }
+
+        self.sender = None;
+    }
+
     fn view(
         &self,
         data: Self::ViewData<'_>

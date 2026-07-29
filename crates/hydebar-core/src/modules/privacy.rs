@@ -110,6 +110,19 @@ where
         Ok(())
     }
 
+    /// Stops watching PipeWire and the webcam nodes once the indicator leaves
+    /// the bar.
+    ///
+    /// The listener keeps a PipeWire connection and an inotify watch alive; a
+    /// layout that shows no privacy dot has no use for either.
+    fn deregister(&mut self) {
+        for task in self.tasks.drain(..) {
+            task.abort();
+        }
+
+        self.sender = None;
+    }
+
     /// Render the privacy indicator when data is available.
     fn view(
         &self,

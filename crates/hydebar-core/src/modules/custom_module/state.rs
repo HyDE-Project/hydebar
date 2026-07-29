@@ -69,6 +69,18 @@ impl RegistrationSource {
 }
 
 impl Custom {
+    /// Reports whether a producing command is currently feeding the module.
+    ///
+    /// Registration is what starts the shell behind a custom module, and the
+    /// only externally visible trace of it is the task it left behind. The bar
+    /// gates registration on the module being drawn somewhere, so this is the
+    /// question a caller has to be able to ask to tell a module that is merely
+    /// silent from one that was never started.
+    #[must_use]
+    pub fn is_listening(&self) -> bool {
+        self.registration.is_some()
+    }
+
     fn abort_listener(&mut self) {
         if let Some(handle) = self.listener_task.take() {
             handle.abort();

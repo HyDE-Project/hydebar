@@ -22,17 +22,19 @@ use crate::{
 
 #[derive(Debug, Clone)]
 struct ShellInfo {
-    id:           Id,
-    position:     Position,
-    style:        AppearanceStyle,
-    menu:         Menu,
-    scale_factor: f64,
+    id:               Id,
+    position:         Position,
+    style:            AppearanceStyle,
+    menu:             Menu,
+    scale_factor:     f64,
     /// Bar height the surface was created with, as named by the configuration.
-    height:       Option<f32>,
+    height:           Option<f32>,
     /// Surface the tooltips of this output are drawn on.
-    tooltip_id:   Id,
+    tooltip_id:       Id,
     /// Tooltip that surface is showing, if any.
-    tooltip:      Option<TooltipInfo>
+    tooltip:          Option<TooltipInfo>,
+    /// Surface the notification popups of this output are drawn on.
+    notifications_id: Id
 }
 
 impl ShellInfo {
@@ -75,7 +77,10 @@ pub enum HasOutput<'a> {
     /// The identifier refers to the surface the tooltips are drawn on.
     ///
     /// What it shows is read back with [`Outputs::tooltip`].
-    Tooltip
+    Tooltip,
+    /// The identifier refers to the surface the notification popups are drawn
+    /// on.
+    Notifications
 }
 
 impl Outputs {
@@ -105,6 +110,7 @@ impl Outputs {
             main_id,
             menu_id,
             tooltip_id,
+            notifications_id,
             task
         } = create_layer_surfaces(
             style,
@@ -127,7 +133,8 @@ impl Outputs {
                     scale_factor: config.appearance.scale_factor,
                     height: config.appearance.height,
                     tooltip_id,
-                    tooltip: None
+                    tooltip: None,
+                    notifications_id
                 }),
                 None
             )]),
