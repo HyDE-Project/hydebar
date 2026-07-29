@@ -7,12 +7,12 @@ use hydebar_proto::ports::hyprland::{
 };
 use hyprland::event_listener::AsyncEventListener;
 use log::warn;
-use tokio::{runtime::Handle, sync::mpsc};
+use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 
 use super::{
     super::{HyprlandClient, config::HyprlandClientConfig},
-    CHANNEL_CAPACITY,
+    CHANNEL_CAPACITY, runtime,
     supervisor::supervise
 };
 
@@ -105,8 +105,7 @@ pub(crate) fn spawn_keyboard_listener(
     client: HyprlandClient,
     config: Arc<HyprlandClientConfig>
 ) -> Result<HyprlandEventStream<HyprlandKeyboardEvent>, HyprlandError> {
-    let handle = Handle::try_current()
-        .map_err(|_| HyprlandError::runtime_unavailable(KEYBOARD_EVENTS_OP))?;
+    let handle = runtime::handle()?;
     let (tx, rx) = mpsc::channel(CHANNEL_CAPACITY);
     let base_delay = config.retry_backoff;
     let stability_window = config.listener_stability_window;

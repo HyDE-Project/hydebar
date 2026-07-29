@@ -5,10 +5,12 @@ use std::sync::Arc;
 use hydebar_proto::ports::hyprland::{HyprlandError, HyprlandEventStream, HyprlandWorkspaceEvent};
 use hyprland::event_listener::AsyncEventListener;
 use log::warn;
-use tokio::{runtime::Handle, sync::mpsc};
+use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 
-use super::{super::config::HyprlandClientConfig, CHANNEL_CAPACITY, supervisor::supervise};
+use super::{
+    super::config::HyprlandClientConfig, CHANNEL_CAPACITY, runtime, supervisor::supervise
+};
 
 const WORKSPACE_EVENTS_OP: &str = "workspace_events";
 
@@ -83,8 +85,7 @@ fn build_listener(tx: &WorkspaceSender) -> AsyncEventListener {
 pub(crate) fn spawn_workspace_listener(
     config: Arc<HyprlandClientConfig>
 ) -> Result<HyprlandEventStream<HyprlandWorkspaceEvent>, HyprlandError> {
-    let handle = Handle::try_current()
-        .map_err(|_| HyprlandError::runtime_unavailable(WORKSPACE_EVENTS_OP))?;
+    let handle = runtime::handle()?;
     let (tx, rx) = mpsc::channel(CHANNEL_CAPACITY);
     let base_delay = config.retry_backoff;
     let stability_window = config.listener_stability_window;
