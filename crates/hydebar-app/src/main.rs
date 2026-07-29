@@ -85,6 +85,26 @@ fn start() -> Result<(), MainError> {
     run(runtime_handle)
 }
 
+/// Clears the strays of earlier runs and arms the reaper for this one.
+///
+/// Ordered after the instance lock on purpose: the bar that was running has
+/// already been asked to quit and released the slot, so everything still
+/// wearing an older launch stamp is genuinely abandoned. Both steps are best
+/// effort — a bar that cannot sweep or cannot install its handler is still a
+/// working bar, and its children are covered by the parent death signal the
+/// kernel enforces on each of them.
+fn reap_and_guard_children() {
+    let swept = hydebar_core::utils::process_group::sweep_orphans();
+
+    if swept > 0 {
+        debug!("ended {swept} processes left behind by an earlier run");
+    }
+
+    if let Err(err) = hydebar_core::utils::process_group::install_termination_handler() {
+        error!("failed to arm the process reaper, a signalled exit may leave children: {err}");
+    }
+}
+
 fn run(runtime_handle: Handle) -> Result<(), MainError> {
     let args = Args::parse();
     debug!("args: {args:?}");
@@ -116,6 +136,8 @@ fn run(runtime_handle: Handle) -> Result<(), MainError> {
 
     let instance_lock = instance::acquire()?;
     debug!("instance lock held at {:?}", instance_lock.path());
+
+    reap_and_guard_children();
 
     let mut raw_config = raw_config;
 

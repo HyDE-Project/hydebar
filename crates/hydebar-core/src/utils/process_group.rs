@@ -2,47 +2,161 @@
 //!
 //! A listener is a shell loop that spawns a helper every few seconds. Killing
 //! only the shell leaves the loop's children behind, and every restart of the
-//! bar adds another crop of them: a thousand of them heat a machine as
+//! bar adds another crop of them: a few hundred of them heat a machine as
 //! effectively as a stress test. Putting each listener in its own process group
 //! makes it possible to end the whole family with one signal.
 //!
-//! Two ways out of the bar have to end those groups. A module whose task is
-//! aborted — a configuration reload, a schedule change — is covered by
-//! [`GroupGuard`], which fires while the cancelled future is dropped. A
-//! termination signal is not: the bar answers it by removing its surfaces and
-//! leaving through [`std::process::exit`], which runs no destructor at all.
-//! Every guarded group is therefore also recorded in a process wide registry
-//! that [`terminate_all`] walks on the way out.
+//! Nothing may be trusted to run on the way out, so the guarantee is built from
+//! three independent layers.
+//!
+//! * [`GroupGuard`] ends a group while the cancelled future that owns it is
+//!   dropped, which covers a configuration reload or a schedule change.
+//! * [`install_termination_handler`] covers a bar that is signalled rather than
+//!   asked: the handler ends every recorded group with nothing but atomic loads
+//!   and `kill`, both of which a signal handler may use, and then wakes a
+//!   thread that ends the process once the graceful path has had its chance.
+//! * [`supervised`] asks the kernel to kill the child when the bar disappears,
+//!   which is the only layer that survives `SIGKILL`, a panic in the graphics
+//!   driver or a power-loss-shaped crash of the event loop.
+//!
+//! A bar that still finds strays from an earlier run — one started before this
+//! machinery existed, or one whose kernel level backstop was defeated — sweeps
+//! them up at startup through [`sweep_orphans`]. Recognition is by the launch
+//! stamp [`LAUNCH_VAR`] carries into every supervised process and, through the
+//! inherited environment, into everything those processes start; no command
+//! text is matched, so a foreign bar or an unrelated shell loop is never
+//! touched.
 
 use std::{
-    collections::HashSet,
-    io,
+    fs, io,
     process::Output,
-    sync::{Mutex, OnceLock}
+    ptr,
+    sync::{
+        OnceLock,
+        atomic::{AtomicI32, AtomicU32, Ordering}
+    },
+    thread,
+    time::{Duration, SystemTime, UNIX_EPOCH}
 };
 
-use log::warn;
+use log::{info, warn};
 use tokio::process::{Child, Command};
 
-/// Leaders of the groups the bar started and has not ended yet.
-type Registry = Mutex<HashSet<u32>>;
+/// Environment variable stamping every process the bar supervises.
+///
+/// Its value identifies the run that started the process, which is what lets a
+/// later bar tell its own children from the strays of a previous one.
+pub const LAUNCH_VAR: &str = "HYDEBAR_LAUNCH_ID";
 
-/// Registry every [`GroupGuard`] records itself in.
-fn live_groups() -> &'static Registry {
-    static GROUPS: OnceLock<Registry> = OnceLock::new();
+/// [`LAUNCH_VAR`] as it appears in a `/proc/<pid>/environ` entry.
+const LAUNCH_PREFIX: &[u8] = b"HYDEBAR_LAUNCH_ID=";
 
-    GROUPS.get_or_init(Registry::default)
+/// Process groups the registry can hold at once.
+///
+/// One slot per live listener or scheduled command; a configuration with a
+/// module per slot would be unusable long before the registry filled up.
+const REGISTRY_CAPACITY: usize = 512;
+
+/// Value stored in a registry slot that holds no group.
+const EMPTY_SLOT: u32 = 0;
+
+/// Time the graceful exit path is given before the process is ended anyway.
+///
+/// The groups are already gone by then, so this only decides how long a bar
+/// whose event loop stopped answering keeps its surfaces on screen.
+const HARD_EXIT_GRACE: Duration = Duration::from_millis(1000);
+
+/// Groups the bar started and has not ended yet.
+///
+/// The registry is a fixed array of atomics rather than a locked set because a
+/// termination signal has to be able to walk it: taking a lock in a signal
+/// handler risks deadlocking against the thread that already holds it, and a
+/// deadlock here is exactly the leak this module exists to prevent.
+struct GroupRegistry {
+    /// Leader of one group per occupied slot.
+    slots: [AtomicU32; REGISTRY_CAPACITY]
 }
 
-/// Reads or edits `registry`, treating a poisoned lock as usable.
-///
-/// A panic while the set was borrowed says nothing about the process ids in it,
-/// and refusing to read them afterwards would strand exactly the children this
-/// module exists to reap.
-fn with_registry<R>(registry: &Registry, edit: impl FnOnce(&mut HashSet<u32>) -> R) -> R {
-    let mut groups = registry.lock().unwrap_or_else(|err| err.into_inner());
+impl GroupRegistry {
+    /// A registry holding no group.
+    const fn new() -> Self {
+        Self {
+            slots: [const { AtomicU32::new(EMPTY_SLOT) }; REGISTRY_CAPACITY]
+        }
+    }
 
-    edit(&mut groups)
+    /// Records the group led by `pid`, reporting whether a slot was free.
+    fn insert(&self, pid: u32) -> bool {
+        self.slots.iter().any(|slot| {
+            slot.compare_exchange(EMPTY_SLOT, pid, Ordering::AcqRel, Ordering::Relaxed)
+                .is_ok()
+        })
+    }
+
+    /// Forgets the group led by `pid`.
+    fn remove(&self, pid: u32) {
+        for slot in &self.slots {
+            if slot
+                .compare_exchange(pid, EMPTY_SLOT, Ordering::AcqRel, Ordering::Relaxed)
+                .is_ok()
+            {
+                return;
+            }
+        }
+    }
+
+    /// Reports whether the group led by `pid` is recorded.
+    fn contains(&self, pid: u32) -> bool {
+        self.slots
+            .iter()
+            .any(|slot| slot.load(Ordering::Acquire) == pid)
+    }
+
+    /// Ends every recorded group, emptying the registry.
+    ///
+    /// Only an atomic swap and `kill` are used, so this is safe to run from a
+    /// signal handler; it reports how many groups it reached rather than
+    /// logging, because logging from a handler is not.
+    fn terminate_all(&self) -> usize {
+        let mut ended = 0;
+
+        for slot in &self.slots {
+            let pid = slot.swap(EMPTY_SLOT, Ordering::AcqRel);
+
+            if pid != EMPTY_SLOT {
+                kill_group(pid);
+                ended += 1;
+            }
+        }
+
+        ended
+    }
+}
+
+/// Registry every [`GroupGuard`] records itself in.
+static LIVE_GROUPS: GroupRegistry = GroupRegistry::new();
+
+/// Write end of the pipe a termination signal wakes the reaper thread through.
+///
+/// Negative while no handler is installed.
+static WAKE_WRITER: AtomicI32 = AtomicI32::new(-1);
+
+/// Stamp identifying this run of the bar.
+///
+/// The process id alone would not do: identifiers are reused, and a stray that
+/// happens to carry the id of the bar reading it would be mistaken for one of
+/// its own children. Pairing it with the moment the bar started makes such a
+/// collision impossible in practice.
+pub fn launch_id() -> &'static str {
+    static ID: OnceLock<String> = OnceLock::new();
+
+    ID.get_or_init(|| {
+        let started = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_or(0, |since| since.as_nanos());
+
+        format!("{}-{started}", std::process::id())
+    })
 }
 
 /// Puts the child, and everything it spawns, in a process group of its own.
@@ -53,7 +167,47 @@ pub fn in_own_group(command: &mut Command) -> &mut Command {
     command.process_group(0)
 }
 
-/// Starts `command` in a group of its own, guarded against cancellation.
+/// Prepares a command whose process must not outlive the bar.
+///
+/// On top of the group of its own the child is stamped with the launch id, so
+/// a later bar can recognise it, and armed with a parent death signal, so the
+/// kernel kills it the moment the bar is gone however abruptly that happens.
+///
+/// The death signal is tied to the thread that performs the spawn, which for
+/// every caller here is a runtime worker living as long as the process. A
+/// command that must survive the bar — anything the user launches from a menu —
+/// therefore goes through [`in_own_group`] instead.
+pub fn supervised(command: &mut Command) -> &mut Command {
+    let parent = unsafe { libc::getpid() };
+
+    in_own_group(command).env(LAUNCH_VAR, launch_id());
+
+    unsafe {
+        command.pre_exec(move || arm_parent_death(parent));
+    }
+
+    command
+}
+
+/// Asks the kernel to kill this process once its parent is gone.
+///
+/// Called between `fork` and `exec`, where only a handful of operations are
+/// legal; the parent check closes the window in which the bar dies after the
+/// fork but before the request is registered, in which case no signal would
+/// ever arrive and the child would be a stray from birth.
+fn arm_parent_death(parent: i32) -> io::Result<()> {
+    if unsafe { libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGKILL) } != 0 {
+        return Err(io::Error::last_os_error());
+    }
+
+    if unsafe { libc::getppid() } != parent {
+        unsafe { libc::_exit(0) };
+    }
+
+    Ok(())
+}
+
+/// Starts `command` supervised and guarded against cancellation.
 ///
 /// The guard is built from the identifier the spawn just returned, with no
 /// await point in between, so there is no window in which the task can be
@@ -63,7 +217,7 @@ pub fn in_own_group(command: &mut Command) -> &mut Command {
 ///
 /// Returns the spawn failure reported by the operating system.
 pub fn spawn_guarded(command: &mut Command) -> io::Result<(Child, Option<GroupGuard>)> {
-    let child = in_own_group(command).spawn()?;
+    let child = supervised(command).spawn()?;
     let guard = child.id().map(GroupGuard::new);
 
     Ok((child, guard))
@@ -103,25 +257,40 @@ pub fn terminate_group(pid: u32) -> io::Result<()> {
     signal(group, libc::SIGKILL)
 }
 
-/// Ends every process group the bar still owns.
-///
-/// This is the last thing the bar does before [`std::process::exit`]: a
-/// takeover asks the running instance to quit with `SIGTERM`, and the outgoing
-/// bar never unwinds, so no [`GroupGuard`] would otherwise run. Without this
-/// call every restart of the bar leaves its listener shells behind, and they
-/// keep spawning helpers forever.
-pub fn terminate_all() {
-    terminate_registered(live_groups());
+/// [`terminate_group`] without a report, for the paths that cannot make one.
+fn kill_group(pid: u32) {
+    let group = -(pid as i32);
+
+    unsafe {
+        libc::kill(group, libc::SIGTERM);
+        libc::kill(group, libc::SIGKILL);
+    }
 }
 
-/// Ends every group recorded in `registry`, emptying it.
-fn terminate_registered(registry: &Registry) {
-    let leaders: Vec<u32> = with_registry(registry, |groups| groups.drain().collect());
+/// Ends every process group the bar still owns, then every straggler.
+///
+/// This is the last thing the bar does before [`std::process::exit`], which
+/// runs no destructor and would otherwise leave every listener shell behind.
+///
+/// The groups go first, so nothing keeps starting new work while the second
+/// half runs. That second half exists because a group kill cannot reach a
+/// descendant that detached itself: `faked`, which the update check leaves
+/// behind through `fakeroot`, forks twice and lets its parent exit, ending up
+/// outside every group the bar knows about. The launch stamp survives the
+/// detachment, because the environment does, so those stragglers are still
+/// recognisable as this run's.
+pub fn terminate_all() {
+    let ended = LIVE_GROUPS.terminate_all();
 
-    for pid in leaders {
-        if let Err(err) = terminate_group(pid) {
-            warn!("failed to end the process group led by {pid}: {err}");
-        }
+    if ended > 0 {
+        info!("ended {ended} process groups on the way out");
+    }
+
+    let own = launch_id();
+    let strays = terminate_marked(|stamp| stamp == own);
+
+    if strays > 0 {
+        info!("ended {strays} detached processes on the way out");
     }
 }
 
@@ -134,6 +303,173 @@ fn signal(group: i32, signal: i32) -> io::Result<()> {
     } else {
         Err(io::Error::last_os_error())
     }
+}
+
+/// Signals that ask the bar to stop and are answered by a reaping handler.
+///
+/// The rest — `SIGKILL` above all — cannot be caught, which is what the parent
+/// death signal armed by [`supervised`] is for.
+const TERMINATION_SIGNALS: [i32; 3] = [libc::SIGTERM, libc::SIGINT, libc::SIGHUP];
+
+/// Makes a termination signal end every group the bar started.
+///
+/// The bar answers `SIGTERM` through its event loop, which needs the loop to
+/// still be running and the runtime to still be scheduling; when either has
+/// stopped, the process dies with its listeners intact and they keep spawning
+/// helpers on a timer forever. The handler installed here does not depend on
+/// either: it walks the registry with atomic loads and ends each group with
+/// `kill`, both of which a signal handler is allowed to do, and then wakes a
+/// thread that ends the process should the graceful path fail to.
+///
+/// Registration composes with the runtime's own signal handling rather than
+/// replacing it, so the orderly shutdown — taking the surfaces off screen
+/// before exiting — still happens whenever the event loop is alive to do it.
+///
+/// # Errors
+///
+/// Returns the failure reported when the wake pipe, the reaper thread or a
+/// handler registration could not be set up.
+pub fn install_termination_handler() -> io::Result<()> {
+    let reader = open_wake_pipe()?;
+
+    thread::Builder::new()
+        .name("hydebar-reaper".to_owned())
+        .spawn(move || await_termination(reader))?;
+
+    for number in TERMINATION_SIGNALS {
+        unsafe {
+            signal_hook_registry::register(number, on_termination_signal)?;
+        }
+    }
+
+    Ok(())
+}
+
+/// Creates the wake pipe, publishing its write end, and returns the read end.
+fn open_wake_pipe() -> io::Result<i32> {
+    let mut ends = [0; 2];
+
+    if unsafe { libc::pipe2(ends.as_mut_ptr(), libc::O_CLOEXEC) } != 0 {
+        return Err(io::Error::last_os_error());
+    }
+
+    WAKE_WRITER.store(ends[1], Ordering::Release);
+
+    Ok(ends[0])
+}
+
+/// Ends every group and wakes the reaper, using only what a handler may call.
+fn on_termination_signal() {
+    LIVE_GROUPS.terminate_all();
+
+    let writer = WAKE_WRITER.load(Ordering::Acquire);
+
+    if writer >= 0 {
+        let wake = 1u8;
+
+        unsafe {
+            libc::write(writer, ptr::addr_of!(wake).cast(), 1);
+        }
+    }
+}
+
+/// Ends the process once a termination signal has been reaped.
+///
+/// The graceful path is given its moment first: it removes the surfaces and
+/// exits on its own, and this thread only matters when it no longer can.
+fn await_termination(reader: i32) {
+    if !wait_for_wake(reader) {
+        return;
+    }
+
+    info!("termination signal reaped, ending the process");
+    thread::sleep(HARD_EXIT_GRACE);
+    terminate_all();
+    std::process::exit(0);
+}
+
+/// Blocks until the handler writes, reporting whether a wake arrived.
+fn wait_for_wake(reader: i32) -> bool {
+    let mut wake = 0u8;
+
+    loop {
+        let read = unsafe { libc::read(reader, ptr::addr_of_mut!(wake).cast(), 1) };
+
+        if read == 1 {
+            return true;
+        }
+
+        if read < 0 && io::Error::last_os_error().raw_os_error() == Some(libc::EINTR) {
+            continue;
+        }
+
+        return false;
+    }
+}
+
+/// Ends the supervised processes an earlier bar left behind.
+///
+/// Returns how many were ended. A bar that crashed before its listeners could
+/// be reaped leaves shell loops that keep spawning helpers on a timer; picking
+/// them up here means a restart is enough to clean a machine up, and that the
+/// count of supervised processes does not grow from one run to the next.
+pub fn sweep_orphans() -> usize {
+    let own = launch_id();
+    let ended = terminate_marked(|stamp| stamp != own);
+
+    if ended > 0 {
+        warn!("ended {ended} processes left behind by an earlier run");
+    }
+
+    ended
+}
+
+/// Ends every process whose launch stamp `wanted` accepts.
+///
+/// Two passes, because the first one may land between a shell loop starting a
+/// helper and the scan noticing it; the helper carries the same stamp through
+/// the inherited environment, so the second pass finds it.
+fn terminate_marked(wanted: impl Fn(&str) -> bool) -> usize {
+    let mut ended = 0;
+
+    for _ in 0..2 {
+        for pid in marked_processes(&wanted) {
+            if unsafe { libc::kill(pid as i32, libc::SIGKILL) } == 0 {
+                ended += 1;
+            }
+        }
+    }
+
+    ended
+}
+
+/// Lists the running processes whose launch stamp `wanted` accepts.
+fn marked_processes(wanted: &impl Fn(&str) -> bool) -> Vec<u32> {
+    let own = std::process::id();
+    let Ok(entries) = fs::read_dir("/proc") else {
+        return Vec::new();
+    };
+
+    entries
+        .flatten()
+        .filter_map(|entry| entry.file_name().to_str()?.parse::<u32>().ok())
+        .filter(|pid| *pid != own)
+        .filter(|pid| {
+            fs::read(format!("/proc/{pid}/environ"))
+                .ok()
+                .and_then(|environ| marked_launch(&environ).map(wanted))
+                .unwrap_or(false)
+        })
+        .collect()
+}
+
+/// Reads the launch stamp out of a NUL separated environment block.
+fn marked_launch(environ: &[u8]) -> Option<&str> {
+    environ.split(|byte| *byte == 0).find_map(|entry| {
+        let stamp = entry.strip_prefix(LAUNCH_PREFIX)?;
+
+        std::str::from_utf8(stamp).ok()
+    })
 }
 
 /// Ends a process group when it goes out of scope.
@@ -153,7 +489,12 @@ impl GroupGuard {
     /// Guards the group led by `pid`.
     #[must_use]
     pub fn new(pid: u32) -> Self {
-        with_registry(live_groups(), |groups| groups.insert(pid));
+        if !LIVE_GROUPS.insert(pid) {
+            warn!(
+                "the process group registry is full, the group led by {pid} will only be ended by \
+                 its guard"
+            );
+        }
 
         Self {
             pid: Some(pid)
@@ -167,7 +508,7 @@ impl GroupGuard {
     /// later would hit a stranger.
     pub fn release(&mut self) {
         if let Some(pid) = self.pid.take() {
-            with_registry(live_groups(), |groups| groups.remove(&pid));
+            LIVE_GROUPS.remove(pid);
         }
     }
 }
@@ -175,7 +516,7 @@ impl GroupGuard {
 impl Drop for GroupGuard {
     fn drop(&mut self) {
         if let Some(pid) = self.pid.take() {
-            with_registry(live_groups(), |groups| groups.remove(&pid));
+            LIVE_GROUPS.remove(pid);
             let _ = terminate_group(pid);
         }
     }
@@ -183,12 +524,27 @@ impl Drop for GroupGuard {
 
 #[cfg(test)]
 mod tests {
-    use std::{process::Stdio, time::Duration};
+    use std::{
+        os::unix::process::CommandExt,
+        process::Stdio,
+        sync::atomic::AtomicUsize,
+        time::{Duration, Instant}
+    };
 
     use super::*;
 
     /// A process id far beyond `pid_max`, so signalling it reaches nobody.
     const UNUSED_PID: u32 = u32::MAX / 2;
+
+    /// Distinguishes the launch stamps two tests plant at the same time.
+    static STAMPS: AtomicUsize = AtomicUsize::new(0);
+
+    /// A launch stamp no other test and no running bar can be wearing.
+    fn unique_stamp() -> String {
+        let ordinal = STAMPS.fetch_add(1, Ordering::Relaxed);
+
+        format!("test-{}-{ordinal}", std::process::id())
+    }
 
     /// Starts a shell loop that keeps a helper of its own alive.
     fn spawn_loop() -> tokio::process::Child {
@@ -199,6 +555,45 @@ mod tests {
             .stdout(Stdio::null());
 
         in_own_group(&mut command).spawn().expect("listener")
+    }
+
+    /// Starts a shell loop wearing `stamp` as its launch id.
+    fn spawn_marked_loop(stamp: &str) -> tokio::process::Child {
+        let mut command = Command::new("bash");
+        command
+            .arg("-c")
+            .arg("while :; do sleep 30 & wait; done")
+            .env(LAUNCH_VAR, stamp)
+            .stdout(Stdio::null());
+
+        in_own_group(&mut command).spawn().expect("listener")
+    }
+
+    /// Reports whether `pid` is still a live, unreaped process.
+    fn is_running(pid: u32) -> bool {
+        let Ok(stat) = fs::read_to_string(format!("/proc/{pid}/stat")) else {
+            return false;
+        };
+
+        stat.rsplit(')')
+            .next()
+            .and_then(|rest| rest.split_whitespace().next())
+            .is_some_and(|state| state != "Z")
+    }
+
+    /// Waits for `pid` to stop running, reporting whether it did in time.
+    fn wait_until_gone(pid: u32) -> bool {
+        let deadline = Instant::now() + Duration::from_secs(5);
+
+        while Instant::now() < deadline {
+            if !is_running(pid) {
+                return true;
+            }
+
+            thread::sleep(Duration::from_millis(25));
+        }
+
+        false
     }
 
     #[tokio::test]
@@ -245,13 +640,11 @@ mod tests {
 
     #[test]
     fn a_guard_is_recorded_until_it_goes_away() {
-        let recorded = |pid: u32| with_registry(live_groups(), |groups| groups.contains(&pid));
-
         let guard = GroupGuard::new(UNUSED_PID - 1);
-        assert!(recorded(UNUSED_PID - 1));
+        assert!(LIVE_GROUPS.contains(UNUSED_PID - 1));
 
         drop(guard);
-        assert!(!recorded(UNUSED_PID - 1));
+        assert!(!LIVE_GROUPS.contains(UNUSED_PID - 1));
     }
 
     #[test]
@@ -260,26 +653,47 @@ mod tests {
 
         guard.release();
 
-        assert!(!with_registry(live_groups(), |groups| groups.contains(&(UNUSED_PID - 2))));
+        assert!(!LIVE_GROUPS.contains(UNUSED_PID - 2));
+    }
+
+    #[test]
+    fn the_registry_holds_a_group_until_it_is_removed() {
+        let registry = GroupRegistry::new();
+
+        assert!(registry.insert(41));
+        assert!(registry.contains(41));
+
+        registry.remove(41);
+
+        assert!(!registry.contains(41));
+    }
+
+    #[test]
+    fn the_registry_reports_when_it_has_no_room_left() {
+        let registry = GroupRegistry::new();
+
+        for pid in 1..=REGISTRY_CAPACITY {
+            assert!(registry.insert(pid as u32), "slot {pid} must be free");
+        }
+
+        assert!(!registry.insert(REGISTRY_CAPACITY as u32 + 1));
     }
 
     #[tokio::test]
     async fn the_exit_path_ends_every_group_it_recorded() {
-        let registry = Registry::default();
+        let registry = GroupRegistry::new();
 
         let mut first = spawn_loop();
         let mut second = spawn_loop();
         let first_pid = first.id().expect("a running listener");
         let second_pid = second.id().expect("a running listener");
 
-        with_registry(&registry, |groups| {
-            groups.insert(first_pid);
-            groups.insert(second_pid);
-        });
+        registry.insert(first_pid);
+        registry.insert(second_pid);
 
         tokio::time::sleep(Duration::from_millis(200)).await;
 
-        terminate_registered(&registry);
+        assert_eq!(registry.terminate_all(), 2);
 
         for child in [&mut first, &mut second] {
             tokio::time::timeout(Duration::from_secs(5), child.wait())
@@ -288,7 +702,8 @@ mod tests {
                 .expect("the listener is reaped");
         }
 
-        assert!(with_registry(&registry, |groups| groups.is_empty()));
+        assert!(!registry.contains(first_pid));
+        assert!(!registry.contains(second_pid));
     }
 
     #[tokio::test]
@@ -311,5 +726,165 @@ mod tests {
     #[test]
     fn ending_a_group_that_is_already_gone_is_not_a_failure() {
         assert!(terminate_group(UNUSED_PID).is_ok());
+    }
+
+    #[test]
+    fn the_launch_stamp_is_the_same_for_every_reader() {
+        assert_eq!(launch_id(), launch_id());
+        assert!(launch_id().starts_with(&format!("{}-", std::process::id())));
+    }
+
+    #[test]
+    fn the_marker_prefix_matches_the_variable_it_stands_for() {
+        assert_eq!(LAUNCH_PREFIX, format!("{LAUNCH_VAR}=").as_bytes());
+    }
+
+    #[test]
+    fn a_stamped_environment_reveals_the_run_that_started_it() {
+        let environ = b"PATH=/usr/bin\0HYDEBAR_LAUNCH_ID=7-42\0HOME=/home/user\0";
+
+        assert_eq!(marked_launch(environ), Some("7-42"));
+    }
+
+    #[test]
+    fn an_environment_without_the_stamp_reveals_nothing() {
+        let environ = b"PATH=/usr/bin\0WAYBAR_SOMETHING=1\0";
+
+        assert_eq!(marked_launch(environ), None);
+    }
+
+    /// The stamp is a whole entry, never a fragment of a longer name: a
+    /// variable ending in the marker's name must not be mistaken for it.
+    #[test]
+    fn a_lookalike_variable_is_not_the_stamp() {
+        let environ = b"NOT_HYDEBAR_LAUNCH_ID=7-42\0";
+
+        assert_eq!(marked_launch(environ), None);
+    }
+
+    #[tokio::test]
+    async fn a_supervised_command_carries_the_launch_stamp() {
+        let mut command = Command::new("bash");
+        command
+            .arg("-c")
+            .arg("printf %s \"$HYDEBAR_LAUNCH_ID\"")
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+
+        let output = guarded_output(&mut command)
+            .await
+            .expect("the command runs");
+
+        assert_eq!(String::from_utf8_lossy(&output.stdout), launch_id());
+    }
+
+    #[tokio::test]
+    async fn the_sweep_ends_the_strays_of_another_run() {
+        let stamp = unique_stamp();
+        let mut stray = spawn_marked_loop(&stamp);
+        let pid = stray.id().expect("a running listener");
+
+        tokio::time::sleep(Duration::from_millis(200)).await;
+        assert!(marked_processes(&|found: &str| found == stamp).contains(&pid));
+
+        let ended = terminate_marked(|found| found == stamp);
+
+        assert!(ended >= 1);
+        tokio::time::timeout(Duration::from_secs(5), stray.wait())
+            .await
+            .expect("the stray stops in time")
+            .expect("the stray is reaped");
+    }
+
+    #[tokio::test]
+    async fn the_sweep_leaves_the_processes_of_another_stamp_alone() {
+        let stamp = unique_stamp();
+        let hunted = unique_stamp();
+        let mut mine = spawn_marked_loop(&stamp);
+        let pid = mine.id().expect("a running listener");
+
+        tokio::time::sleep(Duration::from_millis(200)).await;
+
+        assert_eq!(terminate_marked(|found| found == hunted), 0);
+        assert!(is_running(pid));
+
+        let _ = terminate_group(pid);
+        let _ = mine.wait().await;
+    }
+
+    /// A group kill cannot reach a descendant that started a session of its
+    /// own and outlived the parent that started it; the stamp still can, which
+    /// is what the exit path relies on to catch the last stragglers.
+    #[tokio::test]
+    async fn a_detached_descendant_is_still_recognised_by_its_stamp() {
+        let stamp = unique_stamp();
+        let mut command = Command::new("bash");
+        command
+            .arg("-c")
+            .arg("setsid sleep 60 >/dev/null 2>&1 & printf ready")
+            .env(LAUNCH_VAR, &stamp)
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+
+        let output = in_own_group(&mut command)
+            .output()
+            .await
+            .expect("the command runs");
+        assert_eq!(output.stdout, b"ready");
+
+        let detached = marked_processes(&|found: &str| found == stamp);
+        assert_eq!(detached.len(), 1, "the session of its own survived alone");
+
+        assert!(terminate_marked(|found| found == stamp) >= 1);
+        assert!(wait_until_gone(detached[0]));
+    }
+
+    /// An unmarked shell loop belongs to somebody else and must survive a
+    /// sweep that accepts every stamp it finds.
+    #[tokio::test]
+    async fn the_sweep_never_reaches_an_unmarked_process() {
+        let mut stranger = spawn_loop();
+        let pid = stranger.id().expect("a running listener");
+
+        tokio::time::sleep(Duration::from_millis(200)).await;
+
+        assert!(!marked_processes(&|_: &str| true).contains(&pid));
+        assert!(is_running(pid));
+
+        let _ = terminate_group(pid);
+        let _ = stranger.wait().await;
+    }
+
+    /// The kernel level backstop: the child is killed the moment the thread
+    /// that started it is gone, without anything in this process acting.
+    #[test]
+    fn a_supervised_child_does_not_outlive_the_one_that_started_it() {
+        let parent = unsafe { libc::getpid() };
+
+        let mut child = thread::spawn(move || {
+            let mut command = std::process::Command::new("bash");
+            command
+                .arg("-c")
+                .arg("while :; do sleep 30 & wait; done")
+                .stdout(Stdio::null())
+                .process_group(0);
+
+            unsafe {
+                command.pre_exec(move || arm_parent_death(parent));
+            }
+
+            command.spawn().expect("listener")
+        })
+        .join()
+        .expect("the spawning thread finishes");
+
+        assert!(
+            wait_until_gone(child.id()),
+            "the child survived the thread that started it"
+        );
+
+        let _ = child.wait();
     }
 }

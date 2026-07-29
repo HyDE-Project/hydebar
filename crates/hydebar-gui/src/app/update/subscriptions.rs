@@ -2,7 +2,10 @@
 
 use std::sync::Arc;
 
-use hydebar_core::config::{self, ConfigEvent};
+use hydebar_core::{
+    config::{self, ConfigEvent},
+    modules::settings
+};
 use iced::{
     Subscription,
     event::{listen_with, wayland::Event as WaylandEvent},
@@ -45,6 +48,23 @@ impl App {
         .map(Self::config_event)
     }
 
+    /// Keeps the indicator of a running desktop change moving.
+    ///
+    /// A HyDE theme switch takes seconds and the bar has nothing to do for any
+    /// of them, so nothing would otherwise make it redraw: the indicator would
+    /// be drawn once on the press and then stand still, which is exactly what a
+    /// hung bar looks like. The tick runs only while a switch is running, and
+    /// on the indicator's own cadence rather than on the frame clock, so a wait
+    /// costs a handful of redraws a second instead of one per refresh.
+    fn switch_subscription(&self) -> Subscription<Message> {
+        if self.settings.is_waiting() {
+            iced::time::every(settings::FRAME_INTERVAL)
+                .map(|_| Message::Settings(settings::Message::SwitchTick))
+        } else {
+            Subscription::none()
+        }
+    }
+
     /// of interpolating on a polling timer.
     fn frame_subscription(&self) -> Subscription<Message> {
         if self.outputs.menu_is_animating() || self.appearance_transition.is_animating() {
@@ -59,6 +79,8 @@ impl App {
             bus::subscription(self.bus_receiver.clone()).map(Message::BusFlushed),
             shutdown::subscription().map(Message::Shutdown),
             self.frame_subscription(),
+            self.switch_subscription(),
+            self.demo_subscription(),
             config::subscription(&self.config_path, Arc::clone(&self.config_manager))
                 .map(Self::config_event),
             self.theme_subscription(),

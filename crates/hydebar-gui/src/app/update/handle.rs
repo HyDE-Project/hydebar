@@ -8,6 +8,7 @@ impl App {
     pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::None => Task::none(),
+            Message::Demo => self.update_demo(),
             Message::Frame(_)
             | Message::BusFlushed(_)
             | Message::ConfigChanged(_)

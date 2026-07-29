@@ -1,5 +1,6 @@
 //! Application update loop.
 
+mod demo;
 mod handle;
 mod lifecycle;
 mod mapping;

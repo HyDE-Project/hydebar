@@ -151,7 +151,8 @@ pub enum Message {
     /// Carries the surface the menu was opened from so it can be dismissed
     /// once the command is on its way.
     CustomMenuAction(Id, String),
-    CustomUpdate(String, modules::custom_module::Message)
+    CustomUpdate(String, modules::custom_module::Message),
+    Demo
 }
 
 impl From<modules::control_center::Message> for Message {

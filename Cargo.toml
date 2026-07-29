@@ -53,6 +53,7 @@ clap = { version = "4", features = ["derive"] }
 shellexpand = { version = "3", features = ["path"] }
 inotify = "0.11"
 libc = "0.2"
+signal-hook-registry = "1"
 masterror = "0.29"
 futures = "0.3"
 dirs = "6"

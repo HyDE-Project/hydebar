@@ -74,6 +74,7 @@ impl Settings {
             Tab::Hyde => hyde::view(
                 self.hyde(),
                 self.switching(),
+                self.spinner(),
                 opacity,
                 font_size,
                 self.page_width(config)

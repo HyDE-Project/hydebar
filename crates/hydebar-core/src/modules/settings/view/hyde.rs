@@ -16,13 +16,17 @@ use hydebar_proto::hyde_state::HydeState;
 use iced::Element;
 
 use super::{
-    metrics::{button_width, chip_width, status_row_width, text_width, wrap_chips_into_rows},
+    metrics::{
+        button_width, chip_width, indicator_width, status_row_width, text_width,
+        wrap_chips_into_rows
+    },
     style,
     widgets::{
-        chip, choice_button, grid, group, note, page, rows as row_stack, section, status_row
+        ThemeChip, choice_button, grid, group, note, page, rows as row_stack, section, status_row,
+        theme_chip
     }
 };
-use crate::modules::settings::Message;
+use crate::modules::settings::{Message, Spinner};
 
 /// Theme buttons a row is sized to hold.
 ///
@@ -72,9 +76,14 @@ const WALLPAPER_ROWS: f32 = 1.0;
 ///
 /// `available_width` is how wide the page may draw, so the theme chips wrap
 /// inside the window instead of running past its edge.
+///
+/// `spinner` is the frame the indicator of a running switch is on. It is only
+/// drawn while `switching` names a theme, so a page nobody is waiting on has
+/// nothing moving on it.
 pub(super) fn view<'a>(
     state: &HydeState,
     switching: Option<&str>,
+    spinner: Spinner,
     opacity: f32,
     font_size: f32,
     available_width: f32
@@ -83,16 +92,19 @@ pub(super) fn view<'a>(
         .push(status_row(
             STATUS_LABELS[0],
             active_label(state, switching),
+            switching.map(|_| spinner.glyph()),
             font_size
         ))
         .push(status_row(
             STATUS_LABELS[1],
             switch_label(state.wallpaper_colors).to_owned(),
+            None,
             font_size
         ))
         .push(status_row(
             STATUS_LABELS[2],
             state.shader.clone().unwrap_or_else(|| UNKNOWN.to_owned()),
+            None,
             font_size
         ));
 
@@ -108,7 +120,14 @@ pub(super) fn view<'a>(
         .push(section(DESKTOP, desktop.into(), font_size))
         .push(section(
             THEMES,
-            themes(state, opacity, font_size, available_width),
+            themes(
+                state,
+                switching,
+                spinner,
+                opacity,
+                font_size,
+                available_width
+            ),
             font_size
         ))
         .push(section(WALLPAPER, wallpaper.into(), font_size))
@@ -119,8 +138,17 @@ pub(super) fn view<'a>(
 ///
 /// The theme in force is drawn as picked, so the grid doubles as the answer to
 /// "which one am I on" without the page repeating the name twice.
+///
+/// While a switch runs the grid stops being a set of choices: the theme being
+/// applied is the only one lit, and every other chip is dimmed and carries no
+/// press at all. A second switch started on top of the first would race it over
+/// the state file, the wallpaper cache and every generated stylesheet, and the
+/// module refuses one anyway — a grid that still looked pressable would only be
+/// hiding that refusal until after the click.
 fn themes<'a>(
     state: &HydeState,
+    switching: Option<&str>,
+    spinner: Spinner,
     opacity: f32,
     font_size: f32,
     available_width: f32
@@ -138,10 +166,10 @@ fn themes<'a>(
         for index in indices {
             let name = &state.themes[index];
 
-            row = row.push(chip(
+            row = row.push(theme_chip(
                 name.clone(),
                 Message::SwitchHydeTheme(name.clone()),
-                state.is_active(name),
+                chip_state(state, switching, spinner, name),
                 font_size,
                 opacity
             ));
@@ -151,6 +179,28 @@ fn themes<'a>(
     }
 
     block.into()
+}
+
+/// What the chip of `name` stands for, given what the desktop reports and what
+/// the bar is waiting on.
+///
+/// The theme being applied wins over the theme in force, because for the whole
+/// length of a switch HyDE reports the new name in its state file long before
+/// the switch is anywhere near done: a grid that only looked at the state file
+/// would light the new chip within a moment of the press and then sit
+/// completely still for the several seconds that actually matter.
+fn chip_state(
+    state: &HydeState,
+    switching: Option<&str>,
+    spinner: Spinner,
+    name: &str
+) -> ThemeChip {
+    match switching {
+        Some(pending) if pending == name => ThemeChip::Applying(spinner),
+        Some(_) => ThemeChip::Blocked,
+        None if state.is_active(name) => ThemeChip::Active,
+        None => ThemeChip::Idle
+    }
 }
 
 /// Names the state of a switch the page reports but does not operate.
@@ -204,6 +254,11 @@ pub(super) fn rows(state: &HydeState, font_size: f32, available_width: f32) -> f
 /// whole list: the grid wraps into whatever width the rest of the page settles
 /// on, and sizing the window to hold every theme side by side would make it far
 /// wider than the screen.
+///
+/// Room for the live indicator is reserved whether one is showing or not. It
+/// costs a glyph of width on a page that is already the widest of the three,
+/// and it buys a window that does not jump wider the instant a theme is pressed
+/// — which is the one moment the user is looking straight at it.
 #[must_use]
 pub(super) fn desired_width(state: &HydeState, switching: Option<&str>, font_size: f32) -> f32 {
     let statuses = [
@@ -213,7 +268,8 @@ pub(super) fn desired_width(state: &HydeState, switching: Option<&str>, font_siz
     ]
     .iter()
     .map(|value| status_row_width(value, font_size))
-    .fold(0.0_f32, f32::max);
+    .fold(0.0_f32, f32::max)
+        + indicator_width(font_size);
 
     let control = style::control_size(font_size);
     let gap = style::group_gap(font_size);
@@ -298,6 +354,105 @@ mod tests {
 
         assert!(state.is_active("Nord"));
         assert!(!state.is_active("Mocha"));
+    }
+
+    #[test]
+    fn a_page_nobody_is_waiting_on_marks_the_theme_in_force_and_offers_the_rest() {
+        let state = state(&["Nord", "Mocha"], Some("Nord"));
+        let spinner = Spinner::default();
+
+        assert_eq!(chip_state(&state, None, spinner, "Nord"), ThemeChip::Active);
+        assert_eq!(chip_state(&state, None, spinner, "Mocha"), ThemeChip::Idle);
+    }
+
+    #[test]
+    fn a_running_switch_marks_the_theme_it_is_applying() {
+        let state = state(&["Nord", "Mocha"], Some("Nord"));
+        let spinner = Spinner::default();
+
+        assert_eq!(
+            chip_state(&state, Some("Mocha"), spinner, "Mocha"),
+            ThemeChip::Applying(spinner)
+        );
+    }
+
+    #[test]
+    fn a_running_switch_blocks_every_other_theme() {
+        let state = state(&["Nord", "Mocha", "Latte"], Some("Nord"));
+        let spinner = Spinner::default();
+
+        for name in ["Nord", "Latte"] {
+            assert_eq!(
+                chip_state(&state, Some("Mocha"), spinner, name),
+                ThemeChip::Blocked,
+                "{name}"
+            );
+        }
+    }
+
+    /// The one case the state file cannot settle: HyDE records the new theme
+    /// within a moment of the press and the switch itself runs for seconds
+    /// afterwards, so a grid that trusted the file would go still exactly when
+    /// the user is waiting hardest.
+    #[test]
+    fn the_theme_being_applied_stays_marked_once_the_state_file_names_it() {
+        let state = state(&["Nord", "Mocha"], Some("Mocha"));
+        let spinner = Spinner::default();
+
+        assert_eq!(
+            chip_state(&state, Some("Mocha"), spinner, "Mocha"),
+            ThemeChip::Applying(spinner)
+        );
+        assert!(!chip_state(&state, Some("Mocha"), spinner, "Nord").is_pressable());
+    }
+
+    #[test]
+    fn no_chip_can_start_a_second_switch_while_one_runs() {
+        let state = state(&["Nord", "Mocha", "Latte"], Some("Nord"));
+        let spinner = Spinner::default();
+
+        for name in &state.themes {
+            assert!(
+                !chip_state(&state, Some("Mocha"), spinner, name).is_pressable(),
+                "{name}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_marked_chip_keeps_moving_as_the_indicator_advances() {
+        let state = state(&["Nord", "Mocha"], Some("Nord"));
+        let mut spinner = Spinner::default();
+        let first = chip_state(&state, Some("Mocha"), spinner, "Mocha");
+
+        spinner.advance();
+
+        assert_ne!(chip_state(&state, Some("Mocha"), spinner, "Mocha"), first);
+    }
+
+    /// A window that grew wider the instant a theme was pressed would move the
+    /// grid out from under the pointer.
+    #[test]
+    fn the_page_reserves_the_indicator_before_anything_is_running() {
+        let state = state(&["A Theme Long Enough To Set The Width", "Mocha"], None);
+        let font_size = 16.0;
+
+        assert!(
+            desired_width(&state, None, font_size)
+                >= status_row_width(&active_label(&state, None), font_size)
+                    + indicator_width(font_size)
+        );
+    }
+
+    #[test]
+    fn a_page_showing_an_indicator_is_no_wider_than_one_that_is_not() {
+        let state = state(&["Nord", "Mocha"], Some("Nord"));
+        let font_size = 16.0;
+
+        assert_eq!(
+            desired_width(&state, Some("Nord"), font_size),
+            desired_width(&state, None, font_size)
+        );
     }
 
     #[test]

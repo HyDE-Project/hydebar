@@ -49,6 +49,17 @@ pub(super) fn chip_width(label: &str, font_size: f32) -> f32 {
     text_width(label, font_size) + 2.0 * style::CHIP_PADDING_EM[1] * font_size
 }
 
+/// Width the live indicator adds in front of a reported value.
+///
+/// One glyph of the icon font, drawn at the control text size, plus the gap
+/// that separates it from the value beside it. Reserved by the pages that can
+/// show one so a window measured while nothing is running is still wide enough
+/// the moment something starts.
+#[must_use]
+pub(super) fn indicator_width(font_size: f32) -> f32 {
+    style::icon_width(style::control_size(font_size)) + style::row_gap(font_size)
+}
+
 /// Width a row of buttons takes, gaps included.
 #[must_use]
 pub(super) fn button_row_width<'a, I>(labels: I, font_size: f32, gap: f32) -> f32

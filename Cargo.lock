@@ -2345,6 +2345,7 @@ dependencies = [
  "serde_json",
  "serde_with",
  "shellexpand",
+ "signal-hook-registry",
  "sysinfo",
  "tempfile",
  "tokio",

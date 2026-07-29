@@ -11,7 +11,18 @@ use iced::{
 };
 
 use super::style;
-use crate::{modules::settings::Message, style::settings_button_style};
+use crate::{
+    components::icons::icon_raw_sized,
+    modules::settings::{Message, Spinner},
+    style::settings_button_style
+};
+
+/// Share of its colour a control that cannot be pressed right now is drawn at.
+///
+/// Low enough to read as unavailable at a glance, high enough that the label
+/// stays legible: a chip the user cannot press still has to say which theme it
+/// stands for, or the grid turns into a row of blanks while a switch runs.
+const BLOCKED_ALPHA: f32 = 0.35;
 
 /// Renders a compact button carrying `label`.
 ///
@@ -79,16 +90,28 @@ where
 /// the page never offers a button that quietly does nothing when pressed. The
 /// value takes the control text size all the same, so a reporting row lines up
 /// with an acting one.
+///
+/// An `indicator` is the moving glyph a row carries while the bar waits on a
+/// change it has asked the desktop for. It is drawn in front of the value
+/// rather than after it, so the row reads as "something is happening to this"
+/// from its first character.
 pub(super) fn status_row<'a>(
     label: &'a str,
     value: String,
+    indicator: Option<&'static str>,
     font_size: f32
 ) -> Element<'a, Message> {
-    labelled_row(
-        label,
-        text(value).size(style::control_size(font_size)).into(),
-        font_size
-    )
+    let control = style::control_size(font_size);
+
+    let content: Element<'a, Message> = match indicator {
+        Some(glyph) => controls(font_size)
+            .push(icon_raw_sized(glyph.to_owned(), Some(control)))
+            .push(text(value).size(control))
+            .into(),
+        None => text(value).size(control).into()
+    };
+
+    labelled_row(label, content, font_size)
 }
 
 /// Renders a label with a value that steps down and up.
@@ -157,6 +180,86 @@ pub(super) fn chip<'a>(
             }
         })
         .into()
+}
+
+/// What a chip of the theme grid stands for right now.
+///
+/// The grid is the only place on the page where a press starts something the
+/// bar cannot take back or hurry, so the four cases are named rather than
+/// squeezed into a pair of flags: a chip is the theme in force, a theme that
+/// can be switched to, the theme being applied, or a theme that cannot be
+/// pressed because another one is being applied.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum ThemeChip {
+    /// The theme the desktop is on.
+    Active,
+    /// A theme the desktop can be switched to.
+    Idle,
+    /// The theme the running switch is on its way to.
+    Applying(Spinner),
+    /// A theme that cannot be pressed while another switch runs.
+    Blocked
+}
+
+impl ThemeChip {
+    /// Whether a press on this chip is allowed to start a switch.
+    ///
+    /// A chip that cannot start one carries no press handler at all, so the
+    /// refusal is something the pointer meets rather than something the module
+    /// has to log after the fact.
+    pub(super) fn is_pressable(self) -> bool {
+        matches!(self, Self::Active | Self::Idle)
+    }
+}
+
+/// Renders a chip of the theme grid.
+///
+/// Kept apart from [`chip`], which draws a picture of the bar and is never
+/// blocked, because this one has to say three things at once: which theme the
+/// desktop is on, which one it is moving to, and that nothing else can be asked
+/// for until it gets there.
+pub(super) fn theme_chip<'a>(
+    label: String,
+    message: Message,
+    state: ThemeChip,
+    font_size: f32,
+    opacity: f32
+) -> Element<'a, Message> {
+    let control = style::control_size(font_size);
+
+    let mut chip = button(text(label).size(control)).padding([
+        style::CHIP_PADDING_EM[0] * control,
+        style::CHIP_PADDING_EM[1] * control
+    ]);
+
+    if state.is_pressable() {
+        chip = chip.on_press(message);
+    }
+
+    chip.style(move |theme: &Theme, _status| {
+        let palette = theme.extended_palette();
+
+        let (background, text_color) = match state {
+            ThemeChip::Active => (palette.primary.base.color, palette.primary.base.text),
+            ThemeChip::Idle => (palette.background.weak.color, palette.background.base.text),
+            ThemeChip::Applying(spinner) => (
+                palette.primary.base.color.scale_alpha(spinner.pulse()),
+                palette.primary.base.text
+            ),
+            ThemeChip::Blocked => (
+                palette.background.weak.color.scale_alpha(BLOCKED_ALPHA),
+                palette.background.base.text.scale_alpha(BLOCKED_ALPHA)
+            )
+        };
+
+        button::Style {
+            background: Some(Background::Color(background.scale_alpha(opacity))),
+            text_color,
+            border: Border::default().rounded(style::corner_radius(font_size)),
+            ..button::Style::default()
+        }
+    })
+    .into()
 }
 
 /// Renders a note: a sentence a page states in place of a control it cannot
@@ -313,4 +416,38 @@ pub(super) fn outlined<'a>(
             ..container::Style::default()
         })
         .into()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_theme_that_can_be_switched_to_takes_a_press() {
+        assert!(ThemeChip::Idle.is_pressable());
+    }
+
+    #[test]
+    fn the_theme_in_force_takes_a_press() {
+        assert!(ThemeChip::Active.is_pressable());
+    }
+
+    /// A press on the theme already being applied would be dropped by the
+    /// module anyway; refusing it at the chip is what makes the refusal
+    /// something the user can see before clicking rather than after.
+    #[test]
+    fn the_theme_being_applied_takes_no_press() {
+        assert!(!ThemeChip::Applying(Spinner::default()).is_pressable());
+    }
+
+    #[test]
+    fn a_theme_blocked_by_a_running_switch_takes_no_press() {
+        assert!(!ThemeChip::Blocked.is_pressable());
+    }
+
+    #[test]
+    fn a_blocked_chip_is_dimmed_but_not_erased() {
+        assert!(BLOCKED_ALPHA > 0.0);
+        assert!(BLOCKED_ALPHA < 1.0);
+    }
 }
