@@ -105,6 +105,8 @@ impl App {
                 info!("New config applied: {config:?}");
                 debug!("Config impact: {impact:?}");
 
+                let mut tasks = Vec::new();
+
                 if source_changed {
                     // Announced here rather than where the choice was made: the
                     // notice has to be painted the new way, and until the
@@ -122,6 +124,10 @@ impl App {
                                 std::time::Instant::now()
                             )
                         );
+                        // The surface is a strip whose height is whatever its
+                        // popups need; without this it stays as tall as it was
+                        // when empty and clips the notice away entirely.
+                        tasks.push(self.fit_notification_surface());
                     } else {
                         hydebar_core::modules::settings::announce_source(
                             config.notifications.source,
@@ -129,8 +135,6 @@ impl App {
                         );
                     }
                 }
-
-                let mut tasks = Vec::new();
 
                 let outputs_need_sync = impact.outputs_changed
                     || impact.position_changed
