@@ -169,23 +169,22 @@ fn place(
 ///
 /// The `#variant` suffix is dropped first: the layouts use it to pick styling
 /// or an alternative definition of the same module, neither of which changes
-/// what the module *is*. A `custom/` name whose role the bar covers natively
-/// takes the native module: the layout's `custom/theme` chip *is* the theme
-/// switcher, and answering it with a configured shell command would trade a
-/// working module for however that command has aged — commands written for
-/// the previous bar go stale with every HyDE rename, and a stale one fails
-/// without a word. The configured custom modules answer for the names no
-/// native module covers, and a name nothing answers for is skipped, which is
-/// how a layout survives entries we have no counterpart for.
+/// what the module *is*. A `custom/` name whose tail the configuration
+/// defines as a custom module maps to that definition: the icon and the
+/// command written there are the user's word, and a native module — whatever
+/// it does better — has no right to displace the glyphs a person chose. The
+/// built-in tables answer for the rest, and a name nothing answers for is
+/// skipped, which is how a layout survives entries we have no counterpart
+/// for.
 fn module_for(name: &str, custom: &BTreeSet<&str>) -> Option<ModuleName> {
     let name = name.split('#').next().unwrap_or(name);
 
     if let Some(tail) = name.strip_prefix("custom/") {
-        return builtin_for_custom(tail).or_else(|| {
-            custom
-                .contains(tail)
-                .then(|| ModuleName::Custom(tail.to_owned()))
-        });
+        if custom.contains(tail) {
+            return Some(ModuleName::Custom(tail.to_owned()));
+        }
+
+        return builtin_for_custom(tail);
     }
 
     builtin_for(name)
@@ -440,33 +439,22 @@ mod tests {
         assert_eq!(audio, 1);
     }
 
-    /// A role the bar covers natively takes the native module even when the
-    /// configuration defines a wrapper of the same name: the wrapper is a
-    /// shell command written for the previous bar, and it goes stale with
-    /// every HyDE rename while the native module keeps working.
+    /// The icon and command a user wrote for a name are their word; the
+    /// built-in map answers only for names the configuration says nothing
+    /// about.
     #[test]
-    fn a_native_role_outranks_a_configured_wrapper() {
+    fn a_defined_custom_module_wins_over_the_built_in_map() {
         let custom = vec!["theme".to_owned()];
-        let source = r#"{ "modules-left": ["custom/theme"] }"#;
-
-        let modules = parse(source, &custom).expect("layout");
-
-        assert_eq!(modules.left, vec![ModuleDef::Single(ModuleName::Themes)]);
-    }
-
-    /// A name no native module covers still reaches the configured wrapper.
-    #[test]
-    fn an_uncovered_name_falls_back_to_the_configured_wrapper() {
-        let custom = vec!["keybindhint".to_owned()];
-        let source = r#"{ "modules-left": ["custom/keybindhint"] }"#;
+        let source = r#"{ "modules-left": ["custom/theme", "custom/updates"] }"#;
 
         let modules = parse(source, &custom).expect("layout");
 
         assert_eq!(
             modules.left,
-            vec![ModuleDef::Single(ModuleName::Custom(
-                "keybindhint".to_owned()
-            ))]
+            vec![
+                ModuleDef::Single(ModuleName::Custom("theme".to_owned())),
+                ModuleDef::Single(ModuleName::Updates),
+            ]
         );
     }
 
