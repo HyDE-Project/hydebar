@@ -195,20 +195,37 @@ pub(super) fn rows(state: &HydeState, font_size: f32, available_width: f32) -> f
         + theme_rows(state, font_size, available_width)
 }
 
+/// Longest line the active row can ever grow to.
+///
+/// While a switch runs the row names both themes, `active → pending`, and any
+/// installed theme can be the pending one. Reserving for the longest of those
+/// lines up front is what keeps the menu the same size through a press: a
+/// window that jumps wider the instant it is pressed jumps at the one moment
+/// the user is looking straight at it.
+fn widest_active_row(state: &HydeState, switching: Option<&str>, font_size: f32) -> f32 {
+    let shown = status_row_width(&active_label(state, switching), font_size);
+    let active = state.theme.as_deref().unwrap_or(UNKNOWN);
+
+    state
+        .themes
+        .iter()
+        .filter(|name| !state.is_active(name))
+        .map(|name| status_row_width(&format!("{active}{SWITCHING_TO}{name}"), font_size))
+        .fold(shown, f32::max)
+}
+
 /// Longest line of this menu, which is how wide it has to be.
 ///
 /// The grid is measured as a row of the widest themes rather than as the whole
 /// list: it wraps into whatever width the menu settles on, and sizing the menu
 /// to hold every theme side by side would make it far wider than the screen.
 ///
-/// Room for the live indicator is reserved whether one is showing or not. It
-/// costs a glyph of width, and it buys a menu that does not jump wider the
-/// instant a theme is pressed — which is the one moment the user is looking
-/// straight at it.
+/// Room for the live indicator and for the longest possible switch line is
+/// reserved whether a switch is running or not, so starting one moves
+/// nothing — see [`widest_active_row`].
 #[must_use]
 pub(super) fn desired_width(state: &HydeState, switching: Option<&str>, font_size: f32) -> f32 {
-    let active =
-        status_row_width(&active_label(state, switching), font_size) + indicator_width(font_size);
+    let active = widest_active_row(state, switching, font_size) + indicator_width(font_size);
 
     let control = style::control_size(font_size);
     let gap = style::group_gap(font_size);
@@ -415,6 +432,30 @@ mod tests {
             desired_width(&state, None, font_size)
                 >= status_row_width(&active_label(&state, None), font_size)
                     + indicator_width(font_size)
+        );
+    }
+
+    /// Starting a switch must not move the menu: the width already holds the
+    /// longest line the active row can become.
+    #[test]
+    fn starting_a_switch_changes_no_size() {
+        let themes = state(
+            &["Nord", "A Theme With A Very Long Name Indeed"],
+            Some("Nord")
+        );
+        let font_size = 16.0;
+
+        let resting = desired_width(&themes, None, font_size);
+        let switching = desired_width(
+            &themes,
+            Some("A Theme With A Very Long Name Indeed"),
+            font_size
+        );
+
+        assert_eq!(resting, switching);
+        assert_eq!(
+            desired_height(&themes, font_size, resting),
+            desired_height(&themes, font_size, switching)
         );
     }
 
