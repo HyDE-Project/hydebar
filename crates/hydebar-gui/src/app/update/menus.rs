@@ -2,7 +2,10 @@
 
 use hydebar_core::{
     menu::MenuType,
-    modules::{self, control_center::brightness::BrightnessMessage},
+    modules::{
+        self,
+        control_center::{SubMenu, brightness::BrightnessMessage}
+    },
     services::brightness::BrightnessCommand
 };
 use iced::Task;
@@ -62,6 +65,23 @@ impl App {
                     }
                     MenuType::Themes => {
                         cmd.push(self.themes.load_swatches().map(Message::Themes));
+                    }
+                    MenuType::Audio => {
+                        self.control_center.sub_menu = Some(SubMenu::Sinks);
+                    }
+                    MenuType::Network => {
+                        if self.outputs.open_menu() != Some(&MenuType::Network) {
+                            self.control_center.sub_menu = None;
+                            self.control_center.update(
+                                modules::control_center::Message::ToggleSubMenu(SubMenu::Wifi),
+                                &self.config.control_center,
+                                &mut self.outputs,
+                                &self.config
+                            );
+                        }
+                    }
+                    MenuType::Bluetooth => {
+                        self.control_center.sub_menu = Some(SubMenu::Bluetooth);
                     }
                     MenuType::ControlCenter => {
                         self.control_center.sub_menu = None;

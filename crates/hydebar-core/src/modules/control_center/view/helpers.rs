@@ -5,7 +5,13 @@ use iced::{
     widget::{Space, column, container, row}
 };
 
-use crate::{components::scale, modules::control_center::state::Message};
+use crate::{components::scale, modules::control_center::state::Message, style::darken_color};
+
+/// How much darker an unfolded zone is than the menu it sits in.
+///
+/// Darker rather than lighter on purpose: the zone is a recess the extra
+/// facts sit in, and a lighter shade reads as a raised control instead.
+const SUB_MENU_DARKENING: f32 = 0.25;
 
 pub(super) fn quick_settings_section<'a>(
     buttons: Vec<(Element<'a, Message>, Option<Element<'a, Message>>)>,
@@ -57,15 +63,10 @@ pub(crate) fn sub_menu_wrapper<Msg: 'static>(content: Element<Msg>, opacity: f32
     container(content)
         .style(move |theme: &Theme| container::Style {
             background: Background::Color(
-                theme
-                    .extended_palette()
-                    .secondary
-                    .strong
-                    .color
-                    .scale_alpha(opacity)
+                darken_color(theme.palette().background, SUB_MENU_DARKENING).scale_alpha(opacity)
             )
             .into(),
-            border: Border::default().rounded(16),
+            border: Border::default().rounded(scale::scaled(16.0)),
             ..container::Style::default()
         })
         .padding(scale::scaled(16.0))
