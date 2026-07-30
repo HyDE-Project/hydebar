@@ -22,6 +22,20 @@ const MAX_STEP: f32 = 0.25;
 /// are delivered late on a slow refresh cycle.
 const MAX_SUBSTEP: f32 = 1.0 / 240.0;
 
+/// Response of the spring behind immediate feedback: hovers, presses.
+///
+/// The three motion tokens below are the only speeds the bar moves at. One
+/// scale instead of scattered constants keeps every animation in the same
+/// family: what the pointer touches answers fastest, what the theme repaints
+/// moves slowest, and nothing overshoots enough to read as a toy.
+pub const SNAPPY: Duration = Duration::from_millis(150);
+
+/// Response of the spring behind windows and unfolds.
+pub const STANDARD: Duration = Duration::from_millis(220);
+
+/// Response of the spring behind whole-surface changes: theme, layout.
+pub const GENTLE: Duration = Duration::from_millis(320);
+
 /// Default time the spring needs to travel most of the way to its target.
 const DEFAULT_RESPONSE: f32 = 0.22;
 

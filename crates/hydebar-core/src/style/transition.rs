@@ -7,9 +7,6 @@ use crate::{
     config::{Appearance, AppearanceColor, MenuAppearance}
 };
 
-/// Time a full theme cross-fade takes.
-const THEME_RESPONSE: Duration = Duration::from_millis(320);
-
 /// Cross-fade between two [`Appearance`] snapshots.
 ///
 /// A single progress spring drives the whole palette instead of one spring per
@@ -50,7 +47,7 @@ impl AppearanceTransition {
         Self {
             from:     appearance.clone(),
             to:       appearance.clone(),
-            progress: Spring::new(1.0).with_response(THEME_RESPONSE),
+            progress: Spring::new(1.0).with_response(crate::animation::GENTLE),
             current:  appearance
         }
     }

@@ -40,6 +40,22 @@ impl Outputs {
     }
 
     /// Get the animated opacity for a menu window.
+    /// How far the open animation of the menu on `id` has travelled.
+    pub fn get_menu_progress(&self, id: Id) -> f32 {
+        self.0
+            .iter()
+            .find_map(|(_, shell_info, _)| {
+                shell_info.as_ref().and_then(|shell_info| {
+                    if shell_info.menu.id == id {
+                        Some(shell_info.menu.progress())
+                    } else {
+                        None
+                    }
+                })
+            })
+            .unwrap_or(1.0)
+    }
+
     pub fn get_menu_opacity(&self, id: Id) -> f32 {
         self.0
             .iter()

@@ -154,6 +154,22 @@ impl Menu {
         }
     }
 
+    /// How far the open animation has travelled, zero closed and one open.
+    ///
+    /// The opacity spring doubles as the progress signal: its target is the
+    /// themed opacity, so the travelled share is the value against the
+    /// target. The wrapper slides the window by the remainder, which is what
+    /// makes a menu grow out of its module instead of merely fading in place.
+    pub fn progress(&self) -> f32 {
+        let target = self.opacity.target();
+
+        if target <= f32::EPSILON {
+            1.0
+        } else {
+            (self.opacity.value() / target).clamp(0.0, 1.0)
+        }
+    }
+
     /// Points the opacity spring at `target`, or jumps to it when animations
     /// are disabled.
     fn aim_opacity(&mut self, target: f32, animation_config: &AnimationConfig) {

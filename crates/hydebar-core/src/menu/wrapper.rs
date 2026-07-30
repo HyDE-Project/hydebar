@@ -13,6 +13,12 @@ use crate::{
     style::{menu_backdrop_style, menu_container_style}
 };
 
+/// Distance the box travels while it fades in, in em of the themed size.
+///
+/// Small on purpose: the window should read as growing out of the bar, not
+/// as flying across the screen.
+const SLIDE_EM: f32 = 0.8;
+
 /// Inner padding of a menu box, in multiples of the themed text size.
 pub const PADDING_EM: f32 = 1.6;
 
@@ -36,7 +42,13 @@ pub struct MenuLayout {
     /// Given one the box is capped to the share of the screen a menu may cover
     /// and its content scrolls, so a long page is reachable instead of being
     /// cut off by the edge of the screen.
-    pub content_height: Option<f32>
+    pub content_height: Option<f32>,
+    /// How far the open animation has travelled, zero closed and one open.
+    ///
+    /// The box slides in from the bar edge by the remainder of this while it
+    /// fades, so the window reads as growing out of the module that owns it
+    /// rather than materialising in place.
+    pub progress:       f32
 }
 
 /// Wraps `content` into a menu box anchored under `button_ui_ref`.
@@ -81,14 +93,16 @@ pub fn menu_wrapper<Message: Clone + 'static>(
                 AppearanceStyle::Islands => 0.0
             };
 
+            let slide = SLIDE_EM * layout.font_size * (1.0 - layout.progress.clamp(0.0, 1.0));
+
             Padding::new(0.)
                 .top(if layout.bar_position == Position::Top {
-                    edge_gap
+                    edge_gap + slide
                 } else {
                     0.0
                 })
                 .bottom(if layout.bar_position == Position::Bottom {
-                    edge_gap
+                    edge_gap + slide
                 } else {
                     0.0
                 })
