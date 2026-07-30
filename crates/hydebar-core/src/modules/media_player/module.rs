@@ -1,10 +1,6 @@
 //! Module trait wiring for the media player.
 
-use iced::{
-    Element,
-    alignment::Vertical,
-    widget::{row, text}
-};
+use iced::{Element, alignment::Vertical, widget::row};
 use log::warn;
 use tokio::task::yield_now;
 
@@ -13,7 +9,8 @@ use crate::{
     ModuleContext,
     components::{
         icons::{IconTheme, Icons, icon},
-        scale
+        scale,
+        text::text
     },
     config::MediaPlayerModuleConfig,
     event_bus::ModuleEvent,
@@ -102,7 +99,7 @@ where
                 row![
                     icon(icons, Icons::MusicNote),
                     text(Self::get_title(&s[0], config))
-                        .wrapping(text::Wrapping::WordOrGlyph)
+                        .wrapping(iced::widget::text::Wrapping::WordOrGlyph)
                         .size(scale::scaled(12.0))
                 ]
                 .align_y(Vertical::Center)

@@ -1,13 +1,14 @@
 use iced::{
     Element, Length, SurfaceId as Id, Theme,
-    widget::{Column, Row, button, column, container, row, rule, text}
+    widget::{Column, Row, button, column, container, row, rule}
 };
 
 use super::{Message, SubMenu, quick_setting_button};
 use crate::{
     components::{
         icons::{IconTheme, Icons, icon},
-        push_maybe::PushMaybe
+        push_maybe::PushMaybe,
+        text::text
     },
     services::{
         ServiceEvent,

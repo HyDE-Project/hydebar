@@ -11,7 +11,7 @@ use tokio::{task::JoinHandle, time::sleep};
 
 use crate::{
     ModuleContext, ModuleEventSender,
-    components::icons::IconTheme,
+    components::{icons::IconTheme, text::text},
     config::ClockModuleConfig,
     event_bus::ModuleEvent,
     format_cycle::FormatCycle,
@@ -286,8 +286,6 @@ where
         &self,
         config: Self::ViewData<'_>
     ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
-        use iced::widget::text;
-
         let clock_text = text(self.data.format(self.active_format(config))).into();
         let on_press = if config.has_alternatives() {
             OnModulePress::Action(Box::new(M::from(Message::NextFormat)))

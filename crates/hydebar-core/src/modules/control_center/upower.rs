@@ -1,11 +1,14 @@
 use iced::{
     Alignment, Element, Theme,
-    widget::{Container, container, row, text}
+    widget::{Container, container, row}
 };
 
 use super::{Message, quick_setting_button};
 use crate::{
-    components::icons::{IconTheme, Icons, icon},
+    components::{
+        icons::{IconTheme, Icons, icon},
+        text::text
+    },
     services::{
         ServiceEvent,
         upower::{BatteryData, BatteryStatus, PowerProfile, UPowerService}

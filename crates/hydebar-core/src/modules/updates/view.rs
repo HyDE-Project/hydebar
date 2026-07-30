@@ -3,14 +3,15 @@ use std::borrow::Cow;
 use iced::{
     Alignment, Element, Length, Padding, SurfaceId as Id,
     alignment::Horizontal,
-    widget::{Column, button, column, container, row, rule, scrollable, text}
+    widget::{Column, button, column, container, row, rule, scrollable}
 };
 
 use super::state::{CheckState, Message, Updates};
 use crate::{
     components::{
         icons::{IconTheme, Icons, icon as icon_component},
-        scale
+        scale,
+        text::text
     },
     style::ghost_button_style
 };

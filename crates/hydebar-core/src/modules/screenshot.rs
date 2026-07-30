@@ -2,7 +2,7 @@ use std::process::Command;
 
 use iced::{
     Alignment, Element,
-    widget::{Column, Row, button, container, text}
+    widget::{Column, Row, button, container}
 };
 use log::{debug, error};
 
@@ -11,7 +11,8 @@ use crate::{
     ModuleContext,
     components::{
         icons::{IconTheme, Icons, icon},
-        scale
+        scale,
+        text::text
     },
     menu::MenuType
 };

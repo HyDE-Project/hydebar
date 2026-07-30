@@ -2,14 +2,15 @@
 
 use iced::{
     Element, Length,
-    widget::{Column, Row, button, row, rule, text, toggler}
+    widget::{Column, Row, button, row, rule, toggler}
 };
 
 use super::super::tray::{TrayMessage, TrayModule};
 use crate::{
     components::{
         icons::{IconTheme, Icons, icon},
-        push_maybe::PushMaybe
+        push_maybe::PushMaybe,
+        text::text
     },
     services::tray::dbus::{Layout, LayoutProps},
     style::ghost_button_style

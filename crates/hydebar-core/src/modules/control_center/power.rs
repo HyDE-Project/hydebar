@@ -1,10 +1,13 @@
 use iced::{
     Element, Length,
-    widget::{button, column, row, rule, text}
+    widget::{button, column, row, rule}
 };
 
 use crate::{
-    components::icons::{IconTheme, Icons, icon},
+    components::{
+        icons::{IconTheme, Icons, icon},
+        text::text
+    },
     config::ControlCenterModuleConfig,
     style::ghost_button_style,
     utils

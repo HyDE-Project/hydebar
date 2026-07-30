@@ -1,12 +1,13 @@
 use iced::{
     Alignment, Border, Color, Element, Length, Theme,
-    widget::{Column, Row, button, column, container, row, rule, text}
+    widget::{Column, Row, button, column, container, row, rule}
 };
 
 use super::{CalendarState, Message};
 use crate::components::{
     icons::{IconTheme, Icons, icon},
-    scale
+    scale,
+    text::text
 };
 
 const WEEKDAYS: [&str; 7] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];

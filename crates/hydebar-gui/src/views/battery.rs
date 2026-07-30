@@ -1,4 +1,5 @@
 /// Battery module view layer - Pure rendering, no business logic
+use hydebar_core::components::text::text;
 use hydebar_core::{
     components::icons::{IconTheme, icon},
     config::BatteryModuleConfig,
@@ -6,7 +7,7 @@ use hydebar_core::{
 };
 use iced::{
     Alignment, Element, Theme,
-    widget::{container, row, text}
+    widget::{container, row}
 };
 
 use crate::app::Message;

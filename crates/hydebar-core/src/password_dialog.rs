@@ -1,13 +1,14 @@
 use iced::{
     Alignment, Element, Length, SurfaceId as Id,
     alignment::Vertical,
-    widget::{Space, button, column, row, text, text_input}
+    widget::{Space, button, column, row, text_input}
 };
 
 use crate::{
     components::{
         icons::{IconTheme, Icons, icon},
-        scale
+        scale,
+        text::text
     },
     style::{confirm_button_style, outline_button_style, text_input_style}
 };

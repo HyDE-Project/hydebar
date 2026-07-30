@@ -11,10 +11,13 @@ use hydebar_proto::config::{Appearance, Position};
 use iced::{
     Background, Border, Element, Length, Theme,
     alignment::{Horizontal, Vertical},
-    widget::{Column, container, text}
+    widget::{Column, container}
 };
 
-use crate::services::notifications::{Notification, Urgency};
+use crate::{
+    components::text::text,
+    services::notifications::{Notification, Urgency}
+};
 
 /// Width of a popup, in multiples of the themed text size.
 const WIDTH_EM: f32 = 20.0;

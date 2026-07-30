@@ -3,7 +3,7 @@
 use iced::{
     Background, Border, Element, Length, Theme,
     alignment::Vertical,
-    widget::{Column, button, column, container, row, rule, slider, text}
+    widget::{Column, button, column, container, row, rule, slider}
 };
 
 use super::{MediaPlayer, Message};
@@ -11,7 +11,8 @@ use crate::{
     components::{
         icons::{IconTheme, Icons, icon},
         push_maybe::PushMaybe,
-        scale
+        scale,
+        text::text
     },
     config::MediaPlayerModuleConfig,
     services::mpris::PlaybackStatus,
@@ -32,7 +33,7 @@ impl MediaPlayer {
                 rule::horizontal(1),
                 column(s.iter().map(|d| {
                     let title = text(Self::get_title(d, config))
-                        .wrapping(text::Wrapping::WordOrGlyph)
+                        .wrapping(iced::widget::text::Wrapping::WordOrGlyph)
                         .width(Length::Fill);
 
                     let play_pause_icon = match d.state {

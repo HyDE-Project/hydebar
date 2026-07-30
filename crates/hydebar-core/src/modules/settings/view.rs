@@ -8,14 +8,15 @@ mod modules;
 
 use iced::{
     Alignment, Element, Length,
-    widget::{Column, Row, text}
+    widget::{Column, Row}
 };
 
 use super::{Message, Settings, Tab};
 use crate::{
     components::{
         icons::{IconTheme, Icons, icon},
-        page::{metrics, style, widgets::choice_button}
+        page::{metrics, style, widgets::choice_button},
+        text::text
     },
     config::{Config, DEFAULT_FONT_SIZE}
 };

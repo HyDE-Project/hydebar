@@ -1,13 +1,14 @@
 use iced::{
     Alignment, Element, Length, SurfaceId as Id, Theme,
-    widget::{Column, button, column, container, row, rule, scrollable, text, toggler}
+    widget::{Column, button, column, container, row, rule, scrollable, toggler}
 };
 
 use super::{Message, SubMenu, quick_setting_button};
 use crate::{
     components::{
         icons::{IconTheme, Icons, icon},
-        scale
+        scale,
+        text::text
     },
     services::{
         ServiceEvent,

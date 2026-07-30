@@ -6,11 +6,11 @@
 
 use iced::{
     Element, Length,
-    widget::{Column, button, row, text}
+    widget::{Column, button, row}
 };
 
 use crate::{
-    components::icons::icon_raw,
+    components::{icons::icon_raw, text::text},
     config::{Appearance, CustomMenuEntry, CustomModuleDef},
     style::menu_entry_button_style
 };

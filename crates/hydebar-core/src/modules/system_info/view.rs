@@ -1,6 +1,6 @@
 use iced::{
     Alignment, Element, Length, Theme,
-    widget::{Column, Row, column, container, row, rule, text}
+    widget::{Column, Row, column, container, row, rule}
 };
 
 use super::{Message, data::SystemInfoData, indicators, sensors::GpuReadings};
@@ -8,7 +8,8 @@ use crate::{
     components::{
         icons::{IconTheme, Icons, icon},
         push_maybe::PushMaybe,
-        scale
+        scale,
+        text::text
     },
     config::{Appearance, MemoryFormat, SystemIndicator, SystemModuleConfig},
     menu::MenuType,

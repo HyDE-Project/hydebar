@@ -3,14 +3,15 @@
 use iced::{
     Alignment, Element, Length, Padding,
     alignment::{Horizontal, Vertical},
-    widget::{Column, Row, button, container, row, text}
+    widget::{Column, Row, button, container, row}
 };
 
 use crate::{
     components::{
         icons::{IconTheme, Icons, icon},
         push_maybe::PushMaybe,
-        scale
+        scale,
+        text::text
     },
     modules::control_center::state::SubMenu,
     style::{quick_settings_button_style, quick_settings_submenu_button_style}

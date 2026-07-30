@@ -6,13 +6,16 @@ use iced::{
     widget::{
         Stack, canvas,
         canvas::{Cache, Geometry, Path, Program},
-        container, row, text
+        container, row
     }
 };
 
 use super::Custom;
 use crate::{
-    components::icons::{IconTheme, Icons, icon, icon_raw},
+    components::{
+        icons::{IconTheme, Icons, icon, icon_raw},
+        text::text
+    },
     config::{Appearance, CustomModuleDef}
 };
 

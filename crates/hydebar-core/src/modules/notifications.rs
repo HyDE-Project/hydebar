@@ -1,6 +1,6 @@
 use iced::{
     Alignment, Element,
-    widget::{Column, Row, button, container, scrollable, text}
+    widget::{Column, Row, button, container, scrollable}
 };
 use log::error;
 
@@ -9,7 +9,8 @@ use crate::{
     ModuleContext, ModuleEventSender,
     components::{
         icons::{IconTheme, Icons, icon},
-        scale
+        scale,
+        text::text
     },
     event_bus::ModuleEvent,
     menu::MenuType,

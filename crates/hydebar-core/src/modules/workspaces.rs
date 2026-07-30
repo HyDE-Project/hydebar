@@ -6,7 +6,7 @@ use hydebar_proto::ports::hyprland::{
 };
 use iced::{
     Element, Length, Padding, SurfaceId as Id, alignment,
-    widget::{Row, button, container, text}
+    widget::{Row, button, container}
 };
 use itertools::Itertools;
 use log::{debug, error};
@@ -16,6 +16,7 @@ use tokio_stream::StreamExt;
 use super::{Module, ModuleError, OnModulePress};
 use crate::{
     ModuleContext, ModuleEventSender,
+    components::text::text,
     config::{
         Appearance, MODULE_VERTICAL_PADDING_EM, WORKSPACE_ACTIVE_MARGIN_EM,
         WORKSPACE_ACTIVE_PADDING_EM, WORKSPACE_GAP_EM, WORKSPACE_GLYPH_ADVANCE_EM,
