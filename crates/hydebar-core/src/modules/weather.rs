@@ -140,6 +140,33 @@ impl Weather {
         &self.data
     }
 
+    /// Restates the module for a configuration that may have changed.
+    ///
+    /// The module was built from the configuration at startup; without this a
+    /// corrected API key or a new city would be ignored until the bar is
+    /// restarted. The reading is kept when nothing changed, and reset when the
+    /// place or the unit did — the old value would be an answer to another
+    /// question.
+    pub fn configure(
+        &mut self,
+        location: String,
+        api_key: Option<String>,
+        use_celsius: bool,
+        update_interval_minutes: u64
+    ) {
+        let unchanged = self.data.location == location
+            && self.api_key == api_key
+            && self.data.use_celsius == use_celsius;
+
+        self.api_key = api_key;
+        self.update_interval =
+            Duration::from_secs(update_interval_minutes.clamp(1, 24 * 60).saturating_mul(60));
+
+        if !unchanged {
+            self.data = WeatherData::new(location, use_celsius);
+        }
+    }
+
     /// Initialize with module context
     pub fn register(&mut self, ctx: &ModuleContext) {
         self.sender = Some(ctx.module_sender(|event: WeatherEvent| match event {

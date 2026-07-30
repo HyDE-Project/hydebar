@@ -136,7 +136,10 @@ impl IwdDbus<'_> {
                     .filter_map(|level| async move {
                         debug!("Signal level changed: {level}");
                         // TODO: get current network name
-                        Some(vec![NetworkEvent::Strength(("".to_string(), level as u8))])
+                        Some(vec![NetworkEvent::Strength((
+                            String::new(),
+                            strength_of_level(level)
+                        ))])
                     })
                     .boxed()
             );
@@ -239,5 +242,19 @@ impl IwdDbus<'_> {
         ]);
 
         Ok(events)
+    }
+}
+
+/// Maps the bucket the signal agent reports onto a percentage.
+///
+/// The agent is registered with three thresholds, so iwd answers with the
+/// index of the band the signal fell into — not a percentage. Rendering the
+/// index directly showed the weakest icon whatever the actual signal.
+fn strength_of_level(level: i16) -> u8 {
+    match level {
+        0 => 100,
+        1 => 75,
+        2 => 50,
+        _ => 25
     }
 }

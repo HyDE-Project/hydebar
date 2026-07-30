@@ -137,10 +137,20 @@ impl NotificationsServer {
             Urgency::Low => "message"
         };
 
-        // Try canberra first (standard freedesktop sound system)
-        std::process::Command::new("canberra-gtk-play")
+        // Try canberra first (standard freedesktop sound system); waiting on
+        // a thread reaps the player instead of leaving a zombie per sound
+        match std::process::Command::new("canberra-gtk-play")
             .args(["-i", sound_name, "-d", "New notification"])
             .spawn()
-            .ok();
+        {
+            Ok(mut child) => {
+                std::thread::spawn(move || {
+                    let _ = child.wait();
+                });
+            }
+            Err(err) => {
+                debug!("notification sound player is not available: {err}");
+            }
+        }
     }
 }

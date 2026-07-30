@@ -152,8 +152,15 @@ pub fn post_to_bus(message: &str) {
         ])
         .spawn();
 
-    if let Err(err) = sent {
-        warn!("the notice could not be posted to the notification bus: {err}");
+    match sent {
+        Ok(mut child) => {
+            std::thread::spawn(move || {
+                let _ = child.wait();
+            });
+        }
+        Err(err) => {
+            warn!("the notice could not be posted to the notification bus: {err}");
+        }
     }
 }
 

@@ -79,6 +79,12 @@ impl App {
         }
 
         if hosts(ModuleName::Clock) && self.config.clock.show_weather {
+            self.weather.configure(
+                self.config.weather.location.clone(),
+                self.config.weather.api_key.clone(),
+                self.config.weather.use_celsius,
+                self.config.weather.update_interval_minutes
+            );
             self.weather.register(ctx);
         } else {
             self.weather.stop();
