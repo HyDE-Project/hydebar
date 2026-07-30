@@ -16,12 +16,13 @@ use super::{
 /// different ranges standing side by side on the bar read as one size.
 fn ink_share(glyph: &str) -> f32 {
     match glyph.chars().next().map_or(0, u32::from) {
-        0xE300..=0xE3E3 => 0.85,
-        0xE5FA..=0xE6B7 => 0.85,
-        0xE700..=0xE8EF => 0.85,
-        0xEA60..=0xEC1E => 0.8,
-        0xED00..=0xF2FF => 0.8,
-        0xF400..=0xF533 => 0.85,
+        0xE200..=0xE2A9 => 0.9,
+        0xE300..=0xE3E3 => 0.8,
+        0xE5FA..=0xE6B7 => 0.8,
+        0xE700..=0xE8EF => 0.8,
+        0xEA60..=0xEC1E => 0.7,
+        0xED00..=0xF2FF => 0.75,
+        0xF400..=0xF533 => 0.8,
         _ => 1.0
     }
 }
