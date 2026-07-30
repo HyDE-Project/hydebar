@@ -67,10 +67,6 @@ pub struct App {
     pub outputs: Outputs,
     pub navigation_mode: bool,
     pub focused_module_index: Option<usize>,
-    /// Whether the pointer rests on the sound module of the bar.
-    pub(super) sound_on_module: bool,
-    /// Whether the pointer rests on the open sound menu.
-    pub(super) sound_on_menu: bool,
     pub app_launcher: AppLauncher,
     pub custom: HashMap<String, Custom>,
     pub updates: Updates,
@@ -130,18 +126,6 @@ pub enum Message {
         /// Hint to show while it rests there, absent when it publishes none.
         tooltip: Option<TooltipInfo>
     },
-    /// The pointer entered or left the open sound menu.
-    SoundMenuHover(bool),
-    /// The pointer arrived on the surface the sound menu is drawn on.
-    ///
-    /// The surfaces are separate windows: once the pointer is here it cannot
-    /// still be on the bar module, whatever leave event the bar missed.
-    SoundSurfaceEntered,
-    /// The grace period after the pointer left the sound module or its menu.
-    ///
-    /// Fired a beat after either leave, so the pointer has time to travel the
-    /// gap between the module and its menu before the menu is taken down.
-    SoundHoverSettle,
     /// The slow clock came due for the modules resting on the bar.
     PollAtRest,
     /// The fast clock came due for the module being attended.
@@ -384,8 +368,6 @@ impl App {
             magnification: hydebar_core::components::scale::screen_factor(),
             outputs,
             navigation_mode: false,
-            sound_on_module: false,
-            sound_on_menu: false,
             focused_module_index: None,
             app_launcher: AppLauncher,
             custom,

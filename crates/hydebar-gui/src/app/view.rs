@@ -237,48 +237,42 @@ impl App {
                         Message::None,
                         Message::CloseMenu(id)
                     ),
-                    Some((MenuType::Audio, button_ui_ref)) => {
-                        iced::widget::mouse_area(menu_wrapper(
-                            id,
-                            iced::widget::mouse_area(
-                                self.control_center
-                                    .audio_menu(
-                                        id,
-                                        &self.config.control_center,
-                                        animated_opacity,
-                                        self.config.position,
-                                        self.icons()
-                                    )
-                                    .map(Message::ControlCenter)
-                            )
-                            .on_enter(Message::SoundMenuHover(true))
-                            .on_exit(Message::SoundMenuHover(false))
-                            .on_scroll(|delta| {
-                                let up = match delta {
-                                    iced::mouse::ScrollDelta::Lines {
-                                        y, ..
-                                    }
-                                    | iced::mouse::ScrollDelta::Pixels {
-                                        y, ..
-                                    } => y > 0.0
-                                };
-
-                                Message::ControlCenter(
-                                    hydebar_core::modules::control_center::Message::Audio(
-                                        AudioMessage::SinkVolumeWheel(if up { 1 } else { -1 })
-                                    )
+                    Some((MenuType::Audio, button_ui_ref)) => menu_wrapper(
+                        id,
+                        iced::widget::mouse_area(
+                            self.control_center
+                                .audio_menu(
+                                    id,
+                                    &self.config.control_center,
+                                    animated_opacity,
+                                    self.config.position,
+                                    self.icons()
                                 )
-                            })
-                            .into(),
-                            MenuSize::Medium,
-                            *button_ui_ref,
-                            self.menu_layout(animated_opacity),
-                            Message::None,
-                            Message::CloseMenu(id)
-                        ))
-                        .on_enter(Message::SoundSurfaceEntered)
-                        .into()
-                    }
+                                .map(Message::ControlCenter)
+                        )
+                        .on_scroll(|delta| {
+                            let up = match delta {
+                                iced::mouse::ScrollDelta::Lines {
+                                    y, ..
+                                }
+                                | iced::mouse::ScrollDelta::Pixels {
+                                    y, ..
+                                } => y > 0.0
+                            };
+
+                            Message::ControlCenter(
+                                hydebar_core::modules::control_center::Message::Audio(
+                                    AudioMessage::SinkVolumeWheel(if up { 1 } else { -1 })
+                                )
+                            )
+                        })
+                        .into(),
+                        MenuSize::Medium,
+                        *button_ui_ref,
+                        self.menu_layout(animated_opacity),
+                        Message::None,
+                        Message::CloseMenu(id)
+                    ),
                     Some((MenuType::Network, button_ui_ref)) => menu_wrapper(
                         id,
                         self.control_center
