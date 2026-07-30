@@ -14,7 +14,7 @@ use wayland_client::protocol::wl_output::WlOutput;
 
 use super::wayland::{LayerSurfaceCreation, create_layer_surfaces};
 use crate::{
-    config::{AppearanceStyle, Position},
+    config::{AppearanceStyle, ModuleName, Position},
     menu::{Menu, MenuType},
     position_button::ButtonUIRef,
     tooltip::TooltipInfo
@@ -31,8 +31,13 @@ struct ShellInfo {
     height:           Option<f32>,
     /// Surface the tooltips of this output are drawn on.
     tooltip_id:       Id,
-    /// Tooltip that surface is showing, if any.
-    tooltip:          Option<TooltipInfo>,
+    /// Tooltip that surface is showing, if any, and the module it belongs to.
+    ///
+    /// The owner is kept because enter and leave arrive in widget order, not
+    /// in pointer order: moving towards the start of the bar delivers the next
+    /// module's enter before the previous module's leave, and a leave that
+    /// hid whatever is showing would take the fresh tooltip down with it.
+    tooltip:          Option<(ModuleName, TooltipInfo)>,
     /// Surface the notification popups of this output are drawn on.
     notifications_id: Id
 }

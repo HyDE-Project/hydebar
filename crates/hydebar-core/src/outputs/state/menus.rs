@@ -148,7 +148,7 @@ impl Outputs {
         button_ui_ref: ButtonUIRef,
         config: &crate::config::Config
     ) -> Task<Message> {
-        let hide_tooltip = self.hide_tooltip(id);
+        let hide_tooltip = self.hide_tooltip(id, None);
 
         match self.0.iter_mut().find(|(_, shell_info, _)| {
             shell_info.as_ref().map(|shell_info| shell_info.id) == Some(id)

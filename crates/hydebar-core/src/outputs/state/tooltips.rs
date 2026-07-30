@@ -12,7 +12,7 @@ use iced::{
 };
 
 use super::{Outputs, ShellInfo};
-use crate::tooltip::TooltipInfo;
+use crate::{config::ModuleName, tooltip::TooltipInfo};
 
 /// Asks the runtime to paint every surface again.
 ///
@@ -34,21 +34,27 @@ impl Outputs {
             })
     }
 
-    /// Shows `info` on the tooltip surface of the output owning `id`.
+    /// Shows `info` for `owner` on the tooltip surface of the output owning
+    /// `id`.
     ///
     /// The surface only leaves the background layer once, so a tooltip
     /// following the pointer from module to module costs a redraw and nothing
     /// more.
-    pub fn show_tooltip<Message: 'static>(&mut self, id: Id, info: TooltipInfo) -> Task<Message> {
+    pub fn show_tooltip<Message: 'static>(
+        &mut self,
+        id: Id,
+        owner: ModuleName,
+        info: TooltipInfo
+    ) -> Task<Message> {
         match self.shell_info_mut(id) {
             Some(shell_info) => {
-                if shell_info.tooltip.as_ref() == Some(&info) {
+                if shell_info.tooltip.as_ref() == Some(&(owner.clone(), info.clone())) {
                     return Task::none();
                 }
 
                 let was_hidden = shell_info.tooltip.is_none();
                 let tooltip_id = shell_info.tooltip_id;
-                shell_info.tooltip = Some(info);
+                shell_info.tooltip = Some((owner, info));
 
                 if was_hidden {
                     Task::batch(vec![
@@ -63,16 +69,31 @@ impl Outputs {
         }
     }
 
-    /// Hides the tooltip of the output owning `id`.
+    /// Hides the tooltip `owner` published on the output owning `id`.
     ///
-    /// The surface sinks back into the background so it stops covering the
-    /// windows below it.
-    pub fn hide_tooltip<Message: 'static>(&mut self, id: Id) -> Task<Message> {
+    /// A tooltip belonging to another module stays: the pointer moving towards
+    /// the start of the bar delivers the next module's enter before the
+    /// previous module's leave, and that stale leave must not take the fresh
+    /// tooltip down. Passing [`None`] hides whatever is showing, for a pointer
+    /// that settled on a module with nothing to say.
+    pub fn hide_tooltip<Message: 'static>(
+        &mut self,
+        id: Id,
+        owner: Option<&ModuleName>
+    ) -> Task<Message> {
         match self.shell_info_mut(id) {
             Some(shell_info) => {
-                if shell_info.tooltip.take().is_none() {
+                let shown_by_owner = match (&shell_info.tooltip, owner) {
+                    (Some((shown, _)), Some(leaving)) => shown == leaving,
+                    (Some(_), None) => true,
+                    (None, _) => false
+                };
+
+                if !shown_by_owner {
                     return Task::none();
                 }
+
+                shell_info.tooltip = None;
 
                 Task::batch(vec![
                     set_layer(shell_info.tooltip_id, Layer::Background),
@@ -88,7 +109,9 @@ impl Outputs {
         self.0
             .iter()
             .find_map(|(_, shell_info, _)| match shell_info {
-                Some(shell_info) if shell_info.owns(id) => shell_info.tooltip.as_ref(),
+                Some(shell_info) if shell_info.owns(id) => {
+                    shell_info.tooltip.as_ref().map(|(_, info)| info)
+                }
                 _ => None
             })
     }
@@ -130,7 +153,7 @@ mod tests {
         let (mut outputs, id) = outputs();
         let menu_id = outputs.shell_info_mut(id).expect("output").menu.id;
 
-        let _task: Task<()> = outputs.show_tooltip(id, info("Memory"));
+        let _task: Task<()> = outputs.show_tooltip(id, ModuleName::Clock, info("Memory"));
 
         assert_eq!(outputs.tooltip(id), Some(&info("Memory")));
         assert_eq!(outputs.tooltip(menu_id), Some(&info("Memory")));
@@ -139,9 +162,34 @@ mod tests {
     #[test]
     fn hiding_clears_the_tooltip() {
         let (mut outputs, id) = outputs();
-        let _show: Task<()> = outputs.show_tooltip(id, info("Memory"));
+        let _show: Task<()> = outputs.show_tooltip(id, ModuleName::Clock, info("Memory"));
 
-        let _hide: Task<()> = outputs.hide_tooltip(id);
+        let _hide: Task<()> = outputs.hide_tooltip(id, Some(&ModuleName::Clock));
+
+        assert!(outputs.tooltip(id).is_none());
+    }
+
+    /// Moving towards the start of the bar delivers the next module's enter
+    /// before the previous module's leave; the stale leave must not take the
+    /// fresh tooltip down with it, or hints never show in that direction.
+    #[test]
+    fn a_stale_leave_from_another_module_keeps_the_fresh_tooltip() {
+        let (mut outputs, id) = outputs();
+        let _show: Task<()> = outputs.show_tooltip(id, ModuleName::Clock, info("Clock"));
+
+        let _stale: Task<()> = outputs.hide_tooltip(id, Some(&ModuleName::Battery));
+
+        assert_eq!(outputs.tooltip(id), Some(&info("Clock")));
+    }
+
+    /// A pointer settling on a module with nothing to say hides whatever is
+    /// showing, whoever it belonged to.
+    #[test]
+    fn settling_on_a_silent_module_hides_any_tooltip() {
+        let (mut outputs, id) = outputs();
+        let _show: Task<()> = outputs.show_tooltip(id, ModuleName::Clock, info("Clock"));
+
+        let _hide: Task<()> = outputs.hide_tooltip(id, None);
 
         assert!(outputs.tooltip(id).is_none());
     }
@@ -157,7 +205,7 @@ mod tests {
             &config
         );
 
-        let _task: Task<()> = outputs.show_tooltip(id, info("Memory"));
+        let _task: Task<()> = outputs.show_tooltip(id, ModuleName::Clock, info("Memory"));
 
         assert_eq!(outputs.tooltip(id), Some(&info("Memory")));
     }
@@ -166,7 +214,7 @@ mod tests {
     fn opening_a_menu_drops_the_tooltip_it_would_cover() {
         let (mut outputs, id) = outputs();
         let config = Config::default();
-        let _task: Task<()> = outputs.show_tooltip(id, info("Memory"));
+        let _task: Task<()> = outputs.show_tooltip(id, ModuleName::Clock, info("Memory"));
 
         let _menu: Task<()> = outputs.toggle_menu(
             id,

@@ -32,12 +32,16 @@ impl App {
                 entered,
                 tooltip
             } => {
-                self.attention
-                    .follow_pointer(module, entered, self.outputs.menu_is_open());
+                self.attention.follow_pointer(
+                    module.clone(),
+                    entered,
+                    self.outputs.menu_is_open()
+                );
 
                 match tooltip {
-                    Some(info) => self.outputs.show_tooltip(surface, info),
-                    None => self.outputs.hide_tooltip(surface)
+                    Some(info) => self.outputs.show_tooltip(surface, module, info),
+                    None if entered => self.outputs.hide_tooltip(surface, None),
+                    None => self.outputs.hide_tooltip(surface, Some(&module))
                 }
             }
             Message::ToggleMenu(menu_type, id, button_ui_ref) => {
