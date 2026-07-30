@@ -52,9 +52,6 @@ impl<Message> Program<Message> for AlertIndicator {
 /// Diameter of the alert dot, in em of the themed font.
 const ALERT_DOT_EM: f32 = 0.5;
 
-/// Horizontal breathing room around the icon, in em of the themed font.
-const ICON_SIDE_PADDING_EM: f32 = 0.1;
-
 /// Resolves the color a module paints itself with for the state it reports.
 ///
 /// The alternate state carries the bucket a listener assigns to its reading,
@@ -83,15 +80,15 @@ where
 {
     let state_color = state_color(module, config);
 
-    let mut icon_element = config
-        .icon
-        .as_ref()
-        .map_or_else(|| icon(icons, Icons::None), |text| icon_raw(text.clone()));
+    let mut icon_element = config.icon.as_ref().map_or_else(
+        || icon(icons, Icons::None),
+        |glyph| icon_raw(glyph.trim().to_owned())
+    );
 
     if let Some(icons_map) = &config.icons {
         for (re, icon_str) in icons_map {
             if re.is_match(&module.data.alt) {
-                icon_element = icon_raw(icon_str.clone());
+                icon_element = icon_raw(icon_str.trim().to_owned());
                 break;
             }
         }
@@ -101,8 +98,7 @@ where
         icon_element = icon_element.color(color);
     }
 
-    let padded_icon_container =
-        container(icon_element).padding([0.0, appearance.spacing(ICON_SIDE_PADDING_EM)]);
+    let padded_icon_container = container(icon_element);
 
     let mut show_alert = false;
     if let Some(re) = &config.alert
@@ -141,10 +137,12 @@ where
         Some(text(error.to_display_message()))
     } else {
         module.data.text.as_ref().and_then(|text_content| {
-            if text_content.is_empty() {
+            let trimmed = text_content.trim();
+
+            if trimmed.is_empty() {
                 None
             } else {
-                Some(text(text_content.clone()))
+                Some(text(trimmed.to_owned()))
             }
         })
     };

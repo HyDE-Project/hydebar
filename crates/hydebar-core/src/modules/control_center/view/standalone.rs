@@ -70,7 +70,7 @@ impl ControlCenter {
             Row::new()
                 .push_maybe(connection)
                 .push_maybe(vpn)
-                .spacing(scale::scaled(4.0))
+                .spacing(scale::icon_gap())
                 .into(),
             Some(OnModulePress::ToggleMenu(MenuType::Network))
         ))

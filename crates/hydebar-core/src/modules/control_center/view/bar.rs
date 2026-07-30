@@ -70,10 +70,10 @@ impl ControlCenter {
                     Row::new()
                         .push_maybe(connection_indicator)
                         .push_maybe(vpn_indicator)
-                        .spacing(scale::scaled(4.0))
+                        .spacing(scale::icon_gap())
                 )
                 .push_maybe(battery_indicator)
-                .spacing(scale::scaled(8.0))
+                .spacing(scale::item_gap())
                 .into(),
             Some(OnModulePress::ToggleMenu(MenuType::ControlCenter))
         ))

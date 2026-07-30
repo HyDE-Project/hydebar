@@ -30,7 +30,7 @@ impl BatteryData {
 
         container(
             row!(icon(icons, icon_type), text(format!("{}%", self.capacity)))
-                .spacing(scale::scaled(4.0))
+                .spacing(scale::icon_gap())
                 .align_y(Alignment::Center)
         )
         .style(move |theme: &Theme| container::Style {
@@ -56,7 +56,7 @@ impl BatteryData {
                     icon(icons, self.get_icon()),
                     text(format!("{}%", self.capacity))
                 )
-                .spacing(scale::scaled(4.0))
+                .spacing(scale::icon_gap())
             )
             .style(move |theme: &Theme| container::Style {
                 text_color: Some(match state {

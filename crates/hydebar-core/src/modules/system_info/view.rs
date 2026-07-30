@@ -458,7 +458,7 @@ where
     Some((
         Row::with_children(indicators)
             .align_y(Alignment::Center)
-            .spacing(appearance.module_gap())
+            .spacing(scale::item_gap())
             .into(),
         Some(on_press)
     ))

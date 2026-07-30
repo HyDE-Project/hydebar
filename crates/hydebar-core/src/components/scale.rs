@@ -74,6 +74,26 @@ pub fn scaled(size: f32) -> f32 {
     size * factor()
 }
 
+/// Gap between an icon and the value it labels, in pixels.
+///
+/// The same law the module wrappers use, restated here for the views that
+/// have no appearance at hand: one number, or the same pair reads tighter in
+/// one module than in the next.
+#[must_use]
+pub fn icon_gap() -> f32 {
+    base() * hydebar_proto::config::ICON_LABEL_GAP_EM
+}
+
+/// Gap between two readouts standing side by side inside one module.
+///
+/// Exactly the gap two neighbouring modules show between them — the side
+/// padding of each, twice — so a module drawing several readouts is
+/// indistinguishable from several modules standing next to each other.
+#[must_use]
+pub fn item_gap() -> f32 {
+    base() * (hydebar_proto::config::MODULE_SIDE_PADDING_EM * 2.0)
+}
+
 #[cfg(test)]
 mod tests {
     use std::sync::{Mutex, MutexGuard};

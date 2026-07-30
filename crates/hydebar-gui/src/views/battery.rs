@@ -23,7 +23,7 @@ pub fn render_battery_indicator(
 ) -> Element<'static, Message> {
     let mut content = row![icon(icons, data.icon.into())]
         .align_y(Alignment::Center)
-        .spacing(scale::scaled(4.0));
+        .spacing(scale::icon_gap());
 
     if config.show_percentage {
         content = content.push(text(format!("{}%", data.capacity)));
@@ -69,6 +69,6 @@ pub fn render_battery(
 
     row(segments)
         .align_y(Alignment::Center)
-        .spacing(scale::scaled(4.0))
+        .spacing(scale::icon_gap())
         .into()
 }

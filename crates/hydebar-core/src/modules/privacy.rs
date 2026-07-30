@@ -151,7 +151,7 @@ where
                                     .then(|| icon(icons, Icons::Mic1))
                             )
                             .align_y(Alignment::Center)
-                            .spacing(scale::scaled(8.0))
+                            .spacing(scale::item_gap())
                     )
                     .style(|theme| container::Style {
                         text_color: Some(theme.extended_palette().danger.weak.color),

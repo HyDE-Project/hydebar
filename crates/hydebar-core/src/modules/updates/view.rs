@@ -52,7 +52,7 @@ pub(super) fn icon(
 
     let mut content = row!(container(icon_component(icons, icon)))
         .align_y(Alignment::Center)
-        .spacing(scale::scaled(4.0));
+        .spacing(scale::icon_gap());
 
     if update_count > 0 {
         content = content.push(text(update_count));
