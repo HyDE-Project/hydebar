@@ -1,9 +1,11 @@
-mod calendar;
-mod view;
+//! The clock: the current time in the configured formats, and nothing else.
+//!
+//! The calendar and the weather are modules of their own; this one only knows
+//! what time it is. Its bar entry opens the calendar menu, which is
+//! composition between blocks, not knowledge of each other's insides.
 
 use std::time::Duration;
 
-pub use calendar::{CalendarData, CalendarError, CalendarState, DayInfo};
 use chrono::{DateTime, Local};
 use iced::Element;
 use log::error;
@@ -11,26 +13,24 @@ use tokio::{task::JoinHandle, time::sleep};
 
 use crate::{
     ModuleContext, ModuleEventSender,
-    components::{icons::IconTheme, text::text},
+    components::text::text,
     config::ClockModuleConfig,
     event_bus::ModuleEvent,
     format_cycle::FormatCycle,
     menu::MenuType,
-    modules::{Module, ModuleError, OnModulePress, weather::WeatherData}
+    modules::{Module, ModuleError, OnModulePress}
 };
 
-/// Clock data for rendering
+/// The moment the clock last read.
 #[derive(Debug, Clone)]
 pub struct ClockData {
-    pub current_time: DateTime<Local>,
-    pub weather:      Option<WeatherData>
+    pub current_time: DateTime<Local>
 }
 
 impl ClockData {
     pub fn new() -> Self {
         Self {
-            current_time: Local::now(),
-            weather:      None
+            current_time: Local::now()
         }
     }
 
@@ -38,11 +38,7 @@ impl ClockData {
         self.current_time = Local::now();
     }
 
-    pub fn update_weather(&mut self, weather: WeatherData) {
-        self.weather = Some(weather);
-    }
-
-    /// Format the time according to chrono format string
+    /// The time rendered through a `chrono` format string.
     pub fn format(&self, format: &str) -> String {
         self.current_time.format(format).to_string()
     }
@@ -54,19 +50,16 @@ impl Default for ClockData {
     }
 }
 
-/// Events emitted by the clock module
+/// Events emitted by the clock module.
 #[derive(Debug, Clone)]
 pub enum ClockEvent {
     Tick(DateTime<Local>)
 }
 
-/// Message type for GUI communication
+/// What the clock reacts to.
 #[derive(Debug, Clone)]
 pub enum Message {
     Update,
-    UpdateWeather(WeatherData),
-    PreviousMonth,
-    NextMonth,
     /// Switch to the next configured format, wrapping after the last one.
     NextFormat
 }
@@ -108,26 +101,24 @@ fn duration_until_next_tick(now: DateTime<Local>, period: Duration) -> Duration 
     Duration::from_nanos(u64::try_from(remaining).unwrap_or(u64::MAX))
 }
 
-/// Clock module - business logic only, no GUI!
+/// The clock module.
 #[derive(Debug)]
 pub struct Clock {
-    data:           ClockData,
-    tick_interval:  Duration,
-    sender:         Option<ModuleEventSender<ClockEvent>>,
-    task:           Option<JoinHandle<()>>,
-    calendar_state: CalendarState,
-    format:         FormatCycle
+    data:          ClockData,
+    tick_interval: Duration,
+    sender:        Option<ModuleEventSender<ClockEvent>>,
+    task:          Option<JoinHandle<()>>,
+    format:        FormatCycle
 }
 
 impl Default for Clock {
     fn default() -> Self {
         Self {
-            data:           ClockData::new(),
-            tick_interval:  Duration::from_secs(5),
-            sender:         None,
-            task:           None,
-            calendar_state: CalendarState::default(),
-            format:         FormatCycle::new()
+            data:          ClockData::new(),
+            tick_interval: Duration::from_secs(5),
+            sender:        None,
+            task:          None,
+            format:        FormatCycle::new()
         }
     }
 }
@@ -137,14 +128,9 @@ impl Clock {
         Self::default()
     }
 
-    /// Get current clock data for rendering
+    /// The moment the clock last read.
     pub fn data(&self) -> &ClockData {
         &self.data
-    }
-
-    /// Get current calendar state for rendering
-    pub fn calendar_state(&self) -> &CalendarState {
-        &self.calendar_state
     }
 
     /// Format string the active index selects.
@@ -152,7 +138,7 @@ impl Clock {
         self.format.resolve(&config.format, &config.format_alt)
     }
 
-    /// Initialize with module context and clock configuration
+    /// Starts the tick loop for the configured formats.
     pub fn register(&mut self, ctx: &ModuleContext, config: &ClockModuleConfig) {
         self.tick_interval = Self::determine_interval(config);
         self.data.update();
@@ -203,30 +189,16 @@ impl Clock {
         self.sender = None;
     }
 
-    /// Update clock state from GUI message
+    /// Applies what the user or the tick loop asked.
     pub fn update(&mut self, message: Message, config: &ClockModuleConfig) {
         match message {
             Message::Update => {
                 self.data.update();
             }
-            Message::UpdateWeather(weather) => {
-                self.data.update_weather(weather);
-            }
-            Message::PreviousMonth => {
-                self.calendar_state.previous_month();
-            }
-            Message::NextMonth => {
-                self.calendar_state.next_month();
-            }
             Message::NextFormat => {
                 self.format.advance(&config.format_alt);
             }
         }
-    }
-
-    /// Renders the calendar menu view.
-    pub fn menu_view(&self, icons: &IconTheme) -> Element<'_, Message> {
-        view::build_calendar_menu_view(&self.calendar_state, icons)
     }
 
     /// Determine tick interval from every format the module can render.

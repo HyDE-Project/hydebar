@@ -180,19 +180,12 @@ impl App {
                 self.clock.update(message, &self.config.clock);
                 Task::none()
             }
+            Message::Calendar(message) => {
+                self.calendar.update(message);
+                Task::none()
+            }
             Message::Weather(message) => {
-                self.weather.update(message.clone());
-
-                // If clock is configured to show weather, update it too
-                if self.config.clock.show_weather
-                    && let modules::weather::Message::Update(weather_data) = message
-                {
-                    self.clock.update(
-                        modules::clock::Message::UpdateWeather(weather_data),
-                        &self.config.clock
-                    );
-                }
-
+                self.weather.update(message);
                 Task::none()
             }
             Message::Battery(message) => {

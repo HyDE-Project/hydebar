@@ -399,7 +399,7 @@ impl App {
                     ),
                     Some((MenuType::Calendar, button_ui_ref)) => menu_wrapper(
                         id,
-                        self.clock.menu_view(self.icons()).map(Message::Clock),
+                        self.calendar.menu_view(self.icons()).map(Message::Calendar),
                         MenuSize::Medium,
                         *button_ui_ref,
                         self.menu_layout(animated_opacity),

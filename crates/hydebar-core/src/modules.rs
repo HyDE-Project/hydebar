@@ -7,6 +7,7 @@ use crate::{attention::PollSchedule, event_bus::EventBusError, menu::MenuType};
 
 pub mod app_launcher;
 pub mod battery;
+pub mod calendar;
 pub mod clipboard;
 pub mod clock;
 pub mod control_center;
