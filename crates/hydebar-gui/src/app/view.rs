@@ -165,17 +165,27 @@ impl App {
                             .into()
                         }),
                         AppearanceStyle::Islands => {
-                            if self.outputs.menu_is_open() {
-                                Some(backdrop_color(self.appearance().menu.backdrop).into())
-                            } else if self.appearance().bar_opacity > 0.0 {
-                                Some(
-                                    t.palette()
-                                        .background
-                                        .scale_alpha(self.appearance().bar_opacity)
-                                        .into()
-                                )
-                            } else {
-                                None
+                            let wash = (self.appearance().bar_opacity > 0.0).then(|| {
+                                t.palette()
+                                    .background
+                                    .scale_alpha(self.appearance().bar_opacity)
+                            });
+
+                            // The dim of an open menu lands on top of the
+                            // strip's own wash, never in its place: the wash
+                            // is what the compositor's blur threshold sees,
+                            // and replacing it with a fully clear backdrop
+                            // turned the blur off for as long as a menu was
+                            // open.
+                            match (wash, self.outputs.menu_is_open()) {
+                                (Some(wash), true) => Some(
+                                    darken_color(wash, self.appearance().menu.backdrop).into()
+                                ),
+                                (Some(wash), false) => Some(wash.into()),
+                                (None, true) => {
+                                    Some(backdrop_color(self.appearance().menu.backdrop).into())
+                                }
+                                (None, false) => None
                             }
                         }
                     },
