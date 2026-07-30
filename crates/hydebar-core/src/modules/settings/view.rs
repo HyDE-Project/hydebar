@@ -37,7 +37,8 @@ impl Settings {
         config: &'a Config,
         opacity: f32,
         icons: &IconTheme,
-        magnification: f32
+        magnification: f32,
+        page_width: f32
     ) -> Element<'a, Message> {
         let font_size = config.appearance.font_size.unwrap_or(DEFAULT_FONT_SIZE);
         let active = self.tab();
@@ -68,7 +69,7 @@ impl Settings {
                 font_size,
                 self.section(),
                 self.selected(),
-                self.page_width(config)
+                page_width
             )
         };
 
@@ -86,12 +87,6 @@ impl Settings {
     /// The grid that wraps — the module catalogue — has to wrap against the
     /// room it gets rather than against the room the window asks for, or it
     /// would fit one chip too many and run past the edge.
-    fn page_width(&self, config: &Config) -> f32 {
-        let font_size = config.appearance.font_size.unwrap_or(DEFAULT_FONT_SIZE);
-
-        self.content_width(config) - metrics::ROW_SLACK_EM * font_size
-    }
-
     /// Width the longest row of the current page needs.
     ///
     /// The window asks for exactly this much and no more: the screen only ever
@@ -123,6 +118,19 @@ impl Settings {
     /// Measured rather than guessed so the window can be capped to the screen
     /// and scroll the rest: a page taller than the screen would otherwise have
     /// its last rows cut off by the edge.
+    /// The three window lengths, with the content walked exactly once.
+    #[must_use]
+    pub fn window_metrics(&self, config: &Config) -> crate::menu::MenuMetrics {
+        let font_size = config.appearance.font_size.unwrap_or(DEFAULT_FONT_SIZE);
+        let width = self.content_width(config);
+
+        crate::menu::MenuMetrics {
+            width,
+            page_width: width - metrics::ROW_SLACK_EM * font_size,
+            height: self.content_height(config)
+        }
+    }
+
     #[must_use]
     pub fn content_height(&self, config: &Config) -> f32 {
         let font_size = config.appearance.font_size.unwrap_or(DEFAULT_FONT_SIZE);
@@ -196,7 +204,7 @@ mod tests {
         let config = Config::default();
         let settings = Settings::default();
 
-        assert!(settings.page_width(&config) < settings.content_width(&config));
+        assert!(settings.window_metrics(&config).page_width < settings.content_width(&config));
     }
 
     #[test]

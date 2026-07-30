@@ -324,39 +324,42 @@ impl App {
                         Message::None,
                         Message::CloseMenu(id)
                     ),
-                    Some((MenuType::Settings, button_ui_ref)) => menu_wrapper(
-                        id,
-                        self.settings
-                            .menu_view(
-                                &self.config,
-                                animated_opacity,
-                                self.icons(),
-                                self.magnification
-                            )
-                            .map(Message::Settings),
-                        MenuSize::Content(self.settings.content_width(&self.config)),
-                        *button_ui_ref,
-                        self.measured_menu_layout(
-                            animated_opacity,
-                            self.settings.content_height(&self.config)
-                        ),
-                        Message::None,
-                        Message::CloseMenu(id)
-                    ),
-                    Some((MenuType::Themes, button_ui_ref)) => menu_wrapper(
-                        id,
-                        self.themes
-                            .menu_view(&self.config, animated_opacity)
-                            .map(Message::Themes),
-                        MenuSize::Content(self.themes.content_width(&self.config)),
-                        *button_ui_ref,
-                        self.measured_menu_layout(
-                            animated_opacity,
-                            self.themes.content_height(&self.config)
-                        ),
-                        Message::None,
-                        Message::CloseMenu(id)
-                    ),
+                    Some((MenuType::Settings, button_ui_ref)) => {
+                        let metrics = self.settings.window_metrics(&self.config);
+
+                        menu_wrapper(
+                            id,
+                            self.settings
+                                .menu_view(
+                                    &self.config,
+                                    animated_opacity,
+                                    self.icons(),
+                                    self.magnification,
+                                    metrics.page_width
+                                )
+                                .map(Message::Settings),
+                            MenuSize::Content(metrics.width),
+                            *button_ui_ref,
+                            self.measured_menu_layout(animated_opacity, metrics.height),
+                            Message::None,
+                            Message::CloseMenu(id)
+                        )
+                    }
+                    Some((MenuType::Themes, button_ui_ref)) => {
+                        let metrics = self.themes.window_metrics(&self.config);
+
+                        menu_wrapper(
+                            id,
+                            self.themes
+                                .menu_view(&self.config, animated_opacity, metrics.page_width)
+                                .map(Message::Themes),
+                            MenuSize::Content(metrics.width),
+                            *button_ui_ref,
+                            self.measured_menu_layout(animated_opacity, metrics.height),
+                            Message::None,
+                            Message::CloseMenu(id)
+                        )
+                    }
                     Some((MenuType::MediaPlayer, button_ui_ref)) => menu_wrapper(
                         id,
                         self.media_player

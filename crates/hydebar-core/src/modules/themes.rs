@@ -230,7 +230,12 @@ impl Themes {
     /// `opacity` is the menu opacity the surface is animating through, so the
     /// chips fade in with the box that holds them.
     #[must_use]
-    pub fn menu_view<'a>(&self, config: &Config, opacity: f32) -> Element<'a, Message> {
+    pub fn menu_view<'a>(
+        &self,
+        config: &Config,
+        opacity: f32,
+        page_width: f32
+    ) -> Element<'a, Message> {
         let font_size = config.appearance.font_size_px();
 
         view::view(
@@ -240,15 +245,22 @@ impl Themes {
             self.spinner,
             opacity,
             font_size,
-            self.page_width(config)
+            page_width
         )
     }
 
-    /// Width the menu draws into, the slack a row keeps excluded.
-    fn page_width(&self, config: &Config) -> f32 {
+    /// The three window lengths, with the content walked exactly once.
+    #[must_use]
+    pub fn window_metrics(&self, config: &Config) -> crate::menu::MenuMetrics {
         let font_size = config.appearance.font_size_px();
+        let width = self.content_width(config);
+        let page_width = width - page::metrics::ROW_SLACK_EM * font_size;
 
-        self.content_width(config) - page::metrics::ROW_SLACK_EM * font_size
+        crate::menu::MenuMetrics {
+            width,
+            page_width,
+            height: view::desired_height(&self.hyde, font_size, page_width)
+        }
     }
 
     /// Width the longest row of the menu needs.
@@ -267,9 +279,7 @@ impl Themes {
     /// Height the menu needs.
     #[must_use]
     pub fn content_height(&self, config: &Config) -> f32 {
-        let font_size = config.appearance.font_size_px();
-
-        view::desired_height(&self.hyde, font_size, self.page_width(config))
+        self.window_metrics(config).height
     }
 
     /// Applies a choice made in the module.

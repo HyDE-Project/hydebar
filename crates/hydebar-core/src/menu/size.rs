@@ -21,6 +21,21 @@ const MAX_HEIGHT_SHARE: f32 = 0.85;
 /// Gap kept between a menu and the screen edge, in multiples of the text size.
 const EDGE_MARGIN_EM: f32 = 0.8;
 
+/// The three lengths a measured window states, measured once per frame.
+///
+/// One struct rather than three calls on purpose: the width measurement walks
+/// the whole content, and asking for it from three places made every frame
+/// pay for the walk three times.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct MenuMetrics {
+    /// Width the window box asks the screen for.
+    pub width:      f32,
+    /// Width the page inside may draw into, slack excluded.
+    pub page_width: f32,
+    /// Height the content needs before the screen caps it.
+    pub height:     f32
+}
+
 /// How wide a menu asks to be.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum MenuSize {
