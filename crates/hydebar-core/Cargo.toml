@@ -5,6 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+quick-xml.workspace = true
 ttf-parser.workspace = true
 chrono.workspace = true
 dirs.workspace = true

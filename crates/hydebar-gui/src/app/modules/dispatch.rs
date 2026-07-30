@@ -105,6 +105,7 @@ impl App {
             ModuleName::KeyboardSubmap => self.keyboard_submap.view(()),
             ModuleName::Tray => self.tray.view((id, opacity)),
             ModuleName::Clock => self.clock.view(&self.config.clock),
+            ModuleName::HydeMenu => self.hyde_menu.view(self.icons()),
             ModuleName::Battery => self.battery.data().map(|data| {
                 (
                     crate::views::battery::render_battery(
@@ -173,6 +174,7 @@ impl App {
             ModuleName::KeyboardSubmap => self.keyboard_submap.subscription(),
             ModuleName::Tray => self.tray.subscription(),
             ModuleName::Clock => None,
+            ModuleName::HydeMenu => None,
             ModuleName::Themes => None,
             ModuleName::Wallpaper => None,
             ModuleName::Battery => None,

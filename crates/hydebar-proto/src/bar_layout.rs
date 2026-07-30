@@ -184,6 +184,10 @@ fn module_for(name: &str, custom: &BTreeSet<&str>) -> Option<ModuleName> {
             return Some(ModuleName::Themes);
         }
 
+        if tail == "hyde-menu" {
+            return Some(ModuleName::HydeMenu);
+        }
+
         if custom.contains(tail) {
             return Some(ModuleName::Custom(tail.to_owned()));
         }
@@ -225,6 +229,7 @@ fn builtin_for_custom(tail: &str) -> Option<ModuleName> {
         "power" | "powermenu" => ModuleName::Settings,
         "theme" | "themeswitch" => ModuleName::Themes,
         "wallchange" => ModuleName::Wallpaper,
+        "hyde-menu" => ModuleName::HydeMenu,
         "spotify" | "mediaplayer" => ModuleName::MediaPlayer,
         "swaync" | "dunst" | "notifications" => ModuleName::Notifications,
         "bluetooth" => ModuleName::Bluetooth,
@@ -281,7 +286,7 @@ pub fn display_label(name: &str) -> String {
 /// Layout files carry line and block comments and the odd trailing comma;
 /// both are removed outside of strings so the strict parser can take the
 /// rest.
-fn plain_json(source: &str) -> String {
+pub fn plain_json(source: &str) -> String {
     let without_comments = strip_comments(source);
 
     strip_trailing_commas(&without_comments)

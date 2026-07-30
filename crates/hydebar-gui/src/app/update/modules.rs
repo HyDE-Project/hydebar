@@ -184,6 +184,14 @@ impl App {
                 self.calendar.update(message);
                 Task::none()
             }
+            Message::HydeMenu(message) => match self.hyde_menu.update(message) {
+                Some((surface, command)) => {
+                    hydebar_core::utils::launcher::execute_command(command);
+
+                    self.outputs.close_menu(surface, &self.config)
+                }
+                None => Task::none()
+            },
             Message::Weather(message) => {
                 self.weather.update(message);
                 Task::none()

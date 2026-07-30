@@ -69,6 +69,9 @@ impl App {
                     MenuType::Audio => {
                         self.control_center.sub_menu = Some(SubMenu::Sinks);
                     }
+                    MenuType::HydeMenu => {
+                        self.hyde_menu.reload();
+                    }
                     MenuType::Network => {
                         if self.outputs.open_menu() != Some(&MenuType::Network) {
                             self.control_center.sub_menu = None;

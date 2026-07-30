@@ -55,6 +55,7 @@ pub enum ModuleName {
     Settings,
     Themes,
     Wallpaper,
+    HydeMenu,
     MediaPlayer,
     Notifications,
     Screenshot,
@@ -64,7 +65,7 @@ pub enum ModuleName {
 
 impl ModuleName {
     /// Every module the bar ships, in the order the editor lists them.
-    pub const BUILT_IN: [ModuleName; 24] = [
+    pub const BUILT_IN: [ModuleName; 25] = [
         ModuleName::AppLauncher,
         ModuleName::Updates,
         ModuleName::Clipboard,
@@ -85,6 +86,7 @@ impl ModuleName {
         ModuleName::Settings,
         ModuleName::Themes,
         ModuleName::Wallpaper,
+        ModuleName::HydeMenu,
         ModuleName::MediaPlayer,
         ModuleName::Notifications,
         ModuleName::Screenshot,
@@ -115,6 +117,7 @@ impl ModuleName {
             ModuleName::Settings => "Settings",
             ModuleName::Themes => "Themes",
             ModuleName::Wallpaper => "Wallpaper",
+            ModuleName::HydeMenu => "HydeMenu",
             ModuleName::MediaPlayer => "MediaPlayer",
             ModuleName::Notifications => "Notifications",
             ModuleName::Screenshot => "Screenshot",
@@ -151,6 +154,7 @@ impl ModuleName {
             ModuleName::Settings => "Bar settings",
             ModuleName::Themes => "Desktop themes",
             ModuleName::Wallpaper => "Wallpaper",
+            ModuleName::HydeMenu => "HyDE menu",
             ModuleName::MediaPlayer => "Media player",
             ModuleName::Notifications => "Notifications",
             ModuleName::Screenshot => "Screenshot",

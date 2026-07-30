@@ -12,6 +12,7 @@ pub mod clipboard;
 pub mod clock;
 pub mod control_center;
 pub mod custom_module;
+pub mod hyde_menu;
 pub mod idle_inhibitor;
 pub mod keyboard_layout;
 pub mod keyboard_submap;

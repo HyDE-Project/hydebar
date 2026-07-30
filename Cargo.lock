@@ -1618,6 +1618,7 @@ dependencies = [
  "log",
  "masterror",
  "pipewire",
+ "quick-xml",
  "regex",
  "reqwest",
  "serde",

@@ -68,6 +68,10 @@ impl App {
             modules::Module::<Message>::deregister(&mut self.clipboard);
         }
 
+        if hosts(ModuleName::HydeMenu) {
+            let _ = modules::Module::<Message>::register(&mut self.hyde_menu, ctx, ());
+        }
+
         if hosts(ModuleName::Clock) {
             self.clock.register(ctx, &self.config.clock);
         } else {

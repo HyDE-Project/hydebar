@@ -313,6 +313,17 @@ impl App {
                         Message::None,
                         Message::CloseMenu(id)
                     ),
+                    Some((MenuType::HydeMenu, button_ui_ref)) => menu_wrapper(
+                        id,
+                        self.hyde_menu
+                            .menu_view(id, animated_opacity)
+                            .map(Message::HydeMenu),
+                        MenuSize::Small,
+                        *button_ui_ref,
+                        self.menu_layout(animated_opacity),
+                        Message::None,
+                        Message::CloseMenu(id)
+                    ),
                     Some((MenuType::Settings, button_ui_ref)) => menu_wrapper(
                         id,
                         self.settings

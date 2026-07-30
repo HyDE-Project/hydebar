@@ -13,6 +13,7 @@ edition = "2024"
 rust-version = "1.97"
 
 [workspace.dependencies]
+quick-xml = "0.41"
 ttf-parser = "0.25"
 iced = { package = "iced_layershell", git = "https://github.com/MalpenZibo/iced_layershell", tag = "v0.2.1", features = [
   "tokio",

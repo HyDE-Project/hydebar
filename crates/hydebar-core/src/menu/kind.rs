@@ -16,6 +16,7 @@ pub enum MenuType {
     PowerProfile,
     /// Window configuring the bar itself.
     Settings,
+    HydeMenu,
     /// Menu of the theme module, listing the installed desktop themes.
     Themes,
     Tray(String),
@@ -45,6 +46,7 @@ impl MenuType {
             Self::Bluetooth => ModuleName::Bluetooth,
             Self::PowerProfile => ModuleName::PowerProfile,
             Self::Settings => ModuleName::Settings,
+            Self::HydeMenu => ModuleName::HydeMenu,
             Self::Themes => ModuleName::Themes,
             Self::Tray(_) => ModuleName::Tray,
             Self::MediaPlayer => ModuleName::MediaPlayer,

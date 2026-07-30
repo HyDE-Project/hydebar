@@ -17,6 +17,7 @@ use hydebar_core::{
         clock::Clock,
         control_center::ControlCenter,
         custom_module::Custom,
+        hyde_menu::HydeMenu,
         idle_inhibitor::IdleInhibitor,
         keyboard_layout::KeyboardLayout,
         keyboard_submap::KeyboardSubmap,
@@ -80,6 +81,7 @@ pub struct App {
     pub tray: TrayModule,
     pub clock: Clock,
     pub calendar: Calendar,
+    pub hyde_menu: HydeMenu,
     pub battery: Battery,
     pub privacy: Privacy,
     pub control_center: ControlCenter,
@@ -161,6 +163,7 @@ pub enum Message {
     Tray(TrayMessage),
     Clock(modules::clock::Message),
     Calendar(modules::calendar::Message),
+    HydeMenu(modules::hyde_menu::Message),
     Battery(modules::battery::Message),
     Privacy(modules::privacy::PrivacyMessage),
     ControlCenter(modules::control_center::Message),
@@ -232,6 +235,12 @@ impl From<modules::screenshot::ScreenshotMessage> for Message {
 impl From<modules::clock::Message> for Message {
     fn from(msg: modules::clock::Message) -> Self {
         Message::Clock(msg)
+    }
+}
+
+impl From<modules::hyde_menu::Message> for Message {
+    fn from(msg: modules::hyde_menu::Message) -> Self {
+        Message::HydeMenu(msg)
     }
 }
 
@@ -384,6 +393,7 @@ impl App {
             tray: TrayModule::default(),
             clock: Clock::default(),
             calendar: Calendar::default(),
+            hyde_menu: HydeMenu::default(),
             battery: Battery::default(),
             privacy: Privacy::default(),
             control_center: ControlCenter::default(),
