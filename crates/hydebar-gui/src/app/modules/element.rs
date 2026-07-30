@@ -45,12 +45,12 @@ impl App {
         }
     }
 
-    pub(super) fn single_module_wrapper(
-        &self,
-        module_name: &ModuleName,
+    pub(super) fn single_module_wrapper<'a>(
+        &'a self,
+        module_name: &'a ModuleName,
         id: Id,
         opacity: f32
-    ) -> Option<Element<'_, Message>> {
+    ) -> Option<Element<'a, Message>> {
         let module = self
             .get_module_view(module_name, id, opacity)
             .map(|(content, action)| (content, self.module_actions(module_name, action)));
@@ -182,33 +182,37 @@ impl App {
     /// shows no tooltip is still something the user can look at. The hint, when
     /// there is one, rides along on the same message rather than on a second
     /// one, because there is only ever one thing being looked at.
+    ///
+    /// The hint is composed inside the closure on purpose: the closure runs
+    /// when the pointer actually enters or leaves, while the wrapper itself
+    /// runs for every module on every frame — and a date formatted for a
+    /// tooltip nobody hovers is a frame budget spent on nothing.
     fn with_tooltip<'a>(
-        &self,
-        module_name: &ModuleName,
+        &'a self,
+        module_name: &'a ModuleName,
         module: Element<'a, Message>,
         id: Id
     ) -> Element<'a, Message> {
-        let hint = self.module_tooltip(module_name).flatten();
-        let module_name = module_name.clone();
-
         tooltip_anchor(module, move |anchor| Message::ModuleHover {
             surface: id,
             module:  module_name.clone(),
             entered: anchor.is_some(),
-            tooltip: anchor.zip(hint.clone()).map(|(anchor, text)| TooltipInfo {
-                text,
-                anchor
-            })
+            tooltip: anchor
+                .zip(anchor.and(self.module_tooltip(module_name).flatten()))
+                .map(|(anchor, text)| TooltipInfo {
+                    text,
+                    anchor
+                })
         })
         .into()
     }
 
-    pub(super) fn group_module_wrapper(
-        &self,
-        group: &[ModuleName],
+    pub(super) fn group_module_wrapper<'a>(
+        &'a self,
+        group: &'a [ModuleName],
         id: Id,
         opacity: f32
-    ) -> Option<Element<'_, Message>> {
+    ) -> Option<Element<'a, Message>> {
         let modules = group
             .iter()
             .filter_map(|module| {

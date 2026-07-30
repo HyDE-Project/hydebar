@@ -131,7 +131,7 @@ impl App {
             ModuleName::MediaPlayer => self
                 .media_player
                 .view((&self.config.media_player, self.icons())),
-            ModuleName::Notifications => self.notifications.view(()),
+            ModuleName::Notifications => self.notifications.view(self.icons()),
             ModuleName::Screenshot => self.screenshot.view(self.icons()),
             ModuleName::IdleInhibitor => self
                 .idle_inhibitor

@@ -42,12 +42,12 @@ impl App {
         None
     }
 
-    pub fn modules_section(
-        &self,
-        modules_def: &[ModuleDef],
+    pub fn modules_section<'a>(
+        &'a self,
+        modules_def: &'a [ModuleDef],
         id: Id,
         opacity: f32
-    ) -> Element<'_, Message> {
+    ) -> Element<'a, Message> {
         let mut row = row!()
             .height(Length::Shrink)
             .align_y(Alignment::Center)

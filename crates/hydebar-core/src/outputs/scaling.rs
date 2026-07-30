@@ -114,6 +114,20 @@ pub struct ScreenGeometry {
     pub scale:    f32
 }
 
+/// How long an answer from the compositor keeps serving repeat questions.
+///
+/// Output events arrive in bursts — a hotplug or mode change fires several in
+/// a row — and each question costs a process spawn on the thread that draws
+/// the bar. Within a burst the geometry cannot have meaningfully changed.
+const GEOMETRY_FRESHNESS: std::time::Duration = std::time::Duration::from_secs(1);
+
+/// The last answer per screen name, with the moment it was read.
+static GEOMETRY_CACHE: std::sync::LazyLock<
+    std::sync::Mutex<
+        std::collections::HashMap<String, (std::time::Instant, Option<ScreenGeometry>)>
+    >
+> = std::sync::LazyLock::new(std::sync::Mutex::default);
+
 /// Reads the geometry of the named screen from the compositor.
 ///
 /// Asked of the compositor rather than taken from the windowing layer because
@@ -121,8 +135,35 @@ pub struct ScreenGeometry {
 /// magnification is exactly the number that must be computed from physical
 /// pixels and millimetres, or a scaled screen would be shrunk twice and a
 /// television never magnified.
+///
+/// A fresh answer is served from the cache: the question is asked from the
+/// drawing thread, and a burst of output events must not stack up process
+/// spawns there.
 #[must_use]
 pub fn screen_geometry(name: &str) -> Option<ScreenGeometry> {
+    let now = std::time::Instant::now();
+
+    if let Some((asked, answer)) = GEOMETRY_CACHE
+        .lock()
+        .expect("geometry cache poisoned")
+        .get(name)
+        && now.duration_since(*asked) < GEOMETRY_FRESHNESS
+    {
+        return *answer;
+    }
+
+    let answer = query_geometry(name);
+
+    GEOMETRY_CACHE
+        .lock()
+        .expect("geometry cache poisoned")
+        .insert(name.to_owned(), (now, answer));
+
+    answer
+}
+
+/// Asks the compositor outright.
+fn query_geometry(name: &str) -> Option<ScreenGeometry> {
     let output = std::process::Command::new("hyprctl")
         .args(["-j", "monitors"])
         .output()

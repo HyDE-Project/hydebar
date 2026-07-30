@@ -3,7 +3,6 @@ use std::time::Duration;
 use log::warn;
 
 use crate::{
-    ModuleContext,
     components::icons::Icons,
     services::{
         ServiceEvent,
@@ -160,11 +159,6 @@ impl Battery {
     }
 
     /// Registers module with event system
-    pub fn register(&mut self, _ctx: &ModuleContext) {
-        // BatteryEvent is not used for UI updates, Battery module only
-        // subscribes to service events
-    }
-
     /// Processes incoming messages from GUI layer
     pub fn update(&mut self, message: Message) {
         match message {

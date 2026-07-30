@@ -63,6 +63,7 @@ pub enum Icons {
     RightChevron,
     Brightness,
     Point,
+    Bell,
     Close,
     Airplane,
     Webcam,
@@ -85,7 +86,7 @@ pub enum Icons {
 
 impl Icons {
     /// Every icon that can be overridden from the configuration.
-    pub const ALL: [Icons; 78] = [
+    pub const ALL: [Icons; 79] = [
         Icons::None,
         Icons::AppLauncher,
         Icons::Clipboard,
@@ -146,6 +147,7 @@ impl Icons {
         Icons::RightChevron,
         Icons::Brightness,
         Icons::Point,
+        Icons::Bell,
         Icons::Close,
         Icons::Airplane,
         Icons::Webcam,
@@ -230,6 +232,7 @@ impl Icons {
             Icons::RightChevron => "right_chevron",
             Icons::Brightness => "brightness",
             Icons::Point => "point",
+            Icons::Bell => "bell",
             Icons::Close => "close",
             Icons::Airplane => "airplane",
             Icons::Webcam => "webcam",
@@ -321,6 +324,7 @@ impl Icons {
             Icons::RightChevron => "󰅂",
             Icons::Brightness => "󰃠",
             Icons::Point => "",
+            Icons::Bell => "\u{f009a}",
             Icons::Close => "󰅖",
             Icons::Airplane => "󰀝",
             Icons::Webcam => "",

@@ -33,7 +33,19 @@ pub enum NotificationsMessage {
 #[derive(Debug, Default)]
 pub struct Notifications {
     pub service: Option<NotificationsService>,
-    sender:      Option<ModuleEventSender<NotificationsMessage>>
+    sender:      Option<ModuleEventSender<NotificationsMessage>>,
+    /// Notifications as of the last event, rendered without touching the
+    /// store.
+    ///
+    /// The store sits behind a lock the notification server writes from; a
+    /// view that read it directly would take that lock and deep-copy the
+    /// list on every frame of the menu animation. The copy is made once per
+    /// event instead, which is the only time it can change.
+    list:        Vec<Notification>,
+    /// Unread notifications as of the last event.
+    unread:      usize,
+    /// Whether do-not-disturb was on as of the last event.
+    dnd:         bool
 }
 
 impl Notifications {
@@ -69,6 +81,19 @@ impl Notifications {
                 }
             }
         }
+
+        self.refresh_snapshot();
+    }
+
+    /// Re-reads the store once, after something actually changed.
+    fn refresh_snapshot(&mut self) {
+        let Some(service) = self.service.as_ref() else {
+            return;
+        };
+
+        self.list = service.get_notifications();
+        self.unread = service.unread_count();
+        self.dnd = service.is_dnd();
     }
 
     /// Render notification center menu popup.
@@ -77,12 +102,12 @@ impl Notifications {
         _opacity: f32,
         icons: &IconTheme
     ) -> Element<'_, NotificationsMessage> {
-        let Some(service) = self.service.as_ref() else {
+        if self.service.is_none() {
             return text("Loading notifications...").into();
-        };
+        }
 
-        let notifications = service.get_notifications();
-        let is_dnd = service.is_dnd();
+        let notifications = &self.list;
+        let is_dnd = self.dnd;
 
         let mut content = Column::new()
             .spacing(scale::scaled(8.0))
@@ -111,7 +136,7 @@ impl Notifications {
                 list = list.push(notification_item(notification, icons));
             }
 
-            content = content.push(scrollable(list).height(300));
+            content = content.push(scrollable(list).height(scale::scaled(300.0)));
         }
 
         container(content)
@@ -133,7 +158,7 @@ impl<M> Module<M> for Notifications
 where
     M: 'static + Clone + From<NotificationsMessage>
 {
-    type ViewData<'a> = ();
+    type ViewData<'a> = &'a IconTheme;
     type RegistrationData<'a> = ();
 
     fn register(
@@ -160,17 +185,16 @@ where
     /// Render notification icon with unread count.
     fn view(
         &self,
-        _: Self::ViewData<'_>
+        icons: Self::ViewData<'_>
     ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
-        let unread_count = self.service.as_ref().map(|s| s.unread_count()).unwrap_or(0);
-
-        let content = if unread_count > 0 {
+        let content = if self.unread > 0 {
             Row::new()
-                .push(text(format!("🔔 {}", unread_count,)))
-                .spacing(scale::scaled(4.0))
+                .push(icon(icons, Icons::Bell))
+                .push(text(self.unread))
+                .spacing(scale::icon_gap())
                 .align_y(Alignment::Center)
         } else {
-            Row::new().push(text("🔔"))
+            Row::new().push(icon(icons, Icons::Bell))
         };
 
         Some((
@@ -181,7 +205,7 @@ where
 }
 
 /// Render a single notification item.
-fn notification_item<M>(notification: Notification, icons: &IconTheme) -> Element<'static, M>
+fn notification_item<M>(notification: &Notification, icons: &IconTheme) -> Element<'static, M>
 where
     M: 'static + Clone + From<NotificationsMessage>
 {

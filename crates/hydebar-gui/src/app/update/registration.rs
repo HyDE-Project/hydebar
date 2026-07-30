@@ -159,8 +159,6 @@ impl App {
             modules::Module::<Message>::deregister(&mut self.tray);
         }
 
-        self.battery.register(ctx);
-
         if hosts(ModuleName::Privacy) {
             register(
                 "privacy",
