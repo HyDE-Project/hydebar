@@ -1,11 +1,8 @@
 //! Text widgets rendering a glyph in the icon font.
 
-use iced::{
-    Font,
-    widget::{Text, text}
-};
+use iced::{Font, widget::Text};
 
-use super::{catalog::Icons, theme::IconTheme};
+use super::{super::text::text, catalog::Icons, theme::IconTheme};
 
 /// Font every glyph of the catalogue is looked up in.
 const ICON_FONT: &str = "Symbols Nerd Font";
@@ -15,7 +12,10 @@ pub fn icon<'a>(theme: &IconTheme, icon: Icons) -> Text<'a> {
     sized(icon_raw(theme.glyph(icon).to_owned()), theme.size())
 }
 
-/// Renders an arbitrary glyph in the icon font, at the renderer default size.
+/// Renders an arbitrary glyph in the icon font, at the themed size.
+///
+/// Built on the themed text helper on purpose: a glyph left at the renderer
+/// default would stay small while the rest of the bar follows the screen.
 pub fn icon_raw<'a>(glyph: String) -> Text<'a> {
     text(glyph).font(Font::with_name(ICON_FONT))
 }
