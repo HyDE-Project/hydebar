@@ -180,6 +180,10 @@ fn module_for(name: &str, custom: &BTreeSet<&str>) -> Option<ModuleName> {
     let name = name.split('#').next().unwrap_or(name);
 
     if let Some(tail) = name.strip_prefix("custom/") {
+        if matches!(tail, "theme" | "themeswitch") {
+            return Some(ModuleName::Themes);
+        }
+
         if custom.contains(tail) {
             return Some(ModuleName::Custom(tail.to_owned()));
         }
@@ -444,18 +448,32 @@ mod tests {
     /// about.
     #[test]
     fn a_defined_custom_module_wins_over_the_built_in_map() {
-        let custom = vec!["theme".to_owned()];
-        let source = r#"{ "modules-left": ["custom/theme", "custom/updates"] }"#;
+        let custom = vec!["wallchange".to_owned()];
+        let source = r#"{ "modules-left": ["custom/wallchange", "custom/updates"] }"#;
 
         let modules = parse(source, &custom).expect("layout");
 
         assert_eq!(
             modules.left,
             vec![
-                ModuleDef::Single(ModuleName::Custom("theme".to_owned())),
+                ModuleDef::Single(ModuleName::Custom("wallchange".to_owned())),
                 ModuleDef::Single(ModuleName::Updates),
             ]
         );
+    }
+
+    /// Pressing the theme chip has to open the list of themes. A configured
+    /// wrapper of that name runs a switch command instead — no list, no
+    /// feedback — so the theme chip is the one entry the native module always
+    /// answers for.
+    #[test]
+    fn the_theme_chip_always_opens_the_theme_list() {
+        let custom = vec!["theme".to_owned()];
+        let source = r#"{ "modules-left": ["custom/theme"] }"#;
+
+        let modules = parse(source, &custom).expect("layout");
+
+        assert_eq!(modules.left, vec![ModuleDef::Single(ModuleName::Themes)]);
     }
 
     #[test]
