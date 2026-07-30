@@ -403,7 +403,7 @@ impl App {
                     Some((MenuType::Screenshot, button_ui_ref)) => menu_wrapper(
                         id,
                         self.screenshot
-                            .menu_view(animated_opacity)
+                            .menu_view(animated_opacity, self.icons())
                             .map(Message::Screenshot),
                         MenuSize::Small,
                         *button_ui_ref,

@@ -183,7 +183,7 @@ impl Screenshot {
     }
 
     /// Render screenshot actions menu.
-    pub fn menu_view(&self, _opacity: f32) -> Element<'_, ScreenshotMessage> {
+    pub fn menu_view(&self, _opacity: f32, icons: &IconTheme) -> Element<'_, ScreenshotMessage> {
         let mut content = Column::new()
             .spacing(scale::scaled(8.0))
             .padding(scale::scaled(12.0));
@@ -195,8 +195,9 @@ impl Screenshot {
             .push(
                 button(
                     Row::new()
-                        .push(text("📐 Select Area"))
-                        .spacing(scale::scaled(8.0))
+                        .push(icon(icons, Icons::AreaSelect))
+                        .push(text("Select Area"))
+                        .spacing(scale::icon_gap())
                         .align_y(Alignment::Center)
                 )
                 .on_press(ScreenshotMessage::TakeScreenshot(ScreenshotAction::Area))
@@ -205,8 +206,9 @@ impl Screenshot {
             .push(
                 button(
                     Row::new()
-                        .push(text("🪟 Current Window"))
-                        .spacing(scale::scaled(8.0))
+                        .push(icon(icons, Icons::WindowCapture))
+                        .push(text("Current Window"))
+                        .spacing(scale::icon_gap())
                         .align_y(Alignment::Center)
                 )
                 .on_press(ScreenshotMessage::TakeScreenshot(ScreenshotAction::Window))
@@ -215,8 +217,9 @@ impl Screenshot {
             .push(
                 button(
                     Row::new()
-                        .push(text("🖥️ Fullscreen"))
-                        .spacing(scale::scaled(8.0))
+                        .push(icon(icons, Icons::Fullscreen))
+                        .push(text("Fullscreen"))
+                        .spacing(scale::icon_gap())
                         .align_y(Alignment::Center)
                 )
                 .on_press(ScreenshotMessage::TakeScreenshot(
@@ -234,8 +237,9 @@ impl Screenshot {
         let recording_button = if self.is_recording {
             button(
                 Row::new()
-                    .push(text("⏹️ Stop Recording"))
-                    .spacing(scale::scaled(8.0))
+                    .push(icon(icons, Icons::Stop))
+                    .push(text("Stop Recording"))
+                    .spacing(scale::icon_gap())
                     .align_y(Alignment::Center)
             )
             .on_press(ScreenshotMessage::StopRecording)
@@ -243,8 +247,9 @@ impl Screenshot {
         } else {
             button(
                 Row::new()
-                    .push(text("🔴 Start Recording"))
-                    .spacing(scale::scaled(8.0))
+                    .push(icon(icons, Icons::Record))
+                    .push(text("Start Recording"))
+                    .spacing(scale::icon_gap())
                     .align_y(Alignment::Center)
             )
             .on_press(ScreenshotMessage::StartRecording)
@@ -280,11 +285,11 @@ where
         let content = if self.is_recording {
             Row::new()
                 .push(icon(icons, Icons::Point))
-                .push(text("📷"))
-                .spacing(scale::scaled(4.0))
+                .push(icon(icons, Icons::Camera))
+                .spacing(scale::icon_gap())
                 .align_y(Alignment::Center)
         } else {
-            Row::new().push(text("📷"))
+            Row::new().push(icon(icons, Icons::Camera))
         };
 
         Some((
