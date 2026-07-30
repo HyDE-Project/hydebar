@@ -19,7 +19,6 @@ iced = { git = "https://github.com/pop-os/iced", features = [
   "wgpu",
   "winit",
   "wayland",
-  "cctk",
   "image",
   "lazy",
   "svg",

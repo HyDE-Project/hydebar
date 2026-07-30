@@ -739,6 +739,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "build_helpers"
+version = "0.14.0"
+dependencies = [
+ "cfg_aliases",
+]
+
+[[package]]
 name = "built"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1145,7 +1152,7 @@ dependencies = [
 [[package]]
 name = "cosmic-client-toolkit"
 version = "0.2.0"
-source = "git+https://github.com/pop-os/cosmic-protocols?rev=c253ec1#c253ec1d6804afbcdf250f5cc37ae1194bba7bd2"
+source = "git+https://github.com/pop-os/cosmic-protocols?rev=32283d7#32283d76a8d0342da74c4cc022a533c52dcf378f"
 dependencies = [
  "bitflags 2.13.1",
  "cosmic-protocols",
@@ -1158,7 +1165,7 @@ dependencies = [
 [[package]]
 name = "cosmic-protocols"
 version = "0.2.0"
-source = "git+https://github.com/pop-os/cosmic-protocols?rev=c253ec1#c253ec1d6804afbcdf250f5cc37ae1194bba7bd2"
+source = "git+https://github.com/pop-os/cosmic-protocols?rev=32283d7#32283d76a8d0342da74c4cc022a533c52dcf378f"
 dependencies = [
  "bitflags 2.13.1",
  "wayland-backend",
@@ -2507,6 +2514,7 @@ dependencies = [
 name = "iced"
 version = "0.14.0"
 dependencies = [
+ "build_helpers",
  "dnd",
  "iced_accessibility",
  "iced_core",
@@ -2536,6 +2544,7 @@ name = "iced_core"
 version = "0.14.0"
 dependencies = [
  "bitflags 2.13.1",
+ "build_helpers",
  "bytes",
  "cosmic-client-toolkit",
  "dnd",
@@ -2620,6 +2629,7 @@ dependencies = [
 name = "iced_runtime"
 version = "0.14.0"
 dependencies = [
+ "build_helpers",
  "bytes",
  "cosmic-client-toolkit",
  "dnd",
@@ -2653,6 +2663,7 @@ version = "0.14.0"
 dependencies = [
  "as-raw-xcb-connection",
  "bitflags 2.13.1",
+ "build_helpers",
  "bytemuck",
  "cryoglyph",
  "futures",
@@ -2680,6 +2691,7 @@ dependencies = [
 name = "iced_widget"
 version = "0.14.2"
 dependencies = [
+ "build_helpers",
  "cosmic-client-toolkit",
  "dnd",
  "iced_accessibility",
@@ -2698,6 +2710,7 @@ dependencies = [
 name = "iced_winit"
 version = "0.14.0"
 dependencies = [
+ "build_helpers",
  "cosmic-client-toolkit",
  "cursor-icon",
  "dnd",
