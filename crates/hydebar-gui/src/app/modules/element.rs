@@ -151,7 +151,7 @@ impl App {
                     custom
                         .tooltip()
                         .map(str::to_owned)
-                        .unwrap_or_else(|| name.clone())
+                        .unwrap_or_else(|| hydebar_proto::bar_layout::display_label(name))
                 )
             }),
             ModuleName::IdleInhibitor => Some(
