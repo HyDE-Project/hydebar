@@ -139,16 +139,21 @@ impl App {
     ///
     /// Modules whose facts fit a line state them; the rest state their name,
     /// because a strip of glyphs nobody can name is a bar nobody can learn.
-    /// The ones that stay silent already say everything on the bar itself:
-    /// workspaces and the window title are their own text, the tray draws
-    /// icons the bar does not own, and the system readouts stand beside their
-    /// values.
+    /// A custom module with no hint of its own states the name it was
+    /// configured under, for the same reason. The ones that stay silent
+    /// already say everything on the bar itself: workspaces and the window
+    /// title are their own text, the tray draws icons the bar does not own,
+    /// and the system readouts stand beside their values.
     fn module_tooltip(&self, module_name: &ModuleName) -> Option<Option<String>> {
         match module_name {
-            ModuleName::Custom(name) => self
-                .custom
-                .get(name)
-                .map(|custom| custom.tooltip().map(str::to_owned)),
+            ModuleName::Custom(name) => self.custom.get(name).map(|custom| {
+                Some(
+                    custom
+                        .tooltip()
+                        .map(str::to_owned)
+                        .unwrap_or_else(|| name.clone())
+                )
+            }),
             ModuleName::IdleInhibitor => Some(
                 self.config
                     .idle_inhibitor
