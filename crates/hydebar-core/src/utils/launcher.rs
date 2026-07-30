@@ -153,6 +153,8 @@ fn spawn_and_log(command: String, context: &'static str) {
     tokio::spawn(async move {
         let command_arc: Arc<str> = Arc::from(command);
 
+        log::info!("{context} runs: {command_arc}");
+
         if let Err(error) = run_detached(&command_arc).await {
             error!("{context} command failed: {error}");
             crate::services::hyprland_notify::post_to_bus(&format!(
