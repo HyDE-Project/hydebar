@@ -1,6 +1,6 @@
 //! Compositor output hotplug handling.
 
-use hydebar_core::outputs::auto_metrics;
+use hydebar_core::outputs::{auto_metrics, scaling::screen_geometry};
 use iced::{OutputEvent, Task};
 use log::info;
 
@@ -14,7 +14,7 @@ impl App {
                 OutputEvent::Added(info) => {
                     info!("Output created: {info:?}");
 
-                    self.adopt_metrics(info.logical_size, info.scale_factor);
+                    self.adopt_metrics(&info.name);
 
                     let appearance = self.scaled_appearance();
 
@@ -39,7 +39,7 @@ impl App {
                     )
                 }
                 OutputEvent::InfoChanged(info) => {
-                    if self.adopt_metrics(info.logical_size, info.scale_factor) {
+                    if self.adopt_metrics(&info.name) {
                         self.refresh_appearance()
                     } else {
                         Task::none()
@@ -62,19 +62,18 @@ impl App {
     /// time by a compositor that already scales the surface, and the scale the
     /// bar applies to its own surface is divided out for the same reason.
     /// Reports whether the sizes changed.
-    fn adopt_metrics(&mut self, dimensions: Option<(i32, i32)>, scale_factor: i32) -> bool {
-        let Some(dimensions) = dimensions else {
+    fn adopt_metrics(&mut self, name: &str) -> bool {
+        let Some(geometry) = screen_geometry(name) else {
             return false;
         };
 
-        let compositor_scale = scale_factor.max(1) as f32;
         let surface_scale = self.config.appearance.scale_factor as f32;
 
         let metrics = auto_metrics(
-            dimensions.0 as f32,
-            dimensions.1 as f32,
-            compositor_scale * surface_scale.max(f32::EPSILON),
-            (dimensions.0 as f32, dimensions.1 as f32)
+            geometry.pixels.0,
+            geometry.pixels.1,
+            geometry.scale * surface_scale.max(f32::EPSILON),
+            geometry.physical
         );
 
         if self.auto_metrics == Some(metrics) {

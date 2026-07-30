@@ -103,12 +103,83 @@ pub fn metrics(
     }
 }
 
+/// Geometry of one screen, as the compositor reports it.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ScreenGeometry {
+    /// Resolution in physical pixels.
+    pub pixels:   (f32, f32),
+    /// Physical size in millimetres, zero when the screen does not report it.
+    pub physical: (f32, f32),
+    /// Scale the compositor already applies to the surface.
+    pub scale:    f32
+}
+
+/// Reads the geometry of the named screen from the compositor.
+///
+/// Asked of the compositor rather than taken from the windowing layer because
+/// the layer reports logical pixels and no physical size at all — and the
+/// magnification is exactly the number that must be computed from physical
+/// pixels and millimetres, or a scaled screen would be shrunk twice and a
+/// television never magnified.
+#[must_use]
+pub fn screen_geometry(name: &str) -> Option<ScreenGeometry> {
+    let output = std::process::Command::new("hyprctl")
+        .args(["-j", "monitors"])
+        .output()
+        .ok()?;
+
+    if !output.status.success() {
+        return None;
+    }
+
+    parse_geometry(&String::from_utf8_lossy(&output.stdout), name)
+}
+
+/// Picks the named screen out of the compositor answer.
+fn parse_geometry(json: &str, name: &str) -> Option<ScreenGeometry> {
+    let monitors: serde_json::Value = serde_json::from_str(json).ok()?;
+    let monitor = monitors
+        .as_array()?
+        .iter()
+        .find(|monitor| monitor["name"].as_str() == Some(name))?;
+
+    let number = |key: &str| monitor[key].as_f64().unwrap_or(0.0) as f32;
+
+    Some(ScreenGeometry {
+        pixels:   (number("width"), number("height")),
+        physical: (number("physicalWidth"), number("physicalHeight")),
+        scale:    number("scale").max(1.0)
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     /// A twenty four inch monitor, the screen the sizes were tuned on.
     const REFERENCE_MM: (f32, f32) = (531.0, 299.0);
+
+    #[test]
+    fn the_named_screen_is_the_one_read() {
+        let answer = r#"[
+            {"name":"HDMI-A-1","width":3840,"height":2160,
+             "physicalWidth":1650,"physicalHeight":930,"scale":1.0},
+            {"name":"eDP-1","width":1920,"height":1080,
+             "physicalWidth":344,"physicalHeight":193,"scale":2.0}
+        ]"#;
+
+        let geometry = parse_geometry(answer, "eDP-1").expect("screen");
+
+        assert_eq!(geometry.pixels, (1920.0, 1080.0));
+        assert_eq!(geometry.physical, (344.0, 193.0));
+        assert_eq!(geometry.scale, 2.0);
+    }
+
+    #[test]
+    fn an_unknown_screen_reads_as_nothing() {
+        assert_eq!(parse_geometry("[]", "eDP-1"), None);
+        assert_eq!(parse_geometry("not json", "eDP-1"), None);
+    }
 
     /// A seventy five inch television.
     const TELEVISION_MM: (f32, f32) = (1650.0, 930.0);
