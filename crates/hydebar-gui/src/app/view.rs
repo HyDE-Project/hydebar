@@ -236,15 +236,20 @@ impl App {
                     ),
                     Some((MenuType::Audio, button_ui_ref)) => menu_wrapper(
                         id,
-                        self.control_center
-                            .audio_menu(
-                                id,
-                                &self.config.control_center,
-                                animated_opacity,
-                                self.config.position,
-                                self.icons()
-                            )
-                            .map(Message::ControlCenter),
+                        iced::widget::mouse_area(
+                            self.control_center
+                                .audio_menu(
+                                    id,
+                                    &self.config.control_center,
+                                    animated_opacity,
+                                    self.config.position,
+                                    self.icons()
+                                )
+                                .map(Message::ControlCenter)
+                        )
+                        .on_enter(Message::SoundMenuHover(true))
+                        .on_exit(Message::SoundMenuHover(false))
+                        .into(),
                         MenuSize::Medium,
                         *button_ui_ref,
                         self.menu_layout(animated_opacity),

@@ -1,5 +1,7 @@
 //! Opening and closing menu surfaces.
 
+use std::time::Duration;
+
 use hydebar_core::{
     config::ModuleName,
     menu::MenuType,
@@ -7,6 +9,10 @@ use hydebar_core::{
     services::brightness::BrightnessCommand
 };
 use iced::Task;
+
+/// Pause between the pointer leaving the sound module or its menu and the
+/// menu being taken down, long enough to travel between the two.
+const SOUND_HOVER_GRACE: Duration = Duration::from_millis(300);
 
 use super::super::state::{App, Message};
 
@@ -24,6 +30,17 @@ impl App {
         self.attention.look_at(focus);
     }
 
+    /// Schedules the check that takes the sound menu down after a leave.
+    ///
+    /// The pause covers the travel between the sound module and its menu:
+    /// closing on the leave itself would take the menu away while the pointer
+    /// is still on its way into it.
+    fn settle_sound_hover() -> Task<Message> {
+        Task::perform(tokio::time::sleep(SOUND_HOVER_GRACE), |()| {
+            Message::SoundHoverSettle
+        })
+    }
+
     /// Handles the messages this module owns.
     pub(super) fn update_menus(&mut self, message: Message) -> Task<Message> {
         match message {
@@ -39,27 +56,60 @@ impl App {
                     self.outputs.menu_is_open()
                 );
 
-                if entered
-                    && matches!(module, ModuleName::Audio)
-                    && self.outputs.open_menu() != Some(&MenuType::Audio)
-                    && let Some(info) = &tooltip
-                {
-                    let task = self.outputs.toggle_menu(
-                        surface,
-                        MenuType::Audio,
-                        info.anchor,
-                        &self.config
-                    );
+                if matches!(module, ModuleName::Audio) {
+                    self.sound_on_module = entered;
 
-                    self.attend_the_open_menu();
+                    if !entered {
+                        return Task::batch(vec![
+                            self.outputs.hide_tooltip(surface, Some(&module)),
+                            Self::settle_sound_hover(),
+                        ]);
+                    }
 
-                    return task;
+                    if self.outputs.open_menu() != Some(&MenuType::Audio)
+                        && let Some(info) = &tooltip
+                    {
+                        let task = self.outputs.toggle_menu(
+                            surface,
+                            MenuType::Audio,
+                            info.anchor,
+                            &self.config
+                        );
+
+                        self.attend_the_open_menu();
+
+                        return task;
+                    }
+
+                    return self.outputs.hide_tooltip(surface, None);
                 }
 
                 match tooltip {
                     Some(info) => self.outputs.show_tooltip(surface, module, info),
                     None if entered => self.outputs.hide_tooltip(surface, None),
                     None => self.outputs.hide_tooltip(surface, Some(&module))
+                }
+            }
+            Message::SoundMenuHover(entered) => {
+                self.sound_on_menu = entered;
+
+                if entered {
+                    Task::none()
+                } else {
+                    Self::settle_sound_hover()
+                }
+            }
+            Message::SoundHoverSettle => {
+                if !self.sound_on_module
+                    && !self.sound_on_menu
+                    && self.outputs.open_menu() == Some(&MenuType::Audio)
+                {
+                    let task = self.outputs.close_all_menus(&self.config);
+                    self.attend_the_open_menu();
+
+                    task
+                } else {
+                    Task::none()
                 }
             }
             Message::ToggleMenu(menu_type, id, button_ui_ref) => {
