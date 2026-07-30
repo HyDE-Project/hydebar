@@ -40,18 +40,27 @@ pub fn icon_raw_sized<'a>(glyph: String, size: Option<f32>) -> Text<'a> {
 
 /// The glyph as a text widget, optically corrected to `size`.
 ///
-/// The stated font size comes from the glyph's own ink share — see
-/// [`optical::stated_size`] — so glyphs drawn to different shares of their
-/// box come out at one apparent size.
+/// The face and the stated font size both come from [`optical::resolved`]:
+/// fontconfig names the font, the same way the reference waybar resolves its
+/// icons, and the size correction is measured from that very face — so glyphs
+/// drawn to different shares of their box come out at one apparent size.
 ///
-/// No font is named here on purpose: the glyph renders in the themed font and
-/// falls back through the system font database when that font lacks it — the
-/// same road the reference waybar theme takes, where no icon font is declared
-/// anywhere and the symbols resolve to whatever nerd font the system carries.
+/// The widget owns a box of the same width whatever the glyph: every font
+/// pads its glyphs with side bearings of its own taste, and left to them two
+/// icons standing side by side would show a different gap in every pair. The
+/// ink is centred in the box, so the gap between icons is exactly the gap
+/// their wrappers state.
 fn build<'a>(glyph: String, size: f32) -> Text<'a> {
-    let stated = optical::stated_size(&glyph, size);
+    let face = optical::resolved(&glyph);
+    let styled = text(glyph)
+        .size(size * face.factor)
+        .line_height(LineHeight::Absolute(Pixels(size * LINE_EM)));
 
-    text(glyph)
-        .size(stated)
-        .line_height(LineHeight::Absolute(Pixels(size * LINE_EM)))
+    match face.font {
+        Some(font) => styled
+            .font(font)
+            .width(size * LINE_EM)
+            .align_x(iced::alignment::Horizontal::Center),
+        None => styled
+    }
 }
