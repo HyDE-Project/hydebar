@@ -97,6 +97,8 @@ fn reap_and_guard_children() {
         debug!("ended {swept} processes left behind by an earlier run");
     }
 
+    hydebar_core::utils::process_group::start_orphan_reaper();
+
     if let Err(err) = hydebar_core::utils::process_group::claim_orphans() {
         error!("failed to claim orphaned children, some may escape the bar: {err}");
     }
