@@ -7,11 +7,23 @@ use iced::{
     platform_specific::shell::wayland::commands::layer_surface::{
         KeyboardInteractivity, Layer, set_keyboard_interactivity, set_layer
     },
+    runtime::{Action, task, window::Action as WindowAction},
     window::Id
 };
 
 use super::kind::MenuType;
 use crate::{animation::Spring, config::AnimationConfig, position_button::ButtonUIRef};
+
+/// Asks the runtime to paint every surface again.
+///
+/// The fade of a menu is advanced by frame callbacks, and frame callbacks only
+/// arrive while something draws. Opening or closing a menu therefore has to
+/// ask for the first frame itself: without it the fade waits for an unrelated
+/// redraw — a pointer that happens to move — and until one comes the menu
+/// stands fully transparent, open but invisible.
+fn redraw_surfaces<Message: 'static>() -> Task<Message> {
+    task::effect(Action::Window(WindowAction::RedrawAll))
+}
 
 #[derive(Clone, Debug)]
 pub struct Menu {
@@ -72,7 +84,7 @@ impl Menu {
             &config.appearance.animations
         );
 
-        let mut tasks = vec![set_layer(self.id, Layer::Overlay)];
+        let mut tasks = vec![set_layer(self.id, Layer::Overlay), redraw_surfaces()];
 
         if config.menu_keyboard_focus {
             tasks.push(set_keyboard_interactivity(
@@ -92,7 +104,7 @@ impl Menu {
 
             self.aim_opacity(0.0, &config.appearance.animations);
 
-            let mut tasks = vec![set_layer(self.id, Layer::Background)];
+            let mut tasks = vec![set_layer(self.id, Layer::Background), redraw_surfaces()];
 
             if config.menu_keyboard_focus {
                 tasks.push(set_keyboard_interactivity(
