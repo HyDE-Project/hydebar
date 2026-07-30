@@ -3,7 +3,7 @@
 use iced::{
     Element, Length, Padding, SurfaceId as Id,
     alignment::{Horizontal, Vertical},
-    widget::{container, mouse_area}
+    widget::{container, mouse_area, scrollable}
 };
 
 use super::size::MenuSize;
@@ -43,7 +43,8 @@ pub struct MenuLayout {
 ///
 /// The box takes the width `menu_size` asks for on the output it lands on,
 /// is nudged back inside the screen when its button sits near an
-/// edge.
+/// edge. Content measured taller than the share of the screen a menu may
+/// cover scrolls inside the box instead of running off the edge.
 pub fn menu_wrapper<Message: Clone + 'static>(
     _id: Id,
     content: Element<'_, Message>,
@@ -53,9 +54,17 @@ pub fn menu_wrapper<Message: Clone + 'static>(
     none_message: Message,
     close_menu_message: Message
 ) -> Element<'_, Message> {
-    let (viewport_width, _viewport_height) = button_ui_ref.viewport;
+    let (viewport_width, viewport_height) = button_ui_ref.viewport;
     let width = menu_size.width(layout.font_size, viewport_width);
     let padding = PADDING_EM * layout.font_size;
+
+    let ceiling = MenuSize::max_height(viewport_height);
+    let content: Element<'_, Message> = match layout.content_height {
+        Some(content_height) if content_height + 2.0 * padding > ceiling => {
+            scrollable(content).into()
+        }
+        _ => content
+    };
 
     mouse_area(
         container(
@@ -64,6 +73,7 @@ pub fn menu_wrapper<Message: Clone + 'static>(
                     .height(Length::Shrink)
                     .width(Length::Fill)
                     .max_width(width)
+                    .max_height(ceiling)
                     .padding(padding)
                     .style(menu_container_style(layout.opacity, layout.radius))
             )

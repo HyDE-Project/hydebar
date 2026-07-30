@@ -229,8 +229,16 @@ where
             source
         })?;
 
-    toml::from_str(&content)
-        .map(|config| follow_hyde(config, declares_modules(&content), theme, layout))
+    let table: toml::Table =
+        toml::from_str(&content).map_err(|source| ConfigReadError::Parse {
+            path: path.to_path_buf(),
+            source
+        })?;
+    let declared = declares_modules(&table);
+
+    table
+        .try_into()
+        .map(|config| follow_hyde(config, declared, theme, layout))
         .map_err(|source| ConfigReadError::Parse {
             path: path.to_path_buf(),
             source
@@ -242,10 +250,8 @@ where
 /// Presence is what matters, not content: a hand-written `[modules]` section
 /// is manual control and pins the layout, however much it happens to coincide
 /// with anything HyDE has on file.
-fn declares_modules(content: &str) -> bool {
-    toml::from_str::<toml::Table>(content)
-        .map(|table| table.contains_key("modules"))
-        .unwrap_or(false)
+fn declares_modules(table: &toml::Table) -> bool {
+    table.contains_key("modules")
 }
 
 /// Overlays the HyDE theme and bar layout onto a freshly parsed configuration.

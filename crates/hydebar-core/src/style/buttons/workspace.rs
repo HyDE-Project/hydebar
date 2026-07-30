@@ -1,12 +1,50 @@
 //! Style of the workspace indicator buttons.
 
 use iced::{
-    Background, Border, Theme,
+    Background, Border, Color, Theme,
     theme::palette,
     widget::button::{self, Status}
 };
 
 use crate::config::AppearanceColor;
+
+/// Base and strong colour pairs a workspace indicator paints with.
+///
+/// Derived once per style call rather than once per status arm: the palette
+/// generation walks colour spaces, and the hovered arm needs the same
+/// derivation as the resting one.
+struct IndicatorColors {
+    base:   (Color, Color),
+    strong: (Color, Color)
+}
+
+/// Resolves the colour pairs for the configured monitor colour, if any.
+fn indicator_colors(theme: &Theme, colors: Option<Option<AppearanceColor>>) -> IndicatorColors {
+    let extended = theme.extended_palette();
+
+    match colors {
+        None => IndicatorColors {
+            base:   (extended.background.weak.color, theme.palette().text),
+            strong: (extended.background.strong.color, theme.palette().text)
+        },
+        Some(None) => IndicatorColors {
+            base:   (extended.primary.base.color, extended.primary.base.text),
+            strong: (extended.primary.strong.color, extended.primary.strong.text)
+        },
+        Some(Some(color)) => {
+            let generated = palette::Primary::generate(
+                color.get_base(),
+                theme.palette().background,
+                color.get_text().unwrap_or(theme.palette().text)
+            );
+
+            IndicatorColors {
+                base:   (generated.base.color, generated.base.text),
+                strong: (generated.strong.color, generated.strong.text)
+            }
+        }
+    }
+}
 
 /// Builds the workspace button style closure, handling optional colours.
 ///
@@ -23,27 +61,9 @@ pub fn workspace_button_style(
     let is_muted = is_empty || !is_active;
 
     move |theme: &Theme, status: Status| {
-        let (bg_color, fg_color) = colors
-            .map(|c| {
-                c.map_or(
-                    (
-                        theme.extended_palette().primary.base.color,
-                        theme.extended_palette().primary.base.text
-                    ),
-                    |c| {
-                        let color = palette::Primary::generate(
-                            c.get_base(),
-                            theme.palette().background,
-                            c.get_text().unwrap_or(theme.palette().text)
-                        );
-                        (color.base.color, color.base.text)
-                    }
-                )
-            })
-            .unwrap_or((
-                theme.extended_palette().background.weak.color,
-                theme.palette().text
-            ));
+        let indicator = indicator_colors(theme, colors);
+        let (bg_color, fg_color) = indicator.base;
+
         let mut base = button::Style {
             background: if is_muted {
                 None
@@ -62,44 +82,22 @@ pub fn workspace_button_style(
             },
             ..button::Style::default()
         };
-        match status {
-            Status::Active => base,
-            Status::Hovered => {
-                let (bg_color, fg_color) = colors
-                    .map(|c| {
-                        c.map_or(
-                            (
-                                theme.extended_palette().primary.strong.color,
-                                theme.extended_palette().primary.strong.text
-                            ),
-                            |c| {
-                                let color = palette::Primary::generate(
-                                    c.get_base(),
-                                    theme.palette().background,
-                                    c.get_text().unwrap_or(theme.palette().text)
-                                );
-                                (color.strong.color, color.strong.text)
-                            }
-                        )
-                    })
-                    .unwrap_or((
-                        theme.extended_palette().background.strong.color,
-                        theme.palette().text
-                    ));
 
-                base.background = Some(Background::Color(if is_empty {
-                    theme.extended_palette().background.strong.color
-                } else {
-                    bg_color
-                }));
-                base.text_color = if is_empty {
-                    theme.palette().text
-                } else {
-                    fg_color
-                };
-                base
-            }
-            _ => base
+        if matches!(status, Status::Hovered) {
+            let (strong_bg, strong_fg) = indicator.strong;
+
+            base.background = Some(Background::Color(if is_empty {
+                theme.extended_palette().background.strong.color
+            } else {
+                strong_bg
+            }));
+            base.text_color = if is_empty {
+                theme.palette().text
+            } else {
+                strong_fg
+            };
         }
+
+        base
     }
 }

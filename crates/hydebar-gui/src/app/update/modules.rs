@@ -247,9 +247,16 @@ impl App {
                 }
             }
             Message::Notifications(msg) => {
+                let popups_before = self.notification_popups.len();
+
                 self.raise_popup(&msg);
                 self.notifications.update(msg);
-                self.fit_notification_surface()
+
+                if popups_before == self.notification_popups.len() {
+                    Task::none()
+                } else {
+                    self.fit_notification_surface()
+                }
             }
             Message::Screenshot(msg) => {
                 self.screenshot.update(msg);
