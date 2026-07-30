@@ -11,7 +11,10 @@ use iced::Element;
 
 use super::{Message, Spinner};
 use crate::components::page::{
-    metrics::{chip_width, indicator_width, status_row_width, text_width, wrap_chips_into_rows},
+    metrics::{
+        chip_cell_width, chip_width, indicator_width, status_row_width, text_width,
+        wrap_chips_into_rows
+    },
     style,
     widgets::{
         ThemeChip, grid, group, note, page, rows as row_stack, section, status_row, theme_chip
@@ -111,6 +114,7 @@ fn themes<'a>(
     }
 
     let gap = style::group_gap(font_size);
+    let cell = chip_cell_width(&state.themes, font_size);
     let mut block = grid(font_size);
 
     for indices in wrap_chips_into_rows(&state.themes, available_width, font_size, gap) {
@@ -124,7 +128,8 @@ fn themes<'a>(
                 Message::Switch(name.clone()),
                 chip_state(state, switching, spinner, name),
                 font_size,
-                opacity
+                opacity,
+                cell
             ));
         }
 

@@ -144,21 +144,38 @@ pub(crate) fn stepper_row<'a, M: Clone + 'a>(
 /// A chip is not a button in disguise: it is filled when picked and outlined
 /// when not, so the row reads as a picture of the bar rather than as a row of
 /// controls.
+///
+/// `cell` fixes the chip to a grid cell of that width; chips in a grid all
+/// take the same cell so the grid keeps its shape whatever the labels
+/// measure, while [`None`] leaves the chip the size of its own label for the
+/// rows that draw a picture of the bar.
 pub(crate) fn chip<'a, M: Clone + 'a>(
     label: impl text::IntoFragment<'a>,
     message: M,
     picked: bool,
     font_size: f32,
-    opacity: f32
+    opacity: f32,
+    cell: Option<f32>
 ) -> Element<'a, M> {
     let control = style::control_size(font_size);
 
-    button(text(label).size(control))
-        .padding([
-            style::CHIP_PADDING_EM[0] * control,
-            style::CHIP_PADDING_EM[1] * control
-        ])
-        .on_press(message)
+    let mut label = text(label).size(control);
+    if cell.is_some() {
+        label = label
+            .width(iced::Length::Fill)
+            .align_x(iced::Alignment::Center);
+    }
+
+    let mut chip = button(label).padding([
+        style::CHIP_PADDING_EM[0] * control,
+        style::CHIP_PADDING_EM[1] * control
+    ]);
+
+    if let Some(cell) = cell {
+        chip = chip.width(cell);
+    }
+
+    chip.on_press(message)
         .style(move |theme: &Theme, _status| {
             let palette = theme.extended_palette();
             let background = if picked {
@@ -222,11 +239,19 @@ pub(crate) fn theme_chip<'a, M: Clone + 'a>(
     message: M,
     state: ThemeChip,
     font_size: f32,
-    opacity: f32
+    opacity: f32,
+    cell: f32
 ) -> Element<'a, M> {
     let control = style::control_size(font_size);
 
-    let mut chip = button(text(label).size(control)).padding([
+    let mut chip = button(
+        text(label)
+            .size(control)
+            .width(iced::Length::Fill)
+            .align_x(iced::Alignment::Center)
+    )
+    .width(cell)
+    .padding([
         style::CHIP_PADDING_EM[0] * control,
         style::CHIP_PADDING_EM[1] * control
     ]);

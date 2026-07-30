@@ -15,7 +15,7 @@ use iced::Element;
 
 use crate::{
     components::page::{
-        metrics::{button_row_width, chip_width, wrap_chips_into_rows},
+        metrics::{button_row_width, chip_cell_width, chip_width, wrap_chips_into_rows},
         style,
         widgets::{
             card, chip, choice_button, grid, group, labelled_row, note, outlined, page,
@@ -224,6 +224,7 @@ fn catalogue<'a>(
         .map(|module| module.as_str().to_owned())
         .collect::<Vec<_>>();
 
+    let cell = chip_cell_width(&labels, font_size);
     let mut block = grid(font_size);
 
     for indices in wrap_chips_into_rows(&labels, available_width, font_size, gap) {
@@ -238,7 +239,8 @@ fn catalogue<'a>(
                 }),
                 false,
                 font_size,
-                opacity
+                opacity,
+                Some(cell)
             ));
         }
 
@@ -301,7 +303,8 @@ fn section_islands<'a>(
                 }),
                 picked,
                 font_size,
-                opacity
+                opacity,
+                None
             ));
         }
 

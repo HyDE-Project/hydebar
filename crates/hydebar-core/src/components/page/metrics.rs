@@ -106,46 +106,29 @@ pub(crate) fn status_row_width(value: &str, font_size: f32) -> f32 {
         + text_width(value, style::control_size(font_size))
 }
 
-/// Groups `labels` into the rows they fill when laid out `available` wide.
+/// Width of the one cell every chip of a grid is drawn in.
 ///
-/// Wrapping is computed rather than left to the layout engine because the rows
-/// have to be counted before they are drawn: the height of the window depends
-/// on how many of them there turn out to be. A label wider than the whole row
-/// still gets a row of its own, so nothing is silently dropped.
-///
-/// `item_width` is passed in rather than assumed so a grid of chips is wrapped
-/// by the width of a chip and a grid of buttons by the width of a button.
+/// The widest label decides for everyone. Cells of one width are what holds a
+/// grid's shape still while a theme switch changes the font or the active
+/// name: chips packed by their own widths re-measure and re-wrap on every
+/// such change, and a grid that rearranges under an open menu reads as
+/// breakage, not as a theme.
 #[must_use]
-pub(crate) fn wrap_into_rows(
-    labels: &[String],
-    available: f32,
-    item_width: impl Fn(&str) -> f32,
-    gap: f32
-) -> Vec<Vec<usize>> {
-    let mut rows: Vec<Vec<usize>> = Vec::new();
-    let mut used = 0.0;
+pub(crate) fn chip_cell_width(labels: &[String], font_size: f32) -> f32 {
+    let chip_font = style::control_size(font_size);
 
-    for (index, label) in labels.iter().enumerate() {
-        let width = item_width(label);
-        let fits = used + width <= available;
-
-        match rows.last_mut() {
-            Some(row) if fits => {
-                row.push(index);
-                used += width + gap;
-            }
-            _ => {
-                rows.push(vec![index]);
-                used = width + gap;
-            }
-        }
-    }
-
-    rows
+    labels
+        .iter()
+        .map(|label| chip_width(label, chip_font))
+        .fold(0.0_f32, f32::max)
 }
 
 /// Groups `labels` into the rows of chips they fill when laid out `available`
 /// wide at the page text size `font_size`.
+///
+/// Every chip occupies the same cell — see [`chip_cell_width`] — so the
+/// grouping depends on how many cells fit a row, never on which labels happen
+/// to share it.
 #[must_use]
 pub(crate) fn wrap_chips_into_rows(
     labels: &[String],
@@ -153,9 +136,14 @@ pub(crate) fn wrap_chips_into_rows(
     font_size: f32,
     gap: f32
 ) -> Vec<Vec<usize>> {
-    let chip_font = style::control_size(font_size);
+    let cell = chip_cell_width(labels, font_size);
+    let per_row = (((available + gap) / (cell + gap)).floor() as usize).max(1);
 
-    wrap_into_rows(labels, available, |label| chip_width(label, chip_font), gap)
+    (0..labels.len())
+        .collect::<Vec<usize>>()
+        .chunks(per_row)
+        .map(<[usize]>::to_vec)
+        .collect()
 }
 
 #[cfg(test)]
@@ -163,20 +151,20 @@ mod tests {
     use super::*;
 
     #[test]
-    fn a_catalogue_that_fits_stays_a_single_row() {
+    fn a_grid_that_fits_stays_a_single_row() {
         let labels = vec!["Clock".to_owned(), "Tray".to_owned()];
 
         assert_eq!(
-            wrap_into_rows(&labels, 1000.0, |label| button_width(label, 10.0), 4.0),
+            wrap_chips_into_rows(&labels, 1000.0, 10.0, 4.0),
             vec![vec![0, 1]]
         );
     }
 
     #[test]
-    fn a_long_catalogue_wraps_onto_several_rows() {
+    fn a_long_grid_wraps_onto_several_rows() {
         let labels = (0..8).map(|i| format!("Module{i}")).collect::<Vec<_>>();
 
-        let rows = wrap_into_rows(&labels, 200.0, |label| button_width(label, 10.0), 4.0);
+        let rows = wrap_chips_into_rows(&labels, 200.0, 10.0, 4.0);
 
         assert!(rows.len() > 1);
         assert_eq!(rows.iter().map(Vec::len).sum::<usize>(), labels.len());
@@ -187,8 +175,27 @@ mod tests {
         let labels = vec!["AnExtremelyLongModuleName".to_owned()];
 
         assert_eq!(
-            wrap_into_rows(&labels, 10.0, |label| button_width(label, 10.0), 4.0),
+            wrap_chips_into_rows(&labels, 10.0, 10.0, 4.0),
             vec![vec![0]]
+        );
+    }
+
+    /// The cell is the widest chip, so the shape of the grid cannot depend on
+    /// which labels happen to share a row — every row holds the same number
+    /// of cells, and renaming or restyling a label never re-wraps the rest.
+    #[test]
+    fn rows_hold_the_same_number_of_cells_whatever_the_labels() {
+        let short = (0..6).map(|i| format!("A{i}")).collect::<Vec<_>>();
+        let mut mixed = short.clone();
+        mixed[0] = "A very long theme name".to_owned();
+
+        let per_row = |rows: Vec<Vec<usize>>| rows.first().map(Vec::len);
+        let cell = chip_cell_width(&mixed, 16.0);
+        let width = cell * 3.0 + 2.0 * 6.0;
+
+        assert_eq!(
+            per_row(wrap_chips_into_rows(&mixed, width, 16.0, 6.0)),
+            Some(3)
         );
     }
 
