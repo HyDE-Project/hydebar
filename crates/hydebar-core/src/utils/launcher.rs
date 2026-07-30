@@ -155,6 +155,9 @@ fn spawn_and_log(command: String, context: &'static str) {
 
         if let Err(error) = run_detached(&command_arc).await {
             error!("{context} command failed: {error}");
+            crate::services::hyprland_notify::post_to_bus(&format!(
+                "the {context} command failed: {error}"
+            ));
         }
     });
 }
