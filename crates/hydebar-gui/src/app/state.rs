@@ -132,6 +132,11 @@ pub enum Message {
     },
     /// The pointer entered or left the open sound menu.
     SoundMenuHover(bool),
+    /// The pointer arrived on the surface the sound menu is drawn on.
+    ///
+    /// The surfaces are separate windows: once the pointer is here it cannot
+    /// still be on the bar module, whatever leave event the bar missed.
+    SoundSurfaceEntered,
     /// The grace period after the pointer left the sound module or its menu.
     ///
     /// Fired a beat after either leave, so the pointer has time to travel the

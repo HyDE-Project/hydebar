@@ -99,6 +99,15 @@ impl App {
                     Self::settle_sound_hover()
                 }
             }
+            Message::SoundSurfaceEntered => {
+                self.sound_on_module = false;
+
+                if self.sound_on_menu {
+                    Task::none()
+                } else {
+                    Self::settle_sound_hover()
+                }
+            }
             Message::SoundHoverSettle => {
                 if !self.sound_on_module
                     && !self.sound_on_menu
