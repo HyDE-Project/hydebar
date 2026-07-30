@@ -14,7 +14,7 @@ use crate::{
 };
 
 /// Inner padding of a menu box, in multiples of the themed text size.
-const PADDING_EM: f32 = 1.6;
+pub const PADDING_EM: f32 = 1.6;
 
 /// Everything the placement needs to know about the theme in force.
 #[derive(Debug, Clone, Copy)]

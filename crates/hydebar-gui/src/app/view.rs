@@ -400,9 +400,16 @@ impl App {
                     Some((MenuType::Calendar, button_ui_ref)) => menu_wrapper(
                         id,
                         self.calendar.menu_view(self.icons()).map(Message::Calendar),
-                        MenuSize::Medium,
+                        MenuSize::Content(
+                            hydebar_core::modules::calendar::Calendar::content_width(
+                                self.appearance().font_size_px()
+                            )
+                        ),
                         *button_ui_ref,
-                        self.menu_layout(animated_opacity),
+                        self.measured_menu_layout(
+                            animated_opacity,
+                            hydebar_core::modules::calendar::Calendar::content_height()
+                        ),
                         Message::None,
                         Message::CloseMenu(id)
                     ),

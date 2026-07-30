@@ -26,6 +26,29 @@ const CELL: f32 = 36.0;
 /// Gap between day cells, in pixels of the reference theme.
 const CELL_GAP: f32 = 4.0;
 
+/// Month title size, in pixels of the reference theme.
+const TITLE_SIZE: f32 = 18.0;
+
+/// Weekday header size, in pixels of the reference theme.
+const WEEKDAY_SIZE: f32 = 12.0;
+
+/// Day number size, in pixels of the reference theme.
+const DAY_SIZE: f32 = 14.0;
+
+/// Gap between the header, the rule, the weekdays and the grid.
+const SECTION_GAP: f32 = 8.0;
+
+/// Padding of the whole column, in pixels of the reference theme.
+const OUTER_PADDING: f32 = 4.0;
+
+/// Vertical room the renderer's stock button padding adds to the header.
+const NAV_BUTTON_PADDING: f32 = 10.0;
+
+/// Height one line of text at `size` occupies at the stock line height.
+fn scaled_line(size: f32) -> f32 {
+    scale::scaled(size) * 1.3
+}
+
 /// What the user asks of the calendar.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Message {
@@ -231,6 +254,27 @@ impl Calendar {
         &self.state
     }
 
+    /// Width the menu box needs: the grid, its own padding, the box padding.
+    ///
+    /// Stated by the module so the box hugs the grid; a stock menu width
+    /// leaves a blank margin beside a grid that cannot grow into it.
+    pub fn content_width(font_size: f32) -> f32 {
+        scale::scaled(7.0 * CELL + 6.0 * CELL_GAP + 2.0 * OUTER_PADDING)
+            + 2.0 * crate::menu::MENU_PADDING_EM * font_size
+    }
+
+    /// Height the menu content needs, from the same constants the view uses.
+    pub fn content_height() -> f32 {
+        let header = scaled_line(TITLE_SIZE) + NAV_BUTTON_PADDING;
+        let weekdays = scaled_line(WEEKDAY_SIZE);
+        let grid = scale::scaled(6.0 * CELL + 5.0 * CELL_GAP);
+        let rule = 1.0;
+        let spacings = 3.0 * scale::scaled(SECTION_GAP);
+        let padding = scale::scaled(2.0 * OUTER_PADDING);
+
+        header + rule + weekdays + grid + spacings + padding
+    }
+
     /// Applies what the user asked.
     pub fn update(&mut self, message: Message) {
         match message {
@@ -247,7 +291,7 @@ impl Calendar {
             button(
                 container(
                     text(format!("{} {}", self.state.month_name(), self.state.year()))
-                        .size(scale::scaled(18.0))
+                        .size(scale::scaled(TITLE_SIZE))
                 )
                 .width(Length::Fill)
                 .align_x(Alignment::Center)
@@ -258,13 +302,13 @@ impl Calendar {
             nav_button(icon(icons, Icons::RightChevron), Message::NextMonth),
         ]
         .align_y(Alignment::Center)
-        .spacing(scale::scaled(8.0));
+        .spacing(scale::scaled(SECTION_GAP));
 
         let weekday_header = Row::with_children(
             WEEKDAYS
                 .iter()
                 .map(|day| {
-                    container(text(*day).size(scale::scaled(12.0)))
+                    container(text(*day).size(scale::scaled(WEEKDAY_SIZE)))
                         .width(Length::Fixed(scale::scaled(CELL)))
                         .align_x(Alignment::Center)
                         .into()
@@ -287,8 +331,8 @@ impl Calendar {
         let calendar_grid = Column::with_children(week_rows).spacing(scale::scaled(CELL_GAP));
 
         column![header, rule::horizontal(1), weekday_header, calendar_grid]
-            .spacing(scale::scaled(8.0))
-            .padding(scale::scaled(4.0))
+            .spacing(scale::scaled(SECTION_GAP))
+            .padding(scale::scaled(OUTER_PADDING))
             .width(Length::Fixed(scale::scaled(7.0 * CELL + 6.0 * CELL_GAP)))
             .into()
     }
@@ -300,7 +344,7 @@ fn day_cell<'a>(day_info: &DayInfo) -> Element<'a, Message> {
     let is_today = day_info.is_today;
 
     button(
-        container(text(day_info.day.to_string()).size(scale::scaled(14.0)))
+        container(text(day_info.day.to_string()).size(scale::scaled(DAY_SIZE)))
             .width(Length::Fill)
             .height(Length::Fill)
             .align_x(Alignment::Center)

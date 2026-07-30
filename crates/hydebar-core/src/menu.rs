@@ -13,4 +13,4 @@ pub use dismiss_area::{DismissArea, dismiss_area};
 pub use kind::MenuType;
 pub use size::MenuSize;
 pub use state::Menu;
-pub use wrapper::{MenuLayout, menu_wrapper};
+pub use wrapper::{MenuLayout, PADDING_EM as MENU_PADDING_EM, menu_wrapper};
