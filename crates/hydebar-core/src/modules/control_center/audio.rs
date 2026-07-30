@@ -33,6 +33,26 @@ pub enum AudioMessage {
     SourcesMore(Id)
 }
 
+/// The wheel notch as a volume direction: `1` up, `-1` down.
+///
+/// Stated once next to the message it feeds, so every place that takes the
+/// wheel — the bar entry, the open menu — reads the same direction.
+#[must_use]
+pub fn wheel_direction(delta: iced::mouse::ScrollDelta) -> i32 {
+    use iced::mouse::ScrollDelta;
+
+    let up = match delta {
+        ScrollDelta::Lines {
+            y, ..
+        }
+        | ScrollDelta::Pixels {
+            y, ..
+        } => y > 0.0
+    };
+
+    if up { 1 } else { -1 }
+}
+
 impl AudioData {
     pub fn sink_indicator<Message: 'static>(
         &self,

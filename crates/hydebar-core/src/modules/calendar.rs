@@ -4,50 +4,15 @@
 //! the time, this module knows what a month looks like. The bar entry that
 //! opens it lives with the clock, which is exactly the composition — a widget
 //! made of two blocks, each blind to the other's internals.
+//!
+//! One file, three rooms: [`month`] knows what a month is, [`metrics`] knows
+//! how much room the view needs, [`view`] draws it. The module root holds the
+//! state and the messages, and is all the outside ever talks to.
 
-use chrono::{Datelike, Local, Month, NaiveDate};
-use iced::{
-    Alignment, Border, Color, Element, Length, Theme,
-    widget::{Column, Row, button, column, container, row, rule}
-};
+use iced::Element;
+pub use month::{CalendarData, CalendarError, CalendarState, DayInfo};
 
-use crate::components::{
-    icons::{IconTheme, Icons, icon},
-    scale,
-    text::text
-};
-
-/// Week starts on Monday, the way the reference desktop counts.
-const WEEKDAYS: [&str; 7] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
-/// Side of one day cell, in pixels of the reference theme.
-const CELL: f32 = 36.0;
-
-/// Gap between day cells, in pixels of the reference theme.
-const CELL_GAP: f32 = 4.0;
-
-/// Month title size, in pixels of the reference theme.
-const TITLE_SIZE: f32 = 18.0;
-
-/// Weekday header size, in pixels of the reference theme.
-const WEEKDAY_SIZE: f32 = 12.0;
-
-/// Day number size, in pixels of the reference theme.
-const DAY_SIZE: f32 = 14.0;
-
-/// Gap between the header, the rule, the weekdays and the grid.
-const SECTION_GAP: f32 = 8.0;
-
-/// Padding of the whole column, in pixels of the reference theme.
-const OUTER_PADDING: f32 = 4.0;
-
-/// Vertical room the renderer's stock button padding adds to the header.
-const NAV_BUTTON_PADDING: f32 = 10.0;
-
-/// Height one line of text at `size` occupies at the stock line height.
-fn scaled_line(size: f32) -> f32 {
-    scale::scaled(size) * 1.3
-}
+use crate::components::icons::IconTheme;
 
 /// What the user asks of the calendar.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -57,190 +22,6 @@ pub enum Message {
     /// Return to the month that holds today.
     Today
 }
-
-/// Month and year the calendar is looking at.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CalendarState {
-    year:  i32,
-    month: u32
-}
-
-impl Default for CalendarState {
-    fn default() -> Self {
-        let now = Local::now();
-
-        Self {
-            year:  now.year(),
-            month: now.month()
-        }
-    }
-}
-
-impl CalendarState {
-    /// The month that holds today.
-    pub fn current() -> Self {
-        Self::default()
-    }
-
-    /// A specific month.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`CalendarError::InvalidMonth`] when `month` is not 1–12.
-    pub fn new(year: i32, month: u32) -> Result<Self, CalendarError> {
-        if !(1..=12).contains(&month) {
-            return Err(CalendarError::InvalidMonth {
-                month
-            });
-        }
-
-        Ok(Self {
-            year,
-            month
-        })
-    }
-
-    pub fn year(&self) -> i32 {
-        self.year
-    }
-
-    /// Month in view, 1–12.
-    pub fn month(&self) -> u32 {
-        self.month
-    }
-
-    pub fn previous_month(&mut self) {
-        if self.month == 1 {
-            self.month = 12;
-            self.year -= 1;
-        } else {
-            self.month -= 1;
-        }
-    }
-
-    pub fn next_month(&mut self) {
-        if self.month == 12 {
-            self.month = 1;
-            self.year += 1;
-        } else {
-            self.month += 1;
-        }
-    }
-
-    /// English name of the month in view.
-    pub fn month_name(&self) -> &'static str {
-        Month::try_from(self.month as u8)
-            .map(|month| month.name())
-            .unwrap_or("Unknown")
-    }
-
-    /// The grid of days this month shows.
-    pub fn generate_calendar(&self) -> CalendarData {
-        CalendarData::generate(self.year, self.month)
-    }
-}
-
-/// One day cell of the grid.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct DayInfo {
-    pub day:      u32,
-    pub is_today: bool,
-    pub in_month: bool
-}
-
-/// A month rendered as a fixed seven-by-six grid.
-///
-/// The grid keeps its six rows whatever the month, so walking the months
-/// never changes the window height under the pointer.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CalendarData {
-    pub days: Vec<DayInfo>
-}
-
-impl CalendarData {
-    /// The grid for `year`/`month`, padded with the neighbouring months.
-    pub fn generate(year: i32, month: u32) -> Self {
-        let today = Local::now().date_naive();
-
-        let first_day = NaiveDate::from_ymd_opt(year, month, 1)
-            .unwrap_or_else(|| NaiveDate::from_ymd_opt(year, 1, 1).expect("fallback date"));
-        let weekday = first_day.weekday().num_days_from_monday();
-        let days_in_month = Self::days_in_month(year, month);
-        let prev_month_days = if month == 1 {
-            Self::days_in_month(year - 1, 12)
-        } else {
-            Self::days_in_month(year, month - 1)
-        };
-
-        let mut days = Vec::with_capacity(42);
-
-        for i in 0..weekday {
-            days.push(DayInfo {
-                day:      prev_month_days - weekday + i + 1,
-                is_today: false,
-                in_month: false
-            });
-        }
-
-        for day in 1..=days_in_month {
-            let date = NaiveDate::from_ymd_opt(year, month, day).unwrap_or(first_day);
-
-            days.push(DayInfo {
-                day,
-                is_today: date == today,
-                in_month: true
-            });
-        }
-
-        let remaining = 42 - days.len();
-
-        for day in 1..=remaining {
-            days.push(DayInfo {
-                day:      day as u32,
-                is_today: false,
-                in_month: false
-            });
-        }
-
-        Self {
-            days
-        }
-    }
-
-    fn days_in_month(year: i32, month: u32) -> u32 {
-        NaiveDate::from_ymd_opt(year, month, 1)
-            .and_then(|date| {
-                if month == 12 {
-                    NaiveDate::from_ymd_opt(year + 1, 1, 1)
-                } else {
-                    NaiveDate::from_ymd_opt(year, month + 1, 1)
-                }
-                .map(|next| next.signed_duration_since(date).num_days() as u32)
-            })
-            .unwrap_or(30)
-    }
-}
-
-/// What can go wrong when a month is named outright.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum CalendarError {
-    /// Month value outside 1–12.
-    InvalidMonth { month: u32 }
-}
-
-impl std::fmt::Display for CalendarError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            CalendarError::InvalidMonth {
-                month
-            } => {
-                write!(f, "invalid month: {month}, must be in range 1-12")
-            }
-        }
-    }
-}
-
-impl std::error::Error for CalendarError {}
 
 /// The calendar module: the month in view and nothing else.
 #[derive(Debug, Default)]
@@ -259,20 +40,12 @@ impl Calendar {
     /// Stated by the module so the box hugs the grid; a stock menu width
     /// leaves a blank margin beside a grid that cannot grow into it.
     pub fn content_width(font_size: f32) -> f32 {
-        scale::scaled(7.0 * CELL + 6.0 * CELL_GAP + 2.0 * OUTER_PADDING)
-            + 2.0 * crate::menu::MENU_PADDING_EM * font_size
+        metrics::content_width(font_size)
     }
 
     /// Height the menu content needs, from the same constants the view uses.
     pub fn content_height() -> f32 {
-        let header = scaled_line(TITLE_SIZE) + NAV_BUTTON_PADDING;
-        let weekdays = scaled_line(WEEKDAY_SIZE);
-        let grid = scale::scaled(6.0 * CELL + 5.0 * CELL_GAP);
-        let rule = 1.0;
-        let spacings = 3.0 * scale::scaled(SECTION_GAP);
-        let padding = scale::scaled(2.0 * OUTER_PADDING);
-
-        header + rule + weekdays + grid + spacings + padding
+        metrics::content_height()
     }
 
     /// Applies what the user asked.
@@ -286,11 +59,293 @@ impl Calendar {
 
     /// The month view: navigation, weekday header and the day grid.
     pub fn menu_view(&self, icons: &IconTheme) -> Element<'_, Message> {
+        view::month_view(&self.state, icons)
+    }
+}
+
+/// What a month is: days, shape and names. No rendering in this room.
+mod month {
+    use chrono::{Datelike, Local, Month, NaiveDate};
+
+    /// Month and year the calendar is looking at.
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    pub struct CalendarState {
+        year:  i32,
+        month: u32
+    }
+
+    impl Default for CalendarState {
+        fn default() -> Self {
+            let now = Local::now();
+
+            Self {
+                year:  now.year(),
+                month: now.month()
+            }
+        }
+    }
+
+    impl CalendarState {
+        /// The month that holds today.
+        pub fn current() -> Self {
+            Self::default()
+        }
+
+        /// A specific month.
+        ///
+        /// # Errors
+        ///
+        /// Returns [`CalendarError::InvalidMonth`] when `month` is not 1–12.
+        pub fn new(year: i32, month: u32) -> Result<Self, CalendarError> {
+            if !(1..=12).contains(&month) {
+                return Err(CalendarError::InvalidMonth {
+                    month
+                });
+            }
+
+            Ok(Self {
+                year,
+                month
+            })
+        }
+
+        pub fn year(&self) -> i32 {
+            self.year
+        }
+
+        /// Month in view, 1–12.
+        pub fn month(&self) -> u32 {
+            self.month
+        }
+
+        pub fn previous_month(&mut self) {
+            if self.month == 1 {
+                self.month = 12;
+                self.year -= 1;
+            } else {
+                self.month -= 1;
+            }
+        }
+
+        pub fn next_month(&mut self) {
+            if self.month == 12 {
+                self.month = 1;
+                self.year += 1;
+            } else {
+                self.month += 1;
+            }
+        }
+
+        /// English name of the month in view.
+        pub fn month_name(&self) -> &'static str {
+            Month::try_from(self.month as u8)
+                .map(|month| month.name())
+                .unwrap_or("Unknown")
+        }
+
+        /// The grid of days this month shows.
+        pub fn generate_calendar(&self) -> CalendarData {
+            CalendarData::generate(self.year, self.month)
+        }
+    }
+
+    /// One day cell of the grid.
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    pub struct DayInfo {
+        pub day:      u32,
+        pub is_today: bool,
+        pub in_month: bool
+    }
+
+    /// A month rendered as a fixed seven-by-six grid.
+    ///
+    /// The grid keeps its six rows whatever the month, so walking the months
+    /// never changes the window height under the pointer.
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    pub struct CalendarData {
+        pub days: Vec<DayInfo>
+    }
+
+    impl CalendarData {
+        /// The grid for `year`/`month`, padded with the neighbouring months.
+        pub fn generate(year: i32, month: u32) -> Self {
+            let today = Local::now().date_naive();
+
+            let first_day = NaiveDate::from_ymd_opt(year, month, 1)
+                .unwrap_or_else(|| NaiveDate::from_ymd_opt(year, 1, 1).expect("fallback date"));
+            let weekday = first_day.weekday().num_days_from_monday();
+            let days_in_month = Self::days_in_month(year, month);
+            let prev_month_days = if month == 1 {
+                Self::days_in_month(year - 1, 12)
+            } else {
+                Self::days_in_month(year, month - 1)
+            };
+
+            let mut days = Vec::with_capacity(42);
+
+            for i in 0..weekday {
+                days.push(DayInfo {
+                    day:      prev_month_days - weekday + i + 1,
+                    is_today: false,
+                    in_month: false
+                });
+            }
+
+            for day in 1..=days_in_month {
+                let date = NaiveDate::from_ymd_opt(year, month, day).unwrap_or(first_day);
+
+                days.push(DayInfo {
+                    day,
+                    is_today: date == today,
+                    in_month: true
+                });
+            }
+
+            let remaining = 42 - days.len();
+
+            for day in 1..=remaining {
+                days.push(DayInfo {
+                    day:      day as u32,
+                    is_today: false,
+                    in_month: false
+                });
+            }
+
+            Self {
+                days
+            }
+        }
+
+        fn days_in_month(year: i32, month: u32) -> u32 {
+            NaiveDate::from_ymd_opt(year, month, 1)
+                .and_then(|date| {
+                    if month == 12 {
+                        NaiveDate::from_ymd_opt(year + 1, 1, 1)
+                    } else {
+                        NaiveDate::from_ymd_opt(year, month + 1, 1)
+                    }
+                    .map(|next| next.signed_duration_since(date).num_days() as u32)
+                })
+                .unwrap_or(30)
+        }
+    }
+
+    /// What can go wrong when a month is named outright.
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    pub enum CalendarError {
+        /// Month value outside 1–12.
+        InvalidMonth { month: u32 }
+    }
+
+    impl std::fmt::Display for CalendarError {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match self {
+                CalendarError::InvalidMonth {
+                    month
+                } => {
+                    write!(f, "invalid month: {month}, must be in range 1-12")
+                }
+            }
+        }
+    }
+
+    impl std::error::Error for CalendarError {}
+}
+
+/// Every size of the view, and the room the whole of it takes.
+///
+/// The window is sized from these same constants, so the box always hugs the
+/// grid: a size changed here moves the drawing and the measurement together.
+mod metrics {
+    use crate::components::scale;
+
+    /// Week starts on Monday, the way the reference desktop counts.
+    pub(super) const WEEKDAYS: [&str; 7] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+    /// Side of one day cell, in pixels of the reference theme.
+    pub(super) const CELL: f32 = 36.0;
+
+    /// Gap between day cells, in pixels of the reference theme.
+    pub(super) const CELL_GAP: f32 = 4.0;
+
+    /// Month title size, in pixels of the reference theme.
+    pub(super) const TITLE_SIZE: f32 = 18.0;
+
+    /// Weekday header size, in pixels of the reference theme.
+    pub(super) const WEEKDAY_SIZE: f32 = 12.0;
+
+    /// Day number size, in pixels of the reference theme.
+    pub(super) const DAY_SIZE: f32 = 14.0;
+
+    /// Gap between the header, the rule, the weekdays and the grid.
+    pub(super) const SECTION_GAP: f32 = 8.0;
+
+    /// Padding of the whole column, in pixels of the reference theme.
+    pub(super) const OUTER_PADDING: f32 = 4.0;
+
+    /// Vertical room the renderer's stock button padding adds to the header.
+    const NAV_BUTTON_PADDING: f32 = 10.0;
+
+    /// Height one line of text at `size` occupies at the stock line height.
+    fn scaled_line(size: f32) -> f32 {
+        scale::scaled(size) * 1.3
+    }
+
+    /// Width of the day grid alone.
+    pub(super) fn grid_width() -> f32 {
+        scale::scaled(7.0 * CELL + 6.0 * CELL_GAP)
+    }
+
+    /// Width the menu box needs, box padding included.
+    pub(super) fn content_width(font_size: f32) -> f32 {
+        scale::scaled(7.0 * CELL + 6.0 * CELL_GAP + 2.0 * OUTER_PADDING)
+            + 2.0 * crate::menu::MENU_PADDING_EM * font_size
+    }
+
+    /// Height the menu content needs.
+    pub(super) fn content_height() -> f32 {
+        let header = scaled_line(TITLE_SIZE) + NAV_BUTTON_PADDING;
+        let weekdays = scaled_line(WEEKDAY_SIZE);
+        let grid = scale::scaled(6.0 * CELL + 5.0 * CELL_GAP);
+        let rule = 1.0;
+        let spacings = 3.0 * scale::scaled(SECTION_GAP);
+        let padding = scale::scaled(2.0 * OUTER_PADDING);
+
+        header + rule + weekdays + grid + spacings + padding
+    }
+}
+
+/// Drawing of the month: header, weekday row, day grid and their styles.
+mod view {
+    use iced::{
+        Alignment, Border, Color, Element, Length, Theme,
+        widget::{Column, Row, button, column, container, row, rule}
+    };
+
+    use super::{
+        Message,
+        metrics::{
+            CELL, CELL_GAP, DAY_SIZE, OUTER_PADDING, SECTION_GAP, TITLE_SIZE, WEEKDAY_SIZE,
+            WEEKDAYS, grid_width
+        },
+        month::{CalendarState, DayInfo}
+    };
+    use crate::components::{
+        icons::{IconTheme, Icons, icon},
+        scale,
+        text::text
+    };
+
+    /// The whole month view.
+    pub(super) fn month_view<'a>(
+        state: &'a CalendarState,
+        icons: &IconTheme
+    ) -> Element<'a, Message> {
         let header = row![
             nav_button(icon(icons, Icons::LeftChevron), Message::PreviousMonth),
             button(
                 container(
-                    text(format!("{} {}", self.state.month_name(), self.state.year()))
+                    text(format!("{} {}", state.month_name(), state.year()))
                         .size(scale::scaled(TITLE_SIZE))
                 )
                 .width(Length::Fill)
@@ -317,7 +372,7 @@ impl Calendar {
         )
         .spacing(scale::scaled(CELL_GAP));
 
-        let calendar_data = self.state.generate_calendar();
+        let calendar_data = state.generate_calendar();
         let week_rows = calendar_data
             .days
             .chunks(7)
@@ -333,106 +388,108 @@ impl Calendar {
         column![header, rule::horizontal(1), weekday_header, calendar_grid]
             .spacing(scale::scaled(SECTION_GAP))
             .padding(scale::scaled(OUTER_PADDING))
-            .width(Length::Fixed(scale::scaled(7.0 * CELL + 6.0 * CELL_GAP)))
+            .width(Length::Fixed(grid_width()))
             .into()
     }
-}
 
-/// One day of the grid as a cell button.
-fn day_cell<'a>(day_info: &DayInfo) -> Element<'a, Message> {
-    let in_month = day_info.in_month;
-    let is_today = day_info.is_today;
+    /// One day of the grid as a cell button.
+    fn day_cell<'a>(day_info: &DayInfo) -> Element<'a, Message> {
+        let in_month = day_info.in_month;
+        let is_today = day_info.is_today;
 
-    button(
-        container(text(day_info.day.to_string()).size(scale::scaled(DAY_SIZE)))
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .align_x(Alignment::Center)
-            .align_y(Alignment::Center)
-    )
-    .width(Length::Fixed(scale::scaled(CELL)))
-    .height(Length::Fixed(scale::scaled(CELL)))
-    .style(move |theme: &Theme, status: button::Status| {
-        day_button_style(theme, status, in_month, is_today)
-    })
-    .into()
-}
-
-/// A chevron of the month navigation.
-fn nav_button<'a>(
-    content: impl Into<Element<'a, Message>>,
-    message: Message
-) -> iced::widget::Button<'a, Message> {
-    button(content.into())
-        .on_press(message)
-        .style(nav_button_style)
-}
-
-fn nav_button_style(theme: &Theme, status: button::Status) -> button::Style {
-    let mut base = button::Style {
-        background: None,
-        border: Border {
-            width:  0.0,
-            radius: scale::scaled(4.0).into(),
-            color:  Color::TRANSPARENT
-        },
-        text_color: theme.palette().text,
-        ..button::Style::default()
-    };
-
-    if matches!(status, button::Status::Hovered) {
-        base.background = Some(theme.extended_palette().background.weak.color.into());
-    }
-
-    base
-}
-
-/// Style of one day cell.
-///
-/// Today is the one filled cell; every other day sits flat on the menu and
-/// lights up under the pointer. Days of the neighbouring months stay dimmed,
-/// so the shape of the month is readable at a glance.
-fn day_button_style(
-    theme: &Theme,
-    status: button::Status,
-    in_month: bool,
-    is_today: bool
-) -> button::Style {
-    let palette = theme.extended_palette();
-
-    let (background, text_color) = if is_today {
-        (
-            Some(theme.palette().primary.into()),
-            palette.primary.base.text
+        button(
+            container(text(day_info.day.to_string()).size(scale::scaled(DAY_SIZE)))
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .align_x(Alignment::Center)
+                .align_y(Alignment::Center)
         )
-    } else if in_month {
-        (None, theme.palette().text)
-    } else {
-        (None, palette.background.weak.text)
-    };
-
-    let mut base = button::Style {
-        background,
-        border: Border {
-            width:  0.0,
-            radius: scale::scaled(8.0).into(),
-            color:  Color::TRANSPARENT
-        },
-        text_color,
-        ..button::Style::default()
-    };
-
-    if matches!(status, button::Status::Hovered) && !is_today {
-        base.background = Some(palette.primary.weak.color.into());
-        base.text_color = palette.primary.weak.text;
+        .width(Length::Fixed(scale::scaled(CELL)))
+        .height(Length::Fixed(scale::scaled(CELL)))
+        .style(move |theme: &Theme, status: button::Status| {
+            day_button_style(theme, status, in_month, is_today)
+        })
+        .into()
     }
 
-    base
+    /// A chevron of the month navigation.
+    fn nav_button<'a>(
+        content: impl Into<Element<'a, Message>>,
+        message: Message
+    ) -> iced::widget::Button<'a, Message> {
+        button(content.into())
+            .on_press(message)
+            .style(nav_button_style)
+    }
+
+    fn nav_button_style(theme: &Theme, status: button::Status) -> button::Style {
+        let mut base = button::Style {
+            background: None,
+            border: Border {
+                width:  0.0,
+                radius: scale::scaled(4.0).into(),
+                color:  Color::TRANSPARENT
+            },
+            text_color: theme.palette().text,
+            ..button::Style::default()
+        };
+
+        if matches!(status, button::Status::Hovered) {
+            base.background = Some(theme.extended_palette().background.weak.color.into());
+        }
+
+        base
+    }
+
+    /// Style of one day cell.
+    ///
+    /// Today is the one filled cell; every other day sits flat on the menu
+    /// and lights up under the pointer. Days of the neighbouring months stay
+    /// dimmed, so the shape of the month is readable at a glance.
+    fn day_button_style(
+        theme: &Theme,
+        status: button::Status,
+        in_month: bool,
+        is_today: bool
+    ) -> button::Style {
+        let palette = theme.extended_palette();
+
+        let (background, text_color) = if is_today {
+            (
+                Some(theme.palette().primary.into()),
+                palette.primary.base.text
+            )
+        } else if in_month {
+            (None, theme.palette().text)
+        } else {
+            (None, palette.background.weak.text)
+        };
+
+        let mut base = button::Style {
+            background,
+            border: Border {
+                width:  0.0,
+                radius: scale::scaled(8.0).into(),
+                color:  Color::TRANSPARENT
+            },
+            text_color,
+            ..button::Style::default()
+        };
+
+        if matches!(status, button::Status::Hovered) && !is_today {
+            base.background = Some(palette.primary.weak.color.into());
+            base.text_color = palette.primary.weak.text;
+        }
+
+        base
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use chrono::{Datelike, Local};
+
+    use super::{metrics::WEEKDAYS, *};
 
     #[test]
     fn the_default_view_is_the_current_month() {
@@ -533,5 +590,11 @@ mod tests {
         assert_eq!(WEEKDAYS.len(), 7);
         assert_eq!(WEEKDAYS[0], "Mon");
         assert_eq!(WEEKDAYS[6], "Sun");
+    }
+
+    #[test]
+    fn the_box_is_wider_than_the_grid_it_wraps() {
+        assert!(Calendar::content_width(10.0) > 0.0);
+        assert!(Calendar::content_height() > 0.0);
     }
 }

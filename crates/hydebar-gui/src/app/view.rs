@@ -251,18 +251,11 @@ impl App {
                                 .map(Message::ControlCenter)
                         )
                         .on_scroll(|delta| {
-                            let up = match delta {
-                                iced::mouse::ScrollDelta::Lines {
-                                    y, ..
-                                }
-                                | iced::mouse::ScrollDelta::Pixels {
-                                    y, ..
-                                } => y > 0.0
-                            };
-
                             Message::ControlCenter(
                                 hydebar_core::modules::control_center::Message::Audio(
-                                    AudioMessage::SinkVolumeWheel(if up { 1 } else { -1 })
+                                    AudioMessage::SinkVolumeWheel(
+                                        hydebar_core::modules::control_center::audio::wheel_direction(delta)
+                                    )
                                 )
                             )
                         })

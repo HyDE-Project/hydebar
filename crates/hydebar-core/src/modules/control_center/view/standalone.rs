@@ -7,7 +7,6 @@
 
 use iced::{
     Element, Length, SurfaceId as Id,
-    mouse::ScrollDelta,
     widget::{Column, Row, mouse_area}
 };
 
@@ -26,7 +25,7 @@ use crate::{
     modules::{
         OnModulePress,
         control_center::{
-            audio::AudioMessage,
+            audio::{AudioMessage, wheel_direction},
             power::power_menu,
             state::{ControlCenter, Message, SubMenu}
         }
@@ -54,20 +53,9 @@ impl ControlCenter {
         let indicator = self.audio.as_ref().and_then(|a| a.sink_indicator(icons))?;
         let wheeled = mouse_area(indicator)
             .on_scroll(|delta| {
-                let up = match delta {
-                    ScrollDelta::Lines {
-                        y, ..
-                    }
-                    | ScrollDelta::Pixels {
-                        y, ..
-                    } => y > 0.0
-                };
-
-                M::from(Message::Audio(AudioMessage::SinkVolumeWheel(if up {
-                    1
-                } else {
-                    -1
-                })))
+                M::from(Message::Audio(AudioMessage::SinkVolumeWheel(
+                    wheel_direction(delta)
+                )))
             })
             .into();
 
