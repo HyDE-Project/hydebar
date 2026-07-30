@@ -7,8 +7,8 @@ use log::warn;
 use super::super::{
     ControlCenter, Message,
     event_forwarders::{
-        AudioEventForwarder, BluetoothEventForwarder, BrightnessEventForwarder,
-        NetworkEventForwarder, UPowerEventForwarder
+        audio_forwarder, bluetooth_forwarder, brightness_forwarder, network_forwarder,
+        upower_forwarder
     },
     network::NetworkMessage,
     view::ControlCenterViewExt
@@ -93,27 +93,27 @@ where
 
         let mut tasks = Vec::new();
 
-        let mut audio_publisher = AudioEventForwarder::new(sender.clone());
+        let mut audio_publisher = audio_forwarder(sender.clone());
         tasks.push(ctx.runtime_handle().spawn(async move {
             AudioService::listen(&mut audio_publisher).await;
         }));
 
-        let mut brightness_publisher = BrightnessEventForwarder::new(sender.clone());
+        let mut brightness_publisher = brightness_forwarder(sender.clone());
         tasks.push(ctx.runtime_handle().spawn(async move {
             BrightnessService::listen(&mut brightness_publisher).await;
         }));
 
-        let mut network_publisher = NetworkEventForwarder::new(sender.clone());
+        let mut network_publisher = network_forwarder(sender.clone());
         tasks.push(ctx.runtime_handle().spawn(async move {
             NetworkService::listen(&mut network_publisher).await;
         }));
 
-        let mut bluetooth_publisher = BluetoothEventForwarder::new(sender.clone());
+        let mut bluetooth_publisher = bluetooth_forwarder(sender.clone());
         tasks.push(ctx.runtime_handle().spawn(async move {
             BluetoothService::listen(&mut bluetooth_publisher).await;
         }));
 
-        let mut upower_publisher = UPowerEventForwarder::new(sender.clone());
+        let mut upower_publisher = upower_forwarder(sender.clone());
         tasks.push(ctx.runtime_handle().spawn(async move {
             UPowerService::listen(&mut upower_publisher).await;
         }));

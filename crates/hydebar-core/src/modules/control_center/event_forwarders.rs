@@ -1,3 +1,9 @@
+//! Bridges from the service event streams onto the module message bus.
+//!
+//! One generic forwarder instead of one hand-written struct per service: the
+//! five bridges differed only in the message constructor and the name used in
+//! the failure log, which is exactly what a value can carry.
+
 use std::future::{Ready, ready};
 
 use log::warn;
@@ -9,159 +15,99 @@ use super::{
 use crate::{
     ModuleEventSender,
     services::{
-        ServiceEvent, ServiceEventPublisher, audio::AudioService, bluetooth::BluetoothService,
-        brightness::BrightnessService, network::NetworkService, upower::UPowerService
+        ReadOnlyService, ServiceEvent, ServiceEventPublisher, audio::AudioService,
+        bluetooth::BluetoothService, brightness::BrightnessService, network::NetworkService,
+        upower::UPowerService
     }
 };
 
-pub(super) struct AudioEventForwarder {
-    sender: ModuleEventSender<Message>
+/// Forwards the events of one service, wrapped into the module's message.
+pub(super) struct EventForwarder<S: ReadOnlyService> {
+    sender: ModuleEventSender<Message>,
+    wrap:   fn(ServiceEvent<S>) -> Message,
+    label:  &'static str
 }
 
-impl AudioEventForwarder {
-    pub fn new(sender: ModuleEventSender<Message>) -> Self {
+impl<S: ReadOnlyService> EventForwarder<S> {
+    fn new(
+        sender: ModuleEventSender<Message>,
+        wrap: fn(ServiceEvent<S>) -> Message,
+        label: &'static str
+    ) -> Self {
         Self {
-            sender
+            sender,
+            wrap,
+            label
         }
     }
 }
 
-impl ServiceEventPublisher<AudioService> for AudioEventForwarder {
+impl<S: ReadOnlyService> ServiceEventPublisher<S> for EventForwarder<S> {
     type SendFuture<'a>
         = Ready<()>
     where
         Self: 'a;
 
-    fn send(&mut self, event: ServiceEvent<AudioService>) -> Self::SendFuture<'_> {
-        if let Err(err) = self
-            .sender
-            .try_send(Message::Audio(AudioMessage::Event(event)))
-        {
-            warn!("failed to publish audio event: {err}");
+    fn send(&mut self, event: ServiceEvent<S>) -> Self::SendFuture<'_> {
+        if let Err(err) = self.sender.try_send((self.wrap)(event)) {
+            warn!("failed to publish {} event: {err}", self.label);
         }
 
         ready(())
     }
 }
 
-pub(super) struct BrightnessEventForwarder {
+/// The forwarder of the audio service.
+pub(super) fn audio_forwarder(sender: ModuleEventSender<Message>) -> EventForwarder<AudioService> {
+    EventForwarder::new(
+        sender,
+        |event| Message::Audio(AudioMessage::Event(event)),
+        "audio"
+    )
+}
+
+/// The forwarder of the brightness service.
+pub(super) fn brightness_forwarder(
     sender: ModuleEventSender<Message>
+) -> EventForwarder<BrightnessService> {
+    EventForwarder::new(
+        sender,
+        |event| Message::Brightness(BrightnessMessage::Event(event)),
+        "brightness"
+    )
 }
 
-impl BrightnessEventForwarder {
-    pub fn new(sender: ModuleEventSender<Message>) -> Self {
-        Self {
-            sender
-        }
-    }
-}
-
-impl ServiceEventPublisher<BrightnessService> for BrightnessEventForwarder {
-    type SendFuture<'a>
-        = Ready<()>
-    where
-        Self: 'a;
-
-    fn send(&mut self, event: ServiceEvent<BrightnessService>) -> Self::SendFuture<'_> {
-        if let Err(err) = self
-            .sender
-            .try_send(Message::Brightness(BrightnessMessage::Event(event)))
-        {
-            warn!("failed to publish brightness event: {err}");
-        }
-
-        ready(())
-    }
-}
-
-pub(super) struct NetworkEventForwarder {
+/// The forwarder of the network service.
+pub(super) fn network_forwarder(
     sender: ModuleEventSender<Message>
+) -> EventForwarder<NetworkService> {
+    EventForwarder::new(
+        sender,
+        |event| Message::Network(NetworkMessage::Event(event)),
+        "network"
+    )
 }
 
-impl NetworkEventForwarder {
-    pub fn new(sender: ModuleEventSender<Message>) -> Self {
-        Self {
-            sender
-        }
-    }
-}
-
-impl ServiceEventPublisher<NetworkService> for NetworkEventForwarder {
-    type SendFuture<'a>
-        = Ready<()>
-    where
-        Self: 'a;
-
-    fn send(&mut self, event: ServiceEvent<NetworkService>) -> Self::SendFuture<'_> {
-        if let Err(err) = self
-            .sender
-            .try_send(Message::Network(NetworkMessage::Event(event)))
-        {
-            warn!("failed to publish network event: {err}");
-        }
-
-        ready(())
-    }
-}
-
-pub(super) struct BluetoothEventForwarder {
+/// The forwarder of the bluetooth service.
+pub(super) fn bluetooth_forwarder(
     sender: ModuleEventSender<Message>
+) -> EventForwarder<BluetoothService> {
+    EventForwarder::new(
+        sender,
+        |event| Message::Bluetooth(BluetoothMessage::Event(event)),
+        "bluetooth"
+    )
 }
 
-impl BluetoothEventForwarder {
-    pub fn new(sender: ModuleEventSender<Message>) -> Self {
-        Self {
-            sender
-        }
-    }
-}
-
-impl ServiceEventPublisher<BluetoothService> for BluetoothEventForwarder {
-    type SendFuture<'a>
-        = Ready<()>
-    where
-        Self: 'a;
-
-    fn send(&mut self, event: ServiceEvent<BluetoothService>) -> Self::SendFuture<'_> {
-        if let Err(err) = self
-            .sender
-            .try_send(Message::Bluetooth(BluetoothMessage::Event(event)))
-        {
-            warn!("failed to publish bluetooth event: {err}");
-        }
-
-        ready(())
-    }
-}
-
-pub(super) struct UPowerEventForwarder {
+/// The forwarder of the power service.
+pub(super) fn upower_forwarder(
     sender: ModuleEventSender<Message>
-}
-
-impl UPowerEventForwarder {
-    pub fn new(sender: ModuleEventSender<Message>) -> Self {
-        Self {
-            sender
-        }
-    }
-}
-
-impl ServiceEventPublisher<UPowerService> for UPowerEventForwarder {
-    type SendFuture<'a>
-        = Ready<()>
-    where
-        Self: 'a;
-
-    fn send(&mut self, event: ServiceEvent<UPowerService>) -> Self::SendFuture<'_> {
-        if let Err(err) = self
-            .sender
-            .try_send(Message::UPower(UPowerMessage::Event(event)))
-        {
-            warn!("failed to publish upower event: {err}");
-        }
-
-        ready(())
-    }
+) -> EventForwarder<UPowerService> {
+    EventForwarder::new(
+        sender,
+        |event| Message::UPower(UPowerMessage::Event(event)),
+        "upower"
+    )
 }
 
 #[cfg(test)]
@@ -190,7 +136,7 @@ mod tests {
     #[test]
     fn audio_forwarder_enqueues_events() {
         let (runtime, mut receiver, sender) = setup_forwarder();
-        let mut forwarder = AudioEventForwarder::new(sender);
+        let mut forwarder = audio_forwarder(sender);
 
         let _ = forwarder.send(ServiceEvent::Error(()));
 
@@ -208,7 +154,7 @@ mod tests {
     #[test]
     fn network_forwarder_enqueues_events() {
         let (runtime, mut receiver, sender) = setup_forwarder();
-        let mut forwarder = NetworkEventForwarder::new(sender);
+        let mut forwarder = network_forwarder(sender);
 
         let error = crate::services::network::NetworkServiceError::new("failure");
         let _ = forwarder.send(ServiceEvent::Error(error.clone()));
