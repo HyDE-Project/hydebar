@@ -182,6 +182,10 @@ impl<'de> Deserialize<'de> for ModuleName {
             where
                 E: serde::de::Error
             {
+                if value == "hyde-menu" {
+                    return Ok(ModuleName::HydeMenu);
+                }
+
                 Ok(ModuleName::BUILT_IN
                     .iter()
                     .find(|module| module.as_str() == value)

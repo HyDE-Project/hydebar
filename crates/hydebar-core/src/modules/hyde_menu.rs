@@ -63,6 +63,7 @@ impl HydeMenu {
         self.expanded.clear();
 
         let Some(definition) = source::read_definition() else {
+            log::warn!("the desktop ships no menu definition, the menu stays empty");
             return;
         };
 
@@ -73,6 +74,12 @@ impl HydeMenu {
             .as_deref()
             .and_then(source::read_tree)
             .unwrap_or_default();
+
+        log::info!(
+            "desktop menu: {} entries, {} actions",
+            self.tree.len(),
+            self.actions.len()
+        );
     }
 
     /// Applies what the user asked, reporting the command to run, if any.
