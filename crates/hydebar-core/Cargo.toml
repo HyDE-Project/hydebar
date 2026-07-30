@@ -5,6 +5,8 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+fontdb.workspace = true
+ttf-parser.workspace = true
 chrono.workspace = true
 dirs.workspace = true
 freedesktop-icons.workspace = true

@@ -5,6 +5,7 @@
 //! knows about the renderer.
 
 mod catalog;
+mod optical;
 mod theme;
 mod widget;
 
