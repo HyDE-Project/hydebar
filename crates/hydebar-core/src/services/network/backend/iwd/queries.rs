@@ -61,7 +61,7 @@ impl IwdDbus<'_> {
             info.push(ActiveConnectionInfo::WiFi {
                 id:       ssid.clone(),
                 name:     ssid,
-                strength: (s / 100 + 100) as u8
+                strength: (s / 100 + 100).clamp(0, 100) as u8
             });
         }
         Ok(info)
@@ -108,7 +108,7 @@ impl IwdDbus<'_> {
                     state: DeviceState::Unknown, // TODO:
                     // _s is between 0 and -10000
                     // should be between 0 and 100
-                    strength: ((s / 100) + 100) as u8,
+                    strength: ((s / 100) + 100).clamp(0, 100) as u8,
                     public,
                     working: false, // TODO:
                     path,

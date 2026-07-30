@@ -3,11 +3,7 @@ use std::{any::TypeId, ops::Deref};
 use dbus::{BatteryProxy, BluetoothDbus};
 use iced::{
     Subscription, Task,
-    futures::{
-        Stream, StreamExt,
-        stream::{pending, select_all},
-        stream_select
-    },
+    futures::{Stream, StreamExt, stream::select_all, stream_select},
     stream::channel
 };
 use inotify::{Inotify, WatchMask};
@@ -197,10 +193,10 @@ impl BluetoothService {
                 }
             }
             State::Error => {
-                error!("Bluetooth service error");
+                error!("Bluetooth service error, retrying soon");
 
-                let _ = pending::<u8>().next().await;
-                State::Error
+                tokio::time::sleep(crate::services::RECONNECT_MAX_DELAY).await;
+                State::Init
             }
         }
     }

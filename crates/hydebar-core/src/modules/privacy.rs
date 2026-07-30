@@ -88,10 +88,12 @@ where
 
         let task = ctx.runtime_handle().spawn(async move {
             let mut state = State::Init;
+            let mut failures: u32 = 0;
 
             loop {
                 match run_start_listening(state, &mut publisher).await {
                     Ok(next_state) => {
+                        failures = 0;
                         state = next_state;
                     }
                     Err(error) => {
@@ -99,9 +101,10 @@ where
                             .try_send(PrivacyMessage::Event(ServiceEvent::Error(error.clone())))
                         {
                             warn!("failed to publish privacy service error: {err}");
-                            break;
                         }
 
+                        failures = failures.saturating_add(1);
+                        tokio::time::sleep(crate::services::reconnect_delay(failures)).await;
                         state = State::Init;
                     }
                 }

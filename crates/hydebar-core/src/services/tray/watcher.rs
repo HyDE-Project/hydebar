@@ -1,6 +1,5 @@
 use std::{future::Future, pin::Pin};
 
-use futures::future::pending;
 use iced::futures::{Stream, StreamExt, stream::select_all, stream_select};
 use log::{debug, error, info};
 use masterror::AppError;
@@ -288,10 +287,10 @@ where
             }
         }
         State::Error => {
-            error!("Tray service error");
+            error!("Tray service error, retrying soon");
 
-            pending::<()>().await;
-            State::Error
+            tokio::time::sleep(crate::services::RECONNECT_MAX_DELAY).await;
+            State::Init
         }
     }
 }

@@ -91,14 +91,20 @@ impl StatusNotifierWatcher {
                         .iter()
                         .position(|(unique_name, _)| unique_name == name)
                     {
-                        let emitter =
-                            SignalEmitter::new(&internal_connection, OBJECT_PATH).unwrap();
+                        let Ok(emitter) = SignalEmitter::new(&internal_connection, OBJECT_PATH)
+                        else {
+                            warn!("tray connection is gone, cannot announce the removal");
+                            continue;
+                        };
                         let service = interface.items.remove(idx).1;
-                        StatusNotifierWatcher::status_notifier_item_unregistered(
+
+                        if let Err(err) = StatusNotifierWatcher::status_notifier_item_unregistered(
                             &emitter, &service
                         )
                         .await
-                        .unwrap();
+                        {
+                            warn!("failed to announce a tray item removal: {err}");
+                        }
                     }
                 }
             }
@@ -123,15 +129,19 @@ impl StatusNotifierWatcher {
         #[zbus(header)] header: Header<'_>,
         #[zbus(signal_emitter)] emitter: SignalEmitter<'_>
     ) {
-        let sender = header.sender().unwrap();
+        let Some(sender) = header.sender() else {
+            warn!("tray registration without a sender, ignoring it");
+            return;
+        };
         let service = if service.starts_with('/') {
             format!("{sender}{service}")
         } else {
             service.to_string()
         };
-        Self::status_notifier_item_registered(&emitter, &service)
-            .await
-            .unwrap();
+
+        if let Err(err) = Self::status_notifier_item_registered(&emitter, &service).await {
+            warn!("failed to announce a tray item registration: {err}");
+        }
 
         self.items.push((sender.to_owned(), service));
     }

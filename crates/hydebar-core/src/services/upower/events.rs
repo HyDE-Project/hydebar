@@ -2,7 +2,7 @@
 
 use iced::futures::{
     Stream, StreamExt,
-    stream::{once, pending, select_all},
+    stream::{once, select_all},
     stream_select
 };
 use log::error;
@@ -135,9 +135,9 @@ impl UPowerService {
                 }
             }
             State::Error => {
-                let _ = pending::<u8>().next().await;
+                tokio::time::sleep(crate::services::RECONNECT_MAX_DELAY).await;
 
-                State::Error
+                State::Init
             }
         }
     }

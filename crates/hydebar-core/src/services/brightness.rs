@@ -5,11 +5,7 @@ use std::{
     path::{Path, PathBuf}
 };
 
-use iced::{
-    Subscription, Task,
-    futures::{StreamExt, stream::pending},
-    stream::channel
-};
+use iced::{Subscription, Task, stream::channel};
 use log::{debug, error, info, warn};
 use tokio::io::{Interest, unix::AsyncFd};
 use zbus::proxy;
@@ -186,9 +182,9 @@ impl BrightnessService {
                 Ok(State::Active(device_path))
             }
             State::Error => {
-                error!("Brightness service error");
-                let _ = pending::<u8>().next().await;
-                Ok(State::Error)
+                error!("Brightness service error, retrying soon");
+                tokio::time::sleep(crate::services::RECONNECT_MAX_DELAY).await;
+                Ok(State::Init)
             }
         }
     }

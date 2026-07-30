@@ -2,7 +2,6 @@
 
 use iced::{Element, alignment::Vertical, widget::row};
 use log::warn;
-use tokio::task::yield_now;
 
 use super::{MediaPlayer, MediaPlayerPublisher};
 use crate::{
@@ -46,10 +45,12 @@ where
         let task = ctx.runtime_handle().spawn(async move {
             let mut state = ListenerState::Init;
             let mut publisher = MediaPlayerPublisher::new(listener_sender);
+            let mut failures: u32 = 0;
 
             loop {
                 match MprisPlayerService::start_listening(state, &mut publisher).await {
                     Ok(next_state) => {
+                        failures = 0;
                         state = next_state;
                     }
                     Err(error) => {
@@ -61,8 +62,9 @@ where
                             break;
                         }
 
+                        failures = failures.saturating_add(1);
+                        tokio::time::sleep(crate::services::reconnect_delay(failures)).await;
                         state = ListenerState::Init;
-                        yield_now().await;
                     }
                 }
             }

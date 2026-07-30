@@ -92,7 +92,7 @@ impl NetworkBackend for IwdDbus<'_> {
                 ssid,
                 path,
                 device_path,
-                strength: ((s / 100) + 100) as u8,
+                strength: ((s / 100) + 100).clamp(0, 100) as u8,
                 state: DeviceState::Unknown, // TODO:
                 public: n.type_().await.map_err(|e| {
                     AppError::internal(format!("Failed to get network type: {}", e))

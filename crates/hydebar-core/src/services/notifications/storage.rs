@@ -39,6 +39,26 @@ impl NotificationStorage {
         id
     }
 
+    /// Replaces the notification with `id` in place, keeping that id.
+    ///
+    /// An application updating its own notification — a progress bar, a
+    /// volume change — names the id it was given; the entry must stay
+    /// findable under it, or a later dismissal of that id finds nothing.
+    pub fn replace(&mut self, id: u32, mut notification: Notification) {
+        notification.id = id;
+
+        match self.notifications.iter_mut().find(|n| n.id == id) {
+            Some(existing) => *existing = notification,
+            None => {
+                if self.notifications.len() >= MAX_NOTIFICATIONS {
+                    self.notifications.pop_back();
+                }
+
+                self.notifications.push_front(notification);
+            }
+        }
+    }
+
     pub fn remove(&mut self, id: u32) -> Option<Notification> {
         if let Some(pos) = self.notifications.iter().position(|n| n.id == id) {
             self.notifications.remove(pos)

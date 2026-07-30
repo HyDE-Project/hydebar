@@ -127,7 +127,9 @@ impl Weather {
         Self {
             data: WeatherData::new(location, use_celsius),
             api_key,
-            update_interval: Duration::from_secs(update_interval_minutes * 60),
+            update_interval: Duration::from_secs(
+                update_interval_minutes.clamp(1, 24 * 60).saturating_mul(60)
+            ),
             sender: None,
             task: None
         }

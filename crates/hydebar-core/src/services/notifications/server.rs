@@ -98,7 +98,7 @@ impl NotificationsServer {
 
         // Handle replaces_id
         let id = if replaces_id > 0 {
-            storage.remove(replaces_id);
+            storage.replace(replaces_id, notification.clone());
             replaces_id
         } else {
             storage.add(notification.clone())

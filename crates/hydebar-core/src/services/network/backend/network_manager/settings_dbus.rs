@@ -57,15 +57,17 @@ impl NetworkSettingsDbus<'_> {
             let s = connection.get_settings().await.map_err(|e| {
                 AppError::internal(format!("Failed to get connection settings: {}", e))
             })?;
-            let id = s
+            let Some(id) = s
                 .get("connection")
-                .unwrap()
-                .get("id")
+                .and_then(|section| section.get("id"))
                 .map(|v| match v.deref() {
                     Value::Str(v) => v.to_string(),
-                    _ => "".to_string()
+                    _ => String::new()
                 })
-                .unwrap();
+            else {
+                continue;
+            };
+
             if id == name {
                 return Ok(Some(connection.inner().path().to_owned().into()));
             }

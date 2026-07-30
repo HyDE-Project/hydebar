@@ -37,10 +37,12 @@ impl ReadOnlyService for PrivacyService {
         Subscription::run_with(id, |&_id| {
             channel(100, async |mut output| {
                 let mut state = State::Init;
+                let mut failures: u32 = 0;
 
                 loop {
                     match PrivacyService::start_listening(state, &mut output).await {
                         Ok(next_state) => {
+                            failures = 0;
                             state = next_state;
                         }
                         Err(error) => {
@@ -54,6 +56,8 @@ impl ReadOnlyService for PrivacyService {
                                 break;
                             }
 
+                            failures = failures.saturating_add(1);
+                            tokio::time::sleep(crate::services::reconnect_delay(failures)).await;
                             state = State::Init;
                         }
                     }

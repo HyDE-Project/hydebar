@@ -52,12 +52,21 @@ static WIFI_LOCK_SIGNAL_ICONS: [Icons; 5] = [
 ];
 
 impl ActiveConnectionInfo {
+    /// Maps a signal strength to its icon bucket, whatever the backend sends.
+    ///
+    /// The strength is clamped first: a backend can report a value past one
+    /// hundred — a wrapped negative RSSI does exactly that — and an index
+    /// computed from it unclamped walked off the end of the icon tables.
+    fn signal_bucket(signal: u8) -> usize {
+        f32::round(f32::from(signal.min(100)) / 100. * 4.) as usize
+    }
+
     pub fn get_wifi_icon(signal: u8) -> Icons {
-        WIFI_SIGNAL_ICONS[1 + f32::round(signal as f32 / 100. * 4.) as usize]
+        WIFI_SIGNAL_ICONS[1 + Self::signal_bucket(signal)]
     }
 
     pub fn get_wifi_lock_icon(signal: u8) -> Icons {
-        WIFI_LOCK_SIGNAL_ICONS[f32::round(signal as f32 / 100. * 4.) as usize]
+        WIFI_LOCK_SIGNAL_ICONS[Self::signal_bucket(signal)]
     }
 
     pub fn get_icon(&self) -> Icons {

@@ -71,8 +71,10 @@ impl ReadOnlyService for NotificationsService {
 
     fn update(&mut self, event: Self::UpdateEvent) {
         match event {
-            NotificationEvent::Received(notification) => {
-                self.storage.lock().unwrap().add(notification);
+            NotificationEvent::Received(_) => {
+                // the server already stored it in the storage this service
+                // shares; the event only tells the view to re-read, and
+                // storing again listed every notification twice
             }
             NotificationEvent::Closed(id) => {
                 self.storage.lock().unwrap().remove(id);

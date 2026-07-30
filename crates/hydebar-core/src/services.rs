@@ -24,6 +24,26 @@ pub enum ServiceEvent<S: ReadOnlyService> {
     Error(S::Error)
 }
 
+/// Smallest pause between reconnect attempts of a failed service.
+pub(crate) const RECONNECT_MIN_DELAY: std::time::Duration = std::time::Duration::from_millis(500);
+
+/// Largest pause a repeatedly failing service settles into.
+pub(crate) const RECONNECT_MAX_DELAY: std::time::Duration = std::time::Duration::from_secs(60);
+
+/// Delay before the next attempt after `failures` consecutive failures.
+///
+/// One law for every service on purpose: a backend that is merely restarting
+/// recovers within a second, an absent one settles into a wakeup a minute the
+/// idle bar does not notice — and no service is allowed to spin or to stay
+/// dead for the session.
+pub(crate) fn reconnect_delay(failures: u32) -> std::time::Duration {
+    let shift = failures.saturating_sub(1).min(u32::BITS - 1);
+
+    RECONNECT_MIN_DELAY
+        .saturating_mul(1u32 << shift)
+        .min(RECONNECT_MAX_DELAY)
+}
+
 pub trait Service: ReadOnlyService {
     type Command;
 
