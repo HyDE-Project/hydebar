@@ -20,7 +20,13 @@ pub struct ThemeSwatch {
     /// Text the theme sets on that surface.
     pub text:       Rgba,
     /// Accent the theme highlights with.
-    pub accent:     Rgba
+    pub accent:     Rgba,
+    /// The palette itself, for drawing the theme rather than naming it.
+    ///
+    /// The three remaining primaries and the brightest accent: enough to tell
+    /// two dark themes apart at a glance, which one flat surface colour never
+    /// could.
+    pub palette:    [Rgba; 4]
 }
 
 /// Reads the swatch of `theme`, if anything on disk answers for its colours.
@@ -36,7 +42,13 @@ pub fn theme_swatch(dirs: &HydeDirs, theme: &str) -> Option<ThemeSwatch> {
     Some(ThemeSwatch {
         background: palette.primary[0],
         text:       palette.text[0],
-        accent:     palette.primary[3]
+        accent:     palette.primary[3],
+        palette:    [
+            palette.primary[1],
+            palette.primary[2],
+            palette.primary[3],
+            palette.accents[3][8]
+        ]
     })
 }
 

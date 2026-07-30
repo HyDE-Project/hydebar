@@ -20,7 +20,7 @@ use crate::components::page::{
         chip_cell_width, chip_width, indicator_width, status_row_width, text_width,
         wrap_chips_into_rows
     },
-    style,
+    style, widgets,
     widgets::{
         ChipPaint, ThemeChip, grid, group, note, page, rows as row_stack, section, status_row,
         theme_chip
@@ -154,7 +154,8 @@ fn chip_paint(swatch: &ThemeSwatch) -> ChipPaint {
     ChipPaint {
         background: colour(swatch.background),
         text:       colour(swatch.text),
-        accent:     colour(swatch.accent)
+        accent:     colour(swatch.accent),
+        palette:    swatch.palette.map(colour)
     }
 }
 
@@ -275,9 +276,17 @@ pub(super) fn desired_width(state: &HydeState, switching: Option<&str>, font_siz
 }
 
 /// Height this menu needs when drawn `available_width` wide.
+///
+/// A painted chip is taller than a plain one by its row of palette dots, so
+/// every grid row adds that height on top of the shared row pitch — an
+/// estimate without it would clip the last row of themes.
 #[must_use]
 pub(super) fn desired_height(state: &HydeState, font_size: f32, available_width: f32) -> f32 {
-    style::page_height(rows(state, font_size, available_width), font_size)
+    let dots = theme_rows(state, font_size, available_width)
+        * widgets::DOT_ROW_EM
+        * style::control_size(font_size);
+
+    style::page_height(rows(state, font_size, available_width), font_size) + dots
 }
 
 #[cfg(test)]
@@ -503,13 +512,16 @@ mod tests {
     }
 
     #[test]
-    fn the_menu_height_follows_the_shared_row_pitch() {
+    fn the_menu_height_follows_the_shared_row_pitch_plus_the_dot_rows() {
         let font_size = 16.0;
         let themes = state(&["Nord", "Mocha"], Some("Nord"));
 
         assert_eq!(
             desired_height(&themes, font_size, 400.0),
             style::page_height(rows(&themes, font_size, 400.0), font_size)
+                + theme_rows(&themes, font_size, 400.0)
+                    * widgets::DOT_ROW_EM
+                    * style::control_size(font_size)
         );
     }
 }

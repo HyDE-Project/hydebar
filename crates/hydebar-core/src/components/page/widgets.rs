@@ -7,7 +7,7 @@
 
 use iced::{
     Alignment, Background, Border, Element, Length, Theme,
-    widget::{Column, Row, button, container, text}
+    widget::{Column, Row, Space, button, container, text}
 };
 
 use super::style;
@@ -210,7 +210,50 @@ pub(crate) struct ChipPaint {
     /// Text on that surface.
     pub(crate) text:       iced::Color,
     /// Accent the active theme is ringed with.
-    pub(crate) accent:     iced::Color
+    pub(crate) accent:     iced::Color,
+    /// The theme's own colours, drawn as a row of dots under the name.
+    ///
+    /// One surface colour cannot tell two dark themes apart; the dots draw
+    /// the palette itself, the way any theme picker worth its name does.
+    pub(crate) palette:    [iced::Color; 4]
+}
+
+/// Diameter of one palette dot, in multiples of the control text size.
+const DOT_EM: f32 = 0.55;
+
+/// Gap between two palette dots, in multiples of the control text size.
+const DOT_GAP_EM: f32 = 0.35;
+
+/// Room the dot row adds under the name, in multiples of the control size.
+///
+/// The dot itself plus the spacing the column keeps above it; the menu height
+/// estimate reads this so a grid of painted chips is measured as tall as it
+/// draws.
+pub(crate) const DOT_ROW_EM: f32 = DOT_EM + DOT_GAP_EM;
+
+/// Renders the palette of a theme as a row of coloured dots.
+fn palette_dots<'a, M: 'a>(palette: [iced::Color; 4], control: f32) -> Element<'a, M> {
+    let dot = DOT_EM * control;
+    let mut row = Row::new()
+        .spacing(DOT_GAP_EM * control)
+        .align_y(iced::Alignment::Center);
+
+    for colour in palette {
+        row = row.push(
+            container(Space::new().width(dot).height(dot)).style(move |_: &Theme| {
+                container::Style {
+                    background: Some(Background::Color(colour)),
+                    border: Border::default().rounded(dot / 2.0),
+                    ..container::Style::default()
+                }
+            })
+        );
+    }
+
+    container(row)
+        .width(iced::Length::Fill)
+        .align_x(iced::Alignment::Center)
+        .into()
 }
 
 /// What a chip of the theme grid stands for right now.
@@ -265,14 +308,21 @@ pub(crate) fn theme_chip<'a, M: Clone + 'a>(
 ) -> Element<'a, M> {
     let control = style::control_size(font_size);
 
-    let mut chip = button(
-        text(label)
-            .size(control)
-            .width(iced::Length::Fill)
-            .align_x(iced::Alignment::Center)
-    )
-    .width(cell)
-    .padding([
+    let name = text(label)
+        .size(control)
+        .width(iced::Length::Fill)
+        .align_x(iced::Alignment::Center);
+
+    let content: Element<'a, M> = match paint {
+        Some(paint) => Column::new()
+            .spacing(DOT_GAP_EM * control)
+            .push(name)
+            .push(palette_dots(paint.palette, control))
+            .into(),
+        None => name.into()
+    };
+
+    let mut chip = button(content).width(cell).padding([
         style::CHIP_PADDING_EM[0] * control,
         style::CHIP_PADDING_EM[1] * control
     ]);
