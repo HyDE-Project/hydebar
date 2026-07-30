@@ -192,3 +192,62 @@ pub(super) async fn run_custom_poller(
         .await?;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Distance from `SIGRTMIN` to `SIGRTMAX` on the running kernel.
+    fn real_time_span() -> u8 {
+        u8::try_from(libc::SIGRTMAX() - libc::SIGRTMIN()).expect("span fits a byte")
+    }
+
+    #[test]
+    fn a_zero_offset_names_sigrtmin_itself() {
+        assert_eq!(real_time_signal(0), Some(libc::SIGRTMIN()));
+    }
+
+    #[test]
+    fn an_offset_counts_up_from_sigrtmin() {
+        assert_eq!(real_time_signal(2), Some(libc::SIGRTMIN() + 2));
+    }
+
+    #[test]
+    fn the_last_real_time_signal_is_still_accepted() {
+        assert_eq!(real_time_signal(real_time_span()), Some(libc::SIGRTMAX()));
+    }
+
+    #[test]
+    fn an_offset_past_sigrtmax_is_rejected() {
+        assert_eq!(real_time_signal(real_time_span() + 1), None);
+    }
+
+    #[test]
+    fn the_largest_offset_is_rejected() {
+        assert_eq!(real_time_signal(u8::MAX), None);
+    }
+
+    #[test]
+    fn no_interval_means_no_ticker() {
+        assert!(open_ticker(None).is_none());
+    }
+
+    #[tokio::test]
+    async fn a_ticker_keeps_the_configured_period_and_delays_missed_ticks() {
+        let ticker = open_ticker(Some(Duration::from_secs(5))).expect("ticker");
+
+        assert_eq!(ticker.period(), Duration::from_secs(5));
+        assert_eq!(ticker.missed_tick_behavior(), MissedTickBehavior::Delay);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn the_first_tick_waits_a_full_period() {
+        let period = Duration::from_secs(5);
+        let start = Instant::now();
+        let mut ticker = open_ticker(Some(period)).expect("ticker");
+
+        ticker.tick().await;
+
+        assert_eq!(Instant::now() - start, period);
+    }
+}

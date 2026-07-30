@@ -33,3 +33,33 @@ pub fn truncate_text(value: &str, max_length: u32) -> String {
         value.to_string()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_long_multi_byte_title_keeps_both_ends() {
+        let truncated = truncate_text("Привет мир как дела", 5);
+
+        assert_eq!(truncated, "Пр...ла");
+    }
+
+    #[test]
+    fn every_small_max_survives_multi_byte_input() {
+        for max in 0..8 {
+            let _ = truncate_text("Привет мир как дела", max);
+        }
+    }
+
+    #[test]
+    fn ascii_input_is_truncated_as_before() {
+        assert_eq!(truncate_text("hello world", 6), "hel...rld");
+    }
+
+    #[test]
+    fn a_string_no_longer_than_the_limit_is_untouched() {
+        assert_eq!(truncate_text("Привет", 6), "Привет");
+        assert_eq!(truncate_text("short", 10), "short");
+    }
+}

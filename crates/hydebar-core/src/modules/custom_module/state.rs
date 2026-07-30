@@ -209,3 +209,123 @@ impl crate::services::ReadOnlyService for CustomCommandService {
         Subscription::none()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn update_payload(alt: &str) -> CustomListenData {
+        CustomListenData {
+            alt: String::from(alt),
+            ..CustomListenData::default()
+        }
+    }
+
+    #[test]
+    fn an_update_replaces_the_data_and_clears_the_previous_error() {
+        let mut module = Custom::default();
+        module.update(Message::Event(ServiceEvent::Error(
+            CustomCommandError::ChannelClosed
+        )));
+
+        module.update(Message::Event(ServiceEvent::Update(update_payload("42"))));
+
+        assert_eq!(module.data.alt, "42");
+        assert!(module.last_error.is_none());
+    }
+
+    #[test]
+    fn an_error_keeps_the_data_already_on_screen() {
+        let mut module = Custom::default();
+        module.update(Message::Event(ServiceEvent::Update(update_payload("42"))));
+
+        module.update(Message::Event(ServiceEvent::Error(
+            CustomCommandError::ChannelClosed
+        )));
+
+        assert_eq!(module.data.alt, "42");
+        assert!(matches!(
+            module.last_error,
+            Some(CustomCommandError::ChannelClosed)
+        ));
+    }
+
+    #[test]
+    fn an_init_event_changes_nothing() {
+        let mut module = Custom::default();
+        module.update(Message::Event(ServiceEvent::Update(update_payload("42"))));
+        module.update(Message::Event(ServiceEvent::Error(
+            CustomCommandError::ChannelClosed
+        )));
+
+        module.update(Message::Event(ServiceEvent::Init(CustomCommandService)));
+
+        assert_eq!(module.data.alt, "42");
+        assert!(matches!(
+            module.last_error,
+            Some(CustomCommandError::ChannelClosed)
+        ));
+    }
+
+    #[test]
+    fn a_module_without_a_registration_is_not_listening() {
+        assert!(!Custom::default().is_listening());
+    }
+
+    #[test]
+    fn a_stream_config_keeps_its_command_verbatim() {
+        let source = RegistrationSource::from_config(CustomModuleSource::Stream {
+            command: "tail -f log"
+        });
+
+        match source {
+            RegistrationSource::Stream {
+                command
+            } => assert_eq!(command.as_ref(), "tail -f log"),
+            other => panic!("unexpected source: {other:?}")
+        }
+    }
+
+    #[test]
+    fn a_poll_config_turns_interval_seconds_into_a_period() {
+        let source = RegistrationSource::from_config(CustomModuleSource::Poll {
+            command:  "hyde-shell cpuinfo",
+            interval: Some(5),
+            signal:   Some(20)
+        });
+
+        match source {
+            RegistrationSource::Poll {
+                command,
+                period,
+                signal
+            } => {
+                assert_eq!(command.as_ref(), "hyde-shell cpuinfo");
+                assert_eq!(period, Some(Duration::from_secs(5)));
+                assert_eq!(signal, Some(20));
+            }
+            other => panic!("unexpected source: {other:?}")
+        }
+    }
+
+    #[test]
+    fn a_poll_config_without_an_interval_has_no_period() {
+        let source = RegistrationSource::from_config(CustomModuleSource::Poll {
+            command:  "checkupdates",
+            interval: None,
+            signal:   None
+        });
+
+        match source {
+            RegistrationSource::Poll {
+                period,
+                signal,
+                ..
+            } => {
+                assert!(period.is_none());
+                assert!(signal.is_none());
+            }
+            other => panic!("unexpected source: {other:?}")
+        }
+    }
+}

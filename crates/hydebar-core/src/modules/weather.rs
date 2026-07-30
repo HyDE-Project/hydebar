@@ -1,11 +1,16 @@
 use std::time::Duration;
 
+use hydebar_proto::config::WeatherModuleConfig;
 use log::{error, warn};
 use masterror::{AppError, AppResult};
 use serde::Deserialize;
-use tokio::{task::JoinHandle, time::interval};
+use tokio::{runtime::Handle, task::JoinHandle, time::interval};
 
-use crate::{ModuleContext, ModuleEventSender, event_bus::ModuleEvent};
+use crate::{
+    ModuleContext, ModuleEventSender,
+    event_bus::ModuleEvent,
+    modules::{Module, ModuleError}
+};
 
 /// OpenWeatherMap API response structures
 #[derive(Debug, Clone, Deserialize)]
@@ -57,8 +62,10 @@ impl WeatherData {
         }
     }
 
+    /// Builds a reading from an API response, converting the Kelvin
+    /// temperature OpenWeatherMap returns by default into the unit the
+    /// configuration asked for.
     pub fn from_response(response: WeatherResponse, location: String, use_celsius: bool) -> Self {
-        // OpenWeatherMap returns temperature in Kelvin by default
         let temp_kelvin = response.main.temp;
         let temperature = if use_celsius {
             format!("{:.0}°C", temp_kelvin - 273.15)
@@ -114,7 +121,8 @@ pub struct Weather {
     api_key:         Option<String>,
     update_interval: Duration,
     sender:          Option<ModuleEventSender<WeatherEvent>>,
-    task:            Option<JoinHandle<()>>
+    task:            Option<JoinHandle<()>>,
+    runtime:         Option<Handle>
 }
 
 impl Weather {
@@ -131,13 +139,21 @@ impl Weather {
                 update_interval_minutes.clamp(1, 24 * 60).saturating_mul(60)
             ),
             sender: None,
-            task: None
+            task: None,
+            runtime: None
         }
     }
 
     /// Get current weather data for rendering
     pub fn data(&self) -> &WeatherData {
         &self.data
+    }
+
+    /// Exposes the clamped refresh period so tests can verify the clamping
+    /// without reaching into private state.
+    #[cfg(test)]
+    fn update_interval(&self) -> Duration {
+        self.update_interval
     }
 
     /// Restates the module for a configuration that may have changed.
@@ -167,12 +183,19 @@ impl Weather {
         }
     }
 
-    /// Initialize with module context
+    /// Starts the refresh loop on the runtime the context carries.
+    ///
+    /// The loop owns the first fetch too: a tokio interval yields its first
+    /// tick immediately, so the reading appears as soon as the task starts,
+    /// and there is no second, untracked task to leak when the module stops.
+    /// The runtime handle is kept so a manual refresh can spawn on the same
+    /// runtime instead of assuming one is ambient.
     pub fn register(&mut self, ctx: &ModuleContext) {
         self.sender = Some(ctx.module_sender(|event: WeatherEvent| match event {
             WeatherEvent::Updated(data) => ModuleEvent::Weather(Message::Update(data)),
             WeatherEvent::Error(err) => ModuleEvent::Weather(Message::Error(err))
         }));
+        self.runtime = Some(ctx.runtime_handle().clone());
 
         if let Some(task) = self.task.take() {
             task.abort();
@@ -220,26 +243,6 @@ impl Weather {
                 }
             }));
         }
-
-        // Trigger immediate fetch
-        if let Some(sender) = &self.sender {
-            let location = self.data.location.clone();
-            let use_celsius = self.data.use_celsius;
-            let api_key = self.api_key.clone();
-            let update_sender = sender.clone();
-
-            ctx.runtime_handle().spawn(async move {
-                match Self::fetch_weather(&location, &api_key).await {
-                    Ok(response) => {
-                        let data = WeatherData::from_response(response, location, use_celsius);
-                        let _ = update_sender.try_send(WeatherEvent::Updated(data));
-                    }
-                    Err(err) => {
-                        let _ = update_sender.try_send(WeatherEvent::Error(err.to_string()));
-                    }
-                }
-            });
-        }
     }
 
     /// Aborts the refresh loop, keeping the last reading in place.
@@ -253,6 +256,7 @@ impl Weather {
         }
 
         self.sender = None;
+        self.runtime = None;
     }
 
     /// Update weather state from GUI message
@@ -266,14 +270,13 @@ impl Weather {
                 self.data.description = format!("Error: {err}");
             }
             Message::Refresh => {
-                // Trigger manual refresh
-                if let Some(sender) = &self.sender {
+                if let (Some(sender), Some(runtime)) = (&self.sender, &self.runtime) {
                     let location = self.data.location.clone();
                     let use_celsius = self.data.use_celsius;
                     let api_key = self.api_key.clone();
                     let update_sender = sender.clone();
 
-                    tokio::spawn(async move {
+                    runtime.spawn(async move {
                         match Self::fetch_weather(&location, &api_key).await {
                             Ok(response) => {
                                 let data =
@@ -337,6 +340,42 @@ impl Weather {
     }
 }
 
+impl<M> Module<M> for Weather
+where
+    M: 'static + Clone
+{
+    type RegistrationData<'a> = &'a WeatherModuleConfig;
+    type ViewData<'a> = ();
+
+    /// Restates the module for the given configuration and starts its
+    /// refresh loop.
+    ///
+    /// Weather has no bar section of its own — the clock hosts the readout —
+    /// so registration is the whole contract: adopt whatever the configuration
+    /// says now, then keep the reading fresh. Folding `configure` in here is
+    /// what lets the bar treat weather like every other module instead of
+    /// hand-wiring it.
+    fn register(
+        &mut self,
+        ctx: &ModuleContext,
+        config: Self::RegistrationData<'_>
+    ) -> Result<(), ModuleError> {
+        self.configure(
+            config.location.clone(),
+            config.api_key.clone(),
+            config.use_celsius,
+            config.update_interval_minutes
+        );
+        self.register(ctx);
+        Ok(())
+    }
+
+    /// Stops the refresh loop once nothing on the bar shows weather.
+    fn deregister(&mut self) {
+        self.stop();
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -354,5 +393,84 @@ mod tests {
         let data = WeatherData::new(String::from("London"), true);
         assert_eq!(data.display_temp(), "--");
         assert_eq!(data.display_description(), "Loading...");
+    }
+
+    fn freezing_point_response() -> WeatherResponse {
+        WeatherResponse {
+            main:    MainWeather {
+                temp:     273.15,
+                humidity: 50
+            },
+            weather: vec![WeatherCondition {
+                description: String::from("clear sky"),
+                icon:        String::from("01d")
+            }],
+            wind:    Wind {
+                speed: 1.5
+            }
+        }
+    }
+
+    #[test]
+    fn a_zero_interval_is_clamped_up_to_one_minute() {
+        let weather = Weather::new(String::from("London"), None, true, 0);
+        assert_eq!(weather.update_interval(), Duration::from_secs(60));
+    }
+
+    #[test]
+    fn a_huge_interval_does_not_panic_and_caps_at_twenty_four_hours() {
+        let weather = Weather::new(String::from("London"), None, true, u64::MAX);
+        assert_eq!(weather.update_interval(), Duration::from_secs(24 * 60 * 60));
+    }
+
+    #[test]
+    fn configure_keeps_the_reading_when_nothing_relevant_changed() {
+        let mut weather =
+            Weather::new(String::from("London"), Some(String::from("key")), true, 10);
+        weather.update(Message::Update(WeatherData::from_response(
+            freezing_point_response(),
+            String::from("London"),
+            true
+        )));
+
+        weather.configure(String::from("London"), Some(String::from("key")), true, 30);
+
+        assert_eq!(weather.data().temperature, "0°C");
+        assert_eq!(weather.data().description, "clear sky");
+        assert_eq!(weather.update_interval(), Duration::from_secs(30 * 60));
+    }
+
+    #[test]
+    fn configure_resets_the_reading_when_the_location_changes() {
+        let mut weather =
+            Weather::new(String::from("London"), Some(String::from("key")), true, 10);
+        weather.update(Message::Update(WeatherData::from_response(
+            freezing_point_response(),
+            String::from("London"),
+            true
+        )));
+
+        weather.configure(String::from("Paris"), Some(String::from("key")), true, 10);
+
+        assert_eq!(weather.data().location, "Paris");
+        assert_eq!(weather.data().temperature, "--");
+        assert_eq!(weather.data().description, "Loading...");
+    }
+
+    #[test]
+    fn from_response_converts_the_freezing_point_to_zero_celsius() {
+        let data =
+            WeatherData::from_response(freezing_point_response(), String::from("London"), true);
+        assert_eq!(data.temperature, "0°C");
+        assert_eq!(data.humidity, "50%");
+        assert_eq!(data.wind_speed, "1.5 m/s");
+    }
+
+    #[test]
+    fn from_response_converts_the_freezing_point_to_thirty_two_fahrenheit() {
+        let data =
+            WeatherData::from_response(freezing_point_response(), String::from("London"), false);
+        assert_eq!(data.temperature, "32°F");
+        assert!(!data.use_celsius);
     }
 }

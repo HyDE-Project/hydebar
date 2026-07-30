@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 
 use hydebar_core::{
+    ModuleContext,
     config::ConfigImpact,
     modules::{self, custom_module::Custom}
 };
@@ -10,6 +11,32 @@ use hydebar_proto::config::{Config, ModuleName};
 use log::error;
 
 use super::super::state::{App, Message};
+
+/// Applies the one law of registration: a module is wired while the layout
+/// hosts it and released the moment it is not.
+///
+/// Every module used to restate this law as its own if/else block, and the
+/// copies drifted — one dropped its deregister arm, another swallowed its
+/// registration error. Stating the law once means a module cannot forget half
+/// of it: a failure is logged under the module's label, and an unhosted module
+/// always gives its background work back.
+fn gate<M>(
+    label: &'static str,
+    hosted: bool,
+    module: &mut M,
+    ctx: &ModuleContext,
+    data: M::RegistrationData<'_>
+) where
+    M: modules::Module<Message>
+{
+    if hosted {
+        if let Err(err) = module.register(ctx, data) {
+            error!("failed to register {label} module: {err}");
+        }
+    } else {
+        module.deregister();
+    }
+}
 
 /// Bar entries the control centre services feed.
 ///
@@ -41,183 +68,130 @@ impl App {
     /// removed from the layout starts and stops with it.
     pub(crate) fn register_modules(&mut self) {
         let ctx = &self.module_context;
-        let register = |name: &str, result: Result<(), modules::ModuleError>| {
-            if let Err(err) = result {
-                error!("failed to register {name} module: {err}");
-            }
-        };
 
         let layout = self.config.modules.clone();
         let hosts = |name: ModuleName| layout.hosts(&name);
 
-        if hosts(ModuleName::AppLauncher) {
-            register(
-                "app-launcher",
-                modules::Module::<Message>::register(&mut self.app_launcher, ctx, ())
-            );
-        } else {
-            modules::Module::<Message>::deregister(&mut self.app_launcher);
-        }
-
-        if hosts(ModuleName::Clipboard) {
-            register(
-                "clipboard",
-                modules::Module::<Message>::register(&mut self.clipboard, ctx, ())
-            );
-        } else {
-            modules::Module::<Message>::deregister(&mut self.clipboard);
-        }
-
-        if hosts(ModuleName::HydeMenu) {
-            let _ = modules::Module::<Message>::register(&mut self.hyde_menu, ctx, ());
-        }
-
-        if hosts(ModuleName::Clock) {
-            self.clock.register(ctx, &self.config.clock);
-        } else {
-            self.clock.stop();
-        }
-
-        if hosts(ModuleName::Clock) && self.config.clock.show_weather {
-            self.weather.configure(
-                self.config.weather.location.clone(),
-                self.config.weather.api_key.clone(),
-                self.config.weather.use_celsius,
-                self.config.weather.update_interval_minutes
-            );
-            self.weather.register(ctx);
-        } else {
-            self.weather.stop();
-        }
-
-        if hosts(ModuleName::Updates) {
-            register(
-                "updates",
-                modules::Module::<Message>::register(
-                    &mut self.updates,
-                    ctx,
-                    self.config.updates.as_ref()
-                )
-            );
-        } else {
-            modules::Module::<Message>::deregister(&mut self.updates);
-        }
-
-        if hosts(ModuleName::Workspaces) {
-            register(
-                "workspaces",
-                modules::Module::<Message>::register(
-                    &mut self.workspaces,
-                    ctx,
-                    &self.config.workspaces
-                )
-            );
-        } else {
-            modules::Module::<Message>::deregister(&mut self.workspaces);
-        }
-
-        if hosts(ModuleName::WindowTitle) {
-            register(
-                "window-title",
-                modules::Module::<Message>::register(&mut self.window_title, ctx, ())
-            );
-        } else {
-            modules::Module::<Message>::deregister(&mut self.window_title);
-        }
-
-        if hosts(ModuleName::SystemInfo) {
-            register(
-                "system-info",
-                modules::Module::<Message>::register(
-                    &mut self.system_info,
-                    ctx,
-                    &self.config.system
-                )
-            );
-        } else {
-            modules::Module::<Message>::deregister(&mut self.system_info);
-        }
-
-        if hosts(ModuleName::KeyboardLayout) {
-            register(
-                "keyboard-layout",
-                modules::Module::<Message>::register(&mut self.keyboard_layout, ctx, ())
-            );
-        } else {
-            modules::Module::<Message>::deregister(&mut self.keyboard_layout);
-        }
-
-        if hosts(ModuleName::KeyboardSubmap) {
-            register(
-                "keyboard-submap",
-                modules::Module::<Message>::register(&mut self.keyboard_submap, ctx, ())
-            );
-        } else {
-            modules::Module::<Message>::deregister(&mut self.keyboard_submap);
-        }
-
-        if hosts(ModuleName::Tray) {
-            register(
-                "tray",
-                modules::Module::<Message>::register(&mut self.tray, ctx, ())
-            );
-        } else {
-            modules::Module::<Message>::deregister(&mut self.tray);
-        }
-
-        if hosts(ModuleName::Privacy) {
-            register(
-                "privacy",
-                modules::Module::<Message>::register(&mut self.privacy, ctx, ())
-            );
-        } else {
-            modules::Module::<Message>::deregister(&mut self.privacy);
-        }
-
-        if layout.hosts_any(&CONTROL_CENTER_CONSUMERS) {
-            register(
-                "settings",
-                modules::Module::<Message>::register(&mut self.control_center, ctx, ())
-            );
-        } else {
-            modules::Module::<Message>::deregister(&mut self.control_center);
-        }
-
-        if hosts(ModuleName::MediaPlayer) {
-            register(
-                "media-player",
-                modules::Module::<Message>::register(&mut self.media_player, ctx, ())
-            );
-        } else {
-            modules::Module::<Message>::deregister(&mut self.media_player);
-        }
-
-        if self.config.notifications.source.owns_the_bus() {
-            register(
-                "notifications",
-                modules::Module::<Message>::register(&mut self.notifications, ctx, ())
-            );
-        } else {
-            modules::Module::<Message>::deregister(&mut self.notifications);
-        }
-
-        if hosts(ModuleName::Screenshot) {
-            register(
-                "screenshot",
-                modules::Module::<Message>::register(&mut self.screenshot, ctx, ())
-            );
-        } else {
-            modules::Module::<Message>::deregister(&mut self.screenshot);
-        }
-
-        if hosts(ModuleName::IdleInhibitor) {
-            register(
-                "idle-inhibitor",
-                modules::Module::<Message>::register(&mut self.idle_inhibitor, ctx, ())
-            );
-        } else {
-            modules::Module::<Message>::deregister(&mut self.idle_inhibitor);
-        }
+        gate(
+            "app-launcher",
+            hosts(ModuleName::AppLauncher),
+            &mut self.app_launcher,
+            ctx,
+            ()
+        );
+        gate(
+            "clipboard",
+            hosts(ModuleName::Clipboard),
+            &mut self.clipboard,
+            ctx,
+            ()
+        );
+        gate(
+            "hyde-menu",
+            hosts(ModuleName::HydeMenu),
+            &mut self.hyde_menu,
+            ctx,
+            ()
+        );
+        gate(
+            "clock",
+            hosts(ModuleName::Clock),
+            &mut self.clock,
+            ctx,
+            &self.config.clock
+        );
+        gate(
+            "weather",
+            hosts(ModuleName::Clock) && self.config.clock.show_weather,
+            &mut self.weather,
+            ctx,
+            &self.config.weather
+        );
+        gate(
+            "updates",
+            hosts(ModuleName::Updates),
+            &mut self.updates,
+            ctx,
+            self.config.updates.as_ref()
+        );
+        gate(
+            "workspaces",
+            hosts(ModuleName::Workspaces),
+            &mut self.workspaces,
+            ctx,
+            &self.config.workspaces
+        );
+        gate(
+            "window-title",
+            hosts(ModuleName::WindowTitle),
+            &mut self.window_title,
+            ctx,
+            ()
+        );
+        gate(
+            "system-info",
+            hosts(ModuleName::SystemInfo),
+            &mut self.system_info,
+            ctx,
+            &self.config.system
+        );
+        gate(
+            "keyboard-layout",
+            hosts(ModuleName::KeyboardLayout),
+            &mut self.keyboard_layout,
+            ctx,
+            ()
+        );
+        gate(
+            "keyboard-submap",
+            hosts(ModuleName::KeyboardSubmap),
+            &mut self.keyboard_submap,
+            ctx,
+            ()
+        );
+        gate("tray", hosts(ModuleName::Tray), &mut self.tray, ctx, ());
+        gate(
+            "privacy",
+            hosts(ModuleName::Privacy),
+            &mut self.privacy,
+            ctx,
+            ()
+        );
+        gate(
+            "settings",
+            layout.hosts_any(&CONTROL_CENTER_CONSUMERS),
+            &mut self.control_center,
+            ctx,
+            ()
+        );
+        gate(
+            "media-player",
+            hosts(ModuleName::MediaPlayer),
+            &mut self.media_player,
+            ctx,
+            ()
+        );
+        gate(
+            "notifications",
+            self.config.notifications.source.owns_the_bus(),
+            &mut self.notifications,
+            ctx,
+            ()
+        );
+        gate(
+            "screenshot",
+            hosts(ModuleName::Screenshot),
+            &mut self.screenshot,
+            ctx,
+            ()
+        );
+        gate(
+            "idle-inhibitor",
+            hosts(ModuleName::IdleInhibitor),
+            &mut self.idle_inhibitor,
+            ctx,
+            ()
+        );
 
         for definition in &self.config.custom_modules {
             let placed = layout.hosts(&ModuleName::Custom(definition.name.clone()));

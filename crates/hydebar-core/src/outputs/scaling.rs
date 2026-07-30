@@ -217,6 +217,29 @@ mod tests {
     }
 
     #[test]
+    fn a_screen_without_physical_size_reads_as_zero() {
+        let answer = r#"[
+            {"name":"eDP-1","width":1920,"height":1080,"scale":1.0}
+        ]"#;
+
+        let geometry = parse_geometry(answer, "eDP-1").expect("screen");
+
+        assert_eq!(geometry.physical, (0.0, 0.0));
+    }
+
+    #[test]
+    fn a_scale_below_one_is_read_as_one() {
+        let answer = r#"[
+            {"name":"eDP-1","width":1920,"height":1080,
+             "physicalWidth":344,"physicalHeight":193,"scale":0.5}
+        ]"#;
+
+        let geometry = parse_geometry(answer, "eDP-1").expect("screen");
+
+        assert_eq!(geometry.scale, 1.0);
+    }
+
+    #[test]
     fn an_unknown_screen_reads_as_nothing() {
         assert_eq!(parse_geometry("[]", "eDP-1"), None);
         assert_eq!(parse_geometry("not json", "eDP-1"), None);

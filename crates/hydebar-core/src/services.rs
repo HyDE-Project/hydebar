@@ -84,3 +84,45 @@ where
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{RECONNECT_MAX_DELAY, RECONNECT_MIN_DELAY, reconnect_delay};
+
+    #[test]
+    fn the_first_attempt_waits_the_minimum_delay() {
+        assert_eq!(reconnect_delay(0), RECONNECT_MIN_DELAY);
+        assert_eq!(reconnect_delay(1), RECONNECT_MIN_DELAY);
+    }
+
+    #[test]
+    fn each_further_failure_doubles_the_delay() {
+        let mut previous = reconnect_delay(1);
+
+        for failures in 2..=7 {
+            let current = reconnect_delay(failures);
+            assert_eq!(current, previous * 2, "failures = {failures}");
+            previous = current;
+        }
+    }
+
+    #[test]
+    fn the_delay_never_exceeds_the_maximum() {
+        assert_eq!(reconnect_delay(8), RECONNECT_MAX_DELAY);
+
+        for failures in 8..=64 {
+            assert_eq!(
+                reconnect_delay(failures),
+                RECONNECT_MAX_DELAY,
+                "failures = {failures}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_huge_failure_count_neither_panics_nor_overflows() {
+        assert_eq!(reconnect_delay(u32::MAX), RECONNECT_MAX_DELAY);
+        assert_eq!(reconnect_delay(u32::MAX - 1), RECONNECT_MAX_DELAY);
+        assert_eq!(reconnect_delay(u32::BITS), RECONNECT_MAX_DELAY);
+    }
+}

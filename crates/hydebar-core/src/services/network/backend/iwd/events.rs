@@ -258,3 +258,31 @@ fn strength_of_level(level: i16) -> u8 {
         _ => 25
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::strength_of_level;
+
+    #[test]
+    fn the_strongest_band_maps_to_a_full_signal() {
+        assert_eq!(strength_of_level(0), 100);
+    }
+
+    #[test]
+    fn the_second_band_maps_to_three_quarters() {
+        assert_eq!(strength_of_level(1), 75);
+    }
+
+    #[test]
+    fn the_third_band_maps_to_half() {
+        assert_eq!(strength_of_level(2), 50);
+    }
+
+    #[test]
+    fn any_other_band_maps_to_a_quarter() {
+        assert_eq!(strength_of_level(3), 25);
+        assert_eq!(strength_of_level(-1), 25);
+        assert_eq!(strength_of_level(i16::MAX), 25);
+        assert_eq!(strength_of_level(i16::MIN), 25);
+    }
+}

@@ -5,6 +5,15 @@ use masterror::{AppError, AppResult};
 use super::{IwdDbus, device::DeviceProxy, network::NetworkProxy};
 use crate::services::network::{AccessPoint, ActiveConnectionInfo, DeviceState};
 
+/// Turns the raw RSSI iwd reports into the percentage the bar renders.
+///
+/// iwd hands back signal strength in centi-dBm, roughly 0 down to -10000,
+/// while every consumer expects 0 to 100. The clamp keeps values outside
+/// that window from wrapping when narrowed to `u8`.
+pub(super) fn strength_from_rssi(s: i16) -> u8 {
+    (s / 100 + 100).clamp(0, 100) as u8
+}
+
 impl IwdDbus<'_> {
     /// Get the state of all station interfaces
     pub async fn connectivity(&self) -> AppResult<Vec<String>> {
@@ -57,11 +66,10 @@ impl IwdDbus<'_> {
                 .name()
                 .await
                 .map_err(|e| AppError::internal(format!("Failed to get network name: {}", e)))?;
-            // strength not directly on Network; placeholder 0
             info.push(ActiveConnectionInfo::WiFi {
                 id:       ssid.clone(),
                 name:     ssid,
-                strength: (s / 100 + 100).clamp(0, 100) as u8
+                strength: strength_from_rssi(s)
             });
         }
         Ok(info)
@@ -106,9 +114,7 @@ impl IwdDbus<'_> {
                 aps.push(AccessPoint {
                     ssid,
                     state: DeviceState::Unknown, // TODO:
-                    // _s is between 0 and -10000
-                    // should be between 0 and 100
-                    strength: ((s / 100) + 100).clamp(0, 100) as u8,
+                    strength: strength_from_rssi(s),
                     public,
                     working: false, // TODO:
                     path,
@@ -130,5 +136,30 @@ impl IwdDbus<'_> {
             }
         }
         Ok(false)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::strength_from_rssi;
+
+    #[test]
+    fn a_typical_rssi_maps_onto_the_middle_of_the_scale() {
+        assert_eq!(strength_from_rssi(-4000), 60);
+    }
+
+    #[test]
+    fn an_rssi_below_the_floor_clamps_to_zero() {
+        assert_eq!(strength_from_rssi(-10500), 0);
+    }
+
+    #[test]
+    fn a_zero_rssi_clamps_to_a_full_signal() {
+        assert_eq!(strength_from_rssi(0), 100);
+    }
+
+    #[test]
+    fn the_smallest_rssi_does_not_panic() {
+        assert_eq!(strength_from_rssi(i16::MIN), 0);
     }
 }

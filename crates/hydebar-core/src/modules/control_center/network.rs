@@ -416,3 +416,64 @@ impl NetworkData {
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn every_possible_signal_yields_a_wifi_icon_without_panicking() {
+        for signal in u8::MIN..=u8::MAX {
+            let _ = ActiveConnectionInfo::get_wifi_icon(signal);
+        }
+    }
+
+    #[test]
+    fn every_possible_signal_yields_a_wifi_lock_icon_without_panicking() {
+        for signal in u8::MIN..=u8::MAX {
+            let _ = ActiveConnectionInfo::get_wifi_lock_icon(signal);
+        }
+    }
+
+    #[test]
+    fn signal_quartiles_pick_ascending_wifi_icons() {
+        assert_eq!(ActiveConnectionInfo::get_wifi_icon(0), Icons::Wifi1);
+        assert_eq!(ActiveConnectionInfo::get_wifi_icon(25), Icons::Wifi2);
+        assert_eq!(ActiveConnectionInfo::get_wifi_icon(50), Icons::Wifi3);
+        assert_eq!(ActiveConnectionInfo::get_wifi_icon(75), Icons::Wifi4);
+        assert_eq!(ActiveConnectionInfo::get_wifi_icon(100), Icons::Wifi5);
+    }
+
+    #[test]
+    fn signal_quartiles_pick_ascending_wifi_lock_icons() {
+        assert_eq!(
+            ActiveConnectionInfo::get_wifi_lock_icon(0),
+            Icons::WifiLock1
+        );
+        assert_eq!(
+            ActiveConnectionInfo::get_wifi_lock_icon(25),
+            Icons::WifiLock2
+        );
+        assert_eq!(
+            ActiveConnectionInfo::get_wifi_lock_icon(50),
+            Icons::WifiLock3
+        );
+        assert_eq!(
+            ActiveConnectionInfo::get_wifi_lock_icon(75),
+            Icons::WifiLock4
+        );
+        assert_eq!(
+            ActiveConnectionInfo::get_wifi_lock_icon(100),
+            Icons::WifiLock5
+        );
+    }
+
+    #[test]
+    fn a_signal_past_one_hundred_stays_in_the_top_bucket() {
+        assert_eq!(ActiveConnectionInfo::get_wifi_icon(u8::MAX), Icons::Wifi5);
+        assert_eq!(
+            ActiveConnectionInfo::get_wifi_lock_icon(u8::MAX),
+            Icons::WifiLock5
+        );
+    }
+}
