@@ -1,16 +1,24 @@
 //! The colours a theme would paint the desktop in, read for previewing it.
 //!
 //! A list of theme names answers "which themes are there", not "what do they
-//! look like". The look is on disk already: a theme either pins its palette in
-//! its own palette file, or its current wallpaper has one extracted and cached
-//! by HyDE the last time that wallpaper was applied. Reading those gives every
-//! entry of the theme list the colours it would actually bring, without
-//! switching to it.
+//! look like". The look is on disk already, in the theme's own files: every
+//! HyDE theme ships its terminal palette, and that palette *is* the theme's
+//! identity — its background, its text, and the signature hues its author
+//! chose. Colours extracted from the theme's wallpaper answer only when a
+//! theme ships no palette of its own: they are clusters squeezed out of a
+//! picture, honest but muddy, and no substitute for the author's word.
 
 use std::fs;
 
-use super::dcol::DcolPalette;
+use super::{color::parse_color, dcol::DcolPalette};
 use crate::{hyde_dirs::HydeDirs, theme_source::Rgba};
+
+/// Extension of the per-application style files a theme ships.
+///
+/// Which applications those are is the theme's business: the reader scans
+/// whatever is there and takes the first file that states a palette, so a
+/// theme shipping styles for any terminal — or none — is read the same way.
+const THEME_FILE_EXTENSION: &str = "theme";
 
 /// The colours a theme announces itself with.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -31,12 +39,86 @@ pub struct ThemeSwatch {
 
 /// Reads the swatch of `theme`, if anything on disk answers for its colours.
 ///
-/// The theme's own pinned palette wins; the palette extracted from its
-/// current wallpaper answers otherwise. A theme with neither — never applied
-/// on this machine and shipping no palette — has no swatch, and the caller
-/// paints its entry the way it paints everything.
+/// The theme's own terminal palette wins — it is the author's statement of
+/// what the theme looks like. The palettes HyDE keeps for it — one the theme
+/// pinned, else one extracted from its current wallpaper — answer otherwise.
+/// A theme with none of it has no swatch, and the caller paints its entry the
+/// way it paints everything.
 #[must_use]
 pub fn theme_swatch(dirs: &HydeDirs, theme: &str) -> Option<ThemeSwatch> {
+    shipped_swatch(dirs, theme).or_else(|| extracted_swatch(dirs, theme))
+}
+
+/// The swatch as the theme's author stated it, from the style files it ships.
+///
+/// Every style file of a theme is a deployment header followed by `key value`
+/// lines, and any of them stating a full colour scheme — a background, a
+/// foreground and the numbered scheme colours — states the theme's identity.
+/// The files are tried in name order so the answer is stable, and the first
+/// one that yields a whole swatch wins.
+fn shipped_swatch(dirs: &HydeDirs, theme: &str) -> Option<ThemeSwatch> {
+    let mut files: Vec<_> = fs::read_dir(dirs.theme_dir(theme))
+        .ok()?
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|path| {
+            path.extension()
+                .is_some_and(|extension| extension == THEME_FILE_EXTENSION)
+        })
+        .collect();
+    files.sort();
+
+    files
+        .into_iter()
+        .filter_map(|path| fs::read_to_string(path).ok())
+        .find_map(|source| swatch_of(&source))
+}
+
+/// Reads one style file as a swatch, if it states a whole colour scheme.
+///
+/// The four dots are the scheme's first accent hues — its red, green, yellow
+/// and blue — which is where one colour scheme differs from another to a
+/// reader's eye.
+fn swatch_of(source: &str) -> Option<ThemeSwatch> {
+    let mut background = None;
+    let mut foreground = None;
+    let mut border = None;
+    let mut hues: [Option<Rgba>; 4] = [None; 4];
+
+    for line in source.lines().skip(1) {
+        let mut parts = line.split([' ', '\t', '=']).filter(|part| !part.is_empty());
+        let (Some(key), Some(value)) = (parts.next(), parts.next()) else {
+            continue;
+        };
+
+        let slot = match key {
+            "background" => &mut background,
+            "foreground" => &mut foreground,
+            "active_border_color" => &mut border,
+            "color1" => &mut hues[0],
+            "color2" => &mut hues[1],
+            "color3" => &mut hues[2],
+            "color4" => &mut hues[3],
+            _ => continue
+        };
+
+        if slot.is_none() {
+            *slot = parse_color(value.trim_matches(['"', '\'']));
+        }
+    }
+
+    let palette = [hues[0]?, hues[1]?, hues[2]?, hues[3]?];
+
+    Some(ThemeSwatch {
+        background: background?,
+        text: foreground?,
+        accent: border.or(hues[3])?,
+        palette
+    })
+}
+
+/// The swatch from the palettes HyDE keeps for the theme.
+fn extracted_swatch(dirs: &HydeDirs, theme: &str) -> Option<ThemeSwatch> {
     let palette = pinned_palette(dirs, theme).or_else(|| wallpaper_palette(dirs, theme))?;
 
     Some(ThemeSwatch {
@@ -89,6 +171,59 @@ mod tests {
         );
 
         (root, dirs)
+    }
+
+    /// Whatever application the style file was written for, a full colour
+    /// scheme in it is the theme's own statement of its colours.
+    #[test]
+    fn a_shipped_style_file_states_the_swatch() {
+        let (_root, dirs) = install();
+        let theme_dir = dirs.theme_dir("Nord");
+        fs::create_dir_all(&theme_dir).expect("theme dir");
+        fs::write(
+            theme_dir.join("anyterm.theme"),
+            "$HOME/.config/anyterm/theme.conf|reload\n\
+             background #1E1E2E\n\
+             foreground = \"#CDD6F4\"\n\
+             active_border_color #CBA6F7\n\
+             color1 #F38BA8\n\
+             color2 #A6E3A1\n\
+             color3 #F9E2AF\n\
+             color4 #89B4FA\n"
+        )
+        .expect("style file");
+
+        let swatch = theme_swatch(&dirs, "Nord").expect("swatch");
+
+        assert_eq!(swatch.background, Rgba::rgb(0x1E, 0x1E, 0x2E));
+        assert_eq!(swatch.text, Rgba::rgb(0xCD, 0xD6, 0xF4));
+        assert_eq!(swatch.accent, Rgba::rgb(0xCB, 0xA6, 0xF7));
+        assert_eq!(swatch.palette[3], Rgba::rgb(0x89, 0xB4, 0xFA));
+    }
+
+    /// A style file with no palette — a wallpaper list, a lock screen — is
+    /// passed over for one that states the scheme.
+    #[test]
+    fn a_file_without_a_scheme_is_passed_over() {
+        let (_root, dirs) = install();
+        let theme_dir = dirs.theme_dir("Nord");
+        fs::create_dir_all(&theme_dir).expect("theme dir");
+        fs::write(
+            theme_dir.join("aaa.theme"),
+            "$HOME/.config/aaa/x|reload\nnothing here\n"
+        )
+        .expect("empty style");
+        fs::write(
+            theme_dir.join("bbb.theme"),
+            "$HOME/.config/bbb/x|reload\n\
+             background #272727\nforeground #EBDBB2\n\
+             color1 #EA6962\ncolor2 #A9B665\ncolor3 #D8A657\ncolor4 #7DAEA3\n"
+        )
+        .expect("scheme style");
+
+        let swatch = theme_swatch(&dirs, "Nord").expect("swatch");
+
+        assert_eq!(swatch.background, Rgba::rgb(0x27, 0x27, 0x27));
     }
 
     #[test]
