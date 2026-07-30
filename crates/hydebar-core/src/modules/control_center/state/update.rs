@@ -24,6 +24,9 @@ use crate::{
     }
 };
 
+/// Volume moved by one wheel notch over the bar entry, in percent.
+const WHEEL_VOLUME_STEP: i32 = 5;
+
 impl ControlCenter {
     pub(crate) fn runtime(&self) -> Option<Handle> {
         self.runtime.as_ref().cloned()
@@ -97,6 +100,14 @@ impl ControlCenter {
                 }
                 AudioMessage::SinkVolumeChanged(value) => {
                     let _spawned = self.spawn_audio_command(AudioCommand::SinkVolume(value));
+                }
+                AudioMessage::SinkVolumeWheel(direction) => {
+                    if let Some(audio) = self.audio.as_ref() {
+                        let value =
+                            (audio.cur_sink_volume + direction * WHEEL_VOLUME_STEP).clamp(0, 100);
+
+                        let _spawned = self.spawn_audio_command(AudioCommand::SinkVolume(value));
+                    }
                 }
                 AudioMessage::DefaultSinkChanged(name, port) => {
                     let _spawned = self.spawn_audio_command(AudioCommand::DefaultSink(name, port));

@@ -1,6 +1,7 @@
 //! Opening and closing menu surfaces.
 
 use hydebar_core::{
+    config::ModuleName,
     menu::MenuType,
     modules::{self, control_center::brightness::BrightnessMessage},
     services::brightness::BrightnessCommand
@@ -37,6 +38,23 @@ impl App {
                     entered,
                     self.outputs.menu_is_open()
                 );
+
+                if entered
+                    && matches!(module, ModuleName::Audio)
+                    && self.outputs.open_menu() != Some(&MenuType::Audio)
+                    && let Some(info) = &tooltip
+                {
+                    let task = self.outputs.toggle_menu(
+                        surface,
+                        MenuType::Audio,
+                        info.anchor,
+                        &self.config
+                    );
+
+                    self.attend_the_open_menu();
+
+                    return task;
+                }
 
                 match tooltip {
                     Some(info) => self.outputs.show_tooltip(surface, module, info),

@@ -25,6 +25,8 @@ pub enum AudioMessage {
     DefaultSourceChanged(String, String),
     ToggleSinkMute,
     SinkVolumeChanged(i32),
+    /// A wheel notch over the bar entry, `1` up and `-1` down.
+    SinkVolumeWheel(i32),
     ToggleSourceMute,
     SourceVolumeChanged(i32),
     SinksMore(Id),

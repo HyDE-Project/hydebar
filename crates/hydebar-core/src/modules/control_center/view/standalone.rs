@@ -7,7 +7,8 @@
 
 use iced::{
     Element, Length, SurfaceId as Id,
-    widget::{Column, Row}
+    mouse::ScrollDelta,
+    widget::{Column, Row, mouse_area}
 };
 
 use super::{
@@ -25,6 +26,7 @@ use crate::{
     modules::{
         OnModulePress,
         control_center::{
+            audio::AudioMessage,
             power::power_menu,
             state::{ControlCenter, Message, SubMenu}
         }
@@ -38,16 +40,38 @@ impl ControlCenter {
     ///
     /// Renders nothing while the audio service is away, so a session without a
     /// sound server keeps a bar free of dead icons.
+    ///
+    /// The entry answers the wheel as well: a notch up or down nudges the sink
+    /// volume without the menu ever opening, the way the reference waybar
+    /// module behaves.
     pub fn audio_bar<M>(
         &self,
         icons: &IconTheme
     ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)>
     where
-        M: 'static + From<Message>
+        M: 'static + From<Message> + Clone
     {
         let indicator = self.audio.as_ref().and_then(|a| a.sink_indicator(icons))?;
+        let wheeled = mouse_area(indicator)
+            .on_scroll(|delta| {
+                let up = match delta {
+                    ScrollDelta::Lines {
+                        y, ..
+                    }
+                    | ScrollDelta::Pixels {
+                        y, ..
+                    } => y > 0.0
+                };
 
-        Some((indicator, Some(OnModulePress::ToggleMenu(MenuType::Audio))))
+                M::from(Message::Audio(AudioMessage::SinkVolumeWheel(if up {
+                    1
+                } else {
+                    -1
+                })))
+            })
+            .into();
+
+        Some((wheeled, Some(OnModulePress::ToggleMenu(MenuType::Audio))))
     }
 
     /// Bar entry of the standalone network module, connection and VPN.
