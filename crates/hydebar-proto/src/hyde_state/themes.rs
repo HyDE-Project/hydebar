@@ -71,23 +71,17 @@ fn sort_key(directory: &Path) -> i64 {
         .unwrap_or(DEFAULT_SORT)
 }
 
-/// Puts theme entries into the order HyDE lists them in.
+/// Puts theme entries into alphabetical order.
 ///
-/// The `.sort` number comes first and the name only breaks a tie, which is the
-/// order `get_themes` produces and therefore the order the theme selector, the
-/// next/previous keybindings and this page all have to agree on. Sorting by
-/// name alone would leave the bar the one surface listing the themes its own
-/// way, and pressing "next theme" from the bar's first entry would land
-/// somewhere unrelated.
+/// The list is for a person scanning it: the alphabet is the one order a
+/// reader can predict, so a theme is found where its name says it is. HyDE's
+/// own `.sort` numbers still exist for its scripts, but the bar's list does
+/// not follow them.
 #[must_use]
 fn order(entries: Vec<Entry>) -> Vec<String> {
     let mut entries = entries;
 
-    entries.sort_by(|left, right| {
-        left.sort
-            .cmp(&right.sort)
-            .then_with(|| compare_names(&left.name, &right.name))
-    });
+    entries.sort_by(|left, right| compare_names(&left.name, &right.name));
     entries.dedup();
     entries.into_iter().map(|entry| entry.name).collect()
 }
@@ -118,8 +112,10 @@ mod tests {
             .collect()
     }
 
+    /// The alphabet, not HyDE's `.sort` numbers: a reader finds a theme where
+    /// its name says it is.
     #[test]
-    fn themes_are_listed_in_the_order_hyde_numbered_them() {
+    fn themes_are_listed_alphabetically_whatever_hyde_numbered_them() {
         assert_eq!(
             order(entries(&[
                 (4, "Tokyo Night"),
@@ -128,8 +124,8 @@ mod tests {
                 (2, "Catppuccin Latte")
             ])),
             vec![
-                "Catppuccin Mocha".to_owned(),
                 "Catppuccin Latte".to_owned(),
+                "Catppuccin Mocha".to_owned(),
                 "Rosé Pine".to_owned(),
                 "Tokyo Night".to_owned(),
             ]
@@ -137,7 +133,7 @@ mod tests {
     }
 
     #[test]
-    fn themes_sharing_a_number_fall_back_to_their_names() {
+    fn the_alphabet_reads_past_letter_case() {
         assert_eq!(
             order(entries(&[
                 (0, "tokyo night"),
@@ -151,14 +147,6 @@ mod tests {
                 "Nordic Blue".to_owned(),
                 "tokyo night".to_owned(),
             ]
-        );
-    }
-
-    #[test]
-    fn an_unnumbered_theme_sorts_ahead_of_a_numbered_one() {
-        assert_eq!(
-            order(entries(&[(1, "Numbered"), (0, "Unnumbered")])),
-            vec!["Unnumbered".to_owned(), "Numbered".to_owned()]
         );
     }
 
