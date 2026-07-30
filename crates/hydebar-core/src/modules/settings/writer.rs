@@ -112,6 +112,17 @@ pub fn write_setting(
     path: &[&str],
     setting: SettingValue
 ) -> Result<(), SettingsWriteError> {
+    write_settings(file, vec![(path, setting)])
+}
+
+/// Writes several settings in one pass: one read, one parse, one write.
+///
+/// The configuration file is watched, and every write is a reload of the
+/// whole bar — settings that change together must land together.
+pub fn write_settings(
+    file: &Path,
+    settings: Vec<(&[&str], SettingValue)>
+) -> Result<(), SettingsWriteError> {
     let source = match fs::read_to_string(file) {
         Ok(source) => source,
         Err(err) if err.kind() == io::ErrorKind::NotFound => String::new(),
@@ -119,6 +130,22 @@ pub fn write_setting(
     };
 
     let mut document = source.parse::<DocumentMut>()?;
+
+    for (path, setting) in settings {
+        apply_setting(&mut document, path, setting)?;
+    }
+
+    fs::write(file, document.to_string())?;
+
+    Ok(())
+}
+
+/// States one setting inside the parsed document.
+fn apply_setting(
+    document: &mut DocumentMut,
+    path: &[&str],
+    setting: SettingValue
+) -> Result<(), SettingsWriteError> {
     let Some((key, tables)) = path.split_last() else {
         return Ok(());
     };
@@ -165,8 +192,6 @@ pub fn write_setting(
             table.insert(key, replacement);
         }
     }
-
-    fs::write(file, document.to_string())?;
 
     Ok(())
 }

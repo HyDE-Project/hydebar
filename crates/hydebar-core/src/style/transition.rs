@@ -90,9 +90,19 @@ impl AppearanceTransition {
     }
 
     /// Advances the blend by `elapsed` and reports whether it keeps going.
+    ///
+    /// The displayed appearance is only rebuilt while the spring still moves:
+    /// the value before the call already reflects the settled position, and a
+    /// frame that arrives after settling must not pay for seven colour blends
+    /// and two vectors nobody will see change.
     pub fn advance(&mut self, elapsed: Duration) -> bool {
+        let before = self.progress.value();
         let running = self.progress.advance(elapsed);
-        self.refresh();
+
+        if running || self.progress.value() != before {
+            self.refresh();
+        }
+
         running
     }
 

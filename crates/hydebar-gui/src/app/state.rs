@@ -59,6 +59,12 @@ pub struct App {
     pub(super) bus_receiver: EventReceiver,
     pub(super) last_frame: Option<Instant>,
     pub(super) appearance_transition: AppearanceTransition,
+    /// Theme built from the appearance in force, rebuilt only when it moves.
+    ///
+    /// Building a theme runs the whole palette derivation; the renderer asks
+    /// for the theme on every loop turn, and an idle bar must answer with a
+    /// reference-count bump, not five colour cascades.
+    pub(super) theme_cache: iced::Theme,
     pub(super) module_context: ModuleContext,
     pub(super) icons: IconTheme,
     /// Factor the screen calls for, folded into every configuration loaded.
@@ -265,6 +271,11 @@ impl App {
         self.appearance_transition.current()
     }
 
+    /// Rebuilds the cached theme from the appearance in force.
+    pub(super) fn rebuild_theme(&mut self) {
+        self.theme_cache = hydebar_core::style::hydebar_theme(self.appearance());
+    }
+
     /// Returns `config` restated for the screen the bar runs on.
     ///
     /// A configuration read from disk carries the sizes the user wrote, not the
@@ -308,6 +319,7 @@ impl App {
 
         self.icons =
             IconTheme::from_config(&self.config.icons).with_size(appearance.font_size_px());
+        self.rebuild_theme();
 
         let blend_palette = appearance.animations.enabled;
         let resize =
@@ -373,6 +385,7 @@ impl App {
             bus_receiver,
             last_frame: None,
             appearance_transition: AppearanceTransition::new(config.appearance.clone()),
+            theme_cache: hydebar_core::style::hydebar_theme(&config.appearance),
             module_context,
             icons: IconTheme::from_config(&config.icons)
                 .with_size(config.appearance.font_size_px()),

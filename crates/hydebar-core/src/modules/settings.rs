@@ -234,15 +234,24 @@ fn section_value(entries: &[ModuleDef]) -> SettingValue {
 }
 
 /// Writes every section of `modules` into the configuration file.
+///
+/// In one write on purpose: the file is watched, and three writes in a row
+/// would reload the whole bar up to three times for one edit.
 fn store_layout(config_path: &Path, modules: &Modules) {
-    for (key, entries) in [
-        ("left", &modules.left),
-        ("center", &modules.center),
-        ("right", &modules.right)
-    ] {
-        if let Err(err) = write_setting(config_path, &["modules", key], section_value(entries)) {
-            warn!("failed to store the `{key}` modules: {err}");
-        }
+    let settings = vec![
+        (["modules", "left"].as_slice(), section_value(&modules.left)),
+        (
+            ["modules", "center"].as_slice(),
+            section_value(&modules.center)
+        ),
+        (
+            ["modules", "right"].as_slice(),
+            section_value(&modules.right)
+        ),
+    ];
+
+    if let Err(err) = writer::write_settings(config_path, settings) {
+        warn!("failed to store the module layout: {err}");
     }
 }
 

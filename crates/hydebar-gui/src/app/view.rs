@@ -9,7 +9,7 @@ use hydebar_core::{
     },
     notifications_popup,
     outputs::HasOutput,
-    style::{backdrop_color, darken_color, hydebar_theme},
+    style::{backdrop_color, darken_color},
     tooltip::tooltip_wrapper
 };
 use hydebar_proto::config::{AppearanceStyle, Position};
@@ -32,7 +32,7 @@ impl App {
     }
 
     pub fn theme(&self, _id: Id) -> Theme {
-        hydebar_theme(self.appearance())
+        self.theme_cache.clone()
     }
 
     pub fn style(&self, theme: &Theme) -> Style {

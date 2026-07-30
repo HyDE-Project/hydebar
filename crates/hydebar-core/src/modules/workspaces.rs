@@ -315,7 +315,7 @@ where
         &self,
         (outputs, id, config, appearance): Self::ViewData<'_>
     ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
-        let monitor_name = outputs.get_monitor_name(id).map(|s| s.to_string());
+        let monitor_name = outputs.get_monitor_name(id);
 
         let radius = appearance.pill_radius();
         let font_size = appearance.font_size_px();
@@ -334,8 +334,10 @@ where
                 self.workspaces
                     .iter()
                     .filter_map(|w| {
+                        let on_this_screen = monitor_name.is_none_or(|name| w.monitor == name);
+
                         if config.visibility_mode == WorkspaceVisibilityMode::All
-                            || w.monitor == monitor_name.as_deref().unwrap_or(&w.monitor)
+                            || on_this_screen
                             || !outputs.has_name(&w.monitor)
                         {
                             let empty = w.windows == 0;

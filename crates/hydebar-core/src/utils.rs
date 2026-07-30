@@ -22,7 +22,7 @@ pub fn format_duration(duration: &Duration) -> String {
 }
 
 pub fn truncate_text(value: &str, max_length: u32) -> String {
-    let length = value.len();
+    let length = value.chars().count();
 
     if length > max_length as usize {
         let split = max_length as usize / 2;

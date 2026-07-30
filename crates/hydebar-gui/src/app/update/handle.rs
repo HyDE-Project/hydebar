@@ -1,6 +1,9 @@
 //! Dispatch of a single application message.
 
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{
+    LazyLock,
+    atomic::{AtomicBool, Ordering}
+};
 
 use hydebar_core::{menu::MenuType, position_button::ButtonUIRef};
 use iced::Task;
@@ -9,9 +12,15 @@ use super::super::state::{App, Message};
 
 static SHOT: AtomicBool = AtomicBool::new(false);
 
+/// Whether the one-shot screenshot hook was asked for, read once.
+///
+/// The environment cannot change under a running process, and looking it up
+/// costs a global lock — not a price to pay on every message forever.
+static SHOT_ASKED: LazyLock<bool> = LazyLock::new(|| std::env::var_os("HYDEBAR_SHOT").is_some());
+
 impl App {
     pub fn update(&mut self, message: Message) -> Task<Message> {
-        if std::env::var_os("HYDEBAR_SHOT").is_some() && !SHOT.load(Ordering::Relaxed) {
+        if *SHOT_ASKED && !SHOT.load(Ordering::Relaxed) {
             if let Some(id) = self.outputs.first_main_window_id() {
                 SHOT.store(true, Ordering::Relaxed);
 

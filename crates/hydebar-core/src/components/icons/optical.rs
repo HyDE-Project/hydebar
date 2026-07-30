@@ -11,7 +11,7 @@
 
 use std::{
     collections::HashMap,
-    sync::{LazyLock, Mutex}
+    sync::{LazyLock, Mutex, RwLock}
 };
 
 use iced::Font;
@@ -48,7 +48,11 @@ impl IconFace {
 }
 
 /// Faces already resolved, one entry per distinct glyph.
-static RESOLVED: LazyLock<Mutex<HashMap<char, IconFace>>> = LazyLock::new(Mutex::default);
+///
+/// A read-write lock rather than a mutex on purpose: the map is written a
+/// handful of times at startup and read for every icon of every frame after,
+/// and readers must not queue behind each other in the draw path.
+static RESOLVED: LazyLock<RwLock<HashMap<char, IconFace>>> = LazyLock::new(RwLock::default);
 
 /// Families already leaked for the renderer, which wants them immortal.
 static FAMILIES: LazyLock<Mutex<HashMap<String, &'static str>>> = LazyLock::new(Mutex::default);
@@ -63,11 +67,22 @@ pub(super) fn resolved(glyph: &str) -> IconFace {
         return IconFace::PLAIN;
     }
 
-    *RESOLVED
-        .lock()
+    if let Some(face) = RESOLVED
+        .read()
         .expect("icon face cache poisoned")
-        .entry(first)
-        .or_insert_with(|| resolve(first))
+        .get(&first)
+    {
+        return *face;
+    }
+
+    let face = resolve(first);
+
+    RESOLVED
+        .write()
+        .expect("icon face cache poisoned")
+        .insert(first, face);
+
+    face
 }
 
 /// Asks fontconfig for the face carrying `symbol` and measures its ink.
