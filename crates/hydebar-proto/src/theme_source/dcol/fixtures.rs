@@ -8,7 +8,7 @@
 ///
 /// Carries the `_rgba` variants with their literal `\1` alpha placeholder, so
 /// the tests prove those lines are skipped rather than mistaken for colours.
-pub(super) const WALL_DCOL: &str = r#"
+pub(in crate::theme_source) const WALL_DCOL: &str = r#"
 dcol_mode="dark"
 dcol_pry1="483828"
 dcol_pry1_rgba="rgba(72,56,40,\1)"

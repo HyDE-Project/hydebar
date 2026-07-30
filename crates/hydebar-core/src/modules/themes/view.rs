@@ -6,7 +6,12 @@
 //! chip states and one wait indicator rather than two that have to be kept in
 //! step.
 
-use hydebar_proto::hyde_state::HydeState;
+use std::collections::HashMap;
+
+use hydebar_proto::{
+    hyde_state::HydeState,
+    theme_source::{Rgba, ThemeSwatch}
+};
 use iced::Element;
 
 use super::{Message, Spinner};
@@ -17,7 +22,8 @@ use crate::components::page::{
     },
     style,
     widgets::{
-        ThemeChip, grid, group, note, page, rows as row_stack, section, status_row, theme_chip
+        ChipPaint, ThemeChip, grid, group, note, page, rows as row_stack, section, status_row,
+        theme_chip
     }
 };
 
@@ -60,6 +66,7 @@ const SECTION_COUNT: f32 = 1.0;
 #[must_use]
 pub(super) fn view<'a>(
     state: &HydeState,
+    swatches: &HashMap<String, ThemeSwatch>,
     switching: Option<&str>,
     spinner: Spinner,
     opacity: f32,
@@ -79,6 +86,7 @@ pub(super) fn view<'a>(
             THEMES,
             themes(
                 state,
+                swatches,
                 switching,
                 spinner,
                 opacity,
@@ -103,6 +111,7 @@ pub(super) fn view<'a>(
 /// hiding that refusal until after the click.
 fn themes<'a>(
     state: &HydeState,
+    swatches: &HashMap<String, ThemeSwatch>,
     switching: Option<&str>,
     spinner: Spinner,
     opacity: f32,
@@ -129,7 +138,8 @@ fn themes<'a>(
                 chip_state(state, switching, spinner, name),
                 font_size,
                 opacity,
-                cell
+                cell,
+                swatches.get(name).map(chip_paint)
             ));
         }
 
@@ -137,6 +147,20 @@ fn themes<'a>(
     }
 
     block.into()
+}
+
+/// Restates a theme's swatch in the colours the renderer paints with.
+fn chip_paint(swatch: &ThemeSwatch) -> ChipPaint {
+    ChipPaint {
+        background: colour(swatch.background),
+        text:       colour(swatch.text),
+        accent:     colour(swatch.accent)
+    }
+}
+
+/// One palette colour, as the renderer spells it.
+fn colour(rgba: Rgba) -> iced::Color {
+    iced::Color::from_rgba8(rgba.r, rgba.g, rgba.b, rgba.a)
 }
 
 /// What the chip of `name` stands for, given what the desktop reports and what

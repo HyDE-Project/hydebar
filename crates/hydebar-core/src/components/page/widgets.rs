@@ -198,6 +198,21 @@ pub(crate) fn chip<'a, M: Clone + 'a>(
         .into()
 }
 
+/// The colours a theme chip is painted in, taken from the theme it stands for.
+///
+/// Carried whole rather than as a background alone: a background from one
+/// palette under a text colour from another is exactly the unreadable pairing
+/// the swatch exists to avoid.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) struct ChipPaint {
+    /// Surface of the chip.
+    pub(crate) background: iced::Color,
+    /// Text on that surface.
+    pub(crate) text:       iced::Color,
+    /// Accent the active theme is ringed with.
+    pub(crate) accent:     iced::Color
+}
+
 /// What a chip of the theme grid stands for right now.
 ///
 /// The grid is the only place on the page where a press starts something the
@@ -234,13 +249,19 @@ impl ThemeChip {
 /// blocked, because this one has to say three things at once: which theme the
 /// desktop is on, which one it is moving to, and that nothing else can be asked
 /// for until it gets there.
+///
+/// Given a `paint`, the chip is drawn in the colours of the theme it stands
+/// for — the grid becomes a palette of the themes themselves — and the theme
+/// in force is told apart by a ring of its own accent, since a fill can no
+/// longer mark it.
 pub(crate) fn theme_chip<'a, M: Clone + 'a>(
     label: String,
     message: M,
     state: ThemeChip,
     font_size: f32,
     opacity: f32,
-    cell: f32
+    cell: f32,
+    paint: Option<ChipPaint>
 ) -> Element<'a, M> {
     let control = style::control_size(font_size);
 
@@ -263,23 +284,45 @@ pub(crate) fn theme_chip<'a, M: Clone + 'a>(
     chip.style(move |theme: &Theme, _status| {
         let palette = theme.extended_palette();
 
-        let (background, text_color) = match state {
-            ThemeChip::Active => (palette.primary.base.color, palette.primary.base.text),
-            ThemeChip::Idle => (palette.background.weak.color, palette.background.base.text),
-            ThemeChip::Applying(spinner) => (
-                palette.primary.base.color.scale_alpha(spinner.pulse()),
-                palette.primary.base.text
-            ),
-            ThemeChip::Blocked => (
-                palette.background.weak.color.scale_alpha(BLOCKED_ALPHA),
-                palette.background.base.text.scale_alpha(BLOCKED_ALPHA)
+        let (base, text_colour, ring) = match paint {
+            Some(paint) => (paint.background, paint.text, paint.accent),
+            None => (
+                palette.background.weak.color,
+                palette.background.base.text,
+                palette.primary.base.color
             )
         };
+
+        let (background, text_color, ringed) = match state {
+            ThemeChip::Active => match paint {
+                Some(_) => (base, text_colour, true),
+                None => (palette.primary.base.color, palette.primary.base.text, false)
+            },
+            ThemeChip::Idle => (base, text_colour, false),
+            ThemeChip::Applying(spinner) => match paint {
+                Some(_) => (base.scale_alpha(spinner.pulse()), text_colour, true),
+                None => (
+                    palette.primary.base.color.scale_alpha(spinner.pulse()),
+                    palette.primary.base.text,
+                    false
+                )
+            },
+            ThemeChip::Blocked => (
+                base.scale_alpha(BLOCKED_ALPHA),
+                text_colour.scale_alpha(BLOCKED_ALPHA),
+                false
+            )
+        };
+
+        let mut border = Border::default().rounded(style::corner_radius(font_size));
+        if ringed {
+            border = border.color(ring).width(2.0);
+        }
 
         button::Style {
             background: Some(Background::Color(background.scale_alpha(opacity))),
             text_color,
-            border: Border::default().rounded(style::corner_radius(font_size)),
+            border,
             ..button::Style::default()
         }
     })

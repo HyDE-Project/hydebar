@@ -60,6 +60,9 @@ impl App {
                             self.tray.submenus.clear();
                         }
                     }
+                    MenuType::Themes => {
+                        cmd.push(self.themes.load_swatches().map(Message::Themes));
+                    }
                     MenuType::ControlCenter => {
                         self.control_center.sub_menu = None;
 

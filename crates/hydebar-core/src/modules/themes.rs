@@ -21,9 +21,13 @@
 mod progress;
 mod view;
 
+use std::collections::HashMap;
+
 use hydebar_proto::{
     config::Config,
-    hyde_state::{self, HydeState}
+    hyde_dirs::HydeDirs,
+    hyde_state::{self, HydeState},
+    theme_source::{ThemeSwatch, theme_swatch}
 };
 use iced::{Element, Task};
 use log::{error, info};
@@ -68,7 +72,13 @@ pub enum Message {
     /// otherwise: the bar has no other reason to redraw itself while it waits
     /// on a desktop script, and a wait nobody can see reads as a press that was
     /// never taken.
-    Tick
+    Tick,
+    /// Deliver the swatches the themes announce themselves with.
+    ///
+    /// Raised by the reader the menu starts when it opens; the colours arrive
+    /// a beat after the names because reading them hashes every theme's
+    /// wallpaper, which is nothing the opening animation should wait on.
+    SwatchesLoaded(HashMap<String, ThemeSwatch>)
 }
 
 /// What a press on a theme chip leads to.
@@ -105,6 +115,18 @@ fn decide_switch(theme: &str, switching: Option<&str>, installed: &[String]) -> 
     SwitchDecision::Start
 }
 
+/// Reads the swatch of every named theme from the HyDE install on disk.
+fn read_swatches(themes: &[String]) -> HashMap<String, ThemeSwatch> {
+    let Some(dirs) = HydeDirs::from_env() else {
+        return HashMap::new();
+    };
+
+    themes
+        .iter()
+        .filter_map(|name| theme_swatch(&dirs, name).map(|swatch| (name.clone(), swatch)))
+        .collect()
+}
+
 /// Bar entry listing the installed desktop themes.
 #[derive(Default, Debug, Clone)]
 pub struct Themes {
@@ -114,6 +136,12 @@ pub struct Themes {
     /// frame of the open animation, and reading two files that often would put
     /// the filesystem in the draw path.
     hyde:      HydeState,
+    /// The colours each theme announces itself with, by theme name.
+    ///
+    /// Loaded off the update path — see [`Themes::load_swatches`] — and kept
+    /// so the menu can paint every chip in the colours of the theme it stands
+    /// for. A theme without an entry is painted like any other control.
+    swatches:  HashMap<String, ThemeSwatch>,
     /// Theme a switch is running for, while one is.
     switching: Option<String>,
     /// Frame the indicator of a running switch is on.
@@ -130,9 +158,31 @@ impl Themes {
     pub fn new() -> Self {
         Self {
             hyde:      hyde_state::load(),
+            swatches:  HashMap::new(),
             switching: None,
             spinner:   Spinner::default()
         }
+    }
+
+    /// Starts reading the swatch of every installed theme, off this thread.
+    ///
+    /// Reading one swatch hashes that theme's current wallpaper, and a dozen
+    /// themes make that a moment of real work; done inline it would land in
+    /// the middle of the menu's opening animation. The colours arrive through
+    /// [`Message::SwatchesLoaded`] and the open menu picks them up on its next
+    /// frame.
+    #[must_use]
+    pub fn load_swatches(&self) -> Task<Message> {
+        let themes = self.hyde.themes.clone();
+
+        Task::perform(
+            async move {
+                tokio::task::spawn_blocking(move || read_swatches(&themes))
+                    .await
+                    .unwrap_or_default()
+            },
+            Message::SwatchesLoaded
+        )
     }
 
     /// Desktop state the module draws.
@@ -185,6 +235,7 @@ impl Themes {
 
         view::view(
             &self.hyde,
+            &self.swatches,
             self.switching(),
             self.spinner,
             opacity,
@@ -232,12 +283,17 @@ impl Themes {
             Message::Switched {
                 theme,
                 failure
-            } => self.switched(&theme, failure.as_deref(), config),
+            } => {
+                self.switched(&theme, failure.as_deref(), config);
+
+                return self.load_swatches();
+            }
             Message::Tick => {
                 if self.switching.is_some() {
                     self.spinner.advance();
                 }
             }
+            Message::SwatchesLoaded(swatches) => self.swatches = swatches
         }
 
         Task::none()

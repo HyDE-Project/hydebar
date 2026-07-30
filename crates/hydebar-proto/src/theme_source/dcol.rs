@@ -21,7 +21,7 @@ mod roles;
 mod selection;
 
 #[cfg(test)]
-mod fixtures;
+pub(super) mod fixtures;
 
 pub use palette::{DcolMode, DcolPalette};
 pub(super) use reader::read;
