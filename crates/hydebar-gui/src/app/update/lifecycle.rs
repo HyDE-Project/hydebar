@@ -159,6 +159,7 @@ impl App {
 
                 self.config = config;
                 self.themes.refresh();
+                hydebar_core::outputs::restate_blur();
                 let resize = self.refresh_appearance();
 
                 if impact.moves_module_registration() {
