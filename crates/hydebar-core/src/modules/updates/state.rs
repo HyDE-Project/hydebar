@@ -78,6 +78,24 @@ pub struct Updates {
     schedule:                 Option<Schedule>
 }
 
+impl Updates {
+    /// Hint shown while the pointer rests on the bar entry.
+    ///
+    /// Nothing is shown where no check can run: the entry itself is absent
+    /// from such a bar, so there is nothing to explain.
+    #[must_use]
+    pub fn tooltip(&self) -> Option<String> {
+        match self.state {
+            CheckState::Checking => Some("Updates: checking".to_owned()),
+            CheckState::Ready => Some(match self.updates.len() {
+                0 => "Updates: none pending".to_owned(),
+                pending => format!("Updates: {pending} pending")
+            }),
+            CheckState::Unavailable => None
+        }
+    }
+}
+
 impl std::fmt::Debug for Updates {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Updates")

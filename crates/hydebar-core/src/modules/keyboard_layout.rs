@@ -87,8 +87,9 @@ impl KeyboardLayout {
         }
     }
 
-    #[cfg(test)]
-    pub(crate) fn active_layout(&self) -> &str {
+    /// Layout currently in force, as the compositor names it.
+    #[must_use]
+    pub fn active_layout(&self) -> &str {
         &self.active
     }
 

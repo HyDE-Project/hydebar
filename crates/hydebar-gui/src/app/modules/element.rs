@@ -2,6 +2,7 @@
 
 use hydebar_core::{
     config::{AppearanceStyle, ModuleName},
+    modules::battery::BatteryData,
     position_button::position_button,
     style::module_button_style,
     tooltip::{TooltipInfo, tooltip_anchor}
@@ -14,6 +15,15 @@ use iced::{
 
 use super::{ModuleActions, actions::attach_module_actions};
 use crate::app::state::{App, Message};
+
+/// States the battery in one line: charge, and whether it is being fed.
+fn battery_hint(data: &BatteryData) -> String {
+    if data.charging {
+        format!("Battery: {}%, charging", data.capacity)
+    } else {
+        format!("Battery: {}%", data.capacity)
+    }
+}
 
 impl App {
     /// Padding of a single module, derived from the themed font size.
@@ -126,6 +136,13 @@ impl App {
     ///
     /// The outer [`Option`] separates a module that never shows a hint, and is
     /// left unwrapped, from one that shows a hint only in some of its states.
+    ///
+    /// Modules whose facts fit a line state them; the rest state their name,
+    /// because a strip of glyphs nobody can name is a bar nobody can learn.
+    /// The ones that stay silent already say everything on the bar itself:
+    /// workspaces and the window title are their own text, the tray draws
+    /// icons the bar does not own, and the system readouts stand beside their
+    /// values.
     fn module_tooltip(&self, module_name: &ModuleName) -> Option<Option<String>> {
         match module_name {
             ModuleName::Custom(name) => self
@@ -138,7 +155,19 @@ impl App {
                     .tooltip(self.control_center.is_idle_inhibited())
                     .map(str::to_owned)
             ),
-            _ => None
+            ModuleName::Battery => Some(self.battery.data().map(battery_hint)),
+            ModuleName::Clock => Some(Some(self.clock.data().format("%A, %-d %B %Y"))),
+            ModuleName::Updates => Some(self.updates.tooltip()),
+            ModuleName::KeyboardLayout => Some(Some(format!(
+                "{}: {}",
+                module_name.label(),
+                self.keyboard_layout.active_layout()
+            ))),
+            ModuleName::Workspaces
+            | ModuleName::WindowTitle
+            | ModuleName::Tray
+            | ModuleName::SystemInfo => None,
+            named => Some(Some(named.label().to_owned()))
         }
     }
 

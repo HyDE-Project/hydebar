@@ -122,6 +122,42 @@ impl ModuleName {
             ModuleName::Custom(name) => name.as_str()
         }
     }
+
+    /// Name this module is shown to a person under.
+    ///
+    /// The configuration spelling doubles as an identifier and reads like one;
+    /// this is the spelling for surfaces a user looks at, such as the hint
+    /// shown while the pointer rests on a module.
+    #[must_use]
+    pub fn label(&self) -> &str {
+        match self {
+            ModuleName::AppLauncher => "App launcher",
+            ModuleName::Updates => "Updates",
+            ModuleName::Clipboard => "Clipboard",
+            ModuleName::Workspaces => "Workspaces",
+            ModuleName::WindowTitle => "Window title",
+            ModuleName::SystemInfo => "System monitor",
+            ModuleName::KeyboardLayout => "Keyboard layout",
+            ModuleName::KeyboardSubmap => "Keyboard submap",
+            ModuleName::Tray => "Tray",
+            ModuleName::Clock => "Clock",
+            ModuleName::Battery => "Battery",
+            ModuleName::Privacy => "Privacy",
+            ModuleName::ControlCenter => "Control centre",
+            ModuleName::Audio => "Audio",
+            ModuleName::Network => "Network",
+            ModuleName::Bluetooth => "Bluetooth",
+            ModuleName::PowerProfile => "Power profile",
+            ModuleName::Settings => "Bar settings",
+            ModuleName::Themes => "Desktop themes",
+            ModuleName::Wallpaper => "Wallpaper",
+            ModuleName::MediaPlayer => "Media player",
+            ModuleName::Notifications => "Notifications",
+            ModuleName::Screenshot => "Screenshot",
+            ModuleName::IdleInhibitor => "Idle inhibitor",
+            ModuleName::Custom(name) => name.as_str()
+        }
+    }
 }
 
 impl<'de> Deserialize<'de> for ModuleName {
@@ -401,6 +437,19 @@ mod tests {
 
         assert_eq!(name, ModuleName::Themes);
         assert_eq!(name.as_str(), "Themes");
+    }
+
+    /// A module a person cannot name is a module a person cannot find; every
+    /// shipped module carries a spelled-out label distinct from its
+    /// configuration name style.
+    #[test]
+    fn every_built_in_module_carries_a_human_label() {
+        for module in &ModuleName::BUILT_IN {
+            assert!(!module.label().is_empty());
+        }
+
+        assert_eq!(ModuleName::PowerProfile.label(), "Power profile");
+        assert_eq!(ModuleName::Custom("memory".to_owned()).label(), "memory");
     }
 
     /// A hand-kept name list once forgot `Wallpaper`, turning the built-in
