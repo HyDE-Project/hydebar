@@ -3,7 +3,7 @@
 use hydebar_core::{
     attention::PollSchedule, config::ModuleName, menu::MenuType, modules::OnModulePress
 };
-use iced::{Element, Subscription, window::Id};
+use iced::{Element, Subscription, SurfaceId as Id};
 use log::error;
 
 use super::actions::custom_module_action;

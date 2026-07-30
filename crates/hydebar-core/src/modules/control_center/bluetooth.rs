@@ -1,12 +1,14 @@
 use iced::{
-    Element, Length, Theme,
-    widget::{Column, Row, button, column, container, row, rule, text},
-    window::Id
+    Element, Length, SurfaceId as Id, Theme,
+    widget::{Column, Row, button, column, container, row, rule, text}
 };
 
 use super::{Message, SubMenu, quick_setting_button};
 use crate::{
-    components::icons::{IconTheme, Icons, icon},
+    components::{
+        icons::{IconTheme, Icons, icon},
+        push_maybe::PushMaybe
+    },
     services::{
         ServiceEvent,
         bluetooth::{BluetoothData, BluetoothService, BluetoothState}

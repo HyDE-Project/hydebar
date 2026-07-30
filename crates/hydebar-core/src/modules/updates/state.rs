@@ -1,6 +1,6 @@
 use std::{sync::Arc, time::Duration};
 
-use iced::{Element, window::Id};
+use iced::{Element, SurfaceId as Id};
 use log::{debug, error, info, warn};
 use tokio::{runtime::Handle, sync::Notify, task::JoinHandle, time::sleep};
 

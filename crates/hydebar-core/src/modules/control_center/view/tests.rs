@@ -5,10 +5,7 @@ use iced::{
     widget::{button, text}
 };
 
-use super::{
-    helpers::{quick_settings_section, sub_menu_wrapper},
-    quick_setting_button
-};
+use super::{helpers::quick_settings_section, quick_setting_button};
 use crate::{
     components::icons::{IconTheme, Icons},
     modules::control_center::state::{Message, SubMenu}

@@ -1,7 +1,7 @@
 //! Delegation of the interaction of a [`Centerbox`] to its sections.
 
 use iced::{
-    Element, Event, Rectangle, Vector,
+    Rectangle, Vector,
     advanced::{
         Clipboard, Shell,
         layout::Layout,
@@ -9,6 +9,7 @@ use iced::{
         widget::{Operation, Tree}
     }
 };
+use iced_core::Event;
 
 use super::builder::Centerbox;
 
@@ -95,11 +96,12 @@ pub(super) fn overlay<'a, 'b, Message, Theme, Renderer>(
     renderer: &Renderer,
     viewport: &Rectangle,
     translation: Vector
-) -> Option<overlay::Element<'b, Message, Theme, Renderer>>
+) -> Option<iced_core::overlay::Element<'b, Message, Theme, Renderer>>
 where
     Renderer: iced::advanced::Renderer
 {
-    let children: &'b mut [Element<'a, Message, Theme, Renderer>] = &mut centerbox.children;
+    let children: &'b mut [iced_core::Element<'a, Message, Theme, Renderer>] =
+        &mut centerbox.children;
 
     overlay::from_children(children, tree, layout, renderer, viewport, translation)
 }

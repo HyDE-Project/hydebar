@@ -1,6 +1,6 @@
 use hydebar_core::position_button::position_button;
 use iced::{
-    Alignment, Element, Length, Padding, Point, Size,
+    Alignment, Length, Padding, Point, Size,
     advanced::{
         layout::{Layout, Limits, Node},
         widget::Tree
@@ -21,7 +21,7 @@ const GROUP_GAP: f32 = 8.0;
 
 /// Builds a bar module shaped like the real ones: a fill-height button
 /// wrapping fixed-size content.
-fn module<'a>(width: f32) -> Element<'a, (), TestTheme, TestRenderer> {
+fn module<'a>(width: f32) -> iced_core::Element<'a, (), TestTheme, TestRenderer> {
     position_button(
         container(Space::new().width(width).height(16.0))
             .align_y(Alignment::Center)
@@ -34,7 +34,7 @@ fn module<'a>(width: f32) -> Element<'a, (), TestTheme, TestRenderer> {
 }
 
 /// Builds a bar section the way `modules_section` does.
-fn section<'a>(widths: &[f32]) -> Element<'a, (), TestTheme, TestRenderer> {
+fn section<'a>(widths: &[f32]) -> iced_core::Element<'a, (), TestTheme, TestRenderer> {
     let mut section = row!()
         .height(Length::Shrink)
         .align_y(Alignment::Center)
@@ -48,17 +48,18 @@ fn section<'a>(widths: &[f32]) -> Element<'a, (), TestTheme, TestRenderer> {
 }
 
 fn lay_out<'a>(
-    children: [Element<'a, (), TestTheme, TestRenderer>; 3],
+    children: [iced_core::Element<'a, (), TestTheme, TestRenderer>; 3],
     padding: Padding,
     width: f32
 ) -> Node {
-    let mut element: Element<'a, (), TestTheme, TestRenderer> = Centerbox::new(children)
-        .spacing(GROUP_GAP)
-        .width(Length::Fill)
-        .height(BAR_HEIGHT)
-        .align_items(Alignment::Center)
-        .padding(padding)
-        .into();
+    let mut element: iced_core::Element<'a, (), TestTheme, TestRenderer> =
+        Centerbox::new(children)
+            .spacing(GROUP_GAP)
+            .width(Length::Fill)
+            .height(BAR_HEIGHT)
+            .align_items(Alignment::Center)
+            .padding(padding)
+            .into();
 
     let mut tree = Tree::new(&element);
 

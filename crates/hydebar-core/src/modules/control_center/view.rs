@@ -1,4 +1,4 @@
-use iced::{Element, window::Id};
+use iced::{Element, SurfaceId as Id};
 
 use super::state::{ControlCenter, Message};
 use crate::{

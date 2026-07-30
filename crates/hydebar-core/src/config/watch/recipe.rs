@@ -10,10 +10,10 @@ use std::{
 
 use iced::{
     Subscription,
-    advanced::subscription::{self, Recipe, from_recipe},
     futures::{StreamExt, channel::mpsc::Sender, pin_mut},
     stream::channel
 };
+use iced_futures::subscription::{self, Recipe, from_recipe};
 use inotify::{Inotify, WatchMask};
 use log::{debug, error, info};
 

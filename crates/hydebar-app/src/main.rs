@@ -4,7 +4,6 @@
 #![allow(clippy::double_ended_iterator_last)]
 
 mod error;
-mod executor;
 mod instance;
 mod startup_scale;
 
@@ -22,7 +21,7 @@ use hydebar_core::{
 };
 use hydebar_gui::{App, get_log_spec};
 use hydebar_proto::ports::hyprland::HyprlandPort;
-use iced::{Font, Pixels, Settings};
+use iced::{Anchor, Font, KeyboardInteractivity, Layer, LayerShellSettings, SurfaceId};
 use log::{debug, error};
 use tokio::runtime::Handle;
 
@@ -79,8 +78,6 @@ fn start() -> Result<(), MainError> {
         .build()
         .map_err(MainError::Runtime)?;
     let runtime_handle = runtime.handle().clone();
-
-    executor::install(runtime_handle.clone());
 
     run(runtime_handle)
 }
@@ -173,14 +170,6 @@ fn run(runtime_handle: Handle) -> Result<(), MainError> {
         None => Font::DEFAULT
     };
 
-    let settings = Settings {
-        default_text_size: config
-            .appearance
-            .font_size
-            .map_or_else(|| Settings::default().default_text_size, Pixels::from),
-        ..Settings::default()
-    };
-
     let hyprland: Arc<dyn HyprlandPort> = Arc::new(HyprlandClient::new());
 
     let bus_capacity = NonZeroUsize::new(64).ok_or(MainError::BusCapacity)?;
@@ -206,17 +195,31 @@ fn run(runtime_handle: Handle) -> Result<(), MainError> {
         }
     };
 
-    let outcome = iced::daemon(boot, App::update, App::view)
-        .executor::<executor::SharedRuntime>()
-        .settings(settings)
-        .subscription(App::subscription)
-        .theme(App::theme)
-        .style(App::style)
-        .scale_factor(App::scale_factor)
-        .font(Cow::from(ICON_FONT))
-        .default_font(font)
-        .run()
-        .map_err(MainError::from);
+    let outcome = iced::application(
+        boot,
+        |app: &mut App, message| app.update(message),
+        |app: &App, id| app.view(id)
+    )
+    // The bridge's own first surface is not one of the bar's: it is
+    // parked as an off-screen pixel in the background, and the bar's
+    // real surfaces are created by the output handling.
+    .layer_shell(LayerShellSettings {
+        namespace: "hydebar-boot-layer".to_owned(),
+        size: Some((1, 1)),
+        layer: Layer::Background,
+        keyboard_interactivity: KeyboardInteractivity::None,
+        exclusive_zone: 0,
+        anchor: Anchor::TOP | Anchor::LEFT,
+        margin: (-2, 0, 0, -2),
+        ..Default::default()
+    })
+    .subscription(|app: &App| app.subscription())
+    .theme(|app: &App| app.theme(SurfaceId::MAIN))
+    .scale_factor(|app: &App| app.scale_factor(SurfaceId::MAIN))
+    .font(Cow::from(ICON_FONT))
+    .default_font(font)
+    .run()
+    .map_err(MainError::from);
 
     hydebar_core::utils::process_group::terminate_all();
 

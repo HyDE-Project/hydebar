@@ -10,6 +10,7 @@ use super::{MediaPlayer, Message};
 use crate::{
     components::{
         icons::{IconTheme, Icons, icon},
+        push_maybe::PushMaybe,
         scale
     },
     config::MediaPlayerModuleConfig,

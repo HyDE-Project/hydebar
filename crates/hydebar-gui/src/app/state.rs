@@ -44,9 +44,8 @@ use hydebar_proto::{
     config::{Appearance, Config},
     ports::hyprland::HyprlandPort
 };
-use iced::{Task, event::wayland::OutputEvent, window::Id};
+use iced::{OutputEvent, SurfaceId as Id, Task};
 use tokio::runtime::Handle;
-use wayland_client::protocol::wl_output::WlOutput;
 
 use super::{bus::BusFlushOutcome, shutdown::ShutdownSignal};
 
@@ -169,7 +168,7 @@ pub enum Message {
     Notifications(modules::notifications::NotificationsMessage),
     Screenshot(modules::screenshot::ScreenshotMessage),
     Weather(modules::weather::Message),
-    OutputEvent((OutputEvent, WlOutput)),
+    OutputEvent(OutputEvent),
     LaunchCommand(String),
     /// An entry of the context menu of a custom module was selected.
     ///

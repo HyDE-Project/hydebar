@@ -6,11 +6,7 @@ use hydebar_core::{
     config::{self, ConfigEvent},
     modules::themes
 };
-use iced::{
-    Subscription,
-    event::{listen_with, wayland::Event as WaylandEvent},
-    keyboard, window
-};
+use iced::{Subscription, event::listen_with, keyboard};
 use log::debug;
 
 use super::super::{
@@ -109,7 +105,8 @@ impl App {
     /// of interpolating on a polling timer.
     fn frame_subscription(&self) -> Subscription<Message> {
         if self.outputs.menu_is_animating() || self.appearance_transition.is_animating() {
-            window::wayland_frames().map(Message::Frame)
+            iced::time::every(std::time::Duration::from_millis(16))
+                .map(|_| Message::Frame(std::time::Instant::now()))
         } else {
             Subscription::none()
         }
@@ -126,14 +123,9 @@ impl App {
             config::subscription(&self.config_path, Arc::clone(&self.config_manager))
                 .map(Self::config_event),
             self.theme_subscription(),
+            iced::output_events().map(Message::OutputEvent),
             listen_with(|evt, _, _| match evt {
-                iced::Event::PlatformSpecific(iced::event::PlatformSpecific::Wayland(
-                    WaylandEvent::Output(event, wl_output)
-                )) => {
-                    debug!("Wayland event: {event:?}");
-                    Some(Message::OutputEvent((event, wl_output)))
-                }
-                iced::Event::Keyboard(keyboard::Event::KeyPressed {
+                iced_core::Event::Keyboard(keyboard::Event::KeyPressed {
                     key,
                     modifiers,
                     ..

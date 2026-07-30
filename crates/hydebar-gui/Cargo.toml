@@ -8,6 +8,8 @@ rust-version.workspace = true
 hydebar-core = { path = "../hydebar-core" }
 hydebar-proto = { path = "../hydebar-proto" }
 iced.workspace = true
+iced_core.workspace = true
+iced_futures.workspace = true
 flexi_logger.workspace = true
 log.workspace = true
 tokio.workspace = true

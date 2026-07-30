@@ -11,11 +11,10 @@ use hydebar_core::{
 };
 use hydebar_proto::config::{AppearanceStyle, Position};
 use iced::{
-    Alignment, Color, Element, Gradient, Length, Radians, Theme,
+    Alignment, Color, Element, Gradient, Length, Radians, SurfaceId as Id, Theme,
     gradient::Linear,
     theme::Style,
-    widget::{Row, container},
-    window::Id
+    widget::{Row, container}
 };
 
 use super::{
@@ -36,8 +35,7 @@ impl App {
     pub fn style(&self, theme: &Theme) -> Style {
         Style {
             background_color: Color::TRANSPARENT,
-            text_color:       theme.palette().text,
-            icon_color:       theme.palette().text
+            text_color:       theme.palette().text
         }
     }
 

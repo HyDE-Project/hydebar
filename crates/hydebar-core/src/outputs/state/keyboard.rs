@@ -1,6 +1,6 @@
 //! Keyboard focus requests for menu surfaces.
 
-use iced::{Task, window::Id};
+use iced::{SurfaceId as Id, Task};
 
 use super::Outputs;
 

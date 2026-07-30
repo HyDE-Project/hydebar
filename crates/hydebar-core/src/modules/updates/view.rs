@@ -1,10 +1,9 @@
 use std::borrow::Cow;
 
 use iced::{
-    Alignment, Element, Length, Padding,
+    Alignment, Element, Length, Padding, SurfaceId as Id,
     alignment::Horizontal,
-    widget::{Column, button, column, container, row, rule, scrollable, text},
-    window::Id
+    widget::{Column, button, column, container, row, rule, scrollable, text}
 };
 
 use super::state::{CheckState, Message, Updates};

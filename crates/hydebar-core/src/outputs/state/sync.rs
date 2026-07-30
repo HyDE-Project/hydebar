@@ -1,11 +1,6 @@
 //! Reconciliation of surfaces with the configuration.
 
-use iced::{
-    Task,
-    platform_specific::shell::wayland::commands::layer_surface::{
-        Anchor, set_anchor, set_exclusive_zone, set_size
-    }
-};
+use iced::{Anchor, Task, set_anchor, set_exclusive_zone, set_size};
 use log::debug;
 
 use super::Outputs;
@@ -148,7 +143,7 @@ impl Outputs {
                 config.appearance.height
             );
             tasks.push(Task::batch(vec![
-                set_size(shell_info.id, None, Some(height as u32)),
+                set_size(shell_info.id, (0, height as u32)),
                 set_exclusive_zone(shell_info.id, height as i32),
             ]));
         }

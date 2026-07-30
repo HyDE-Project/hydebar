@@ -1,7 +1,6 @@
 use iced::{
-    Alignment, Element, Length, Theme,
-    widget::{Column, button, column, container, row, rule, scrollable, text, toggler},
-    window::Id
+    Alignment, Element, Length, SurfaceId as Id, Theme,
+    widget::{Column, button, column, container, row, rule, scrollable, text, toggler}
 };
 
 use super::{Message, SubMenu, quick_setting_button};

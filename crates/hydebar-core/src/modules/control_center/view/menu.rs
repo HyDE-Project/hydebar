@@ -1,9 +1,8 @@
 //! Rendering of the settings menu contents.
 
 use iced::{
-    Element, Length,
-    widget::{Column, Row, Space, button},
-    window::Id
+    Element, Length, SurfaceId as Id,
+    widget::{Column, Row, Space, button}
 };
 
 use super::{
@@ -11,7 +10,10 @@ use super::{
     quick_setting_button
 };
 use crate::{
-    components::icons::{IconTheme, Icons, icon},
+    components::{
+        icons::{IconTheme, Icons, icon},
+        push_maybe::PushMaybe
+    },
     config::{ControlCenterModuleConfig, Position},
     modules::control_center::{
         power::power_menu,

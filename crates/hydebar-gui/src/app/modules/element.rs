@@ -8,9 +8,8 @@ use hydebar_core::{
     tooltip::{TooltipInfo, tooltip_anchor}
 };
 use iced::{
-    Alignment, Border, Color, Element, Length,
-    widget::{Row, container},
-    window::Id
+    Alignment, Border, Color, Element, Length, SurfaceId as Id,
+    widget::{Row, container}
 };
 
 use super::{ModuleActions, actions::attach_module_actions};

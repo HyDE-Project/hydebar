@@ -3,9 +3,9 @@ use std::{any::TypeId, hash::Hash};
 use hydebar_core::event_bus::{BusEvent, EventReceiver};
 use iced::{
     Subscription,
-    advanced::subscription::{self, Recipe, from_recipe},
     futures::stream::{BoxStream, StreamExt, unfold}
 };
+use iced_futures::subscription::{self, Recipe, from_recipe};
 use log::error;
 
 #[derive(Debug, Clone)]

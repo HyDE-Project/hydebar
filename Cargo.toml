@@ -13,17 +13,18 @@ edition = "2024"
 rust-version = "1.97"
 
 [workspace.dependencies]
-iced = { git = "https://github.com/pop-os/iced", features = [
+iced = { package = "iced_layershell", git = "https://github.com/MalpenZibo/iced_layershell", tag = "v0.2.1", features = [
   "tokio",
   "advanced",
   "wgpu",
-  "winit",
-  "wayland",
+  "tiny-skia",
   "image",
   "lazy",
   "svg",
   "canvas",
 ] }
+iced_futures = "0.14"
+iced_core = "0.14"
 chrono = "0.4"
 hyprland = "0.4.0-beta.3"
 serde = { version = "1.0", features = ["derive"] }
@@ -64,5 +65,5 @@ lto = true
 codegen-units = 1
 opt-level = 3
 
-[patch."https://github.com/pop-os/iced"]
-iced = { path = "./iced-patch" }
+[patch.crates-io]
+softbuffer = { git = "https://github.com/MalpenZibo/softbuffer", branch = "wayland-argb" }

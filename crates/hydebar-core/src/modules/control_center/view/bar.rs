@@ -6,7 +6,10 @@ use iced::{
 };
 
 use crate::{
-    components::icons::{IconTheme, Icons, icon},
+    components::{
+        icons::{IconTheme, Icons, icon},
+        push_maybe::PushMaybe
+    },
     menu::MenuType,
     modules::{
         OnModulePress,

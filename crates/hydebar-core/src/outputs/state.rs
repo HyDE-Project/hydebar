@@ -9,8 +9,7 @@ mod tooltips;
 #[cfg(all(test, feature = "enable-broken-tests"))]
 mod tests;
 
-use iced::{Task, window::Id};
-use wayland_client::protocol::wl_output::WlOutput;
+use iced::{OutputId, SurfaceId as Id, Task};
 
 use super::wayland::{LayerSurfaceCreation, create_layer_surfaces};
 use crate::{
@@ -66,7 +65,7 @@ impl ShellInfo {
 /// assert!(!outputs.menu_is_open());
 /// ```
 #[derive(Debug, Clone)]
-pub struct Outputs(Vec<(Option<String>, Option<ShellInfo>, Option<WlOutput>)>);
+pub struct Outputs(Vec<(Option<String>, Option<ShellInfo>, Option<OutputId>)>);
 
 /// Result of looking up a Wayland surface identifier.
 ///
@@ -150,7 +149,7 @@ impl Outputs {
     #[cfg(test)]
     fn iter_internal(
         &self
-    ) -> impl Iterator<Item = &(Option<String>, Option<ShellInfo>, Option<WlOutput>)> {
+    ) -> impl Iterator<Item = &(Option<String>, Option<ShellInfo>, Option<OutputId>)> {
         self.0.iter()
     }
 }

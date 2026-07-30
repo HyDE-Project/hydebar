@@ -1,6 +1,6 @@
 //! Lookups by surface id and monitor name.
 
-use iced::window::Id;
+use iced::SurfaceId as Id;
 
 use super::{HasOutput, Outputs};
 
@@ -14,7 +14,7 @@ impl Outputs {
     /// ```
     /// # use hydebar_core::outputs::Outputs;
     /// # use hydebar_core::config::Config;
-    /// # use iced::window::Id;
+    /// # use iced::SurfaceId as Id;
     /// let config = Config::default();
     /// let (outputs, _task) = Outputs::new::<()>(config.appearance.style, config.position, &config);
     /// let unknown = Id::unique();
@@ -50,7 +50,7 @@ impl Outputs {
     /// ```
     /// # use hydebar_core::outputs::Outputs;
     /// # use hydebar_core::config::Config;
-    /// # use iced::window::Id;
+    /// # use iced::SurfaceId as Id;
     /// let config = Config::default();
     /// let (outputs, _task) = Outputs::new::<()>(config.appearance.style, config.position, &config);
     /// assert!(outputs.get_monitor_name(Id::unique()).is_none());

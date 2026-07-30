@@ -6,11 +6,11 @@
 //! screen instead of stopping at the edge of the bar.
 
 use iced::{
-    Element, Length, Rectangle, Size, Vector,
+    Length, Rectangle, Size, Vector,
     core::{
         Clipboard, Layout, Shell, Widget,
         event::Event,
-        layout, mouse, overlay, renderer, touch,
+        layout, mouse, renderer, touch,
         widget::{Operation, Tree, tree}
     }
 };
@@ -35,9 +35,9 @@ struct State {
 /// the menu surface off and on again.
 pub struct DismissArea<'a, Message, Theme = iced::Theme, Renderer = iced::Renderer>
 where
-    Renderer: iced::core::Renderer
+    Renderer: iced_core::Renderer
 {
-    content:    Element<'a, Message, Theme, Renderer>,
+    content:    iced_core::Element<'a, Message, Theme, Renderer>,
     on_press:   Message,
     on_release: Message
 }
@@ -47,12 +47,12 @@ where
 /// `on_press` is published when a press lands on the wrapped element and
 /// `on_release` once that same press completes on it.
 pub fn dismiss_area<'a, Message, Theme, Renderer>(
-    content: impl Into<Element<'a, Message, Theme, Renderer>>,
+    content: impl Into<iced_core::Element<'a, Message, Theme, Renderer>>,
     on_press: Message,
     on_release: Message
 ) -> DismissArea<'a, Message, Theme, Renderer>
 where
-    Renderer: iced::core::Renderer
+    Renderer: iced_core::Renderer
 {
     DismissArea {
         content: content.into(),
@@ -65,7 +65,7 @@ impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
     for DismissArea<'a, Message, Theme, Renderer>
 where
     Message: Clone + 'a,
-    Renderer: 'a + iced::core::Renderer
+    Renderer: 'a + iced_core::Renderer
 {
     fn tag(&self) -> tree::Tag {
         tree::Tag::of::<State>()
@@ -79,8 +79,8 @@ where
         vec![Tree::new(&self.content)]
     }
 
-    fn diff(&mut self, tree: &mut Tree) {
-        tree.diff_children(std::slice::from_mut(&mut self.content));
+    fn diff(&self, tree: &mut Tree) {
+        tree.diff_children(std::slice::from_ref(&self.content));
     }
 
     fn size(&self) -> Size<Length> {
@@ -208,7 +208,7 @@ where
         renderer: &Renderer,
         viewport: &Rectangle,
         translation: Vector
-    ) -> Option<overlay::Element<'b, Message, Theme, Renderer>> {
+    ) -> Option<iced_core::overlay::Element<'b, Message, Theme, Renderer>> {
         self.content.as_widget_mut().overlay(
             &mut tree.children[0],
             layout,
@@ -220,11 +220,11 @@ where
 }
 
 impl<'a, Message, Theme, Renderer> From<DismissArea<'a, Message, Theme, Renderer>>
-    for Element<'a, Message, Theme, Renderer>
+    for iced_core::Element<'a, Message, Theme, Renderer>
 where
     Message: Clone + 'a,
     Theme: 'a,
-    Renderer: iced::core::Renderer + 'a
+    Renderer: iced_core::Renderer + 'a
 {
     fn from(area: DismissArea<'a, Message, Theme, Renderer>) -> Self {
         Self::new(area)
@@ -233,7 +233,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use iced::{Point, Theme, core::layout::Limits, widget::Space};
+    use iced::{Point, Theme, widget::Space};
+    use iced_core::layout::Limits;
 
     use super::*;
 
@@ -267,7 +268,9 @@ mod tests {
             )
         };
 
-        let mut tree = Tree::new(&Element::<Reported, Theme, TestRenderer>::new(build()));
+        let mut tree = Tree::new(&iced_core::Element::<Reported, Theme, TestRenderer>::new(
+            build()
+        ));
         let mut area = build();
         let node = area.layout(
             &mut tree,
@@ -298,7 +301,7 @@ mod tests {
     ) -> Vec<Reported> {
         let mut messages = Vec::new();
         let mut shell = Shell::new(&mut messages);
-        let mut clipboard = iced::core::clipboard::Null;
+        let mut clipboard = iced_core::clipboard::Null;
 
         if captured {
             shell.capture_event();

@@ -10,9 +10,9 @@ use std::{any::TypeId, hash::Hash, thread, time::Duration};
 
 use iced::{
     Subscription,
-    advanced::subscription::{self, Recipe, from_recipe},
     futures::stream::{BoxStream, StreamExt, once}
 };
+use iced_futures::subscription::{self, Recipe, from_recipe};
 use log::{error, info};
 use tokio::signal::unix::{SignalKind, signal};
 

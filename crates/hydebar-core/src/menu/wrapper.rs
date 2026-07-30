@@ -1,10 +1,9 @@
 //! Placement of a menu box on the full screen menu surface.
 
 use iced::{
-    Element, Length, Padding,
+    Element, Length, Padding, SurfaceId as Id,
     alignment::{Horizontal, Vertical},
-    widget::{container, mouse_area},
-    window::Id
+    widget::{container, mouse_area}
 };
 
 use super::size::MenuSize;

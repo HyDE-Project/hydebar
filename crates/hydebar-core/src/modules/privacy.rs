@@ -17,7 +17,10 @@ use super::{Module, ModuleError, OnModulePress};
 use crate::event_bus::BusEvent;
 use crate::{
     ModuleContext, ModuleEventSender,
-    components::icons::{IconTheme, Icons, icon},
+    components::{
+        icons::{IconTheme, Icons, icon},
+        push_maybe::PushMaybe
+    },
     event_bus::ModuleEvent,
     services::{
         ReadOnlyService, ServiceEvent,

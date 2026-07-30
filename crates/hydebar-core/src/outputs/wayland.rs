@@ -1,14 +1,7 @@
 use iced::{
-    Task,
-    platform_specific::{
-        runtime::wayland::layer_surface::{IcedOutput, SctkLayerSurfaceSettings},
-        shell::wayland::commands::layer_surface::{
-            Anchor, KeyboardInteractivity, Layer, destroy_layer_surface, get_layer_surface
-        }
-    },
-    window::Id
+    Anchor, KeyboardInteractivity, Layer, LayerShellSettings, OutputId, SurfaceId as Id, Task,
+    destroy_layer_surface, new_layer_surface, set_input_region
 };
-use wayland_client::protocol::wl_output::WlOutput;
 
 use crate::{
     HEIGHT,
@@ -48,20 +41,19 @@ const NOTIFICATIONS_NAMESPACE: &str = "hydebar-notifications-layer";
 /// click meant for the windows underneath it.
 pub(crate) const NOTIFICATIONS_WIDTH: u32 = 520;
 
-/// Input region of a surface that only ever draws.
+/// Strips a surface of pointer input, leaving it a drawing and nothing else.
 ///
-/// A layer surface that states no region at all takes pointer input over every
-/// pixel it covers. The tooltip surface spans the whole screen the bar leaves
-/// free, so that a hint can be drawn beside any module, and it rises to the
-/// overlay for as long as one is shown: with the region unstated it takes every
-/// press aimed at the desktop underneath it while the pointer merely rests on a
-/// module. The notification surface does the same over the corner its popups
-/// occupy.
+/// A layer surface that states no region takes pointer input over every pixel
+/// it covers. The tooltip surface spans the whole screen the bar leaves free,
+/// so that a hint can be drawn beside any module, and it rises to the overlay
+/// for as long as one is shown: left as it is it would take every press aimed
+/// at the desktop underneath it while the pointer merely rests on a module.
+/// The notification surface does the same over the corner its popups occupy.
 ///
-/// An empty region states the opposite: the surface is painted and nothing
-/// else, so presses keep reaching whatever sits below it.
-fn draw_only() -> Option<Vec<iced::Rectangle>> {
-    Some(Vec::new())
+/// The empty region is stated *after* creation because the settings carry no
+/// region of their own.
+fn draw_only<Message: 'static>(id: Id) -> Task<Message> {
+    set_input_region(id, Some(Vec::new()))
 }
 
 /// Maps the configured bar layer onto the compositor layer it is created on.
@@ -103,28 +95,21 @@ pub(crate) fn layer_height(
         * scale_factor
 }
 
-/// Resolves the output a surface is created on.
-fn on_output(wl_output: Option<WlOutput>) -> IcedOutput {
-    wl_output.map_or(IcedOutput::Active, IcedOutput::Output)
-}
-
 /// Settings of the surface the bar itself is drawn on.
 pub(crate) fn main_settings(
-    id: Id,
     style: AppearanceStyle,
-    wl_output: Option<WlOutput>,
+    output: Option<OutputId>,
     position: Position,
     menu_keyboard_focus: bool,
     scale_factor: f64,
     configured_height: Option<f32>,
     layer: BarLayer
-) -> SctkLayerSurfaceSettings {
+) -> LayerShellSettings {
     let height = layer_height(style, scale_factor, configured_height);
 
-    SctkLayerSurfaceSettings {
-        id,
+    LayerShellSettings {
         namespace: MAIN_NAMESPACE.to_string(),
-        size: Some((None, Some(height as u32))),
+        size: Some((0, height as u32)),
         layer: surface_layer(layer),
         keyboard_interactivity: if menu_keyboard_focus {
             KeyboardInteractivity::OnDemand
@@ -132,7 +117,7 @@ pub(crate) fn main_settings(
             KeyboardInteractivity::None
         },
         exclusive_zone: height as i32,
-        output: on_output(wl_output),
+        output,
         anchor: match position {
             Position::Top => Anchor::TOP,
             Position::Bottom => Anchor::BOTTOM
@@ -144,55 +129,53 @@ pub(crate) fn main_settings(
 
 /// Settings of the surface the menus are drawn on.
 ///
-/// It states no input region on purpose: the menu is dismissed by pressing
+/// It keeps its pointer input on purpose: the menu is dismissed by pressing
 /// beside it, which only reaches the bar while the surface takes the press.
-pub(crate) fn menu_settings(id: Id, wl_output: Option<WlOutput>) -> SctkLayerSurfaceSettings {
-    SctkLayerSurfaceSettings {
-        id,
+pub(crate) fn menu_settings(output: Option<OutputId>) -> LayerShellSettings {
+    LayerShellSettings {
         namespace: MENU_NAMESPACE.to_string(),
-        size: Some((None, None)),
+        size: Some((0, 0)),
         layer: Layer::Background,
         keyboard_interactivity: KeyboardInteractivity::None,
-        output: on_output(wl_output),
+        output,
         anchor: Anchor::TOP | Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT,
         ..Default::default()
     }
 }
 
 /// Settings of the surface the tooltips are drawn on.
-pub(crate) fn tooltip_settings(id: Id, wl_output: Option<WlOutput>) -> SctkLayerSurfaceSettings {
-    SctkLayerSurfaceSettings {
-        id,
+///
+/// Created input-free through [`draw_only`], stated as a follow-up task.
+pub(crate) fn tooltip_settings(output: Option<OutputId>) -> LayerShellSettings {
+    LayerShellSettings {
         namespace: TOOLTIP_NAMESPACE.to_string(),
-        size: Some((None, None)),
+        size: Some((0, 0)),
         layer: Layer::Background,
         keyboard_interactivity: KeyboardInteractivity::None,
-        input_zone: draw_only(),
-        output: on_output(wl_output),
+        output,
         anchor: Anchor::TOP | Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT,
         ..Default::default()
     }
 }
 
 /// Settings of the surface the notification popups are drawn on.
+///
+/// Created input-free through [`draw_only`], stated as a follow-up task.
+/// Parked out of the way until a popup arrives: the compositor stacks a
+/// surface that changes layer above everything already on that layer, so a
+/// surface that sat on the overlay from the start would end up below a menu
+/// raised there later. Rising only when there is something to show is what
+/// keeps the popups above whatever the bar raised before them.
 pub(crate) fn notifications_settings(
-    id: Id,
-    wl_output: Option<WlOutput>,
+    output: Option<OutputId>,
     position: Position
-) -> SctkLayerSurfaceSettings {
-    SctkLayerSurfaceSettings {
-        id,
+) -> LayerShellSettings {
+    LayerShellSettings {
         namespace: NOTIFICATIONS_NAMESPACE.to_string(),
-        size: Some((Some(NOTIFICATIONS_WIDTH), None)),
-        // Parked out of the way until a popup arrives. The compositor stacks a
-        // surface that changes layer above everything already on that layer, so
-        // a surface that sat on the overlay from the start would end up below a
-        // menu raised there later. Rising only when there is something to show
-        // is what keeps the popups above whatever the bar raised before them.
+        size: Some((NOTIFICATIONS_WIDTH, 1)),
         layer: Layer::Background,
         keyboard_interactivity: KeyboardInteractivity::None,
-        input_zone: draw_only(),
-        output: on_output(wl_output),
+        output,
         anchor: match position {
             Position::Top => Anchor::TOP,
             Position::Bottom => Anchor::BOTTOM
@@ -208,7 +191,7 @@ pub(crate) fn notifications_settings(
 /// the next time the bar is started.
 pub(crate) fn create_layer_surfaces<Message: 'static>(
     style: AppearanceStyle,
-    wl_output: Option<WlOutput>,
+    output: Option<OutputId>,
     position: Position,
     menu_keyboard_focus: bool,
     scale_factor: f64,
@@ -217,35 +200,33 @@ pub(crate) fn create_layer_surfaces<Message: 'static>(
 ) -> LayerSurfaceCreation<Message> {
     super::blur::request();
 
-    let main_id = Id::unique();
-    let menu_id = Id::unique();
-    let tooltip_id = Id::unique();
-    let notifications_id = Id::unique();
-
-    let main_task = get_layer_surface(main_settings(
-        main_id,
+    let (main_id, main_task) = new_layer_surface(main_settings(
         style,
-        wl_output.clone(),
+        output,
         position,
         menu_keyboard_focus,
         scale_factor,
         configured_height,
         layer
     ));
-    let menu_task = get_layer_surface(menu_settings(menu_id, wl_output.clone()));
-    let tooltip_task = get_layer_surface(tooltip_settings(tooltip_id, wl_output.clone()));
-    let notifications_task = get_layer_surface(notifications_settings(
-        notifications_id,
-        wl_output,
-        position
-    ));
+    let (menu_id, menu_task) = new_layer_surface(menu_settings(output));
+    let (tooltip_id, tooltip_task) = new_layer_surface(tooltip_settings(output));
+    let (notifications_id, notifications_task) =
+        new_layer_surface(notifications_settings(output, position));
 
     LayerSurfaceCreation {
         main_id,
         menu_id,
         tooltip_id,
         notifications_id,
-        task: Task::batch(vec![main_task, menu_task, tooltip_task, notifications_task])
+        task: Task::batch(vec![
+            main_task,
+            menu_task,
+            tooltip_task,
+            draw_only(tooltip_id),
+            notifications_task,
+            draw_only(notifications_id),
+        ])
     }
 }
 
@@ -268,33 +249,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_tooltip_surface_takes_no_pointer_input() {
-        // it spans the screen and rises above the windows while a hint is up,
-        // so an unstated region would take every press meant for the bar
-        assert_eq!(
-            tooltip_settings(Id::unique(), None).input_zone,
-            Some(Vec::new())
-        );
-    }
-
-    #[test]
-    fn the_notification_surface_takes_no_pointer_input() {
-        assert_eq!(
-            notifications_settings(Id::unique(), None, Position::Top).input_zone,
-            Some(Vec::new())
-        );
-    }
-
-    #[test]
-    fn the_menu_surface_keeps_taking_pointer_input() {
-        // pressing beside an open menu is what closes it
-        assert!(menu_settings(Id::unique(), None).input_zone.is_none());
-    }
-
-    #[test]
-    fn the_bar_surface_keeps_taking_pointer_input() {
+    fn the_bar_surface_reserves_its_strip() {
         let settings = main_settings(
-            Id::unique(),
             AppearanceStyle::Islands,
             None,
             Position::Top,
@@ -304,7 +260,20 @@ mod tests {
             BarLayer::Top
         );
 
-        assert!(settings.input_zone.is_none());
+        assert_eq!(settings.exclusive_zone, HEIGHT as i32);
+        assert_eq!(settings.size, Some((0, HEIGHT as u32)));
+    }
+
+    #[test]
+    fn every_surface_carries_its_own_namespace() {
+        // compositor rules key on the namespace; a shared one would blur the
+        // whole desktop the moment a menu covers it
+        assert_eq!(menu_settings(None).namespace, MENU_NAMESPACE);
+        assert_eq!(tooltip_settings(None).namespace, TOOLTIP_NAMESPACE);
+        assert_eq!(
+            notifications_settings(None, Position::Top).namespace,
+            NOTIFICATIONS_NAMESPACE
+        );
     }
 
     #[test]

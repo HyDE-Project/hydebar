@@ -4,24 +4,10 @@
 //! the overlay while a tooltip is shown, so it never covers the desktop for
 //! longer than the hover lasts.
 
-use iced::{
-    Task,
-    platform_specific::shell::wayland::commands::layer_surface::{Layer, set_layer},
-    runtime::{Action, task, window::Action as WindowAction},
-    window::Id
-};
+use iced::{Layer, SurfaceId as Id, Task, set_layer};
 
 use super::{Outputs, ShellInfo};
 use crate::{config::ModuleName, tooltip::TooltipInfo};
-
-/// Asks the runtime to paint every surface again.
-///
-/// Nothing else drives the tooltip surface: surfaces are only redrawn while an
-/// animation runs or the compositor reconfigures them, so a tooltip appearing
-/// or vanishing has to ask for the frame that shows it.
-fn redraw_surfaces<Message: 'static>() -> Task<Message> {
-    task::effect(Action::Window(WindowAction::RedrawAll))
-}
 
 impl Outputs {
     /// Resolves the output owning `id`, whichever of its surfaces it names.
@@ -57,12 +43,9 @@ impl Outputs {
                 shell_info.tooltip = Some((owner, info));
 
                 if was_hidden {
-                    Task::batch(vec![
-                        set_layer(tooltip_id, Layer::Overlay),
-                        redraw_surfaces(),
-                    ])
+                    set_layer(tooltip_id, Layer::Overlay)
                 } else {
-                    redraw_surfaces()
+                    Task::none()
                 }
             }
             _ => Task::none()
@@ -95,10 +78,7 @@ impl Outputs {
 
                 shell_info.tooltip = None;
 
-                Task::batch(vec![
-                    set_layer(shell_info.tooltip_id, Layer::Background),
-                    redraw_surfaces(),
-                ])
+                set_layer(shell_info.tooltip_id, Layer::Background)
             }
             _ => Task::none()
         }

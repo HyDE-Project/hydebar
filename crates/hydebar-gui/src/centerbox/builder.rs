@@ -1,6 +1,6 @@
 //! The [`Centerbox`] container and the builder methods configuring it.
 
-use iced::{Alignment, Element, Length, Padding, Pixels};
+use iced::{Alignment, Length, Padding, Pixels};
 
 /// A container that distributes its contents horizontally.
 #[allow(missing_debug_implementations)]
@@ -10,7 +10,7 @@ pub struct Centerbox<'a, Message, Theme = iced::Theme, Renderer = iced::Renderer
     pub(super) width:       Length,
     pub(super) height:      Length,
     pub(super) align_items: Alignment,
-    pub(super) children:    [Element<'a, Message, Theme, Renderer>; 3]
+    pub(super) children:    [iced_core::Element<'a, Message, Theme, Renderer>; 3]
 }
 
 impl<'a, Message, Theme, Renderer> Centerbox<'a, Message, Theme, Renderer>
@@ -18,7 +18,7 @@ where
     Renderer: iced::advanced::Renderer
 {
     /// Creates an empty [`Centerbox`].
-    pub fn new(children: [Element<'a, Message, Theme, Renderer>; 3]) -> Self {
+    pub fn new(children: [iced_core::Element<'a, Message, Theme, Renderer>; 3]) -> Self {
         Centerbox {
             spacing: 0.0,
             padding: Padding::ZERO,
@@ -65,7 +65,7 @@ where
 }
 
 impl<'a, Message, Theme, Renderer> From<Centerbox<'a, Message, Theme, Renderer>>
-    for Element<'a, Message, Theme, Renderer>
+    for iced_core::Element<'a, Message, Theme, Renderer>
 where
     Message: 'a,
     Theme: 'a,

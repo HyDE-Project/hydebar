@@ -1,7 +1,7 @@
 //! Assembly of the module rows and subscriptions of a bar section.
 
-use hydebar_core::{config::ModuleDef, modules::OnModulePress};
-use iced::{Alignment, Element, Length, Subscription, widget::row, window::Id};
+use hydebar_core::{components::push_maybe::PushMaybe, config::ModuleDef, modules::OnModulePress};
+use iced::{Alignment, Element, Length, Subscription, SurfaceId as Id, widget::row};
 
 use crate::app::state::{App, Message};
 

@@ -13,6 +13,8 @@ hex_color.workspace = true
 hydebar-proto = { path = "../hydebar-proto" }
 hyprland.workspace = true
 iced.workspace = true
+iced_core.workspace = true
+iced_futures.workspace = true
 inotify.workspace = true
 itertools.workspace = true
 libc.workspace = true

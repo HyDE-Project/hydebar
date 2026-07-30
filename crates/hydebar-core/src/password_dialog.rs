@@ -1,8 +1,7 @@
 use iced::{
-    Alignment, Element, Length,
+    Alignment, Element, Length, SurfaceId as Id,
     alignment::Vertical,
-    widget::{Space, button, column, row, text, text_input},
-    window::Id
+    widget::{Space, button, column, row, text, text_input}
 };
 
 use crate::{

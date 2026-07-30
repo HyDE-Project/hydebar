@@ -7,7 +7,10 @@ use iced::{
 
 use super::super::tray::{TrayMessage, TrayModule};
 use crate::{
-    components::icons::{IconTheme, Icons, icon},
+    components::{
+        icons::{IconTheme, Icons, icon},
+        push_maybe::PushMaybe
+    },
     services::tray::dbus::{Layout, LayoutProps},
     style::ghost_button_style
 };
@@ -92,7 +95,12 @@ impl TrayModule {
                                     .map(|menu| self.menu_voice(name, menu, opacity, icons))
                                     .collect::<Vec<_>>()
                             )
-                            .padding([0, 0, 0, 16])
+                            .padding(iced::Padding {
+                                top:    0.0,
+                                right:  0.0,
+                                bottom: 0.0,
+                                left:   16.0
+                            })
                             .spacing(4)
                         )
                     } else {

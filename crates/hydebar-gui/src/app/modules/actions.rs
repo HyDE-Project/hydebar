@@ -5,7 +5,7 @@ use hydebar_core::{
     menu::MenuType,
     modules::OnModulePress
 };
-use iced::window::Id;
+use iced::SurfaceId as Id;
 
 use super::ModuleActions;
 use crate::app::state::{App, Message};

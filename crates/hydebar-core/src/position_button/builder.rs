@@ -1,5 +1,5 @@
 use iced::{
-    Element, Length, Padding,
+    Length, Padding,
     core::mouse,
     id::Id,
     widget::button::{Catalog, Status, Style, StyleFn}
@@ -13,10 +13,10 @@ use super::{
 /// Button reporting the on-screen position it was pressed at.
 pub struct PositionButton<'a, Message, Theme = iced::Theme, Renderer = iced::Renderer>
 where
-    Renderer: iced::core::Renderer,
+    Renderer: iced_core::Renderer,
     Theme: Catalog
 {
-    pub(super) content:         Element<'a, Message, Theme, Renderer>,
+    pub(super) content:         iced_core::Element<'a, Message, Theme, Renderer>,
     pub(super) on_press:        Option<OnPress<'a, Message>>,
     pub(super) on_right_press:  Option<OnPress<'a, Message>>,
     pub(super) on_middle_press: Option<OnPress<'a, Message>>,
@@ -30,10 +30,10 @@ where
 
 impl<'a, Message, Theme, Renderer> PositionButton<'a, Message, Theme, Renderer>
 where
-    Renderer: iced::core::Renderer,
+    Renderer: iced_core::Renderer,
     Theme: Catalog
 {
-    pub fn new(content: impl Into<Element<'a, Message, Theme, Renderer>>) -> Self {
+    pub fn new(content: impl Into<iced_core::Element<'a, Message, Theme, Renderer>>) -> Self {
         let content = content.into();
         let size = content.as_widget().size_hint();
 
@@ -164,11 +164,11 @@ where
 }
 
 impl<'a, Message, Theme, Renderer> From<PositionButton<'a, Message, Theme, Renderer>>
-    for Element<'a, Message, Theme, Renderer>
+    for iced_core::Element<'a, Message, Theme, Renderer>
 where
     Message: Clone + 'a,
     Theme: Catalog + 'a,
-    Renderer: iced::core::Renderer + 'a
+    Renderer: iced_core::Renderer + 'a
 {
     fn from(button: PositionButton<'a, Message, Theme, Renderer>) -> Self {
         Self::new(button)
@@ -177,11 +177,11 @@ where
 
 /// Builds a [`PositionButton`] wrapping the given content.
 pub fn position_button<'a, Message, Theme, Renderer>(
-    content: impl Into<Element<'a, Message, Theme, Renderer>>
+    content: impl Into<iced_core::Element<'a, Message, Theme, Renderer>>
 ) -> PositionButton<'a, Message, Theme, Renderer>
 where
     Theme: Catalog + 'a,
-    Renderer: iced::core::Renderer
+    Renderer: iced_core::Renderer
 {
     PositionButton::new(content)
 }

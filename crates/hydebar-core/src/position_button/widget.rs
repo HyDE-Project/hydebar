@@ -3,10 +3,9 @@ use iced::{
     core::{
         Clipboard, Layout, Shell, Widget,
         event::Event,
-        layout, mouse, overlay, renderer,
+        layout, mouse, renderer,
         widget::{Operation, Tree, tree}
     },
-    id::Id,
     widget::button::Catalog
 };
 
@@ -16,7 +15,7 @@ impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
     for PositionButton<'a, Message, Theme, Renderer>
 where
     Message: 'a + Clone,
-    Renderer: 'a + iced::core::Renderer,
+    Renderer: 'a + iced_core::Renderer,
     Theme: Catalog
 {
     fn tag(&self) -> tree::Tag {
@@ -31,8 +30,8 @@ where
         vec![Tree::new(&self.content)]
     }
 
-    fn diff(&mut self, tree: &mut Tree) {
-        tree.diff_children(std::slice::from_mut(&mut self.content));
+    fn diff(&self, tree: &mut Tree) {
+        tree.diff_children(std::slice::from_ref(&self.content));
     }
 
     fn size(&self) -> Size<Length> {
@@ -133,7 +132,7 @@ where
         renderer: &Renderer,
         viewport: &Rectangle,
         translation: Vector
-    ) -> Option<overlay::Element<'b, Message, Theme, Renderer>> {
+    ) -> Option<iced_core::overlay::Element<'b, Message, Theme, Renderer>> {
         self.content.as_widget_mut().overlay(
             &mut tree.children[0],
             layout.children().next().unwrap(),
@@ -141,13 +140,5 @@ where
             viewport,
             translation
         )
-    }
-
-    fn id(&self) -> Option<Id> {
-        Some(self.id.clone())
-    }
-
-    fn set_id(&mut self, id: Id) {
-        self.id = id;
     }
 }

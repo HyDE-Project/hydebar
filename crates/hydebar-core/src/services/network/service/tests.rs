@@ -7,11 +7,11 @@ use masterror::AppError;
 use tokio::time::timeout;
 
 use super::{
-    super::{NetworkEvent, NetworkService, NetworkServiceError},
+    super::{NetworkEvent, NetworkService},
     State,
     gate::EventGate
 };
-use crate::services::{ServiceEvent, ServiceEventPublisher};
+use crate::services::ServiceEvent;
 
 #[tokio::test]
 async fn consume_network_events_stops_on_error() {

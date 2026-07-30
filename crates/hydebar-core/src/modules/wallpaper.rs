@@ -120,6 +120,6 @@ mod tests {
             &Config::default()
         );
 
-        assert!(matches!(task, Task { .. }));
+        let _task: Task<Message> = task;
     }
 }

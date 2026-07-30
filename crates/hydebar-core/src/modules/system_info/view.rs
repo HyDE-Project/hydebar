@@ -7,6 +7,7 @@ use super::{Message, data::SystemInfoData, indicators, sensors::GpuReadings};
 use crate::{
     components::{
         icons::{IconTheme, Icons, icon},
+        push_maybe::PushMaybe,
         scale
     },
     config::{Appearance, MemoryFormat, SystemIndicator, SystemModuleConfig},

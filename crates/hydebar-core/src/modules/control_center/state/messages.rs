@@ -8,7 +8,7 @@ use crate::password_dialog;
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    ToggleMenu(iced::window::Id, crate::position_button::ButtonUIRef),
+    ToggleMenu(iced::SurfaceId, crate::position_button::ButtonUIRef),
     UPower(UPowerMessage),
     Network(NetworkMessage),
     Bluetooth(BluetoothMessage),

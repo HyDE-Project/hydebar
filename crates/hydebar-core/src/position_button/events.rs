@@ -25,7 +25,7 @@ pub(super) fn update<Message, Theme, Renderer>(
     viewport: &Rectangle
 ) where
     Message: Clone,
-    Renderer: iced::core::Renderer,
+    Renderer: iced_core::Renderer,
     Theme: Catalog
 {
     button.content.as_widget_mut().update(
@@ -133,7 +133,7 @@ mod tests {
     use std::time::Instant;
 
     use iced::{
-        Element, Point, Size, Theme,
+        Point, Size, Theme,
         core::{Widget, clipboard, layout, layout::Limits, window::RedrawRequest},
         widget::Space
     };
@@ -167,7 +167,9 @@ mod tests {
     }
 
     fn harness<'a>(pressable: bool) -> Harness<'a> {
-        let mut tree = Tree::new(&Element::<(), Theme, TestRenderer>::new(button(pressable)));
+        let mut tree = Tree::new(&iced_core::Element::<(), Theme, TestRenderer>::new(button(
+            pressable
+        )));
         let mut button = button(pressable);
 
         let node = button.layout(
@@ -288,7 +290,9 @@ mod tests {
     }
 
     fn button_harness<'a>() -> ButtonHarness<'a> {
-        let mut tree = Tree::new(&Element::<Pressed, Theme, TestRenderer>::new(every_button()));
+        let mut tree = Tree::new(&iced_core::Element::<Pressed, Theme, TestRenderer>::new(
+            every_button()
+        ));
         let mut button = every_button();
 
         let node = button.layout(
@@ -349,7 +353,7 @@ mod tests {
 
     #[test]
     fn ignores_a_mouse_button_without_a_handler() {
-        let mut tree = Tree::new(&Element::<Pressed, Theme, TestRenderer>::new(
+        let mut tree = Tree::new(&iced_core::Element::<Pressed, Theme, TestRenderer>::new(
             position_button(Space::new().width(16.0).height(16.0)).on_press(Pressed::Left)
         ));
         let mut button: PositionButton<'_, Pressed, Theme, TestRenderer> =

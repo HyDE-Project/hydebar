@@ -2,9 +2,9 @@
 
 use std::time::Duration;
 
-use iced::{Point, Task, window::Id};
+use iced::{Point, SurfaceId as Id, Task};
 
-use super::{kind::MenuType, size::MenuSize, state::Menu};
+use super::{kind::MenuType, state::Menu};
 use crate::{config::Config, position_button::ButtonUIRef};
 
 fn button_ref() -> ButtonUIRef {

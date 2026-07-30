@@ -5,12 +5,7 @@
 //! has to tell the compositor about it, otherwise the new height only reaches
 //! the drawing and the strip the bar occupies stays as it was.
 
-use iced::{
-    Task,
-    platform_specific::shell::wayland::commands::layer_surface::{
-        Layer, set_exclusive_zone, set_layer, set_size
-    }
-};
+use iced::{Layer, Task, set_exclusive_zone, set_layer, set_size};
 
 use super::Outputs;
 use crate::{
@@ -45,7 +40,7 @@ impl Outputs {
             .notification_ids()
             .flat_map(|id| {
                 [
-                    set_size(id, Some(NOTIFICATIONS_WIDTH), Some(height)),
+                    set_size(id, (NOTIFICATIONS_WIDTH, height)),
                     set_layer(id, layer)
                 ]
             })
@@ -73,7 +68,7 @@ impl Outputs {
             .main_ids()
             .flat_map(|id| {
                 [
-                    set_size(id, None, Some(rounded as u32)),
+                    set_size(id, (0, rounded as u32)),
                     set_exclusive_zone(id, rounded as i32)
                 ]
             })

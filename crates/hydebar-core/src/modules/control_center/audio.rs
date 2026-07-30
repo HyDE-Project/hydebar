@@ -1,12 +1,14 @@
 use iced::{
-    Alignment, Element, Length, Theme,
-    widget::{Column, Row, button, column, container, row, rule, slider, text},
-    window::Id
+    Alignment, Element, Length, SurfaceId as Id, Theme,
+    widget::{Column, Row, button, column, container, row, rule, slider, text}
 };
 
 use super::{Message, SubMenu};
 use crate::{
-    components::icons::{IconTheme, Icons, icon},
+    components::{
+        icons::{IconTheme, Icons, icon},
+        push_maybe::PushMaybe
+    },
     services::{
         ServiceEvent,
         audio::{AudioData, AudioService, DeviceType, Sinks}

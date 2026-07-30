@@ -15,12 +15,12 @@ pub(super) fn draw<Message, Theme, Renderer>(
     tree: &Tree,
     renderer: &mut Renderer,
     theme: &Theme,
-    renderer_style: &renderer::Style,
+    _renderer_style: &renderer::Style,
     layout: Layout<'_>,
     cursor: mouse::Cursor,
     viewport: &Rectangle
 ) where
-    Renderer: iced::core::Renderer,
+    Renderer: iced_core::Renderer,
     Theme: Catalog
 {
     let bounds = layout.bounds();
@@ -60,9 +60,7 @@ pub(super) fn draw<Message, Theme, Renderer>(
         renderer,
         theme,
         &renderer::Style {
-            text_color:   style.text_color,
-            icon_color:   style.icon_color.unwrap_or(renderer_style.icon_color),
-            scale_factor: renderer_style.scale_factor
+            text_color: style.text_color
         },
         content_layout,
         cursor,
@@ -73,7 +71,7 @@ pub(super) fn draw<Message, Theme, Renderer>(
 #[cfg(test)]
 mod tests {
     use iced::{
-        Element, Padding, Point, Size, Theme,
+        Padding, Point, Size, Theme,
         core::{Widget, layout::Limits}
     };
 
@@ -97,7 +95,7 @@ mod tests {
         quads: Vec<renderer::Quad>
     }
 
-    impl iced::core::Renderer for QuadRecorder {
+    impl iced_core::Renderer for QuadRecorder {
         fn start_layer(&mut self, _bounds: Rectangle) {}
 
         fn end_layer(&mut self) {}
@@ -114,8 +112,8 @@ mod tests {
 
         fn allocate_image(
             &mut self,
-            _handle: &iced::core::image::Handle,
-            _callback: impl FnOnce(Result<iced::core::image::Allocation, iced::core::image::Error>)
+            _handle: &iced_core::image::Handle,
+            _callback: impl FnOnce(Result<iced_core::image::Allocation, iced_core::image::Error>)
             + Send
             + 'static
         ) {
@@ -140,7 +138,7 @@ mod tests {
 
         let content = || iced::widget::Space::new().width(16.0).height(16.0);
 
-        let mut tree = Tree::new(&Element::<(), Theme, QuadRecorder>::new(
+        let mut tree = Tree::new(&iced_core::Element::<(), Theme, QuadRecorder>::new(
             position_button(content()).padding(padding).style(style())
         ));
 

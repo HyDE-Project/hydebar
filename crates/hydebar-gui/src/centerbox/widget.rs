@@ -1,14 +1,15 @@
 //! The [`Widget`] implementation wiring a [`Centerbox`] into iced.
 
 use iced::{
-    Event, Length, Rectangle, Size, Vector,
+    Length, Rectangle, Size, Vector,
     advanced::{
         Clipboard, Shell, Widget,
         layout::{self, Layout},
-        mouse, overlay, renderer,
+        mouse, renderer,
         widget::{Operation, Tree}
     }
 };
+use iced_core::Event;
 
 use super::{builder::Centerbox, draw, events, layout as centerbox_layout};
 
@@ -21,8 +22,8 @@ where
         self.children.iter().map(Tree::new).collect()
     }
 
-    fn diff(&mut self, tree: &mut Tree) {
-        tree.diff_children(&mut self.children)
+    fn diff(&self, tree: &mut Tree) {
+        tree.diff_children(&self.children)
     }
 
     fn size(&self) -> Size<Length> {
@@ -98,7 +99,7 @@ where
         renderer: &Renderer,
         viewport: &Rectangle,
         translation: Vector
-    ) -> Option<overlay::Element<'b, Message, Theme, Renderer>> {
+    ) -> Option<iced_core::overlay::Element<'b, Message, Theme, Renderer>> {
         events::overlay(self, tree, layout, renderer, viewport, translation)
     }
 }

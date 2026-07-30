@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use iced::{Element, window::Id};
+use iced::{Element, SurfaceId as Id};
 use log::error;
 
 use super::super::{

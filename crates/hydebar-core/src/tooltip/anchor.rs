@@ -1,11 +1,11 @@
 //! Wrapper widget that publishes the hover the tooltip surface renders.
 
 use iced::{
-    Element, Length, Point, Rectangle, Size, Vector,
+    Length, Point, Rectangle, Size, Vector,
     core::{
         Clipboard, Layout, Shell, Widget,
         event::Event,
-        layout, mouse, overlay, renderer, touch,
+        layout, mouse, renderer, touch,
         widget::{Operation, Tree, tree}
     }
 };
@@ -32,9 +32,9 @@ struct State {
 /// and lets the tooltip surface render it.
 pub struct TooltipAnchor<'a, Message, Theme = iced::Theme, Renderer = iced::Renderer>
 where
-    Renderer: iced::core::Renderer
+    Renderer: iced_core::Renderer
 {
-    content:  Element<'a, Message, Theme, Renderer>,
+    content:  iced_core::Element<'a, Message, Theme, Renderer>,
     on_hover: Box<dyn Fn(Option<ButtonUIRef>) -> Message + 'a>
 }
 
@@ -43,11 +43,11 @@ where
 /// The handler receives the on-screen placement of the wrapped element while
 /// the pointer rests on it, and [`None`] once the pointer leaves.
 pub fn tooltip_anchor<'a, Message, Theme, Renderer>(
-    content: impl Into<Element<'a, Message, Theme, Renderer>>,
+    content: impl Into<iced_core::Element<'a, Message, Theme, Renderer>>,
     on_hover: impl Fn(Option<ButtonUIRef>) -> Message + 'a
 ) -> TooltipAnchor<'a, Message, Theme, Renderer>
 where
-    Renderer: iced::core::Renderer
+    Renderer: iced_core::Renderer
 {
     TooltipAnchor {
         content:  content.into(),
@@ -70,7 +70,7 @@ impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
     for TooltipAnchor<'a, Message, Theme, Renderer>
 where
     Message: 'a,
-    Renderer: 'a + iced::core::Renderer
+    Renderer: 'a + iced_core::Renderer
 {
     fn tag(&self) -> tree::Tag {
         tree::Tag::of::<State>()
@@ -84,8 +84,8 @@ where
         vec![Tree::new(&self.content)]
     }
 
-    fn diff(&mut self, tree: &mut Tree) {
-        tree.diff_children(std::slice::from_mut(&mut self.content));
+    fn diff(&self, tree: &mut Tree) {
+        tree.diff_children(std::slice::from_ref(&self.content));
     }
 
     fn size(&self) -> Size<Length> {
@@ -209,7 +209,7 @@ where
         renderer: &Renderer,
         viewport: &Rectangle,
         translation: Vector
-    ) -> Option<overlay::Element<'b, Message, Theme, Renderer>> {
+    ) -> Option<iced_core::overlay::Element<'b, Message, Theme, Renderer>> {
         self.content.as_widget_mut().overlay(
             &mut tree.children[0],
             layout,
@@ -221,11 +221,11 @@ where
 }
 
 impl<'a, Message, Theme, Renderer> From<TooltipAnchor<'a, Message, Theme, Renderer>>
-    for Element<'a, Message, Theme, Renderer>
+    for iced_core::Element<'a, Message, Theme, Renderer>
 where
     Message: 'a,
     Theme: 'a,
-    Renderer: iced::core::Renderer + 'a
+    Renderer: iced_core::Renderer + 'a
 {
     fn from(anchor: TooltipAnchor<'a, Message, Theme, Renderer>) -> Self {
         Self::new(anchor)
@@ -234,7 +234,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use iced::{Theme, core::layout::Limits, widget::Space};
+    use iced::{Theme, widget::Space};
+    use iced_core::layout::Limits;
 
     use super::*;
 
@@ -261,9 +262,11 @@ mod tests {
             )
         };
 
-        let mut tree = Tree::new(&Element::<Option<ButtonUIRef>, Theme, TestRenderer>::new(
-            build()
-        ));
+        let mut tree = Tree::new(&iced_core::Element::<
+            Option<ButtonUIRef>,
+            Theme,
+            TestRenderer
+        >::new(build()));
         let mut anchor = build();
         let node = anchor.layout(
             &mut tree,
@@ -293,7 +296,7 @@ mod tests {
     ) -> Vec<Option<ButtonUIRef>> {
         let mut messages = Vec::new();
         let mut shell = Shell::new(&mut messages);
-        let mut clipboard = iced::core::clipboard::Null;
+        let mut clipboard = iced_core::clipboard::Null;
 
         harness.anchor.update(
             &mut harness.tree,

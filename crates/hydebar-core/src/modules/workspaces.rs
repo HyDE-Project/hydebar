@@ -5,9 +5,8 @@ use hydebar_proto::ports::hyprland::{
     HyprlandWorkspaceSnapshot
 };
 use iced::{
-    Element, Length, Padding, alignment,
-    widget::{Row, button, container, text},
-    window::Id
+    Element, Length, Padding, SurfaceId as Id, alignment,
+    widget::{Row, button, container, text}
 };
 use itertools::Itertools;
 use log::{debug, error};
@@ -397,7 +396,7 @@ where
                         }
                     })
                     .map(|elem: Element<'_, Message>| elem.map(M::from))
-                    .collect::<Vec<Element<'_, M, _, _>>>()
+                    .collect::<Vec<Element<'_, M>>>()
             )
             .spacing(appearance.spacing(WORKSPACE_GAP_EM))
             .into(),

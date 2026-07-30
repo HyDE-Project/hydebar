@@ -1,8 +1,7 @@
 //! Creation and removal of per output surfaces.
 
-use iced::Task;
+use iced::{OutputId, Task};
 use log::debug;
-use wayland_client::protocol::wl_output::WlOutput;
 
 use super::{Outputs, ShellInfo};
 use crate::{
@@ -38,7 +37,7 @@ impl Outputs {
         request_outputs: &config::Outputs,
         position: Position,
         name: &str,
-        wl_output: WlOutput,
+        wl_output: OutputId,
         config: &crate::config::Config,
         scale_factor: f64,
         height: Option<f32>
@@ -56,7 +55,7 @@ impl Outputs {
                 task
             } = create_layer_surfaces(
                 style,
-                Some(wl_output.clone()),
+                Some(wl_output),
                 position,
                 config.menu_keyboard_focus,
                 scale_factor,
@@ -141,7 +140,7 @@ impl Outputs {
         &mut self,
         style: AppearanceStyle,
         position: Position,
-        wl_output: WlOutput,
+        wl_output: OutputId,
         config: &crate::config::Config
     ) -> Task<Message> {
         match self.0.iter().position(|(_, _, assigned_wl_output)| {

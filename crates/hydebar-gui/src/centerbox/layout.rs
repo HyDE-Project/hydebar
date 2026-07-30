@@ -1,7 +1,7 @@
 //! Placement of the three sections a [`Centerbox`] distributes.
 
 use iced::{
-    Alignment, Element, Length, Point, Size,
+    Alignment, Length, Point, Size,
     advanced::{
         layout::{Limits, Node},
         widget::Tree
@@ -46,33 +46,36 @@ where
         _ => available.max(0.0)
     };
 
-    let mut calculate_edge_layout =
-        |i: usize, (child, tree): (&mut Element<'a, Message, Theme, Renderer>, &mut Tree)| {
-            let fill_cross_factor = {
-                let size = child.as_widget_mut().size();
+    let mut calculate_edge_layout = |i: usize,
+                                     (child, tree): (
+        &mut iced_core::Element<'a, Message, Theme, Renderer>,
+        &mut Tree
+    )| {
+        let fill_cross_factor = {
+            let size = child.as_widget_mut().size();
 
-                size.height.fill_factor()
-            };
-
-            let (max_width, max_height) = (
-                remaining,
-                if fill_cross_factor != 0 {
-                    cross
-                } else {
-                    max_cross
-                }
-            );
-
-            let child_limits = Limits::new(Size::ZERO, Size::new(max_width, max_height));
-
-            let layout = child.as_widget_mut().layout(tree, renderer, &child_limits);
-            let size = layout.size();
-
-            remaining -= size.width;
-            cross = cross.max(size.height);
-
-            nodes[i] = layout;
+            size.height.fill_factor()
         };
+
+        let (max_width, max_height) = (
+            remaining,
+            if fill_cross_factor != 0 {
+                cross
+            } else {
+                max_cross
+            }
+        );
+
+        let child_limits = Limits::new(Size::ZERO, Size::new(max_width, max_height));
+
+        let layout = child.as_widget_mut().layout(tree, renderer, &child_limits);
+        let size = layout.size();
+
+        remaining -= size.width;
+        cross = cross.max(size.height);
+
+        nodes[i] = layout;
+    };
 
     calculate_edge_layout(0, (&mut centerbox.children[0], &mut tree.children[0]));
     calculate_edge_layout(2, (&mut centerbox.children[2], &mut tree.children[2]));

@@ -1,6 +1,6 @@
 //! Menu visibility and fade animation state.
 
-use iced::{Task, window::Id};
+use iced::{SurfaceId as Id, Task};
 
 use super::Outputs;
 use crate::{menu::MenuType, position_button::ButtonUIRef};

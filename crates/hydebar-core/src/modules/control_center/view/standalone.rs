@@ -6,9 +6,8 @@
 //! D-Bus connections the bar keeps open.
 
 use iced::{
-    Element, Length,
-    widget::{Column, Row},
-    window::Id
+    Element, Length, SurfaceId as Id,
+    widget::{Column, Row}
 };
 
 use super::{
@@ -16,7 +15,10 @@ use super::{
     quick_setting_button
 };
 use crate::{
-    components::icons::{IconTheme, Icons, icon},
+    components::{
+        icons::{IconTheme, Icons, icon},
+        push_maybe::PushMaybe
+    },
     config::{ControlCenterModuleConfig, Position},
     menu::MenuType,
     modules::{
