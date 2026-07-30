@@ -1,23 +1,25 @@
 //! Text widgets rendering a glyph in the icon font.
 
-use iced::{Font, widget::Text};
+use iced::widget::Text;
 
 use super::{super::text::text, catalog::Icons, theme::IconTheme};
-
-/// Font every glyph of the catalogue is looked up in.
-const ICON_FONT: &str = "Symbols Nerd Font";
 
 /// Renders `icon` at the size the table carries.
 pub fn icon<'a>(theme: &IconTheme, icon: Icons) -> Text<'a> {
     sized(icon_raw(theme.glyph(icon).to_owned()), theme.size())
 }
 
-/// Renders an arbitrary glyph in the icon font, at the themed size.
+/// Renders an arbitrary glyph, at the themed size.
 ///
-/// Built on the themed text helper on purpose: a glyph left at the renderer
+/// No font is named here on purpose: the glyph renders in the themed font and
+/// falls back through the system font database when that font lacks it — the
+/// same road the reference waybar theme takes, where no icon font is declared
+/// anywhere and the symbols resolve to whatever nerd font the system carries.
+///
+/// Built on the themed text helper for the size: a glyph left at the renderer
 /// default would stay small while the rest of the bar follows the screen.
 pub fn icon_raw<'a>(glyph: String) -> Text<'a> {
-    text(glyph).font(Font::with_name(ICON_FONT))
+    text(glyph)
 }
 
 /// Renders `glyph` in the icon font at `size` pixels.
