@@ -84,7 +84,9 @@ impl Notifications {
         let notifications = service.get_notifications();
         let is_dnd = service.is_dnd();
 
-        let mut content = Column::new().spacing(8).padding(12);
+        let mut content = Column::new()
+            .spacing(scale::scaled(8.0))
+            .padding(scale::scaled(12.0));
 
         // Header with DND toggle
         let header = Row::new()
@@ -94,7 +96,7 @@ impl Notifications {
                     .on_press(NotificationsMessage::ToggleDND)
             )
             .push(button(text("Clear All")).on_press(NotificationsMessage::ClearAll))
-            .spacing(8)
+            .spacing(scale::scaled(8.0))
             .align_y(Alignment::Center);
 
         content = content.push(header);
@@ -103,7 +105,7 @@ impl Notifications {
         if notifications.is_empty() {
             content = content.push(text("No notifications").size(scale::scaled(14.0)));
         } else {
-            let mut list = Column::new().spacing(4);
+            let mut list = Column::new().spacing(scale::scaled(4.0));
 
             for notification in notifications {
                 list = list.push(notification_item(notification, icons));
@@ -165,7 +167,7 @@ where
         let content = if unread_count > 0 {
             Row::new()
                 .push(text(format!("🔔 {}", unread_count,)))
-                .spacing(4)
+                .spacing(scale::scaled(4.0))
                 .align_y(Alignment::Center)
         } else {
             Row::new().push(text("🔔"))
@@ -194,14 +196,14 @@ where
                     button(icon(icons, Icons::Close))
                         .on_press(NotificationsMessage::Dismiss(notification.id).into())
                 )
-                .spacing(8)
+                .spacing(scale::scaled(8.0))
                 .align_y(Alignment::Center)
         )
         .push(body)
-        .spacing(4);
+        .spacing(scale::scaled(4.0));
 
     container(content)
-        .padding(8)
+        .padding(scale::scaled(8.0))
         .style(|theme| container::Style {
             background: Some(theme.extended_palette().background.weak.color.into()),
             border: iced::Border {

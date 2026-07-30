@@ -8,7 +8,8 @@ use iced::{
 use crate::{
     components::{
         icons::{IconTheme, Icons, icon},
-        push_maybe::PushMaybe
+        push_maybe::PushMaybe,
+        scale
     },
     menu::MenuType,
     modules::{
@@ -69,10 +70,10 @@ impl ControlCenter {
                     Row::new()
                         .push_maybe(connection_indicator)
                         .push_maybe(vpn_indicator)
-                        .spacing(4)
+                        .spacing(scale::scaled(4.0))
                 )
                 .push_maybe(battery_indicator)
-                .spacing(8)
+                .spacing(scale::scaled(8.0))
                 .into(),
             Some(OnModulePress::ToggleMenu(MenuType::ControlCenter))
         ))

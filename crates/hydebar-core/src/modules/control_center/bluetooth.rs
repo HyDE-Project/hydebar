@@ -8,6 +8,7 @@ use crate::{
     components::{
         icons::{IconTheme, Icons, icon},
         push_maybe::PushMaybe,
+        scale,
         text::text
     },
     services::{
@@ -80,7 +81,7 @@ impl BluetoothData {
                             )
                             .push(
                                 button(text(if d.connected { "Disconnect" } else { "Connect" }))
-                                    .padding([4, 12])
+                                    .padding([scale::scaled(4.0), scale::scaled(12.0)])
                                     .style(ghost_button_style(opacity))
                                     .on_press(Message::Bluetooth(if d.connected {
                                         BluetoothMessage::DisconnectDevice(d.path.clone())
@@ -88,13 +89,13 @@ impl BluetoothData {
                                         BluetoothMessage::ConnectDevice(d.path.clone())
                                     }))
                             )
-                            .spacing(8)
+                            .spacing(scale::scaled(8.0))
                             .align_y(iced::Alignment::Center)
                             .into()
                     })
                     .collect::<Vec<Element<'_, Message>>>()
             )
-            .spacing(8)
+            .spacing(scale::scaled(8.0))
             .width(Length::Fill)
             .into()
         };
@@ -105,11 +106,11 @@ impl BluetoothData {
                 rule::horizontal(1),
                 button("More")
                     .on_press(Message::Bluetooth(BluetoothMessage::More(id)))
-                    .padding([4, 12])
+                    .padding([scale::scaled(4.0), scale::scaled(12.0)])
                     .width(Length::Fill)
                     .style(ghost_button_style(opacity))
             )
-            .spacing(12)
+            .spacing(scale::scaled(12.0))
             .into()
         } else {
             main
@@ -131,7 +132,7 @@ impl BluetoothData {
                 ),
                 text(format!("{battery}%"))
             )
-            .spacing(8)
+            .spacing(scale::scaled(8.0))
             .width(Length::Shrink)
         )
         .style(move |theme: &Theme| container::Style {

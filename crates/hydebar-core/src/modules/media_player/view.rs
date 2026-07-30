@@ -44,17 +44,17 @@ impl MediaPlayer {
                     let buttons = row![
                         button(icon(icons, Icons::SkipPrevious))
                             .on_press(Message::Prev(d.service.clone()))
-                            .padding([5, 12])
+                            .padding([scale::scaled(5.0), scale::scaled(12.0)])
                             .style(settings_button_style(opacity)),
                         button(icon(icons, play_pause_icon))
                             .on_press(Message::PlayPause(d.service.clone()))
                             .style(settings_button_style(opacity)),
                         button(icon(icons, Icons::SkipNext))
                             .on_press(Message::Next(d.service.clone()))
-                            .padding([5, 12])
+                            .padding([scale::scaled(5.0), scale::scaled(12.0)])
                             .style(settings_button_style(opacity)),
                     ]
-                    .spacing(8);
+                    .spacing(scale::scaled(8.0));
 
                     let volume_slider = d.volume.map(|v| {
                         slider(0.0..=100.0, v, move |v| {
@@ -64,9 +64,13 @@ impl MediaPlayer {
 
                     container(
                         Column::new()
-                            .push(row!(title, buttons).spacing(8).align_y(Vertical::Center))
+                            .push(
+                                row!(title, buttons)
+                                    .spacing(scale::scaled(8.0))
+                                    .align_y(Vertical::Center)
+                            )
                             .push_maybe(volume_slider)
-                            .spacing(8)
+                            .spacing(scale::scaled(8.0))
                     )
                     .style(move |theme: &Theme| container::Style {
                         background: Background::Color(
@@ -81,13 +85,13 @@ impl MediaPlayer {
                         border: Border::default().rounded(16),
                         ..container::Style::default()
                     })
-                    .padding(16)
+                    .padding(scale::scaled(16.0))
                     .width(Length::Fill)
                     .into()
                 }))
-                .spacing(16)
+                .spacing(scale::scaled(16.0))
             )
-            .spacing(8)
+            .spacing(scale::scaled(8.0))
             .into()
         }
     }

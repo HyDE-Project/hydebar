@@ -173,7 +173,9 @@ impl Screenshot {
 
     /// Render screenshot actions menu.
     pub fn menu_view(&self, _opacity: f32) -> Element<'_, ScreenshotMessage> {
-        let mut content = Column::new().spacing(8).padding(12);
+        let mut content = Column::new()
+            .spacing(scale::scaled(8.0))
+            .padding(scale::scaled(12.0));
 
         // Screenshot section
         content = content.push(text("Screenshot").size(scale::scaled(16.0)));
@@ -183,7 +185,7 @@ impl Screenshot {
                 button(
                     Row::new()
                         .push(text("📐 Select Area"))
-                        .spacing(8)
+                        .spacing(scale::scaled(8.0))
                         .align_y(Alignment::Center)
                 )
                 .on_press(ScreenshotMessage::TakeScreenshot(ScreenshotAction::Area))
@@ -193,7 +195,7 @@ impl Screenshot {
                 button(
                     Row::new()
                         .push(text("🪟 Current Window"))
-                        .spacing(8)
+                        .spacing(scale::scaled(8.0))
                         .align_y(Alignment::Center)
                 )
                 .on_press(ScreenshotMessage::TakeScreenshot(ScreenshotAction::Window))
@@ -203,7 +205,7 @@ impl Screenshot {
                 button(
                     Row::new()
                         .push(text("🖥️ Fullscreen"))
-                        .spacing(8)
+                        .spacing(scale::scaled(8.0))
                         .align_y(Alignment::Center)
                 )
                 .on_press(ScreenshotMessage::TakeScreenshot(
@@ -211,7 +213,7 @@ impl Screenshot {
                 ))
                 .width(iced::Length::Fill)
             )
-            .spacing(4);
+            .spacing(scale::scaled(4.0));
 
         content = content.push(screenshot_buttons);
 
@@ -222,7 +224,7 @@ impl Screenshot {
             button(
                 Row::new()
                     .push(text("⏹️ Stop Recording"))
-                    .spacing(8)
+                    .spacing(scale::scaled(8.0))
                     .align_y(Alignment::Center)
             )
             .on_press(ScreenshotMessage::StopRecording)
@@ -231,7 +233,7 @@ impl Screenshot {
             button(
                 Row::new()
                     .push(text("🔴 Start Recording"))
-                    .spacing(8)
+                    .spacing(scale::scaled(8.0))
                     .align_y(Alignment::Center)
             )
             .on_press(ScreenshotMessage::StartRecording)
@@ -268,7 +270,7 @@ where
             Row::new()
                 .push(icon(icons, Icons::Point))
                 .push(text("📷"))
-                .spacing(4)
+                .spacing(scale::scaled(4.0))
                 .align_y(Alignment::Center)
         } else {
             Row::new().push(text("📷"))

@@ -10,6 +10,7 @@ use crate::{
     components::{
         icons::{IconTheme, Icons, icon},
         push_maybe::PushMaybe,
+        scale,
         text::text
     },
     services::tray::dbus::{Layout, LayoutProps},
@@ -34,7 +35,7 @@ impl TrayModule {
                     .iter()
                     .map(|menu| self.menu_voice(name, menu, opacity, icons))
             )
-            .spacing(8)
+            .spacing(scale::scaled(8.0))
             .into(),
             _ => Row::new().into()
         }
@@ -83,7 +84,7 @@ impl TrayModule {
                             )
                         ))
                         .style(ghost_button_style(opacity))
-                        .padding([8, 8])
+                        .padding([scale::scaled(8.0), scale::scaled(8.0)])
                         .on_press(TrayMessage::ToggleSubmenu(layout.0))
                         .width(Length::Fill)
                     )
@@ -102,7 +103,7 @@ impl TrayModule {
                                 bottom: 0.0,
                                 left:   16.0
                             })
-                            .spacing(4)
+                            .spacing(scale::scaled(4.0))
                         )
                     } else {
                         None
@@ -115,7 +116,7 @@ impl TrayModule {
                 .style(ghost_button_style(opacity))
                 .on_press(TrayMessage::MenuSelected(name.to_owned(), layout.0))
                 .width(Length::Fill)
-                .padding([8, 8])
+                .padding([scale::scaled(8.0), scale::scaled(8.0)])
                 .into(),
             LayoutProps {
                 type_: Some(t), ..

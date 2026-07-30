@@ -10,7 +10,7 @@ use iced::{
 };
 
 use crate::{
-    components::{icons::icon_raw, text::text},
+    components::{icons::icon_raw, scale, text::text},
     config::{Appearance, CustomMenuEntry, CustomModuleDef},
     style::menu_entry_button_style
 };
@@ -55,7 +55,7 @@ where
                 };
 
                 button(label)
-                    .padding([4, 12])
+                    .padding([scale::scaled(4.0), scale::scaled(12.0)])
                     .width(Length::Fill)
                     .style(menu_entry_button_style(opacity, radius))
                     .on_press(on_select(entry))
@@ -64,7 +64,7 @@ where
             .collect::<Vec<Element<'a, M>>>()
     )
     .width(Length::Fill)
-    .spacing(4)
+    .spacing(scale::scaled(4.0))
     .into()
 }
 

@@ -6,6 +6,7 @@ use iced::{
 use crate::{
     components::{
         icons::{IconTheme, Icons, icon},
+        scale,
         text::text
     },
     config::ControlCenterModuleConfig,
@@ -46,30 +47,30 @@ pub fn power_menu<'a>(
     icons: &IconTheme
 ) -> Element<'a, PowerMessage> {
     column!(
-        button(row!(icon(icons, Icons::Suspend), text("Suspend")).spacing(16))
-            .padding([4, 12])
+        button(row!(icon(icons, Icons::Suspend), text("Suspend")).spacing(scale::scaled(16.0)))
+            .padding([scale::scaled(4.0), scale::scaled(12.0)])
             .on_press(PowerMessage::Suspend(config.suspend_cmd.clone()))
             .width(Length::Fill)
             .style(ghost_button_style(opacity)),
-        button(row!(icon(icons, Icons::Reboot), text("Reboot")).spacing(16))
-            .padding([4, 12])
+        button(row!(icon(icons, Icons::Reboot), text("Reboot")).spacing(scale::scaled(16.0)))
+            .padding([scale::scaled(4.0), scale::scaled(12.0)])
             .on_press(PowerMessage::Reboot(config.reboot_cmd.clone()))
             .width(Length::Fill)
             .style(ghost_button_style(opacity)),
-        button(row!(icon(icons, Icons::Power), text("Shutdown")).spacing(16))
-            .padding([4, 12])
+        button(row!(icon(icons, Icons::Power), text("Shutdown")).spacing(scale::scaled(16.0)))
+            .padding([scale::scaled(4.0), scale::scaled(12.0)])
             .on_press(PowerMessage::Shutdown(config.shutdown_cmd.clone()))
             .width(Length::Fill)
             .style(ghost_button_style(opacity)),
         rule::horizontal(1),
-        button(row!(icon(icons, Icons::Logout), text("Logout")).spacing(16))
-            .padding([4, 12])
+        button(row!(icon(icons, Icons::Logout), text("Logout")).spacing(scale::scaled(16.0)))
+            .padding([scale::scaled(4.0), scale::scaled(12.0)])
             .on_press(PowerMessage::Logout(config.logout_cmd.clone()))
             .width(Length::Fill)
             .style(ghost_button_style(opacity)),
     )
-    .padding(8)
+    .padding(scale::scaled(8.0))
     .width(Length::Fill)
-    .spacing(8)
+    .spacing(scale::scaled(8.0))
     .into()
 }

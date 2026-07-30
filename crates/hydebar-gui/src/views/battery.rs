@@ -1,7 +1,10 @@
 /// Battery module view layer - Pure rendering, no business logic
 use hydebar_core::components::text::text;
 use hydebar_core::{
-    components::icons::{IconTheme, icon},
+    components::{
+        icons::{IconTheme, icon},
+        scale
+    },
     config::BatteryModuleConfig,
     modules::battery::{BatteryData, IndicatorState}
 };
@@ -20,7 +23,7 @@ pub fn render_battery_indicator(
 ) -> Element<'static, Message> {
     let mut content = row![icon(icons, data.icon.into())]
         .align_y(Alignment::Center)
-        .spacing(4);
+        .spacing(scale::scaled(4.0));
 
     if config.show_percentage {
         content = content.push(text(format!("{}%", data.capacity)));
@@ -64,5 +67,8 @@ pub fn render_battery(
 
     segments.push(render_battery_indicator(data, config, icons));
 
-    row(segments).align_y(Alignment::Center).spacing(4).into()
+    row(segments)
+        .align_y(Alignment::Center)
+        .spacing(scale::scaled(4.0))
+        .into()
 }

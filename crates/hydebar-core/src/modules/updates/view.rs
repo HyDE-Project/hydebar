@@ -24,7 +24,9 @@ pub(super) fn menu_view<'a>(
 ) -> Element<'a, Message> {
     column!(
         if updates.updates().is_empty() {
-            container(text("Up to date ;)")).padding([8, 8]).into()
+            container(text("Up to date ;)"))
+                .padding([scale::scaled(8.0), scale::scaled(8.0)])
+                .into()
         } else {
             build_updates_list(updates, opacity, icons)
         },
@@ -32,7 +34,7 @@ pub(super) fn menu_view<'a>(
         action_button("Update", Message::Update(id), opacity),
         check_now_button(updates, opacity, icons),
     )
-    .spacing(4)
+    .spacing(scale::scaled(4.0))
     .into()
 }
 
@@ -50,7 +52,7 @@ pub(super) fn icon(
 
     let mut content = row!(container(icon_component(icons, icon)))
         .align_y(Alignment::Center)
-        .spacing(4);
+        .spacing(scale::scaled(4.0));
 
     if update_count > 0 {
         content = content.push(text(update_count));
@@ -77,7 +79,7 @@ fn build_updates_list<'a>(
             )
         ))
         .style(ghost_button_style(opacity))
-        .padding([8, 8])
+        .padding([scale::scaled(8.0), scale::scaled(8.0)])
         .on_press(Message::ToggleUpdatesList)
         .width(Length::Fill),
     );
@@ -93,9 +95,9 @@ fn build_updates_list<'a>(
                         .collect::<Vec<Element<'_, Message>>>()
                 )
                 .padding(Padding::ZERO.right(16))
-                .spacing(4)
+                .spacing(scale::scaled(4.0))
             ))
-            .padding([8, 0])
+            .padding([scale::scaled(8.0), scale::scaled(0.0)])
             .max_height(300)
         );
     }
@@ -127,7 +129,7 @@ fn action_button<'a>(
 ) -> iced::widget::Button<'a, Message> {
     button(label)
         .style(ghost_button_style(opacity))
-        .padding([8, 8])
+        .padding([scale::scaled(8.0), scale::scaled(8.0)])
         .on_press(message)
         .width(Length::Fill)
 }
@@ -145,7 +147,7 @@ fn check_now_button(
 
     button(content)
         .style(ghost_button_style(opacity))
-        .padding([8, 8])
+        .padding([scale::scaled(8.0), scale::scaled(8.0)])
         .on_press(Message::CheckNow)
         .width(Length::Fill)
 }

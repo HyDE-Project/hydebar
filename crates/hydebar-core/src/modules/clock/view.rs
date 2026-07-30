@@ -33,21 +33,21 @@ pub fn build_calendar_menu_view<'a>(
             .style(nav_button_style),
     ]
     .align_y(Alignment::Center)
-    .spacing(8);
+    .spacing(scale::scaled(8.0));
 
     let weekday_header = Row::with_children(
         WEEKDAYS
             .iter()
             .map(|day| {
                 container(text(*day).size(scale::scaled(12.0)))
-                    .width(Length::Fixed(36.))
+                    .width(Length::Fixed(scale::scaled(36.0)))
                     .height(Length::Shrink)
                     .align_x(Alignment::Center)
                     .into()
             })
             .collect::<Vec<_>>()
     )
-    .spacing(4);
+    .spacing(scale::scaled(4.0));
 
     let mut week_rows = Vec::new();
     for week in calendar_data.days.chunks(7) {
@@ -65,8 +65,8 @@ pub fn build_calendar_menu_view<'a>(
                             .align_x(Alignment::Center)
                             .align_y(Alignment::Center)
                     )
-                    .width(Length::Fixed(36.))
-                    .height(Length::Fixed(36.))
+                    .width(Length::Fixed(scale::scaled(36.0)))
+                    .height(Length::Fixed(scale::scaled(36.0)))
                     .style(move |theme: &Theme, status: button::Status| {
                         day_button_style(theme, status, in_month, is_today)
                     });
@@ -75,18 +75,18 @@ pub fn build_calendar_menu_view<'a>(
                 })
                 .collect::<Vec<_>>()
         )
-        .spacing(4);
+        .spacing(scale::scaled(4.0));
 
         week_rows.push(week_row.into());
     }
 
-    let calendar_grid = Column::with_children(week_rows).spacing(4);
+    let calendar_grid = Column::with_children(week_rows).spacing(scale::scaled(4.0));
 
     let calendar_width = 7. * 36. + 6. * 4.;
 
     column![header, rule::horizontal(1), weekday_header, calendar_grid]
-        .spacing(8)
-        .padding(4)
+        .spacing(scale::scaled(8.0))
+        .padding(scale::scaled(4.0))
         .width(Length::Fixed(calendar_width))
         .into()
 }

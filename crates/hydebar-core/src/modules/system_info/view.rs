@@ -23,13 +23,14 @@ fn info_element<'a>(
     value: String
 ) -> Element<'a, Message> {
     row!(
-        container(icon(icons, info_icon).size(scale::scaled(22.0))).center_x(Length::Fixed(32.)),
+        container(icon(icons, info_icon).size(scale::scaled(22.0)))
+            .center_x(Length::Fixed(scale::scaled(32.0))),
         text(label).width(Length::Fill),
         text(value)
     )
     .width(Length::Fill)
     .align_y(Alignment::Center)
-    .spacing(8)
+    .spacing(scale::scaled(8.0))
     .into()
 }
 
@@ -163,7 +164,7 @@ fn missing_readouts(
             .push(rule::horizontal(1))
             .push(text("Not reported by this machine").size(scale::scaled(14.0)))
             .extend(missing)
-            .spacing(4)
+            .spacing(scale::scaled(4.0))
             .into()
     )
 }
@@ -231,7 +232,7 @@ pub fn build_menu_view<'a>(
                         .flatten()
                         .collect::<Vec<Element<_>>>()
                     )
-                    .spacing(4)
+                    .spacing(scale::scaled(4.0))
             }))
             .push(
                 Column::with_children(
@@ -240,17 +241,17 @@ pub fn build_menu_view<'a>(
                         .map(|(mount_point, usage)| {
                             row!(
                                 container(icon(icons, Icons::Drive).size(scale::scaled(22.0)))
-                                    .center_x(Length::Fixed(32.)),
+                                    .center_x(Length::Fixed(scale::scaled(32.0))),
                                 text(format!("Disk Usage {mount_point}")).width(Length::Fill),
                                 text(format!("{usage}%"))
                             )
                             .align_y(Alignment::Center)
-                            .spacing(8)
+                            .spacing(scale::scaled(8.0))
                             .into()
                         })
                         .collect::<Vec<Element<_>>>(),
                 )
-                .spacing(4),
+                .spacing(scale::scaled(4.0)),
             )
             .push_maybe(data.network.as_ref().map(|network| {
                 let (download_value, download_unit) = format_speed(network.download_speed);
@@ -273,10 +274,10 @@ pub fn build_menu_view<'a>(
                 ])
             }))
             .push_maybe(missing_readouts(data, config))
-            .spacing(4)
-            .padding([0, 8])
+            .spacing(scale::scaled(4.0))
+            .padding([scale::scaled(0.0), scale::scaled(8.0)])
     ]
-    .spacing(8)
+    .spacing(scale::scaled(8.0))
     .into()
 }
 

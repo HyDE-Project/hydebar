@@ -20,8 +20,13 @@ use crate::{
 };
 
 /// Small circle drawn over the icon while the module is in an alert state.
+///
+/// Carries its radius so the dot follows the themed sizes instead of staying
+/// two pixels on every screen.
 #[derive(Debug, Clone, Copy, Default)]
-pub(super) struct AlertIndicator;
+pub(super) struct AlertIndicator {
+    radius: f32
+}
 
 impl<Message> Program<Message> for AlertIndicator {
     type State = ();
@@ -38,12 +43,17 @@ impl<Message> Program<Message> for AlertIndicator {
 
         vec![cache.draw(renderer, bounds.size(), |frame| {
             let center = frame.center();
-            let radius = 2.0;
-            let circle = Path::circle(center, radius);
+            let circle = Path::circle(center, self.radius);
             frame.fill(&circle, theme.palette().danger);
         })]
     }
 }
+
+/// Diameter of the alert dot, in em of the themed font.
+const ALERT_DOT_EM: f32 = 0.5;
+
+/// Horizontal breathing room around the icon, in em of the themed font.
+const ICON_SIDE_PADDING_EM: f32 = 0.1;
 
 /// Resolves the color a module paints itself with for the state it reports.
 ///
@@ -91,7 +101,8 @@ where
         icon_element = icon_element.color(color);
     }
 
-    let padded_icon_container = container(icon_element).padding([0, 1]);
+    let padded_icon_container =
+        container(icon_element).padding([0.0, appearance.spacing(ICON_SIDE_PADDING_EM)]);
 
     let mut show_alert = false;
     if let Some(re) = &config.alert
@@ -105,9 +116,12 @@ where
     }
 
     let icon_with_alert: Element<'static, M> = if show_alert {
-        let alert_canvas = canvas(AlertIndicator)
-            .width(Length::Fixed(5.0))
-            .height(Length::Fixed(5.0));
+        let dot = appearance.spacing(ALERT_DOT_EM);
+        let alert_canvas = canvas(AlertIndicator {
+            radius: dot / 2.0
+        })
+        .width(Length::Fixed(dot))
+        .height(Length::Fixed(dot));
 
         let alert_indicator_container = container(alert_canvas)
             .width(Length::Fill)

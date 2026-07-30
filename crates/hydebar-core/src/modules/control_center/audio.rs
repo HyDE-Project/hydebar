@@ -8,6 +8,7 @@ use crate::{
     components::{
         icons::{IconTheme, Icons, icon},
         push_maybe::PushMaybe,
+        scale,
         text::text
     },
     services::{
@@ -221,12 +222,12 @@ pub fn audio_slider<'a, Message: 'a + Clone>(
                     _ => Icons::RightArrow
                 }
             ))
-            .padding([8, 13])
+            .padding([scale::scaled(8.0), scale::scaled(13.0)])
             .on_press(msg)
             .style(settings_button_style(opacity))
         }))
         .align_y(Alignment::Center)
-        .spacing(8)
+        .spacing(scale::scaled(8.0))
         .into()
 }
 
@@ -251,8 +252,8 @@ pub fn audio_submenu<'a, Message: 'a + Clone>(
                     container(
                         row!(icon(icons, e.device.get_icon()), text(e.name))
                             .align_y(Alignment::Center)
-                            .spacing(16)
-                            .padding([4, 12])
+                            .spacing(scale::scaled(16.0))
+                            .padding([scale::scaled(4.0), scale::scaled(12.0)])
                     )
                     .style(|theme: &Theme| container::Style {
                         text_color: Some(theme.palette().success),
@@ -262,11 +263,11 @@ pub fn audio_submenu<'a, Message: 'a + Clone>(
                 } else {
                     button(
                         row!(icon(icons, e.device.get_icon()), text(e.name))
-                            .spacing(16)
+                            .spacing(scale::scaled(16.0))
                             .align_y(Alignment::Center)
                     )
                     .on_press(e.msg)
-                    .padding([4, 12])
+                    .padding([scale::scaled(4.0), scale::scaled(12.0)])
                     .width(Length::Fill)
                     .style(ghost_button_style(opacity))
                     .into()
@@ -274,7 +275,7 @@ pub fn audio_submenu<'a, Message: 'a + Clone>(
             })
             .collect::<Vec<_>>()
     )
-    .spacing(4)
+    .spacing(scale::scaled(4.0))
     .into();
 
     match more_msg {
@@ -283,11 +284,11 @@ pub fn audio_submenu<'a, Message: 'a + Clone>(
             rule::horizontal(1),
             button("More")
                 .on_press(more_msg)
-                .padding([4, 12])
+                .padding([scale::scaled(4.0), scale::scaled(12.0)])
                 .width(Length::Fill)
                 .style(ghost_button_style(opacity)),
         )
-        .spacing(12)
+        .spacing(scale::scaled(12.0))
         .into(),
         _ => entries
     }

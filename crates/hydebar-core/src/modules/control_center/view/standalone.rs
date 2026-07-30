@@ -17,7 +17,8 @@ use super::{
 use crate::{
     components::{
         icons::{IconTheme, Icons, icon},
-        push_maybe::PushMaybe
+        push_maybe::PushMaybe,
+        scale
     },
     config::{ControlCenterModuleConfig, Position},
     menu::MenuType,
@@ -69,7 +70,7 @@ impl ControlCenter {
             Row::new()
                 .push_maybe(connection)
                 .push_maybe(vpn)
-                .spacing(4)
+                .spacing(scale::scaled(4.0))
                 .into(),
             Some(OnModulePress::ToggleMenu(MenuType::Network))
         ))
@@ -180,7 +181,7 @@ impl ControlCenter {
             )
             .push_maybe(bottom_source_slider)
             .width(Length::Fill)
-            .spacing(16)
+            .spacing(scale::scaled(16.0))
             .into()
     }
 
@@ -277,7 +278,7 @@ impl ControlCenter {
             ))
             .push(power_menu(opacity, config, icons).map(Message::Power))
             .width(Length::Fill)
-            .spacing(16)
+            .spacing(scale::scaled(16.0))
             .into()
     }
 

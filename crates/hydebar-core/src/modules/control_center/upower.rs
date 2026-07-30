@@ -7,6 +7,7 @@ use super::{Message, quick_setting_button};
 use crate::{
     components::{
         icons::{IconTheme, Icons, icon},
+        scale,
         text::text
     },
     services::{
@@ -29,7 +30,7 @@ impl BatteryData {
 
         container(
             row!(icon(icons, icon_type), text(format!("{}%", self.capacity)))
-                .spacing(4)
+                .spacing(scale::scaled(4.0))
                 .align_y(Alignment::Center)
         )
         .style(move |theme: &Theme| container::Style {
@@ -55,7 +56,7 @@ impl BatteryData {
                     icon(icons, self.get_icon()),
                     text(format!("{}%", self.capacity))
                 )
-                .spacing(4)
+                .spacing(scale::scaled(4.0))
             )
             .style(move |theme: &Theme| container::Style {
                 text_color: Some(match state {
@@ -71,16 +72,16 @@ impl BatteryData {
                     battery_info,
                     text(format!("Full in {}", format_duration(&remaining)))
                 )
-                .spacing(16),
+                .spacing(scale::scaled(16.0)),
                 BatteryStatus::Discharging(remaining) if self.capacity < 95 => row!(
                     battery_info,
                     text(format!("Empty in {}", format_duration(&remaining)))
                 )
-                .spacing(16),
+                .spacing(scale::scaled(16.0)),
                 _ => row!(battery_info)
             }
         })
-        .padding([8, 4])
+        .padding([scale::scaled(8.0), scale::scaled(4.0)])
     }
 }
 

@@ -32,9 +32,9 @@ pub fn quick_setting_button<'a, Msg: Clone + 'static>(
         Column::new()
             .push(text(title).size(scale::scaled(12.0)))
             .push_maybe(subtitle.map(|s| text(s).size(scale::scaled(10.0))))
-            .spacing(4)
+            .spacing(scale::scaled(4.0))
     )
-    .spacing(8)
+    .spacing(scale::scaled(8.0))
     .padding(Padding::ZERO.left(4))
     .width(Length::Fill)
     .align_y(Alignment::Center);
@@ -55,22 +55,29 @@ pub fn quick_setting_button<'a, Msg: Clone + 'static>(
                     .align_y(Vertical::Center)
                     .align_x(Horizontal::Center)
                 )
-                .padding([4, if Some(menu_type) == submenu { 9 } else { 12 }])
+                .padding([
+                    scale::scaled(4.0),
+                    scale::scaled(if Some(menu_type) == submenu {
+                        9.0
+                    } else {
+                        12.0
+                    })
+                ])
                 .style(quick_settings_submenu_button_style(active, opacity))
                 .width(Length::Shrink)
                 .height(Length::Shrink)
                 .on_press(msg)
             }))
-            .spacing(4)
+            .spacing(scale::scaled(4.0))
             .align_y(Alignment::Center)
             .height(Length::Fill)
     )
-    .padding([4, 8])
+    .padding([scale::scaled(4.0), scale::scaled(8.0)])
     .on_press(on_press)
     .height(Length::Fill)
     .width(Length::Fill)
     .style(quick_settings_button_style(active, opacity))
     .width(Length::Fill)
-    .height(Length::Fixed(50.))
+    .height(Length::Fixed(scale::scaled(50.0)))
     .into()
 }

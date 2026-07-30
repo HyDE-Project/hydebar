@@ -248,11 +248,11 @@ impl NetworkData {
                 })
                 .size(scale::scaled(12.0)),
                 button(icon(icons, Icons::Refresh))
-                    .padding([4, 10])
+                    .padding([scale::scaled(4.0), scale::scaled(10.0)])
                     .style(settings_button_style(opacity))
                     .on_press(NetworkMessage::ScanNearByWiFi),
             )
-            .spacing(8)
+            .spacing(scale::scaled(8.0))
             .width(Length::Fill)
             .align_y(Alignment::Center),
             rule::horizontal(1),
@@ -286,7 +286,7 @@ impl NetworkData {
                                         text(format!("{}%", ac.strength)).size(scale::scaled(12.0)),
                                     )
                                     .align_y(Alignment::Center)
-                                    .spacing(8),
+                                    .spacing(scale::scaled(8.0)),
                                 )
                                 .style(move |theme: &Theme| {
                                     container::Style {
@@ -300,7 +300,7 @@ impl NetworkData {
                                 }),
                             )
                             .style(ghost_button_style(opacity))
-                            .padding([8, 8])
+                            .padding([scale::scaled(8.0), scale::scaled(8.0)])
                             .on_press_maybe(if !is_active {
                                 Some(if is_known {
                                     NetworkMessage::SelectAccessPoint(ac.clone())
@@ -315,12 +315,12 @@ impl NetworkData {
                         })
                         .collect::<Vec<Element<NetworkMessage>>>(),
                 )
-                .spacing(4)
+                .spacing(scale::scaled(4.0))
             ))
             .max_height(200),
         )
         .width(Length::Fill)
-        .spacing(8);
+        .spacing(scale::scaled(8.0));
 
         if show_more_button {
             column!(
@@ -328,11 +328,11 @@ impl NetworkData {
                 rule::horizontal(1),
                 button("More")
                     .on_press(NetworkMessage::WiFiMore(id))
-                    .padding([4, 12])
+                    .padding([scale::scaled(4.0), scale::scaled(12.0)])
                     .width(Length::Fill)
                     .style(ghost_button_style(opacity))
             )
-            .spacing(12)
+            .spacing(scale::scaled(12.0))
             .into()
         } else {
             main.into()
@@ -368,7 +368,7 @@ impl NetworkData {
                 .collect::<Vec<Element<NetworkMessage>>>(),
         )
         .width(Length::Fill)
-        .spacing(8);
+        .spacing(scale::scaled(8.0));
 
         if show_more_button {
             column!(
@@ -376,11 +376,11 @@ impl NetworkData {
                 rule::horizontal(1),
                 button("More")
                     .on_press(NetworkMessage::VpnMore(id))
-                    .padding([4, 12])
+                    .padding([scale::scaled(4.0), scale::scaled(12.0)])
                     .width(Length::Fill)
                     .style(ghost_button_style(opacity))
             )
-            .spacing(12)
+            .spacing(scale::scaled(12.0))
             .into()
         } else {
             main.into()

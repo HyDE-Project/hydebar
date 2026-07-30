@@ -12,7 +12,8 @@ use super::{
 use crate::{
     components::{
         icons::{IconTheme, Icons, icon},
-        push_maybe::PushMaybe
+        push_maybe::PushMaybe,
+        scale
     },
     config::{ControlCenterModuleConfig, Position},
     modules::control_center::{
@@ -45,7 +46,7 @@ impl ControlCenter {
             let right_buttons = Row::new()
                 .push_maybe(config.lock_cmd.as_ref().map(|_| {
                     button(icon(icons, Icons::Lock))
-                        .padding([8, 13])
+                        .padding([scale::scaled(8.0), scale::scaled(13.0)])
                         .on_press(Message::Lock)
                         .style(settings_button_style(opacity))
                 }))
@@ -58,17 +59,17 @@ impl ControlCenter {
                             Icons::Power
                         }
                     ))
-                    .padding([8, 13])
+                    .padding([scale::scaled(8.0), scale::scaled(13.0)])
                     .on_press(Message::ToggleSubMenu(SubMenu::Power))
                     .style(settings_button_style(opacity))
                 )
-                .spacing(8);
+                .spacing(scale::scaled(8.0));
 
             let header = Row::new()
                 .push_maybe(battery_data)
                 .push(Space::new().width(Length::Fill))
                 .push(right_buttons)
-                .spacing(8)
+                .spacing(scale::scaled(8.0))
                 .width(Length::Fill);
 
             let (sink_slider, source_slider) = self
@@ -212,7 +213,7 @@ impl ControlCenter {
                 .push_maybe(self.brightness.as_ref().map(|b| b.brightness_slider(icons)))
                 .push(quick_settings)
                 .width(Length::Fill)
-                .spacing(16)
+                .spacing(scale::scaled(16.0))
                 .into()
         }
     }

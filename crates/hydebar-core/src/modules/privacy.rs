@@ -19,7 +19,8 @@ use crate::{
     ModuleContext, ModuleEventSender,
     components::{
         icons::{IconTheme, Icons, icon},
-        push_maybe::PushMaybe
+        push_maybe::PushMaybe,
+        scale
     },
     event_bus::ModuleEvent,
     services::{
@@ -150,7 +151,7 @@ where
                                     .then(|| icon(icons, Icons::Mic1))
                             )
                             .align_y(Alignment::Center)
-                            .spacing(8)
+                            .spacing(scale::scaled(8.0))
                     )
                     .style(|theme| container::Style {
                         text_color: Some(theme.extended_palette().danger.weak.color),

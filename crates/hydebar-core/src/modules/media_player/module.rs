@@ -103,7 +103,7 @@ where
                         .size(scale::scaled(12.0))
                 ]
                 .align_y(Vertical::Center)
-                .spacing(8)
+                .spacing(scale::scaled(8.0))
                 .into(),
                 Some(OnModulePress::ToggleMenu(MenuType::MediaPlayer))
             ))
