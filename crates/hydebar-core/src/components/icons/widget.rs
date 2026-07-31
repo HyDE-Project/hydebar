@@ -21,21 +21,27 @@ use super::{
 const LINE_EM: f32 = 1.2;
 
 /// Renders `icon` at the size the table carries.
+///
+/// No allocation: the glyph table hands out immortal references, and the
+/// widget borrows one — this runs for every icon of every frame.
 pub fn icon<'a>(theme: &IconTheme, icon: Icons) -> Text<'a> {
-    let glyph = theme.glyph(icon).to_owned();
+    let glyph = theme.glyph(icon);
     let size = theme.size().unwrap_or_else(scale::base);
 
-    build(glyph, size)
+    build(std::borrow::Cow::Borrowed(glyph), size)
 }
 
 /// Renders an arbitrary glyph, at the themed size.
 pub fn icon_raw<'a>(glyph: String) -> Text<'a> {
-    build(glyph, scale::base())
+    build(std::borrow::Cow::Owned(glyph), scale::base())
 }
 
 /// Renders `glyph` at `size` pixels of apparent size.
 pub fn icon_raw_sized<'a>(glyph: String, size: Option<f32>) -> Text<'a> {
-    build(glyph, size.unwrap_or_else(scale::base))
+    build(
+        std::borrow::Cow::Owned(glyph),
+        size.unwrap_or_else(scale::base)
+    )
 }
 
 /// The glyph as a text widget, optically corrected to `size`.
@@ -50,7 +56,7 @@ pub fn icon_raw_sized<'a>(glyph: String, size: Option<f32>) -> Text<'a> {
 /// icons standing side by side would show a different gap in every pair. The
 /// ink is centred in the box, so the gap between icons is exactly the gap
 /// their wrappers state.
-fn build<'a>(glyph: String, size: f32) -> Text<'a> {
+fn build<'a>(glyph: std::borrow::Cow<'static, str>, size: f32) -> Text<'a> {
     let face = optical::resolved(&glyph);
     let styled = text(glyph)
         .size(size * face.factor)

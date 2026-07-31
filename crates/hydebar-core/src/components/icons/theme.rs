@@ -18,7 +18,7 @@ use super::catalog::Icons;
 /// along with the rest of the bar.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct IconTheme {
-    overrides: HashMap<Icons, String>,
+    overrides: HashMap<Icons, &'static str>,
     size:      Option<f32>
 }
 
@@ -34,7 +34,7 @@ impl IconTheme {
         for (name, glyph) in config.iter() {
             match Icons::from_name(name) {
                 Some(icon) => {
-                    overrides.insert(icon, glyph.to_owned());
+                    overrides.insert(icon, leaked(glyph));
                 }
                 None => warn!("Unknown icon override `{name}`, ignoring it")
             }
@@ -60,16 +60,21 @@ impl IconTheme {
     }
 
     /// Glyph to render for `icon`, honouring any configured override.
+    ///
+    /// The reference lives forever: the defaults are compiled in and the
+    /// overrides are leaked once per reload, so every icon of every frame is
+    /// drawn without allocating a copy of its glyph.
     #[must_use]
-    pub fn glyph(&self, icon: Icons) -> &str {
+    pub fn glyph(&self, icon: Icons) -> &'static str {
         self.overrides
             .get(&icon)
-            .map_or_else(|| icon.default_glyph(), String::as_str)
+            .copied()
+            .unwrap_or_else(|| icon.default_glyph())
     }
 
     /// Declares an override for `icon`, replacing any previous value.
     pub fn set(&mut self, icon: Icons, glyph: impl Into<String>) {
-        self.overrides.insert(icon, glyph.into());
+        self.overrides.insert(icon, leaked(&glyph.into()));
     }
 
     /// Returns `true` when every icon resolves to its built in glyph.
@@ -101,4 +106,14 @@ mod tests {
         assert_eq!(theme.size(), Some(13.0));
         assert!(theme.is_default());
     }
+}
+
+/// A glyph made immortal for the renderer.
+///
+/// The same bargain the font family cache strikes: a handful of bytes per
+/// configured override per reload, in exchange for never allocating on the
+/// draw path. A configuration is reloaded by hand and holds a few overrides
+/// at most, so the leak is bounded by use, not by time.
+fn leaked(glyph: &str) -> &'static str {
+    Box::leak(glyph.to_owned().into_boxed_str())
 }

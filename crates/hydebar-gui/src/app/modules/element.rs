@@ -78,9 +78,23 @@ impl App {
             false => {
                 let height = Self::module_height(grouped);
 
+                // an ungrouped button is an island of its own: its sides carry
+                // the island padding, or its content sits five times closer
+                // to the pill edge than the same module would inside a group
+                let padding = if grouped {
+                    self.module_padding()
+                } else if self.appearance().style == AppearanceStyle::Islands {
+                    [
+                        self.module_padding()[0],
+                        self.appearance().island_padding()[1]
+                    ]
+                } else {
+                    self.module_padding()
+                };
+
                 let button =
                     position_button(container(content).align_y(Alignment::Center).height(height))
-                        .padding(self.module_padding())
+                        .padding(padding)
                         .height(height)
                         .style(module_button_style(
                             self.appearance().style,
