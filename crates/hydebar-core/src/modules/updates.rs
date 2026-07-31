@@ -1063,6 +1063,16 @@ mod state {
 
                     let _ = outputs.close_menu_if::<Message>(id, MenuType::Updates, main_config);
                 }
+                Message::UpdateFinished => match self.schedule.as_ref() {
+                    Some(schedule) => {
+                        self.state = CheckState::Checking;
+                        schedule.request_check();
+                    }
+                    None => {
+                        self.updates.clear();
+                        self.state = CheckState::Ready;
+                    }
+                },
                 Message::UpdateHyde => {
                     if self.hyde_updating {
                         debug!("a hyde update is already running");
@@ -1147,10 +1157,6 @@ mod state {
                     self.updates.clear();
                     self.state = CheckState::Unavailable;
                 }
-                Message::UpdateFinished => {
-                    self.updates.clear();
-                    self.state = CheckState::Ready;
-                }
                 Message::ToggleUpdatesList => {
                     self.is_updates_list_open = !self.is_updates_list_open;
                 }
@@ -1183,7 +1189,10 @@ mod state {
                         .to_owned()
                     );
                 }
-                Message::CheckNow | Message::Update(_) | Message::UpdateHyde => {}
+                Message::CheckNow
+                | Message::Update(_)
+                | Message::UpdateFinished
+                | Message::UpdateHyde => {}
             }
         }
 
