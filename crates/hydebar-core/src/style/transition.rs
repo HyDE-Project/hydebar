@@ -10,9 +10,11 @@ use crate::{
 /// Cross-fade between two [`Appearance`] snapshots.
 ///
 /// A single progress spring drives the whole palette instead of one spring per
-/// colour: retargeting mid-flight snapshots the currently displayed appearance
-/// as the new origin, so a hot reload landing during another hot reload still
-/// blends from what the user actually sees.
+/// colour. A target landing while the blend still runs re-aims the running
+/// travel instead of restarting it: a theme switch writes its files over
+/// several reloads, and a transition that started over on every one of them
+/// never got anywhere — the front the bar sweeps its islands with must cross
+/// the bar once, towards wherever the newest reload points.
 ///
 /// # Examples
 ///
@@ -88,9 +90,11 @@ impl AppearanceTransition {
     /// style or the scale factor switch instantly because the compositor side
     /// of the shell has to be reconfigured for them anyway.
     ///
-    /// A target the transition is already aimed at changes nothing at all: a
-    /// theme switch reloads the configuration several times in a burst, and
-    /// the repeats must ride the running blend rather than cut it short.
+    /// A target the transition is already aimed at changes nothing at all,
+    /// and one landing mid-flight only re-aims the running travel: a theme
+    /// switch reloads the configuration several times over its run, and a
+    /// blend that started over on every reload crawled to the new palette in
+    /// steps too small to see.
     pub fn set_target(&mut self, appearance: Appearance, animated: bool) {
         if animated && appearance == self.to {
             return;
@@ -101,6 +105,12 @@ impl AppearanceTransition {
             self.to = appearance.clone();
             self.current = appearance;
             self.progress.snap_to(1.0);
+            return;
+        }
+
+        if self.progress.is_animating() {
+            self.to = appearance;
+            self.refresh();
             return;
         }
 
@@ -330,15 +340,21 @@ mod tests {
     }
 
     #[test]
-    fn retargeting_blends_from_what_is_displayed() {
+    fn a_target_landing_mid_flight_re_aims_the_travel_without_restarting_it() {
         let mut transition = AppearanceTransition::new(appearance_with_background(0));
         transition.set_target(appearance_with_background(200), true);
         let _ = transition.advance(Duration::from_millis(60));
 
-        let displayed = transition.current().background_color;
+        let travelled = transition.progress();
+        assert!(travelled > 0.0);
+
         transition.set_target(appearance_with_background(40), true);
 
-        assert_eq!(transition.current().background_color, displayed);
+        assert_eq!(
+            transition.progress(),
+            travelled,
+            "a theme switch reloads several times; each must ride the front, not reset it"
+        );
 
         drain(&mut transition);
 
