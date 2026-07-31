@@ -91,8 +91,10 @@ pub trait Module<Message> {
   module being attended.
 - `view` renders the bar entry and names the press action.
 
-Larger modules split into submodules (for example
-`modules/media_player/{state,messages,commands,view}.rs`).
+Every module is one flat file in `modules/`; a large one is organised with
+inline `mod` blocks inside that file (for example `modules/media_player.rs`
+holds `state`, `messages`, `commands` and `view` as inline submodules), never
+with a folder.
 
 ### Registration: one law
 

@@ -415,7 +415,8 @@ Any per-module configuration gets its own file under
 `crates/hydebar-proto/src/config/` and a field on `Config`.
 
 See existing modules for reference; `modules/weather.rs` is a small
-self-contained example, `modules/media_player/` a split one.
+self-contained example, `modules/media_player.rs` a large one organised with
+inline `mod` blocks. Modules are always one flat file, never a folder.
 
 ---
 
