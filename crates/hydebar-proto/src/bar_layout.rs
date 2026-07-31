@@ -151,10 +151,9 @@ fn entry_def(
 
 /// Maps one layout entry onto a module of ours, at most once per layout.
 ///
-/// Several layout entries can land on the same module — the processor and
-/// memory readouts are one system module here, the speaker and microphone one
-/// audio module — and placing it twice would draw it twice. The first entry
-/// wins the spot; later ones fall away.
+/// Several layout entries can land on the same module — the speaker and
+/// microphone are one audio module here — and placing it twice would draw it
+/// twice. The first entry wins the spot; later ones fall away.
 fn place(
     name: &str,
     custom: &BTreeSet<&str>,
@@ -201,7 +200,8 @@ fn module_for(name: &str, custom: &BTreeSet<&str>) -> Option<ModuleName> {
 /// The module answering for a plain layout entry.
 fn builtin_for(name: &str) -> Option<ModuleName> {
     Some(match name {
-        "cpu" | "memory" => ModuleName::SystemInfo,
+        "cpu" => ModuleName::Cpu,
+        "memory" => ModuleName::Memory,
         "clock" => ModuleName::Clock,
         "idle_inhibitor" => ModuleName::IdleInhibitor,
         "hyprland/workspaces" => ModuleName::Workspaces,
@@ -408,7 +408,7 @@ mod tests {
         assert_eq!(
             modules.left,
             vec![
-                ModuleDef::Single(ModuleName::SystemInfo),
+                ModuleDef::Group(vec![ModuleName::Cpu, ModuleName::Memory]),
                 ModuleDef::Group(vec![ModuleName::IdleInhibitor, ModuleName::Clock]),
             ]
         );
@@ -429,22 +429,27 @@ mod tests {
         );
     }
 
-    /// The processor and memory entries are one system module here, and the
-    /// microphone folds into the audio module: each lands once, as the group
-    /// it appears in first.
+    /// The speaker and microphone entries are one audio module here, placed
+    /// once as the group it appears in first; the processor and memory
+    /// entries stay two separate modules.
     #[test]
     fn entries_sharing_a_bar_module_are_placed_once() {
         let modules = parse(LAYOUT, &[]).expect("layout");
-        let system = modules
+        let processor = modules
             .placed()
-            .filter(|name| **name == ModuleName::SystemInfo)
+            .filter(|name| **name == ModuleName::Cpu)
+            .count();
+        let memory = modules
+            .placed()
+            .filter(|name| **name == ModuleName::Memory)
             .count();
         let audio = modules
             .placed()
             .filter(|name| **name == ModuleName::Audio)
             .count();
 
-        assert_eq!(system, 1);
+        assert_eq!(processor, 1);
+        assert_eq!(memory, 1);
         assert_eq!(audio, 1);
     }
 

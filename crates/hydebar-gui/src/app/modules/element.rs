@@ -181,6 +181,12 @@ impl App {
                     .network_hint()
                     .unwrap_or_else(|| module_name.label().to_owned())
             )),
+            ModuleName::Cpu => Some(Some(hydebar_core::modules::cpu::hint(
+                self.system_info.data()
+            ))),
+            ModuleName::Memory => Some(Some(hydebar_core::modules::memory::hint(
+                self.system_info.data()
+            ))),
             ModuleName::Clock => Some(Some(self.clock.data().format("%A, %-d %B %Y"))),
             ModuleName::Updates => Some(self.updates.tooltip()),
             ModuleName::KeyboardLayout => Some(Some(format!(

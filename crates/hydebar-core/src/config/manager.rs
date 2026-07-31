@@ -291,6 +291,13 @@ fn compute_impact(previous: &Config, next: &Config) -> ConfigImpact {
         &previous.system,
         &next.system
     );
+    mark_if_changed(&mut impact, ModuleName::Cpu, &previous.system, &next.system);
+    mark_if_changed(
+        &mut impact,
+        ModuleName::Memory,
+        &previous.system,
+        &next.system
+    );
     mark_if_changed(
         &mut impact,
         ModuleName::Battery,

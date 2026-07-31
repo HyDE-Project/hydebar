@@ -37,6 +37,19 @@ mod data {
         }
     }
 
+    /// Usage of one mounted filesystem.
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    pub struct DiskData {
+        /// Where the filesystem is mounted.
+        pub mount:         String,
+        /// Bytes an allocation could no longer claim.
+        pub used:          u64,
+        /// Bytes the filesystem holds in total.
+        pub total:         u64,
+        /// Share of [`Self::total`] behind [`Self::used`], in percent.
+        pub usage_percent: u32
+    }
+
     /// Aggregated system information consumed by the UI layer.
     #[derive(Debug, Clone, PartialEq, Default)]
     pub struct SystemInfoData {
@@ -44,15 +57,19 @@ mod data {
         pub memory_usage:      u32,
         /// Memory in use, in bytes, behind [`Self::memory_usage`].
         pub memory_used:       u64,
+        /// Memory installed, in bytes.
+        pub memory_total:      u64,
         pub memory_swap_usage: u32,
         /// Swap in use, in bytes, behind [`Self::memory_swap_usage`].
         pub memory_swap_used:  u64,
+        /// Swap configured, in bytes; zero on a machine without swap.
+        pub memory_swap_total: u64,
         /// Processor temperature, absent on a machine that reports none.
         pub cpu_temperature:   Option<i32>,
         /// Graphics readings, absent when the machine exposes no graphics
         /// device.
         pub gpu:               Option<GpuReadings>,
-        pub disks:             Vec<(String, u32)>,
+        pub disks:             Vec<DiskData>,
         pub network:           Option<NetworkData>
     }
 
@@ -78,8 +95,10 @@ mod data {
                 && self.cpu_usage == other.cpu_usage
                 && self.memory_usage == other.memory_usage
                 && self.memory_used == other.memory_used
+                && self.memory_total == other.memory_total
                 && self.memory_swap_usage == other.memory_swap_usage
                 && self.memory_swap_used == other.memory_swap_used
+                && self.memory_swap_total == other.memory_swap_total
                 && self.cpu_temperature == other.cpu_temperature
                 && self.gpu == other.gpu
                 && self.disks == other.disks
@@ -218,17 +237,21 @@ mod data {
             self.system.refresh_memory();
 
             let cpu_usage = self.system.global_cpu_usage().floor() as u32;
+            let memory_total = self.system.total_memory();
+            let memory_swap_total = self.system.total_swap();
             let (memory_usage, memory_used) =
-                memory_share(self.system.total_memory(), self.system.available_memory());
+                memory_share(memory_total, self.system.available_memory());
             let (memory_swap_usage, memory_swap_used) =
-                memory_share(self.system.total_swap(), self.system.free_swap());
+                memory_share(memory_swap_total, self.system.free_swap());
 
             SystemInfoData {
                 cpu_usage,
                 memory_usage,
                 memory_used,
+                memory_total,
                 memory_swap_usage,
                 memory_swap_used,
+                memory_swap_total,
                 ..SystemInfoData::default()
             }
         }
@@ -259,10 +282,12 @@ mod data {
             self.last_network = observation;
 
             let cpu_usage = self.system.global_cpu_usage().floor() as u32;
+            let memory_total = self.system.total_memory();
+            let memory_swap_total = self.system.total_swap();
             let (memory_usage, memory_used) =
-                memory_share(self.system.total_memory(), self.system.available_memory());
+                memory_share(memory_total, self.system.available_memory());
             let (memory_swap_usage, memory_swap_used) =
-                memory_share(self.system.total_swap(), self.system.free_swap());
+                memory_share(memory_swap_total, self.system.free_swap());
 
             let Readings {
                 cpu: cpu_temperature,
@@ -277,15 +302,17 @@ mod data {
                         .iter()
                         .filter(|disk| !disk.is_removable() && disk.total_space() != 0)
                         .map(|disk| {
-                            let mount_point = disk.mount_point().to_string_lossy().to_string();
-                            let usage = percentage(
-                                disk.total_space().saturating_sub(disk.available_space()),
-                                disk.total_space()
-                            );
+                            let total = disk.total_space();
+                            let used = total.saturating_sub(disk.available_space());
 
-                            (mount_point, usage)
+                            DiskData {
+                                mount: disk.mount_point().to_string_lossy().to_string(),
+                                used,
+                                total,
+                                usage_percent: percentage(used, total)
+                            }
                         })
-                        .sorted_by(|a, b| a.0.cmp(&b.0))
+                        .sorted_by(|a, b| a.mount.cmp(&b.mount))
                         .collect()
                 })
                 .unwrap_or_default();
@@ -294,8 +321,10 @@ mod data {
                 cpu_usage,
                 memory_usage,
                 memory_used,
+                memory_total,
                 memory_swap_usage,
                 memory_swap_used,
+                memory_swap_total,
                 cpu_temperature,
                 gpu,
                 disks,
@@ -420,6 +449,8 @@ pub mod indicators {
     /// Why a readout cannot be drawn on this machine.
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub enum Unavailable {
+        /// This machine has no swap configured.
+        NoSwap,
         /// No chip on this machine reports a processor temperature.
         NoCpuSensor,
         /// No graphics device on this machine reports a temperature.
@@ -437,6 +468,7 @@ pub mod indicators {
         #[must_use]
         pub const fn reason(self) -> &'static str {
             match self {
+                Self::NoSwap => "this machine has no swap configured",
                 Self::NoCpuSensor => "this machine reports no processor temperature",
                 Self::NoGpuSensor => "this machine reports no graphics temperature",
                 Self::NoGpuUsage => "the graphics driver on this machine reports no load",
@@ -485,7 +517,10 @@ pub mod indicators {
     #[must_use]
     pub fn unavailable(indicator: &SystemIndicator, data: &SystemInfoData) -> Option<Unavailable> {
         match indicator {
-            SystemIndicator::Cpu | SystemIndicator::Memory | SystemIndicator::MemorySwap => None,
+            SystemIndicator::Cpu | SystemIndicator::Memory => None,
+            SystemIndicator::MemorySwap => {
+                (data.memory_swap_total == 0).then_some(Unavailable::NoSwap)
+            }
             SystemIndicator::CpuTemperature => data
                 .cpu_temperature
                 .is_none()
@@ -500,10 +535,8 @@ pub mod indicators {
                 .as_ref()
                 .is_none_or(|gpu| gpu.utilisation.is_none())
                 .then_some(Unavailable::NoGpuUsage),
-            SystemIndicator::Disk(mount) => {
-                (!data.disks.iter().any(|(mounted, _)| mounted == mount))
-                    .then_some(Unavailable::NoSuchDisk)
-            }
+            SystemIndicator::Disk(mount) => (!data.disks.iter().any(|disk| &disk.mount == mount))
+                .then_some(Unavailable::NoSuchDisk),
             SystemIndicator::IpAddress
             | SystemIndicator::DownloadSpeed
             | SystemIndicator::UploadSpeed => {
@@ -546,7 +579,7 @@ pub mod indicators {
         known.extend(
             data.disks
                 .iter()
-                .map(|(mount, _)| SystemIndicator::Disk(mount.clone()))
+                .map(|disk| SystemIndicator::Disk(disk.mount.clone()))
         );
 
         for indicator in config.indicators.iter().chain(config.hide.iter()) {
@@ -706,7 +739,12 @@ pub mod indicators {
         #[test]
         fn a_mounted_disk_is_available_and_an_unmounted_one_is_not() {
             let data = SystemInfoData {
-                disks: vec![("/".to_owned(), 60)],
+                disks: vec![crate::modules::system_info::DiskData {
+                    mount:         "/".to_owned(),
+                    used:          60,
+                    total:         100,
+                    usage_percent: 60
+                }],
                 ..SystemInfoData::default()
             };
 
@@ -719,13 +757,33 @@ pub mod indicators {
                 Some(Unavailable::NoSuchDisk)
             );
         }
+
+        #[test]
+        fn swap_is_unavailable_on_a_machine_without_swap() {
+            let none = SystemInfoData::default();
+            let some = SystemInfoData {
+                memory_swap_total: 8 * 1024 * 1024 * 1024,
+                ..SystemInfoData::default()
+            };
+
+            assert_eq!(
+                unavailable(&SystemIndicator::MemorySwap, &none),
+                Some(Unavailable::NoSwap)
+            );
+            assert_eq!(unavailable(&SystemIndicator::MemorySwap, &some), None);
+            assert_eq!(
+                Unavailable::NoSwap.reason(),
+                "this machine has no swap configured"
+            );
+        }
     }
 }
 mod runtime {
-    use std::time::Duration;
+    use std::{sync::Arc, time::Duration};
 
     use log::error;
     use tokio::{
+        sync::Notify,
         task::JoinHandle,
         time::{MissedTickBehavior, interval}
     };
@@ -735,6 +793,18 @@ mod runtime {
 
     /// Interval between system information refresh ticks.
     pub const REFRESH_INTERVAL: Duration = Duration::from_secs(5);
+
+    /// Cadence while the user is looking at the module or its window.
+    pub const ATTENDED_INTERVAL: Duration = Duration::from_secs(1);
+
+    /// Pause between priming the counters and the first published sample.
+    ///
+    /// The processor load is a difference between two readings, so the very
+    /// first reading of a fresh sampler is not a load at all — publishing
+    /// it painted `0%` until the second tick five seconds later. Long
+    /// enough for the kernel counters to move, short enough that the bar
+    /// shows honest numbers as soon as it is up.
+    pub const WARMUP: Duration = Duration::from_millis(300);
 
     /// Source of the metrics the polling task publishes.
     ///
@@ -756,14 +826,16 @@ mod runtime {
     /// metrics.
     #[derive(Default)]
     pub struct PollingTask {
-        handle: Option<JoinHandle<()>>
+        handle: Option<JoinHandle<()>>,
+        poke:   Option<Arc<Notify>>
     }
 
     impl PollingTask {
         /// Create a new polling task manager with no active background work.
         pub fn new() -> Self {
             Self {
-                handle: None
+                handle: None,
+                poke:   None
             }
         }
 
@@ -771,6 +843,22 @@ mod runtime {
         pub fn abort(&mut self) {
             if let Some(handle) = self.handle.take() {
                 handle.abort();
+            }
+
+            self.poke = None;
+        }
+
+        /// Asks the running task for a sample right now.
+        ///
+        /// The window and the hover hints read the cached sample, and a
+        /// cache refreshed only on the resting cadence can be seconds
+        /// old the moment somebody looks at it. The sample still
+        /// happens on the task's own thread, and one whose readouts
+        /// match the ones on screen is still dropped, so a poke costs
+        /// a repaint only when something actually changed.
+        pub fn poke(&self) {
+            if let Some(poke) = self.poke.as_ref() {
+                poke.notify_one();
             }
         }
 
@@ -798,6 +886,11 @@ mod runtime {
         /// dropped: every event the module publishes rebuilds and
         /// repaints every surface the bar owns, and an idle machine
         /// reports the same numbers tick after tick.
+        ///
+        /// The first sample is taken and thrown away: it only primes the
+        /// counters the loads are differences of. The first published one
+        /// follows [`WARMUP`] later, so the bar shows honest numbers at
+        /// once instead of a zero it would keep for a whole interval.
         pub fn spawn_from<S>(
             &mut self,
             ctx: &ModuleContext,
@@ -808,33 +901,40 @@ mod runtime {
         {
             self.abort();
 
+            let poke = Arc::new(Notify::new());
+            let poked = Arc::clone(&poke);
+
             let handle = ctx.runtime_handle().spawn(async move {
                 let mut ticker = interval(REFRESH_INTERVAL);
                 ticker.set_missed_tick_behavior(MissedTickBehavior::Delay);
                 let _ = ticker.tick().await;
+                let _ = source.sample();
+                tokio::time::sleep(WARMUP).await;
                 let mut published: Option<SystemInfoData> = None;
 
                 loop {
-                    ticker.tick().await;
-
                     let sample = source.sample();
 
                     if published
                         .as_ref()
-                        .is_some_and(|previous| previous.renders_same_as(&sample))
+                        .is_none_or(|previous| !previous.renders_same_as(&sample))
                     {
-                        continue;
+                        published = Some(sample.clone());
+
+                        if let Err(err) = sender.try_send(Message::Sampled(sample)) {
+                            error!("failed to publish system info refresh: {err}");
+                        }
                     }
 
-                    published = Some(sample.clone());
-
-                    if let Err(err) = sender.try_send(Message::Sampled(sample)) {
-                        error!("failed to publish system info refresh: {err}");
+                    tokio::select! {
+                        _ = ticker.tick() => {}
+                        _ = poked.notified() => {}
                     }
                 }
             });
 
             self.handle = Some(handle);
+            self.poke = Some(poke);
         }
     }
 
@@ -924,11 +1024,39 @@ mod runtime {
 
             assert!(receiver.try_recv().expect("initial queue state").is_none());
 
+            advance(WARMUP).await;
+            yield_now().await;
+
+            let event = receiver.try_recv().expect("queued refresh after warmup");
+            expect_cpu_usage(event, 1);
+
             advance(REFRESH_INTERVAL).await;
             yield_now().await;
 
             let event = receiver.try_recv().expect("queued refresh after interval");
-            expect_cpu_usage(event, 0);
+            expect_cpu_usage(event, 2);
+        }
+
+        #[tokio::test(start_paused = true)]
+        async fn the_priming_sample_is_never_published() {
+            let (ctx, bus) = module_context();
+            let mut polling = PollingTask::default();
+            let mut receiver = bus.receiver();
+
+            let sender = ctx.module_sender(ModuleEvent::SystemInfo);
+            polling.spawn_from(
+                &ctx,
+                sender,
+                RisingLoad {
+                    next: 0
+                }
+            );
+            yield_now().await;
+            advance(WARMUP).await;
+            yield_now().await;
+
+            let event = receiver.try_recv().expect("first published refresh");
+            expect_cpu_usage(event, 1);
         }
 
         #[tokio::test(start_paused = true)]
@@ -941,10 +1069,10 @@ mod runtime {
             polling.spawn_from(&ctx, sender, SteadyLoad);
             yield_now().await;
 
-            advance(REFRESH_INTERVAL).await;
+            advance(WARMUP).await;
             yield_now().await;
 
-            let first = receiver.try_recv().expect("first refresh after interval");
+            let first = receiver.try_recv().expect("first refresh after warmup");
             expect_cpu_usage(first, 7);
 
             advance(REFRESH_INTERVAL).await;
@@ -958,6 +1086,39 @@ mod runtime {
                     .expect("queue state after steady samples")
                     .is_none()
             );
+        }
+
+        #[tokio::test(start_paused = true)]
+        async fn a_poke_samples_without_waiting_for_the_tick() {
+            let (ctx, bus) = module_context();
+            let mut polling = PollingTask::default();
+            let mut receiver = bus.receiver();
+
+            let sender = ctx.module_sender(ModuleEvent::SystemInfo);
+            polling.spawn_from(
+                &ctx,
+                sender,
+                RisingLoad {
+                    next: 0
+                }
+            );
+            yield_now().await;
+            advance(WARMUP).await;
+            yield_now().await;
+
+            let first = receiver.try_recv().expect("refresh after warmup");
+            expect_cpu_usage(first, 1);
+
+            polling.poke();
+            yield_now().await;
+
+            let poked = receiver.try_recv().expect("refresh after poke");
+            expect_cpu_usage(poked, 2);
+        }
+
+        #[test]
+        fn a_poke_without_a_running_task_is_a_no_op() {
+            PollingTask::default().poke();
         }
 
         #[tokio::test(start_paused = true)]
@@ -976,12 +1137,12 @@ mod runtime {
             );
             yield_now().await;
 
-            advance(REFRESH_INTERVAL).await;
+            advance(WARMUP).await;
             yield_now().await;
 
-            let first = receiver.try_recv().expect("first refresh after interval");
-            expect_cpu_usage(first, 0);
-            assert!(receiver.try_recv().expect("drain first interval").is_none());
+            let first = receiver.try_recv().expect("first refresh after warmup");
+            expect_cpu_usage(first, 1);
+            assert!(receiver.try_recv().expect("drain first refresh").is_none());
 
             polling.spawn_from(
                 &ctx,
@@ -992,11 +1153,11 @@ mod runtime {
             );
             yield_now().await;
 
-            advance(REFRESH_INTERVAL).await;
+            advance(WARMUP).await;
             yield_now().await;
 
             let second = receiver.try_recv().expect("refresh after respawn");
-            expect_cpu_usage(second, 100);
+            expect_cpu_usage(second, 101);
             assert!(receiver.try_recv().expect("no duplicate refresh").is_none());
         }
     }
@@ -3530,15 +3691,14 @@ pub mod sensors {
 }
 mod view {
     use iced::{
-        Alignment, Element, Length, Theme,
-        widget::{Column, Row, column, container, row, rule}
+        Alignment, Element, Theme,
+        widget::{Row, container, row}
     };
 
     use super::{Message, data::SystemInfoData, indicators, sensors::GpuReadings};
     use crate::{
         components::{
             icons::{IconTheme, Icons, icon},
-            push_maybe::PushMaybe,
             scale,
             text::text
         },
@@ -3546,24 +3706,6 @@ mod view {
         menu::MenuType,
         modules::OnModulePress
     };
-
-    fn info_element<'a>(
-        icons: &IconTheme,
-        info_icon: Icons,
-        label: &'a str,
-        value: String
-    ) -> Element<'a, Message> {
-        row!(
-            container(icon(icons, info_icon).size(scale::scaled(22.0)))
-                .center_x(Length::Fixed(scale::scaled(32.0))),
-            text(label).width(Length::Fill),
-            text(value)
-        )
-        .width(Length::Fill)
-        .align_y(Alignment::Center)
-        .spacing(scale::scaled(8.0))
-        .into()
-    }
 
     /// Value of an indicator paired with the thresholds coloring it.
     #[derive(Debug, Clone, Copy)]
@@ -3593,15 +3735,24 @@ mod view {
     }
 
     /// Amount of bytes rendered as gibibytes with a single decimal.
-    fn gigabytes(bytes: u64) -> String {
+    ///
+    /// The divisor is binary, so the unit next to the number has to be the
+    /// binary one: eight gibibytes shown as `8.0GB` overstated every
+    /// readout by seven percent against the unit it named.
+    pub(crate) fn gigabytes(bytes: u64) -> String {
         format!("{:.1}", bytes as f64 / (1024.0 * 1024.0 * 1024.0))
+    }
+
+    /// A pool stated as the amount in use against the amount there is.
+    pub(crate) fn used_of_total(used: u64, total: u64) -> String {
+        format!("{} / {} GiB", gigabytes(used), gigabytes(total))
     }
 
     /// Renders a memory readout in the format the active index selects.
     fn memory_label(format: MemoryFormat, prefix: Option<&str>, usage: u32, used: u64) -> String {
         match format {
             MemoryFormat::Percentage => indicator_label(prefix, usage, "%"),
-            MemoryFormat::Bytes => indicator_label(prefix, gigabytes(used), "GB")
+            MemoryFormat::Bytes => indicator_label(prefix, gigabytes(used), "GiB")
         }
     }
 
@@ -3641,7 +3792,7 @@ mod view {
     ///
     /// The placement is spelled out rather than abbreviated, so a machine with
     /// switchable graphics says which of its two devices the bar is watching.
-    fn gpu_title(gpu: &GpuReadings) -> String {
+    pub(crate) fn gpu_title(gpu: &GpuReadings) -> String {
         let placement = match gpu.tag() {
             Some(_) => "Integrated graphics",
             None => "Graphics"
@@ -3653,168 +3804,163 @@ mod view {
         }
     }
 
-    fn format_speed(speed: u32) -> (u32, &'static str) {
-        if speed > 1000 {
-            (speed / 1000, "MB/s")
+    /// A transfer rate, handed in as kilobytes per second, spelled out.
+    ///
+    /// Above a thousand the rate reads in megabytes with one decimal: the
+    /// integer division it replaced showed `1 MB/s` for anything up to
+    /// `1999 KB/s`, understating a rate by up to half.
+    pub(crate) fn format_speed(speed: u32) -> String {
+        if speed >= 1000 {
+            format!("{:.1} MB/s", f64::from(speed) / 1000.0)
         } else {
-            (speed, "KB/s")
+            format!("{speed} KB/s")
         }
     }
 
-    /// Readouts this machine cannot report, each with the reason.
+    /// Bar readout of one indicator, or nothing while this machine cannot
+    /// draw it.
     ///
-    /// A readout that is simply absent from the bar leaves the user guessing,
-    /// so the menu names it and says what is missing. A machine that
-    /// reports everything shows nothing here.
-    fn missing_readouts(
+    /// The standalone processor and memory modules draw single readouts out
+    /// of the same sample the combined module renders, so the one spelling of
+    /// every readout lives here and the thin entries cannot drift from it.
+    pub fn single_indicator<M>(
+        indicator: &SystemIndicator,
         data: &SystemInfoData,
-        config: &SystemModuleConfig
-    ) -> Option<Element<'static, Message>> {
-        let missing: Vec<Element<'static, Message>> = indicators::statuses(config, data)
-            .into_iter()
-            .filter_map(|status| {
-                let reason = status.unavailable?.reason();
+        config: &SystemModuleConfig,
+        memory_format: MemoryFormat,
+        appearance: &Appearance,
+        icons: &IconTheme
+    ) -> Option<Element<'static, M>>
+    where
+        M: 'static + From<Message>
+    {
+        let icon_label_gap = appearance.icon_label_gap();
 
-                Some(
-                    text(format!(
-                        "{} — {reason}",
-                        indicators::title(&status.indicator)
+        let element: Option<Element<'static, Message>> = match indicator {
+            SystemIndicator::Cpu => Some(indicator_info_element(
+                icons,
+                Icons::Cpu,
+                indicator_label(None, data.cpu_usage, "%"),
+                Some(Thresholds::new(
+                    data.cpu_usage,
+                    config.cpu.warn_threshold,
+                    config.cpu.alert_threshold
+                )),
+                icon_label_gap
+            )),
+            SystemIndicator::Memory => Some(indicator_info_element(
+                icons,
+                Icons::Mem,
+                memory_label(memory_format, None, data.memory_usage, data.memory_used),
+                Some(Thresholds::new(
+                    data.memory_usage,
+                    config.memory.warn_threshold,
+                    config.memory.alert_threshold
+                )),
+                icon_label_gap
+            )),
+            SystemIndicator::MemorySwap => Some(indicator_info_element(
+                icons,
+                Icons::Mem,
+                memory_label(
+                    memory_format,
+                    Some("swap"),
+                    data.memory_swap_usage,
+                    data.memory_swap_used
+                ),
+                Some(Thresholds::new(
+                    data.memory_swap_usage,
+                    config.memory.warn_threshold,
+                    config.memory.alert_threshold
+                )),
+                icon_label_gap
+            )),
+            SystemIndicator::CpuTemperature => data.cpu_temperature.map(|temperature| {
+                indicator_info_element(
+                    icons,
+                    Icons::Temp,
+                    indicator_label(None, temperature, "°C"),
+                    Some(Thresholds::new(
+                        temperature,
+                        config.temperature.warn_threshold,
+                        config.temperature.alert_threshold
+                    )),
+                    icon_label_gap
+                )
+            }),
+            SystemIndicator::GpuTemperature => data.gpu.as_ref().and_then(|gpu| {
+                gpu.temperature.map(|temperature| {
+                    indicator_info_element(
+                        icons,
+                        Icons::Gpu,
+                        indicator_label(gpu.tag(), temperature, "°C"),
+                        Some(Thresholds::new(
+                            temperature,
+                            config.gpu.warn_threshold,
+                            config.gpu.alert_threshold
+                        )),
+                        icon_label_gap
+                    )
+                })
+            }),
+            SystemIndicator::GpuUsage => data.gpu.as_ref().and_then(|gpu| {
+                gpu.utilisation.map(|usage| {
+                    indicator_info_element(
+                        icons,
+                        Icons::Accelerator,
+                        indicator_label(gpu.tag(), usage, "%"),
+                        Some(Thresholds::new(
+                            usage,
+                            config.gpu.usage_warn_threshold,
+                            config.gpu.usage_alert_threshold
+                        )),
+                        icon_label_gap
+                    )
+                })
+            }),
+            SystemIndicator::Disk(mount) => data.disks.iter().find_map(|disk| {
+                if disk.mount == mount.as_str() {
+                    Some(indicator_info_element(
+                        icons,
+                        Icons::Drive,
+                        indicator_label(Some(disk.mount.as_str()), disk.usage_percent, "%"),
+                        Some(Thresholds::new(
+                            disk.usage_percent,
+                            config.disk.warn_threshold,
+                            config.disk.alert_threshold
+                        )),
+                        icon_label_gap
                     ))
-                    .size(scale::scaled(12.0))
+                } else {
+                    None
+                }
+            }),
+            SystemIndicator::IpAddress => data.network.as_ref().map(|network| {
+                let ip = network.ip.clone();
+                container(row!(icon(icons, Icons::IpAddress), text(ip)).spacing(icon_label_gap))
                     .into()
+            }),
+            SystemIndicator::DownloadSpeed => data.network.as_ref().map(|network| {
+                indicator_info_element::<u32>(
+                    icons,
+                    Icons::DownloadSpeed,
+                    format_speed(network.download_speed),
+                    None,
+                    icon_label_gap
+                )
+            }),
+            SystemIndicator::UploadSpeed => data.network.as_ref().map(|network| {
+                indicator_info_element::<u32>(
+                    icons,
+                    Icons::UploadSpeed,
+                    format_speed(network.upload_speed),
+                    None,
+                    icon_label_gap
                 )
             })
-            .collect();
+        };
 
-        if missing.is_empty() {
-            return None;
-        }
-
-        Some(
-            Column::new()
-                .push(rule::horizontal(1))
-                .push(text("Not reported by this machine").size(scale::scaled(14.0)))
-                .extend(missing)
-                .spacing(scale::scaled(4.0))
-                .into()
-        )
-    }
-
-    /// Render the module menu displaying detailed system metrics.
-    pub fn build_menu_view<'a>(
-        data: &'a SystemInfoData,
-        config: &SystemModuleConfig,
-        icons: &IconTheme
-    ) -> Element<'a, Message> {
-        column![
-            text("System Info").size(scale::scaled(20.0)),
-            rule::horizontal(1),
-            Column::new()
-                .width(Length::Fill)
-                .push(info_element(
-                    icons,
-                    Icons::Cpu,
-                    "CPU Usage",
-                    format!("{}%", data.cpu_usage)
-                ))
-                .push(info_element(
-                    icons,
-                    Icons::Mem,
-                    "Memory Usage",
-                    format!("{}%", data.memory_usage)
-                ))
-                .push(info_element(
-                    icons,
-                    Icons::Mem,
-                    "Swap memory Usage",
-                    format!("{}%", data.memory_swap_usage),
-                ))
-                .push_maybe(data.cpu_temperature.map(|temp| {
-                    info_element(icons, Icons::Temp, "CPU Temperature", format!("{temp}°C"))
-                }))
-                .push_maybe(data.gpu.as_ref().map(|gpu| {
-                    let title = gpu_title(gpu);
-
-                    Column::new()
-                        .push(text(title).size(scale::scaled(12.0)))
-                        .extend(
-                            [
-                                gpu.temperature.map(|temperature| {
-                                    info_element(
-                                        icons,
-                                        Icons::Temp,
-                                        "GPU Temperature",
-                                        format!("{temperature}°C")
-                                    )
-                                }),
-                                gpu.utilisation.map(|usage| {
-                                    info_element(
-                                        icons,
-                                        Icons::Gpu,
-                                        "GPU Usage",
-                                        format!("{usage}%")
-                                    )
-                                }),
-                                gpu.memory_used.zip(gpu.memory_total).map(|(used, total)| {
-                                    info_element(
-                                        icons,
-                                        Icons::Mem,
-                                        "GPU Memory",
-                                        format!("{}GB / {}GB", gigabytes(used), gigabytes(total))
-                                    )
-                                })
-                            ]
-                            .into_iter()
-                            .flatten()
-                            .collect::<Vec<Element<_>>>()
-                        )
-                        .spacing(scale::scaled(4.0))
-                }))
-                .push(
-                    Column::with_children(
-                        data.disks
-                            .iter()
-                            .map(|(mount_point, usage)| {
-                                row!(
-                                    container(icon(icons, Icons::Drive).size(scale::scaled(22.0)))
-                                        .center_x(Length::Fixed(scale::scaled(32.0))),
-                                    text(format!("Disk Usage {mount_point}")).width(Length::Fill),
-                                    text(format!("{usage}%"))
-                                )
-                                .align_y(Alignment::Center)
-                                .spacing(scale::scaled(8.0))
-                                .into()
-                            })
-                            .collect::<Vec<Element<_>>>(),
-                    )
-                    .spacing(scale::scaled(4.0)),
-                )
-                .push_maybe(data.network.as_ref().map(|network| {
-                    let (download_value, download_unit) = format_speed(network.download_speed);
-                    let (upload_value, upload_unit) = format_speed(network.upload_speed);
-
-                    Column::with_children(vec![
-                        info_element(icons, Icons::IpAddress, "IP Address", network.ip.clone()),
-                        info_element(
-                            icons,
-                            Icons::DownloadSpeed,
-                            "Download Speed",
-                            format!("{download_value} {download_unit}")
-                        ),
-                        info_element(
-                            icons,
-                            Icons::UploadSpeed,
-                            "Upload Speed",
-                            format!("{upload_value} {upload_unit}")
-                        ),
-                    ])
-                }))
-                .push_maybe(missing_readouts(data, config))
-                .spacing(scale::scaled(4.0))
-                .padding([scale::scaled(0.0), scale::scaled(8.0)])
-        ]
-        .spacing(scale::scaled(8.0))
-        .into()
+        element.map(|element| element.map(M::from))
     }
 
     /// Build the indicator widgets representing the configured subset of
@@ -3832,142 +3978,11 @@ mod view {
     where
         M: 'static + From<Message>
     {
-        let icon_label_gap = appearance.icon_label_gap();
-
         indicators::resolve(config, &data)
             .iter()
-            .filter_map(|indicator| -> Option<Element<'static, Message>> {
-                match indicator {
-                    SystemIndicator::Cpu => Some(indicator_info_element(
-                        icons,
-                        Icons::Cpu,
-                        indicator_label(None, data.cpu_usage, "%"),
-                        Some(Thresholds::new(
-                            data.cpu_usage,
-                            config.cpu.warn_threshold,
-                            config.cpu.alert_threshold
-                        )),
-                        icon_label_gap
-                    )),
-                    SystemIndicator::Memory => Some(indicator_info_element(
-                        icons,
-                        Icons::Mem,
-                        memory_label(memory_format, None, data.memory_usage, data.memory_used),
-                        Some(Thresholds::new(
-                            data.memory_usage,
-                            config.memory.warn_threshold,
-                            config.memory.alert_threshold
-                        )),
-                        icon_label_gap
-                    )),
-                    SystemIndicator::MemorySwap => Some(indicator_info_element(
-                        icons,
-                        Icons::Mem,
-                        memory_label(
-                            memory_format,
-                            Some("swap"),
-                            data.memory_swap_usage,
-                            data.memory_swap_used
-                        ),
-                        Some(Thresholds::new(
-                            data.memory_swap_usage,
-                            config.memory.warn_threshold,
-                            config.memory.alert_threshold
-                        )),
-                        icon_label_gap
-                    )),
-                    SystemIndicator::CpuTemperature => data.cpu_temperature.map(|temperature| {
-                        indicator_info_element(
-                            icons,
-                            Icons::Temp,
-                            indicator_label(None, temperature, "°C"),
-                            Some(Thresholds::new(
-                                temperature,
-                                config.temperature.warn_threshold,
-                                config.temperature.alert_threshold
-                            )),
-                            icon_label_gap
-                        )
-                    }),
-                    SystemIndicator::GpuTemperature => data.gpu.as_ref().and_then(|gpu| {
-                        gpu.temperature.map(|temperature| {
-                            indicator_info_element(
-                                icons,
-                                Icons::Gpu,
-                                indicator_label(gpu.tag(), temperature, "°C"),
-                                Some(Thresholds::new(
-                                    temperature,
-                                    config.gpu.warn_threshold,
-                                    config.gpu.alert_threshold
-                                )),
-                                icon_label_gap
-                            )
-                        })
-                    }),
-                    SystemIndicator::GpuUsage => data.gpu.as_ref().and_then(|gpu| {
-                        gpu.utilisation.map(|usage| {
-                            indicator_info_element(
-                                icons,
-                                Icons::Accelerator,
-                                indicator_label(gpu.tag(), usage, "%"),
-                                Some(Thresholds::new(
-                                    usage,
-                                    config.gpu.usage_warn_threshold,
-                                    config.gpu.usage_alert_threshold
-                                )),
-                                icon_label_gap
-                            )
-                        })
-                    }),
-                    SystemIndicator::Disk(mount) => {
-                        data.disks.iter().find_map(|(disk_mount, disk)| {
-                            if disk_mount == mount.as_str() {
-                                Some(indicator_info_element(
-                                    icons,
-                                    Icons::Drive,
-                                    indicator_label(Some(disk_mount), *disk, "%"),
-                                    Some(Thresholds::new(
-                                        *disk,
-                                        config.disk.warn_threshold,
-                                        config.disk.alert_threshold
-                                    )),
-                                    icon_label_gap
-                                ))
-                            } else {
-                                None
-                            }
-                        })
-                    }
-                    SystemIndicator::IpAddress => data.network.as_ref().map(|network| {
-                        let ip = network.ip.clone();
-                        container(
-                            row!(icon(icons, Icons::IpAddress), text(ip)).spacing(icon_label_gap)
-                        )
-                        .into()
-                    }),
-                    SystemIndicator::DownloadSpeed => data.network.as_ref().map(|network| {
-                        let (value, unit) = format_speed(network.download_speed);
-                        indicator_info_element::<u32>(
-                            icons,
-                            Icons::DownloadSpeed,
-                            indicator_label(None, value, unit),
-                            None,
-                            icon_label_gap
-                        )
-                    }),
-                    SystemIndicator::UploadSpeed => data.network.as_ref().map(|network| {
-                        let (value, unit) = format_speed(network.upload_speed);
-                        indicator_info_element::<u32>(
-                            icons,
-                            Icons::UploadSpeed,
-                            indicator_label(None, value, unit),
-                            None,
-                            icon_label_gap
-                        )
-                    })
-                }
+            .filter_map(|indicator| {
+                single_indicator(indicator, &data, config, memory_format, appearance, icons)
             })
-            .map(|elem| elem.map(M::from))
             .collect()
     }
 
@@ -4012,11 +4027,18 @@ mod view {
                 cpu_usage:         25,
                 memory_usage:      50,
                 memory_used:       8 * 1024 * 1024 * 1024,
+                memory_total:      16 * 1024 * 1024 * 1024,
                 memory_swap_usage: 10,
                 memory_swap_used:  1024 * 1024 * 1024,
+                memory_swap_total: 10 * 1024 * 1024 * 1024,
                 cpu_temperature:   Some(42),
                 gpu:               None,
-                disks:             vec![("/".to_string(), 60)],
+                disks:             vec![crate::modules::system_info::DiskData {
+                    mount:         "/".to_string(),
+                    used:          60 * 1024 * 1024 * 1024,
+                    total:         100 * 1024 * 1024 * 1024,
+                    usage_percent: 60
+                }],
                 network:           None
             }
         }
@@ -4065,8 +4087,14 @@ mod view {
 
         #[test]
         fn format_speed_converts_large_values_to_megabytes() {
-            let (value, unit) = format_speed(2048);
-            assert_eq!((value, unit), (2, "MB/s"));
+            assert_eq!(format_speed(2048), "2.0 MB/s");
+        }
+
+        #[test]
+        fn format_speed_keeps_the_fraction_a_truncation_used_to_drop() {
+            assert_eq!(format_speed(1999), "2.0 MB/s");
+            assert_eq!(format_speed(1500), "1.5 MB/s");
+            assert_eq!(format_speed(999), "999 KB/s");
         }
 
         #[test]
@@ -4089,7 +4117,7 @@ mod view {
                     data.memory_usage,
                     data.memory_used
                 ),
-                "8.0GB"
+                "8.0GiB"
             );
         }
 
@@ -4106,7 +4134,7 @@ mod view {
             );
             assert_eq!(
                 memory_label(MemoryFormat::Bytes, Some("swap"), 10, 1024 * 1024 * 1024),
-                "swap 1.0GB"
+                "swap 1.0GiB"
             );
         }
 
@@ -4115,20 +4143,757 @@ mod view {
             assert_eq!(gigabytes(0), "0.0");
             assert_eq!(gigabytes(1024 * 1024 * 1024 * 3 / 2), "1.5");
         }
+
+        #[test]
+        fn a_pool_reads_as_used_against_total() {
+            assert_eq!(
+                used_of_total(8 * 1024 * 1024 * 1024, 16 * 1024 * 1024 * 1024),
+                "8.0 / 16.0 GiB"
+            );
+        }
+    }
+}
+mod window {
+    //! The system monitor window: what it says, how much room it needs, and
+    //! how it is drawn.
+    //!
+    //! Three rooms after the calendar's pattern: [`model`] states every
+    //! section and row out of one sample, [`metrics`] measures the room that
+    //! statement needs from the same constants the drawing uses, and
+    //! [`render`] draws it. The window is measured rather than stock-sized,
+    //! so the box hugs the readouts this machine actually reports.
+
+    pub(super) mod model {
+        //! Every readout of the window, stated as data before it is drawn.
+        //!
+        //! The statement is pure: the height measurement and the drawing both
+        //! walk this list, so the two cannot disagree about what is shown.
+
+        use hydebar_proto::config::SystemModuleConfig;
+
+        use super::super::{
+            data::SystemInfoData,
+            indicators,
+            view::{format_speed, gpu_title, used_of_total}
+        };
+        use crate::components::icons::Icons;
+
+        /// Fill of a usage meter, judged against the shares people read as
+        /// trouble.
+        #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+        pub enum MeterLevel {
+            Calm,
+            Busy,
+            Critical
+        }
+
+        /// Level a meter filled to `percent` draws in.
+        ///
+        /// The buckets are fixed rather than configurable: the window is a
+        /// diagnostic surface, and four fifths full is where a pool starts
+        /// being worth a look whatever thresholds the bar indicators carry.
+        #[must_use]
+        pub fn meter_level(percent: u32) -> MeterLevel {
+            if percent >= 95 {
+                MeterLevel::Critical
+            } else if percent >= 80 {
+                MeterLevel::Busy
+            } else {
+                MeterLevel::Calm
+            }
+        }
+
+        /// Share of `total` behind `used`, in percent.
+        #[must_use]
+        pub fn share(used: u64, total: u64) -> u32 {
+            if total == 0 {
+                return 0;
+            }
+
+            ((used as f64 / total as f64) * 100.0) as u32
+        }
+
+        /// One line of the window.
+        #[derive(Debug, Clone, PartialEq, Eq)]
+        pub enum Row {
+            /// A named value.
+            Fact { label: String, value: String },
+            /// A named value with a usage meter drawn under it.
+            Meter {
+                label:   String,
+                value:   String,
+                percent: u32
+            }
+        }
+
+        /// A titled group of rows.
+        #[derive(Debug, Clone, PartialEq, Eq)]
+        pub struct Section {
+            pub icon:  Icons,
+            pub title: &'static str,
+            /// Line naming the exact source of the readings, when one
+            /// matters.
+            pub note:  Option<String>,
+            pub rows:  Vec<Row>
+        }
+
+        fn fact(label: &str, value: String) -> Row {
+            Row::Fact {
+                label: label.to_owned(),
+                value
+            }
+        }
+
+        fn meter(label: &str, value: String, percent: u32) -> Row {
+            Row::Meter {
+                label: label.to_owned(),
+                value,
+                percent
+            }
+        }
+
+        /// A pool spelled out with the share the meter next to it draws.
+        fn pool(used: u64, total: u64, percent: u32) -> String {
+            format!("{} ({percent}%)", used_of_total(used, total))
+        }
+
+        /// Everything the window says about the machine, in drawing order.
+        ///
+        /// A section the machine cannot fill is left out whole rather than
+        /// drawn empty; what is missing and why is stated by
+        /// [`footnotes`] instead.
+        #[must_use]
+        pub fn sections(data: &SystemInfoData) -> Vec<Section> {
+            let mut sections = Vec::new();
+
+            let mut processor = vec![meter(
+                "Load",
+                format!("{}%", data.cpu_usage),
+                data.cpu_usage
+            )];
+
+            if let Some(temperature) = data.cpu_temperature {
+                processor.push(fact("Temperature", format!("{temperature}°C")));
+            }
+
+            sections.push(Section {
+                icon:  Icons::Cpu,
+                title: "Processor",
+                note:  None,
+                rows:  processor
+            });
+
+            let mut memory = vec![meter(
+                "In use",
+                pool(data.memory_used, data.memory_total, data.memory_usage),
+                data.memory_usage
+            )];
+
+            if data.memory_swap_total > 0 {
+                memory.push(meter(
+                    "Swap",
+                    pool(
+                        data.memory_swap_used,
+                        data.memory_swap_total,
+                        data.memory_swap_usage
+                    ),
+                    data.memory_swap_usage
+                ));
+            }
+
+            sections.push(Section {
+                icon:  Icons::Mem,
+                title: "Memory",
+                note:  None,
+                rows:  memory
+            });
+
+            if let Some(gpu) = data.gpu.as_ref() {
+                let mut rows = Vec::new();
+
+                if let Some(temperature) = gpu.temperature {
+                    rows.push(fact("Temperature", format!("{temperature}°C")));
+                }
+
+                if let Some(usage) = gpu.utilisation {
+                    rows.push(meter("Load", format!("{usage}%"), usage));
+                }
+
+                if let Some((used, total)) = gpu.memory_used.zip(gpu.memory_total)
+                    && total > 0
+                {
+                    let percent = share(used, total);
+                    rows.push(meter("Memory", pool(used, total, percent), percent));
+                }
+
+                if !rows.is_empty() {
+                    sections.push(Section {
+                        icon: Icons::Gpu,
+                        title: "Graphics",
+                        note: Some(gpu_title(gpu)),
+                        rows
+                    });
+                }
+            }
+
+            if !data.disks.is_empty() {
+                sections.push(Section {
+                    icon:  Icons::Drive,
+                    title: "Storage",
+                    note:  None,
+                    rows:  data
+                        .disks
+                        .iter()
+                        .map(|disk| {
+                            meter(
+                                &disk.mount,
+                                pool(disk.used, disk.total, disk.usage_percent),
+                                disk.usage_percent
+                            )
+                        })
+                        .collect()
+                });
+            }
+
+            if let Some(network) = data.network.as_ref() {
+                sections.push(Section {
+                    icon:  Icons::Ethernet,
+                    title: "Network",
+                    note:  None,
+                    rows:  vec![
+                        fact("Address", network.ip.clone()),
+                        fact("Download", format_speed(network.download_speed)),
+                        fact("Upload", format_speed(network.upload_speed)),
+                    ]
+                });
+            }
+
+            sections
+        }
+
+        /// Readouts this machine cannot report, each named with its reason.
+        #[must_use]
+        pub fn footnotes(data: &SystemInfoData, config: &SystemModuleConfig) -> Vec<String> {
+            indicators::statuses(config, data)
+                .into_iter()
+                .filter_map(|status| {
+                    let reason = status.unavailable?.reason();
+
+                    Some(format!(
+                        "{} — {reason}",
+                        indicators::title(&status.indicator)
+                    ))
+                })
+                .collect()
+        }
+    }
+
+    pub(super) mod metrics {
+        //! Every size of the window, and the room the whole of it takes.
+        //!
+        //! The box is sized from these same constants the drawing uses, so a
+        //! size changed here moves the drawing and the measurement together.
+
+        use hydebar_proto::config::SystemModuleConfig;
+
+        use super::{
+            super::data::SystemInfoData,
+            model::{self, Row, Section}
+        };
+        use crate::components::scale;
+
+        /// Window title size, in pixels of the reference theme.
+        pub(super) const TITLE_SIZE: f32 = 18.0;
+
+        /// Section title size, in pixels of the reference theme.
+        pub(super) const SECTION_TITLE_SIZE: f32 = 12.0;
+
+        /// Reading label and value size, in pixels of the reference theme.
+        pub(super) const ROW_SIZE: f32 = 13.0;
+
+        /// Source note and footnote size, in pixels of the reference theme.
+        pub(super) const NOTE_SIZE: f32 = 11.0;
+
+        /// Height of a usage meter track, in pixels of the reference theme.
+        pub(super) const METER_HEIGHT: f32 = 5.0;
+
+        /// Gap between a reading and the meter under it.
+        pub(super) const METER_GAP: f32 = 4.0;
+
+        /// Gap between two rows of one section.
+        pub(super) const ROW_GAP: f32 = 6.0;
+
+        /// Gap between the title, the sections and the footnotes.
+        pub(super) const SECTION_GAP: f32 = 10.0;
+
+        /// Gap between the footnote lines.
+        pub(super) const FOOT_GAP: f32 = 4.0;
+
+        /// Padding of the whole column, in pixels of the reference theme.
+        pub(super) const OUTER_PADDING: f32 = 4.0;
+
+        /// Width of the content column, in pixels of the reference theme.
+        pub(super) const WIDTH: f32 = 300.0;
+
+        /// Height one line of text at `size` occupies at the stock line
+        /// height.
+        fn line(size: f32) -> f32 {
+            scale::scaled(size) * 1.3
+        }
+
+        /// Width of the content column alone.
+        pub(super) fn column_width() -> f32 {
+            scale::scaled(WIDTH)
+        }
+
+        /// Width the menu box needs, box padding included.
+        pub fn content_width(font_size: f32) -> f32 {
+            scale::scaled(WIDTH + 2.0 * OUTER_PADDING)
+                + 2.0 * crate::menu::MENU_PADDING_EM * font_size
+        }
+
+        fn row_height(row: &Row) -> f32 {
+            match row {
+                Row::Fact {
+                    ..
+                } => line(ROW_SIZE),
+                Row::Meter {
+                    ..
+                } => line(ROW_SIZE) + scale::scaled(METER_GAP + METER_HEIGHT)
+            }
+        }
+
+        fn section_height(section: &Section) -> f32 {
+            let title = line(SECTION_TITLE_SIZE);
+            let note = section.note.as_ref().map_or(0.0, |_| line(NOTE_SIZE));
+            let rows: f32 = section.rows.iter().map(row_height).sum();
+            let inner_gaps = section.rows.len() + usize::from(section.note.is_some());
+            let gaps = scale::scaled(ROW_GAP) * inner_gaps as f32;
+
+            title + note + rows + gaps
+        }
+
+        fn footnotes_height(footnotes: &[String]) -> f32 {
+            if footnotes.is_empty() {
+                return 0.0;
+            }
+
+            let rule = 1.0;
+            let heading = line(SECTION_TITLE_SIZE);
+            let lines = footnotes.len() as f32 * line(NOTE_SIZE);
+            let gaps = scale::scaled(FOOT_GAP) * (footnotes.len() as f32 + 1.0);
+
+            rule + heading + lines + gaps
+        }
+
+        /// Height the menu content needs for the readouts it currently
+        /// shows.
+        pub fn content_height(data: &SystemInfoData, config: &SystemModuleConfig) -> f32 {
+            let sections = model::sections(data);
+            let footnotes = model::footnotes(data, config);
+
+            let title = line(TITLE_SIZE);
+            let rule = 1.0;
+            let body: f32 = sections.iter().map(section_height).sum();
+            let blocks = 2 + sections.len() + usize::from(!footnotes.is_empty());
+            let gaps = scale::scaled(SECTION_GAP) * (blocks as f32 - 1.0);
+            let padding = scale::scaled(2.0 * OUTER_PADDING);
+
+            title + rule + body + footnotes_height(&footnotes) + gaps + padding
+        }
+    }
+
+    mod render {
+        //! Drawing of the window: sections, aligned value columns and themed
+        //! usage meters.
+
+        use iced::{
+            Alignment, Border, Color, Element, Length, Theme,
+            widget::{Column, Row as BarRow, Space, column, container, row, rule}
+        };
+
+        use super::{
+            super::{Message, data::SystemInfoData},
+            metrics::{
+                self, FOOT_GAP, METER_GAP, METER_HEIGHT, NOTE_SIZE, OUTER_PADDING, ROW_GAP,
+                ROW_SIZE, SECTION_GAP, SECTION_TITLE_SIZE, TITLE_SIZE
+            },
+            model::{self, MeterLevel, Row, Section}
+        };
+        use crate::{
+            components::{
+                icons::{IconTheme, icon},
+                scale,
+                text::text
+            },
+            config::SystemModuleConfig
+        };
+
+        /// Render the module menu displaying detailed system metrics.
+        pub fn build_menu_view<'a>(
+            data: &'a SystemInfoData,
+            config: &SystemModuleConfig,
+            icons: &IconTheme
+        ) -> Element<'a, Message> {
+            let sections = model::sections(data);
+            let footnotes = model::footnotes(data, config);
+
+            let mut content = Column::new()
+                .push(text("System monitor").size(scale::scaled(TITLE_SIZE)))
+                .push(rule::horizontal(1));
+
+            for section in sections {
+                content = content.push(section_view(section, icons));
+            }
+
+            if !footnotes.is_empty() {
+                content = content.push(footnotes_view(footnotes));
+            }
+
+            content
+                .spacing(scale::scaled(SECTION_GAP))
+                .padding(scale::scaled(OUTER_PADDING))
+                .width(Length::Fixed(metrics::column_width()))
+                .into()
+        }
+
+        fn section_view<'a>(section: Section, icons: &IconTheme) -> Element<'a, Message> {
+            let header = container(
+                row![
+                    icon(icons, section.icon).size(scale::scaled(SECTION_TITLE_SIZE)),
+                    text(section.title).size(scale::scaled(SECTION_TITLE_SIZE))
+                ]
+                .align_y(Alignment::Center)
+                .spacing(scale::icon_gap())
+            )
+            .style(secondary_text);
+
+            let mut body = Column::new().push(header);
+
+            if let Some(note) = section.note {
+                body = body.push(
+                    container(text(note).size(scale::scaled(NOTE_SIZE))).style(secondary_text)
+                );
+            }
+
+            for entry in section.rows {
+                body = body.push(row_view(entry));
+            }
+
+            body.spacing(scale::scaled(ROW_GAP)).into()
+        }
+
+        fn row_view<'a>(entry: Row) -> Element<'a, Message> {
+            match entry {
+                Row::Fact {
+                    label,
+                    value
+                } => fact_view(label, value),
+                Row::Meter {
+                    label,
+                    value,
+                    percent
+                } => column![fact_view(label, value), meter_view(percent)]
+                    .spacing(scale::scaled(METER_GAP))
+                    .into()
+            }
+        }
+
+        /// A label on the left, its value on the right edge of the column.
+        fn fact_view<'a>(label: String, value: String) -> Element<'a, Message> {
+            row![
+                container(text(label).size(scale::scaled(ROW_SIZE)))
+                    .style(secondary_text)
+                    .width(Length::Fill),
+                text(value).size(scale::scaled(ROW_SIZE))
+            ]
+            .align_y(Alignment::Center)
+            .into()
+        }
+
+        /// A usage meter: the filled share over a weak track, coloured by how
+        /// full the pool is.
+        fn meter_view<'a>(percent: u32) -> Element<'a, Message> {
+            let percent = percent.min(100);
+            let radius = scale::scaled(METER_HEIGHT / 2.0);
+
+            let mut bar = BarRow::new();
+
+            if percent > 0 {
+                bar = bar.push(
+                    container(Space::new().width(Length::Fill).height(Length::Fill))
+                        .width(Length::FillPortion(percent as u16))
+                        .height(Length::Fill)
+                        .style(move |theme: &Theme| fill_style(theme, percent, radius))
+                );
+            }
+
+            if percent < 100 {
+                bar = bar.push(Space::new().width(Length::FillPortion((100 - percent) as u16)));
+            }
+
+            container(bar)
+                .width(Length::Fill)
+                .height(Length::Fixed(scale::scaled(METER_HEIGHT)))
+                .style(move |theme: &Theme| track_style(theme, radius))
+                .into()
+        }
+
+        fn footnotes_view<'a>(footnotes: Vec<String>) -> Element<'a, Message> {
+            let mut body = Column::new().push(rule::horizontal(1)).push(
+                container(
+                    text("Not reported on this machine").size(scale::scaled(SECTION_TITLE_SIZE))
+                )
+                .style(secondary_text)
+            );
+
+            for entry in footnotes {
+                body = body.push(
+                    container(text(entry).size(scale::scaled(NOTE_SIZE))).style(secondary_text)
+                );
+            }
+
+            body.spacing(scale::scaled(FOOT_GAP)).into()
+        }
+
+        fn fill_style(theme: &Theme, percent: u32, radius: f32) -> container::Style {
+            let colour = match model::meter_level(percent) {
+                MeterLevel::Calm => theme.palette().primary,
+                MeterLevel::Busy => theme.palette().warning,
+                MeterLevel::Critical => theme.palette().danger
+            };
+
+            rounded(colour.into(), radius)
+        }
+
+        fn track_style(theme: &Theme, radius: f32) -> container::Style {
+            rounded(
+                theme.extended_palette().background.weak.color.into(),
+                radius
+            )
+        }
+
+        fn rounded(background: iced::Background, radius: f32) -> container::Style {
+            container::Style {
+                background: Some(background),
+                border: Border {
+                    width:  0.0,
+                    radius: radius.into(),
+                    color:  Color::TRANSPARENT
+                },
+                ..container::Style::default()
+            }
+        }
+
+        /// Secondary text in the muted shade the theme provides.
+        fn secondary_text(theme: &Theme) -> container::Style {
+            container::Style {
+                text_color: Some(theme.extended_palette().background.weak.text),
+                ..container::Style::default()
+            }
+        }
+    }
+
+    pub use metrics::{content_height, content_width};
+    pub use render::build_menu_view;
+
+    #[cfg(test)]
+    mod tests {
+        use hydebar_proto::config::{SystemIndicator, SystemModuleConfig};
+
+        use super::{
+            metrics,
+            model::{self, MeterLevel, Row}
+        };
+        use crate::modules::system_info::{
+            DiskData, SystemInfoData,
+            sensors::{GpuPlacement, GpuReadings, GpuVendor}
+        };
+
+        const GIB: u64 = 1024 * 1024 * 1024;
+
+        fn machine() -> SystemInfoData {
+            SystemInfoData {
+                cpu_usage:         34,
+                memory_usage:      15,
+                memory_used:       9 * GIB,
+                memory_total:      62 * GIB,
+                memory_swap_usage: 6,
+                memory_swap_used:  GIB / 2,
+                memory_swap_total: 8 * GIB,
+                cpu_temperature:   Some(56),
+                gpu:               Some(GpuReadings {
+                    name:         "amdgpu".to_owned(),
+                    source:       Some("amdgpu junction".to_owned()),
+                    vendor:       GpuVendor::Amd,
+                    placement:    GpuPlacement::Discrete,
+                    temperature:  Some(47),
+                    utilisation:  Some(11),
+                    memory_used:  Some(GIB),
+                    memory_total: Some(8 * GIB)
+                }),
+                disks:             vec![DiskData {
+                    mount:         "/".to_owned(),
+                    used:          213 * GIB,
+                    total:         476 * GIB,
+                    usage_percent: 44
+                }],
+                network:           Some(crate::modules::system_info::NetworkData::new(
+                    "192.168.1.5".to_owned(),
+                    1500,
+                    120,
+                    std::time::Instant::now()
+                ))
+            }
+        }
+
+        fn titles(data: &SystemInfoData) -> Vec<&'static str> {
+            model::sections(data)
+                .into_iter()
+                .map(|section| section.title)
+                .collect()
+        }
+
+        #[test]
+        fn meters_change_colour_at_the_stated_shares() {
+            assert_eq!(model::meter_level(0), MeterLevel::Calm);
+            assert_eq!(model::meter_level(79), MeterLevel::Calm);
+            assert_eq!(model::meter_level(80), MeterLevel::Busy);
+            assert_eq!(model::meter_level(94), MeterLevel::Busy);
+            assert_eq!(model::meter_level(95), MeterLevel::Critical);
+            assert_eq!(model::meter_level(100), MeterLevel::Critical);
+        }
+
+        #[test]
+        fn a_share_is_a_percentage_and_an_empty_pool_has_none() {
+            assert_eq!(model::share(GIB, 8 * GIB), 12);
+            assert_eq!(model::share(0, 8 * GIB), 0);
+            assert_eq!(model::share(GIB, 0), 0);
+        }
+
+        #[test]
+        fn a_full_machine_states_every_section_in_order() {
+            assert_eq!(
+                titles(&machine()),
+                vec!["Processor", "Memory", "Graphics", "Storage", "Network"]
+            );
+        }
+
+        #[test]
+        fn a_machine_without_swap_shows_no_swap_row() {
+            let mut data = machine();
+            data.memory_swap_total = 0;
+
+            let sections = model::sections(&data);
+            let memory = sections
+                .iter()
+                .find(|section| section.title == "Memory")
+                .expect("memory section");
+
+            assert_eq!(memory.rows.len(), 1);
+        }
+
+        #[test]
+        fn swap_reads_as_a_pool_when_the_machine_has_one() {
+            let sections = model::sections(&machine());
+            let memory = sections
+                .iter()
+                .find(|section| section.title == "Memory")
+                .expect("memory section");
+
+            assert!(matches!(
+                &memory.rows[1],
+                Row::Meter { label, value, percent: 6 }
+                    if label == "Swap" && value == "0.5 / 8.0 GiB (6%)"
+            ));
+        }
+
+        #[test]
+        fn the_graphics_section_names_its_source() {
+            let sections = model::sections(&machine());
+            let graphics = sections
+                .iter()
+                .find(|section| section.title == "Graphics")
+                .expect("graphics section");
+
+            assert_eq!(graphics.note.as_deref(), Some("Graphics (amdgpu junction)"));
+            assert_eq!(graphics.rows.len(), 3);
+        }
+
+        #[test]
+        fn transfer_rates_read_in_the_window_as_on_the_bar() {
+            let sections = model::sections(&machine());
+            let network = sections
+                .iter()
+                .find(|section| section.title == "Network")
+                .expect("network section");
+
+            assert!(matches!(
+                &network.rows[1],
+                Row::Fact { label, value } if label == "Download" && value == "1.5 MB/s"
+            ));
+        }
+
+        #[test]
+        fn a_machine_reporting_nothing_still_states_load_and_memory() {
+            assert_eq!(
+                titles(&SystemInfoData::default()),
+                vec!["Processor", "Memory"]
+            );
+        }
+
+        #[test]
+        fn footnotes_name_what_the_machine_cannot_report() {
+            let footnotes =
+                model::footnotes(&SystemInfoData::default(), &SystemModuleConfig::default());
+
+            assert!(
+                footnotes
+                    .iter()
+                    .any(|line| line.starts_with("CPU temperature"))
+            );
+            assert!(footnotes.iter().any(|line| line.starts_with("Swap usage")));
+        }
+
+        #[test]
+        fn a_listed_disk_that_is_not_mounted_is_a_footnote() {
+            let config = SystemModuleConfig {
+                indicators: vec![SystemIndicator::Disk("/data".to_owned())],
+                ..SystemModuleConfig::default()
+            };
+
+            let footnotes = model::footnotes(&machine(), &config);
+
+            assert!(footnotes.iter().any(|line| line.starts_with("Disk /data")));
+        }
+
+        #[test]
+        fn the_window_grows_with_what_it_shows() {
+            let config = SystemModuleConfig::default();
+            let bare = metrics::content_height(&SystemInfoData::default(), &config);
+            let full = metrics::content_height(&machine(), &config);
+
+            assert!(full > bare);
+            assert!(bare > 0.0);
+            assert!(metrics::content_width(10.0) > 0.0);
+        }
     }
 }
 
-pub use data::{NetworkData, SystemInfoData, SystemInfoSampler};
+pub use data::{DiskData, NetworkData, SystemInfoData, SystemInfoSampler};
 use hydebar_proto::config::{Appearance, MemoryFormat, SystemModuleConfig};
 use iced::Element;
 pub use indicators::{IndicatorStatus, Unavailable};
 pub use runtime::REFRESH_INTERVAL;
 pub use sensors::{GpuPlacement, GpuReadings, GpuVendor, HardwareSensors};
-pub use view::{build_indicator_view, build_menu_view, indicator_elements};
+pub(crate) use view::used_of_total;
+pub use view::{build_indicator_view, indicator_elements, single_indicator};
+pub use window::build_menu_view;
 
 use super::{Module, ModuleError, OnModulePress};
 use crate::{
-    ModuleContext, components::icons::IconTheme, event_bus::ModuleEvent, format_cycle::FormatCycle
+    ModuleContext, attention::PollSchedule, components::icons::IconTheme, event_bus::ModuleEvent,
+    format_cycle::FormatCycle
 };
 
 /// Messages published by the system information module.
@@ -4177,13 +4942,32 @@ impl SystemInfo {
             .resolve(&config.memory.format, &config.memory.format_alt)
     }
 
+    /// Latest sample, for the thin bar entries and the hover hints that
+    /// render from it.
+    pub fn data(&self) -> &SystemInfoData {
+        &self.data
+    }
+
+    /// Width the monitor window asks the screen for.
+    ///
+    /// Stated by the module so the box hugs its value columns; a stock menu
+    /// width left a blank margin beside readouts that cannot grow into it.
+    pub fn content_width(font_size: f32) -> f32 {
+        window::content_width(font_size)
+    }
+
+    /// Height the window needs for the readouts this machine reports.
+    pub fn content_height(&self, config: &SystemModuleConfig) -> f32 {
+        window::content_height(&self.data, config)
+    }
+
     /// Render the menu entry exposing detailed system information.
     pub fn menu_view(
         &self,
         config: &SystemModuleConfig,
         icons: &IconTheme
     ) -> Element<'_, Message> {
-        view::build_menu_view(&self.data, config, icons)
+        window::build_menu_view(&self.data, config, icons)
     }
 }
 
@@ -4212,6 +4996,22 @@ where
     /// dropped the module must not keep paying for it every few seconds.
     fn deregister(&mut self) {
         self.polling.abort();
+    }
+
+    /// Refreshes faster only while somebody is looking.
+    ///
+    /// The module's own task keeps the bar current on the resting cadence;
+    /// the attended cadence exists for the window and the hover hints, whose
+    /// readouts would otherwise be up to a whole interval old the moment
+    /// they open.
+    fn poll_schedule(&self) -> Option<PollSchedule> {
+        Some(PollSchedule::only_when_attended(runtime::ATTENDED_INTERVAL))
+    }
+
+    fn poll(&mut self, _: &ModuleContext) -> Result<(), ModuleError> {
+        self.polling.poke();
+
+        Ok(())
     }
 
     fn view(

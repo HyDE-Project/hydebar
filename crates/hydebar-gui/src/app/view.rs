@@ -227,8 +227,12 @@ impl App {
                 self.system_info
                     .menu_view(&self.config.system, self.icons())
                     .map(Message::SystemInfo),
-                MenuSize::Medium,
-                None
+                MenuSize::Content(
+                    hydebar_core::modules::system_info::SystemInfo::content_width(
+                        self.appearance().font_size_px()
+                    )
+                ),
+                Some(self.system_info.content_height(&self.config.system))
             )),
             MenuType::Notifications => Some((
                 self.notifications

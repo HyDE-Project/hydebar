@@ -54,6 +54,14 @@ const CONTROL_CENTER_CONSUMERS: [ModuleName; 7] = [
     ModuleName::Battery
 ];
 
+/// Bar entries the system monitor's sampler feeds.
+///
+/// The standalone processor and memory readouts render from the same sample
+/// as the combined monitor, so the sampler has to run while any of the three
+/// is on screen.
+const SYSTEM_INFO_CONSUMERS: [ModuleName; 3] =
+    [ModuleName::SystemInfo, ModuleName::Cpu, ModuleName::Memory];
+
 impl App {
     /// Registers the background work of every module the layout draws, and
     /// releases it for every module it does not.
@@ -130,7 +138,7 @@ impl App {
         );
         gate(
             "system-info",
-            hosts(ModuleName::SystemInfo),
+            layout.hosts_any(&SYSTEM_INFO_CONSUMERS),
             &mut self.system_info,
             ctx,
             &self.config.system
@@ -238,7 +246,7 @@ impl App {
     fn place_pollable_modules(&mut self) {
         let placed: Vec<ModuleName> = self.config.modules.placed().cloned().collect();
 
-        let schedules: Vec<_> = placed
+        let mut schedules: Vec<_> = placed
             .iter()
             .filter_map(|name| {
                 self.module_poll_schedule(name)
@@ -246,15 +254,35 @@ impl App {
             })
             .collect();
 
+        if self.monitor_window_needs_its_own_roster_entry(&placed)
+            && let Some(schedule) = self.module_poll_schedule(&ModuleName::SystemInfo)
+        {
+            schedules.push((ModuleName::SystemInfo, schedule));
+        }
+
+        let roster: Vec<ModuleName> = schedules.iter().map(|(name, _)| name.clone()).collect();
+
         self.attention.place(schedules);
 
         if self
             .attention
             .focus()
-            .is_some_and(|focus| !placed.contains(focus))
+            .is_some_and(|focus| !placed.contains(focus) && !roster.contains(focus))
         {
             self.attention.look_at(None);
         }
+    }
+
+    /// Reports whether the monitor window can open while the monitor itself
+    /// is not placed.
+    ///
+    /// The standalone processor and memory entries open the monitor's window,
+    /// and an open menu attends its owner rather than the entry it was opened
+    /// from. Without the owner on the roster the fast clock would stand still
+    /// for exactly the window it exists to keep fresh.
+    fn monitor_window_needs_its_own_roster_entry(&self, placed: &[ModuleName]) -> bool {
+        !placed.contains(&ModuleName::SystemInfo)
+            && (placed.contains(&ModuleName::Cpu) || placed.contains(&ModuleName::Memory))
     }
 
     pub(super) fn update_custom_modules(&mut self, config: &Config, impact: &ConfigImpact) {

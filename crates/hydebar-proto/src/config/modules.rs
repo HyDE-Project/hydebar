@@ -41,6 +41,8 @@ pub enum ModuleName {
     Workspaces,
     WindowTitle,
     SystemInfo,
+    Cpu,
+    Memory,
     KeyboardLayout,
     KeyboardSubmap,
     Tray,
@@ -65,13 +67,15 @@ pub enum ModuleName {
 
 impl ModuleName {
     /// Every module the bar ships, in the order the editor lists them.
-    pub const BUILT_IN: [ModuleName; 25] = [
+    pub const BUILT_IN: [ModuleName; 27] = [
         ModuleName::AppLauncher,
         ModuleName::Updates,
         ModuleName::Clipboard,
         ModuleName::Workspaces,
         ModuleName::WindowTitle,
         ModuleName::SystemInfo,
+        ModuleName::Cpu,
+        ModuleName::Memory,
         ModuleName::KeyboardLayout,
         ModuleName::KeyboardSubmap,
         ModuleName::Tray,
@@ -103,6 +107,8 @@ impl ModuleName {
             ModuleName::Workspaces => "Workspaces",
             ModuleName::WindowTitle => "WindowTitle",
             ModuleName::SystemInfo => "SystemInfo",
+            ModuleName::Cpu => "Cpu",
+            ModuleName::Memory => "Memory",
             ModuleName::KeyboardLayout => "KeyboardLayout",
             ModuleName::KeyboardSubmap => "KeyboardSubmap",
             ModuleName::Tray => "Tray",
@@ -140,6 +146,8 @@ impl ModuleName {
             ModuleName::Workspaces => "Workspaces",
             ModuleName::WindowTitle => "Window title",
             ModuleName::SystemInfo => "System monitor",
+            ModuleName::Cpu => "Processor",
+            ModuleName::Memory => "Memory",
             ModuleName::KeyboardLayout => "Keyboard layout",
             ModuleName::KeyboardSubmap => "Keyboard submap",
             ModuleName::Tray => "Tray",
@@ -182,8 +190,11 @@ impl<'de> Deserialize<'de> for ModuleName {
             where
                 E: serde::de::Error
             {
-                if value == "hyde-menu" {
-                    return Ok(ModuleName::HydeMenu);
+                match value {
+                    "hyde-menu" => return Ok(ModuleName::HydeMenu),
+                    "cpu" => return Ok(ModuleName::Cpu),
+                    "memory" => return Ok(ModuleName::Memory),
+                    _ => {}
                 }
 
                 Ok(ModuleName::BUILT_IN
@@ -472,6 +483,25 @@ mod tests {
                     .expect("built-in name");
 
             assert_eq!(&name, module);
+        }
+    }
+
+    /// The layouts spell the processor and memory readouts in lower case, so
+    /// both spellings have to land on the standalone modules.
+    #[test]
+    fn the_processor_and_memory_entries_read_in_both_spellings() {
+        for spelling in ["cpu", "Cpu"] {
+            let name: ModuleName =
+                Deserialize::deserialize(StrDeserializer::<DeError>::new(spelling)).expect("name");
+
+            assert_eq!(name, ModuleName::Cpu);
+        }
+
+        for spelling in ["memory", "Memory"] {
+            let name: ModuleName =
+                Deserialize::deserialize(StrDeserializer::<DeError>::new(spelling)).expect("name");
+
+            assert_eq!(name, ModuleName::Memory);
         }
     }
 
