@@ -9,6 +9,8 @@ pub enum Icons {
     Refresh,
     Trash,
     Download,
+    ViewGrid,
+    ViewList,
     NoUpdatesAvailable,
     UpdatesAvailable,
     MenuClosed,
@@ -94,13 +96,15 @@ pub enum Icons {
 
 impl Icons {
     /// Every icon that can be overridden from the configuration.
-    pub const ALL: [Icons; 87] = [
+    pub const ALL: [Icons; 89] = [
         Icons::None,
         Icons::AppLauncher,
         Icons::Clipboard,
         Icons::Refresh,
         Icons::Trash,
         Icons::Download,
+        Icons::ViewGrid,
+        Icons::ViewList,
         Icons::NoUpdatesAvailable,
         Icons::UpdatesAvailable,
         Icons::MenuClosed,
@@ -194,6 +198,8 @@ impl Icons {
             Icons::Refresh => "refresh",
             Icons::Trash => "trash",
             Icons::Download => "download",
+            Icons::ViewGrid => "view_grid",
+            Icons::ViewList => "view_list",
             Icons::NoUpdatesAvailable => "no_updates_available",
             Icons::UpdatesAvailable => "updates_available",
             Icons::MenuClosed => "menu_closed",
@@ -294,6 +300,8 @@ impl Icons {
             Icons::Refresh => "󰑐",
             Icons::Trash => "󰆴",
             Icons::Download => "󰇚",
+            Icons::ViewGrid => "󰕰",
+            Icons::ViewList => "󰕳",
             Icons::NoUpdatesAvailable => "󰗠",
             Icons::UpdatesAvailable => "󰳛",
             Icons::MenuClosed => "",

@@ -203,7 +203,7 @@ pub(crate) fn chip<'a, M: Clone + 'a>(
 /// Carried whole rather than as a background alone: a background from one
 /// palette under a text colour from another is exactly the unreadable pairing
 /// the swatch exists to avoid.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) struct ChipPaint {
     /// Surface of the chip.
     pub(crate) background: iced::Color,
@@ -215,7 +215,9 @@ pub(crate) struct ChipPaint {
     ///
     /// One surface colour cannot tell two dark themes apart; the dots draw
     /// the palette itself, the way any theme picker worth its name does.
-    pub(crate) palette:    [iced::Color; 4]
+    /// However many the source honestly knows: four from a wallpaper
+    /// swatch, two from the catalogue's announcement.
+    pub(crate) palette:    Vec<iced::Color>
 }
 
 /// Diameter of one palette dot, in multiples of the control text size.
@@ -244,7 +246,7 @@ fn fade_share(theme: &Theme) -> f32 {
 }
 
 /// Renders the palette of a theme as a row of coloured dots.
-fn palette_dots<'a, M: 'a>(palette: [iced::Color; 4], control: f32) -> Element<'a, M> {
+fn palette_dots<'a, M: 'a>(palette: Vec<iced::Color>, control: f32) -> Element<'a, M> {
     let dot = DOT_EM * control;
     let mut row = Row::new()
         .spacing(DOT_GAP_EM * control)
@@ -326,12 +328,16 @@ pub(crate) fn theme_chip<'a, M: Clone + 'static>(
         .width(iced::Length::Fill)
         .align_x(iced::Alignment::Center);
 
-    let body: Element<'a, M> = match paint {
+    let paint_colors = paint
+        .as_ref()
+        .map(|paint| (paint.background, paint.text, paint.accent));
+
+    let body: Element<'a, M> = match &paint {
         Some(paint) => {
             let mut column = Column::new()
                 .spacing(DOT_GAP_EM * control)
                 .push(name)
-                .push(palette_dots(paint.palette, control));
+                .push(palette_dots(paint.palette.clone(), control));
 
             if let ThemeChip::Applying(spinner) = state {
                 column = column.push(busy_strip(spinner, control));
@@ -381,14 +387,14 @@ pub(crate) fn theme_chip<'a, M: Clone + 'static>(
     card.style(move |theme: &Theme| {
         let palette = theme.extended_palette();
 
-        let (base, text_colour, ring) = match paint {
-            Some(paint) => {
+        let (base, text_colour, ring) = match paint_colors {
+            Some((background, text, accent)) => {
                 let share = fade_share(theme);
 
                 (
-                    paint.background.scale_alpha(share),
-                    paint.text.scale_alpha(share),
-                    paint.accent.scale_alpha(share)
+                    background.scale_alpha(share),
+                    text.scale_alpha(share),
+                    accent.scale_alpha(share)
                 )
             }
             None => (
@@ -399,12 +405,12 @@ pub(crate) fn theme_chip<'a, M: Clone + 'static>(
         };
 
         let (background, text_color, ringed) = match state {
-            ThemeChip::Active => match paint {
+            ThemeChip::Active => match paint_colors {
                 Some(_) => (base, text_colour, true),
                 None => (palette.primary.base.color, palette.primary.base.text, false)
             },
             ThemeChip::Idle => (base, text_colour, false),
-            ThemeChip::Applying(spinner) => match paint {
+            ThemeChip::Applying(spinner) => match paint_colors {
                 Some(_) => (base.scale_alpha(spinner.pulse()), text_colour, true),
                 None => (
                     palette.primary.base.color.scale_alpha(spinner.pulse()),

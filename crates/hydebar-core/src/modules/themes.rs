@@ -510,6 +510,7 @@ mod view {
         installing: Option<&str>,
         condemned: Option<&str>,
         updating: Option<&Option<String>>,
+        list_layout: bool,
         spinner: Spinner,
         opacity: f32,
         font_size: f32,
@@ -527,6 +528,9 @@ mod view {
             font_size
         ));
 
+        let offered = offered_names(state, catalogue);
+        let cell = shared_cell(state, &offered, list_layout, font_size, available_width);
+
         let mut window = page(font_size).push(active).push(section(
             THEMES,
             themes(
@@ -540,12 +544,12 @@ mod view {
                 spinner,
                 opacity,
                 font_size,
-                available_width
+                available_width,
+                cell,
+                list_layout
             ),
             font_size
         ));
-
-        let offered = offered_names(state, catalogue);
 
         if !offered.is_empty() {
             window = window.push(section(
@@ -558,7 +562,9 @@ mod view {
                     spinner,
                     opacity,
                     font_size,
-                    available_width
+                    available_width,
+                    cell,
+                    list_layout
                 ),
                 font_size
             ));
@@ -587,6 +593,47 @@ mod view {
             })
             .map(|entry| entry.name.clone())
             .collect()
+    }
+
+    /// One card width for both sections, whatever the layout.
+    ///
+    /// The two grids used to size their cells from their own names and came
+    /// out unequal; sizing from every name at once is what makes an installed
+    /// card and an available one the same card.
+    fn shared_cell(
+        state: &HydeState,
+        offered: &[String],
+        list_layout: bool,
+        font_size: f32,
+        available_width: f32
+    ) -> f32 {
+        if list_layout {
+            return available_width;
+        }
+
+        let mut names = state.themes.clone();
+        names.extend(offered.iter().cloned());
+
+        chip_cell_width(&names, font_size)
+    }
+
+    /// Rows of card indices for the layout in force.
+    fn card_rows(
+        names: &[String],
+        list_layout: bool,
+        font_size: f32,
+        available_width: f32
+    ) -> Vec<Vec<usize>> {
+        if list_layout {
+            (0..names.len()).map(|index| vec![index]).collect()
+        } else {
+            wrap_chips_into_rows(
+                names,
+                available_width,
+                font_size,
+                style::group_gap(font_size)
+            )
+        }
     }
 
     /// Whether two spellings name one theme.
@@ -619,15 +666,15 @@ mod view {
         spinner: Spinner,
         opacity: f32,
         font_size: f32,
-        available_width: f32
+        available_width: f32,
+        cell: f32,
+        list_layout: bool
     ) -> Element<'a, Message> {
         let names = offered_names(state, catalogue);
-        let gap = style::group_gap(font_size);
-        let cell = chip_cell_width(&names, font_size);
         let busy = switching.is_some() || installing.is_some();
         let mut block = grid(font_size);
 
-        for indices in wrap_chips_into_rows(&names, available_width, font_size, gap) {
+        for indices in card_rows(&names, list_layout, font_size, available_width) {
             let mut row = group(font_size);
 
             for index in indices {
@@ -683,7 +730,7 @@ mod view {
             background: surface,
             text:       ink,
             accent:     ink,
-            palette:    [surface, ink, surface, ink]
+            palette:    entry.colors.to_vec()
         }
     }
 
@@ -710,18 +757,19 @@ mod view {
         spinner: Spinner,
         opacity: f32,
         font_size: f32,
-        available_width: f32
+        available_width: f32,
+        cell: f32,
+        list_layout: bool
     ) -> Element<'a, Message> {
         if state.themes.is_empty() {
             return note(NO_THEMES, font_size);
         }
 
         let busy = switching.is_some() || installing.is_some() || updating.is_some();
-        let gap = style::group_gap(font_size);
-        let cell = chip_cell_width(&state.themes, font_size);
-        let mut block = grid(font_size).push(update_all_row(busy, font_size, opacity));
+        let mut block =
+            grid(font_size).push(update_all_row(busy, list_layout, font_size, opacity));
 
-        for indices in wrap_chips_into_rows(&state.themes, available_width, font_size, gap) {
+        for indices in card_rows(&state.themes, list_layout, font_size, available_width) {
             let mut row = group(font_size);
 
             for index in indices {
@@ -783,7 +831,12 @@ mod view {
     }
 
     /// The row offering the one fetch that updates every installed theme.
-    fn update_all_row<'a>(busy: bool, font_size: f32, opacity: f32) -> Element<'a, Message> {
+    fn update_all_row<'a>(
+        busy: bool,
+        list_layout: bool,
+        font_size: f32,
+        opacity: f32
+    ) -> Element<'a, Message> {
         use iced::widget::{Row, button};
 
         use crate::{
@@ -806,7 +859,23 @@ mod view {
             update = update.on_press(Message::Update(None));
         }
 
-        Row::new().push(update).into()
+        let layout_glyph = if list_layout {
+            Icons::ViewGrid.default_glyph()
+        } else {
+            Icons::ViewList.default_glyph()
+        };
+        let layout = button(icon_raw(layout_glyph.to_owned()))
+            .padding(control * 0.25)
+            .style(ghost_button_style(opacity))
+            .on_press(Message::ToggleLayout);
+
+        Row::new()
+            .push(update)
+            .push(iced::widget::Space::new().width(iced::Length::Fill))
+            .push(layout)
+            .align_y(iced::Alignment::Center)
+            .width(iced::Length::Fill)
+            .into()
     }
 
     /// Restates a theme's swatch in the colours the renderer paints with.
@@ -815,7 +884,7 @@ mod view {
             background: colour(swatch.background),
             text:       colour(swatch.text),
             accent:     colour(swatch.accent),
-            palette:    swatch.palette.map(colour)
+            palette:    swatch.palette.map(colour).to_vec()
         }
     }
 
@@ -866,6 +935,20 @@ mod view {
 
     /// Rows the theme grid fills when laid out `available_width` wide.
     fn theme_rows(state: &HydeState, font_size: f32, available_width: f32) -> f32 {
+        theme_rows_in(state, false, font_size, available_width)
+    }
+
+    /// Rows the installed grid fills in the layout in force.
+    fn theme_rows_in(
+        state: &HydeState,
+        list_layout: bool,
+        font_size: f32,
+        available_width: f32
+    ) -> f32 {
+        if list_layout {
+            return state.themes.len().max(1) as f32;
+        }
+
         if state.themes.is_empty() {
             return 1.0;
         }
@@ -952,18 +1035,19 @@ mod view {
     pub(super) fn desired_height(
         state: &HydeState,
         offered: &[String],
+        list_layout: bool,
         font_size: f32,
         available_width: f32
     ) -> f32 {
-        let gap = style::group_gap(font_size);
         let offered_rows = if offered.is_empty() {
             0.0
         } else {
-            wrap_chips_into_rows(offered, available_width, font_size, gap).len() as f32
+            card_rows(offered, list_layout, font_size, available_width).len() as f32
         };
         let offered_sections = if offered.is_empty() { 0.0 } else { 1.0 };
 
-        let chip_rows = theme_rows(state, font_size, available_width) + offered_rows;
+        let chip_rows =
+            theme_rows_in(state, list_layout, font_size, available_width) + offered_rows;
         let control = style::control_size(font_size);
         let actions = chip_rows * ACTIONS_ROW_EM * control + UPDATE_ALL_ROW_EM * control;
         let dots = chip_rows * widgets::DOT_ROW_EM * control + actions;
@@ -1122,7 +1206,8 @@ mod view {
             let width = desired_width(&few, None, 16.0);
 
             assert!(
-                desired_height(&many, &[], 16.0, width) > desired_height(&few, &[], 16.0, width)
+                desired_height(&many, &[], false, 16.0, width)
+                    > desired_height(&few, &[], false, 16.0, width)
             );
         }
 
@@ -1181,8 +1266,8 @@ mod view {
 
             assert_eq!(resting, switching);
             assert_eq!(
-                desired_height(&themes, &[], font_size, resting),
-                desired_height(&themes, &[], font_size, switching)
+                desired_height(&themes, &[], false, font_size, resting),
+                desired_height(&themes, &[], false, font_size, switching)
             );
         }
 
@@ -1208,7 +1293,7 @@ mod view {
             let chip_rows = theme_rows(&themes, font_size, 400.0);
 
             assert_eq!(
-                desired_height(&themes, &[], font_size, 400.0),
+                desired_height(&themes, &[], false, font_size, 400.0),
                 style::page_height(rows(&themes, font_size, 400.0), font_size)
                     + chip_rows * widgets::DOT_ROW_EM * control
                     + chip_rows * ACTIONS_ROW_EM * control
@@ -1300,6 +1385,8 @@ pub enum Message {
     },
     /// Fetch updates for one installed theme, or all of them.
     Update(Option<String>),
+    /// Flip the window between the grid and the single-column layout.
+    ToggleLayout,
     /// Report that an update fetch has ended.
     Updated {
         /// Why the fetch failed, when it did.
@@ -1361,29 +1448,31 @@ pub struct Themes {
     /// Kept here rather than read while rendering: the menu is redrawn on every
     /// frame of the open animation, and reading two files that often would put
     /// the filesystem in the draw path.
-    hyde:       HydeState,
+    hyde:        HydeState,
     /// The colours each theme announces itself with, by theme name.
     ///
     /// Loaded off the update path — see [`Themes::load_swatches`] — and kept
     /// so the menu can paint every chip in the colours of the theme it stands
     /// for. A theme without an entry is painted like any other control.
-    swatches:   HashMap<String, ThemeSwatch>,
+    swatches:    HashMap<String, ThemeSwatch>,
     /// Theme a switch is running for, while one is.
-    switching:  Option<String>,
+    switching:   Option<String>,
     /// The upstream catalogue, once the menu has loaded it.
-    catalogue:  Vec<gallery::GalleryTheme>,
+    catalogue:   Vec<gallery::GalleryTheme>,
     /// Theme an install is running for, while one is.
-    installing: Option<String>,
+    installing:  Option<String>,
     /// Theme whose removal waits for its confirming press, if one does.
-    condemned:  Option<String>,
+    condemned:   Option<String>,
     /// Theme an update is fetching, while one is; `None` name means all.
-    updating:   Option<Option<String>>,
+    updating:    Option<Option<String>>,
+    /// Whether the window lays cards out as one column instead of a grid.
+    list_layout: bool,
     /// Frame the indicator of a running switch is on.
     ///
     /// Advanced on a tick rather than derived from a clock read while drawing,
     /// so what the bar shows is a function of the state it holds and can be
     /// checked without one.
-    spinner:    Spinner
+    spinner:     Spinner
 }
 
 impl Themes {
@@ -1391,14 +1480,15 @@ impl Themes {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            hyde:       hyde_state::load(),
-            swatches:   HashMap::new(),
-            switching:  None,
-            catalogue:  Vec::new(),
-            installing: None,
-            condemned:  None,
-            updating:   None,
-            spinner:    Spinner::default()
+            hyde:        hyde_state::load(),
+            swatches:    HashMap::new(),
+            switching:   None,
+            catalogue:   Vec::new(),
+            installing:  None,
+            condemned:   None,
+            updating:    None,
+            list_layout: false,
+            spinner:     Spinner::default()
         }
     }
 
@@ -1488,6 +1578,7 @@ impl Themes {
             self.installing.as_deref(),
             self.condemned.as_deref(),
             self.updating.as_ref(),
+            self.list_layout,
             self.spinner,
             opacity,
             font_size,
@@ -1508,6 +1599,7 @@ impl Themes {
             height: view::desired_height(
                 &self.hyde,
                 &view::offered_names(&self.hyde, &self.catalogue),
+                self.list_layout,
                 font_size,
                 page_width
             )
@@ -1561,6 +1653,7 @@ impl Themes {
                 return self.auto_update();
             }
             Message::Update(scope) => return self.fetch_updates(scope),
+            Message::ToggleLayout => self.list_layout = !self.list_layout,
             Message::Updated {
                 failure
             } => {
