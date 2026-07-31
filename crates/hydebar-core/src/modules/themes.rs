@@ -404,6 +404,15 @@ mod gallery {
         }
 
         #[test]
+        fn one_theme_is_recognised_under_every_spelling() {
+            use crate::modules::themes::view::same_theme;
+
+            assert!(same_theme("Catppuccin Mocha", "Catppuccin-Mocha"));
+            assert!(same_theme("one_dark", "One Dark"));
+            assert!(!same_theme("Tokyo Night", "Nordic Blue"));
+        }
+
+        #[test]
         fn the_import_command_survives_a_quoted_name() {
             let command = import_command("O'Dark", "https://x/y");
 
@@ -541,15 +550,42 @@ mod view {
     }
 
     /// Names the gallery offers that are not installed yet.
+    ///
+    /// Matched through [`same_theme`], not equality: the catalogue spells
+    /// names with dashes where installed directories carry spaces, and a
+    /// literal comparison left every installed theme in the gallery, one
+    /// press away from downloading itself again.
     pub(super) fn offered_names(
         state: &HydeState,
         catalogue: &[super::gallery::GalleryTheme]
     ) -> Vec<String> {
         catalogue
             .iter()
-            .filter(|entry| !state.themes.contains(&entry.name))
+            .filter(|entry| {
+                !state
+                    .themes
+                    .iter()
+                    .any(|installed| same_theme(installed, &entry.name))
+            })
             .map(|entry| entry.name.clone())
             .collect()
+    }
+
+    /// Whether two spellings name one theme.
+    ///
+    /// Dashes and underscores stand in for spaces across the gallery, its
+    /// branches and the installed directories, and case drifts between them.
+    pub(super) fn same_theme(a: &str, b: &str) -> bool {
+        let canon = |name: &str| {
+            name.chars()
+                .map(|c| match c {
+                    '-' | '_' => ' ',
+                    other => other.to_ascii_lowercase()
+                })
+                .collect::<String>()
+        };
+
+        canon(a) == canon(b)
     }
 
     /// Renders the gallery as a grid of chips painted in announced colours.
