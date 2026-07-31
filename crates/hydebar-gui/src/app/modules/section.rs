@@ -5,7 +5,50 @@ use iced::{Alignment, Element, Length, Subscription, SurfaceId as Id, widget::ro
 
 use crate::app::state::{App, Message};
 
+/// Share of a theme change spent staggering the islands.
+///
+/// The rest is what each island spends on its own blend: high enough that the
+/// new palette visibly crosses the bar from its leading corner, low enough
+/// that no island ever sits still while its neighbours move.
+const SWEEP_SPREAD: f32 = 0.6;
+
 impl App {
+    /// Theme of the island standing at `position` while a theme change runs.
+    ///
+    /// `position` is zero at the corner the front starts from — the right end
+    /// of the bar — and one at the far end. [`None`] whenever the palette
+    /// rests, which is almost always, so the sweep costs nothing outside the
+    /// frames it actually travels.
+    fn sweep_theme(&self, position: f32) -> Option<iced::Theme> {
+        if !self.appearance_transition.is_animating() {
+            return None;
+        }
+
+        let local = hydebar_core::animation::sweep(
+            self.appearance_transition.progress(),
+            position,
+            SWEEP_SPREAD
+        );
+
+        Some(hydebar_core::style::hydebar_theme(
+            &self.appearance_transition.sample(local)
+        ))
+    }
+
+    /// Wraps an island in the palette of its place under the travelling front.
+    fn swept_island<'a>(
+        &self,
+        island: Element<'a, Message>,
+        position: f32
+    ) -> Element<'a, Message> {
+        match self.sweep_theme(position) {
+            Some(theme) => iced::widget::themer(Some(theme), island)
+                .text_color(|theme: &iced::Theme| theme.palette().text)
+                .into(),
+            None => island
+        }
+    }
+
     pub fn get_module_at_index(
         &self,
         index: usize,
@@ -42,22 +85,42 @@ impl App {
         None
     }
 
+    /// Islands the whole layout declares, counted the way the sweep places
+    /// them.
+    pub(super) fn island_count(&self) -> usize {
+        self.config.modules.left.len()
+            + self.config.modules.center.len()
+            + self.config.modules.right.len()
+    }
+
+    /// Builds one bar section, its islands numbered on from `island_offset`.
+    ///
+    /// The offset threads the bar-wide island position through to the theme
+    /// sweep, so a travelling palette crosses the sections as one front
+    /// instead of restarting in each.
     pub fn modules_section<'a>(
         &'a self,
         modules_def: &'a [ModuleDef],
         id: Id,
-        opacity: f32
+        opacity: f32,
+        island_offset: usize
     ) -> Element<'a, Message> {
         let mut row = row!()
             .height(Length::Shrink)
             .align_y(Alignment::Center)
             .spacing(self.appearance().island_gap());
 
-        for module_def in modules_def {
-            row = row.push_maybe(match module_def {
+        let total = self.island_count().max(1) as f32;
+
+        for (index, module_def) in modules_def.iter().enumerate() {
+            let island = match module_def {
                 ModuleDef::Single(module) => self.single_module_wrapper(module, id, opacity),
                 ModuleDef::Group(group) => self.group_module_wrapper(group, id, opacity)
-            });
+            };
+
+            let position = 1.0 - ((island_offset + index) as f32 + 0.5) / total;
+
+            row = row.push_maybe(island.map(|island| self.swept_island(island, position)));
         }
 
         row.into()

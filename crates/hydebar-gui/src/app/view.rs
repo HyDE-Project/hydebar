@@ -285,17 +285,23 @@ impl App {
     pub fn view(&self, id: Id) -> Element<'_, Message> {
         match self.outputs.has(id) {
             Some(HasOutput::Main) => {
-                let left =
-                    self.modules_section(&self.config.modules.left, id, self.appearance().opacity);
+                let left = self.modules_section(
+                    &self.config.modules.left,
+                    id,
+                    self.appearance().opacity,
+                    0
+                );
                 let center = self.modules_section(
                     &self.config.modules.center,
                     id,
-                    self.appearance().opacity
+                    self.appearance().opacity,
+                    self.config.modules.left.len()
                 );
                 let right = self.modules_section(
                     &self.config.modules.right,
                     id,
-                    self.appearance().opacity
+                    self.appearance().opacity,
+                    self.config.modules.left.len() + self.config.modules.center.len()
                 );
 
                 let bar_height = self.appearance().height.unwrap_or(HEIGHT as f32);

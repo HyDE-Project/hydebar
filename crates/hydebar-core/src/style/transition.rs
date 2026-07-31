@@ -64,6 +64,23 @@ impl AppearanceTransition {
         self.progress.is_animating()
     }
 
+    /// How far the blend has travelled, zero at the old appearance and one at
+    /// the new.
+    #[must_use]
+    pub fn progress(&self) -> f32 {
+        self.progress.value().clamp(0.0, 1.0)
+    }
+
+    /// The appearance a share `t` of the way through the running blend.
+    ///
+    /// What a travelling front is drawn from: every island samples the same
+    /// blend at its own share, so the new palette crosses the bar as a wave
+    /// instead of landing everywhere at once.
+    #[must_use]
+    pub fn sample(&self, t: f32) -> Appearance {
+        blend_appearance(&self.from, &self.to, t.clamp(0.0, 1.0))
+    }
+
     /// Blends towards `appearance`, or applies it immediately when `animated`
     /// is false.
     ///
