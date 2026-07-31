@@ -43,6 +43,8 @@ pub enum ModuleName {
     SystemInfo,
     Cpu,
     Memory,
+    CpuTemp,
+    GpuTemp,
     KeyboardLayout,
     KeyboardSubmap,
     Tray,
@@ -67,7 +69,7 @@ pub enum ModuleName {
 
 impl ModuleName {
     /// Every module the bar ships, in the order the editor lists them.
-    pub const BUILT_IN: [ModuleName; 27] = [
+    pub const BUILT_IN: [ModuleName; 29] = [
         ModuleName::AppLauncher,
         ModuleName::Updates,
         ModuleName::Clipboard,
@@ -76,6 +78,8 @@ impl ModuleName {
         ModuleName::SystemInfo,
         ModuleName::Cpu,
         ModuleName::Memory,
+        ModuleName::CpuTemp,
+        ModuleName::GpuTemp,
         ModuleName::KeyboardLayout,
         ModuleName::KeyboardSubmap,
         ModuleName::Tray,
@@ -109,6 +113,8 @@ impl ModuleName {
             ModuleName::SystemInfo => "SystemInfo",
             ModuleName::Cpu => "Cpu",
             ModuleName::Memory => "Memory",
+            ModuleName::CpuTemp => "CpuTemp",
+            ModuleName::GpuTemp => "GpuTemp",
             ModuleName::KeyboardLayout => "KeyboardLayout",
             ModuleName::KeyboardSubmap => "KeyboardSubmap",
             ModuleName::Tray => "Tray",
@@ -148,6 +154,8 @@ impl ModuleName {
             ModuleName::SystemInfo => "System monitor",
             ModuleName::Cpu => "Processor",
             ModuleName::Memory => "Memory",
+            ModuleName::CpuTemp => "CPU temperature",
+            ModuleName::GpuTemp => "GPU temperature",
             ModuleName::KeyboardLayout => "Keyboard layout",
             ModuleName::KeyboardSubmap => "Keyboard submap",
             ModuleName::Tray => "Tray",
@@ -194,6 +202,8 @@ impl<'de> Deserialize<'de> for ModuleName {
                     "hyde-menu" => return Ok(ModuleName::HydeMenu),
                     "cpu" => return Ok(ModuleName::Cpu),
                     "memory" => return Ok(ModuleName::Memory),
+                    "cpu-temp" | "temperature" => return Ok(ModuleName::CpuTemp),
+                    "gpu-temp" => return Ok(ModuleName::GpuTemp),
                     _ => {}
                 }
 

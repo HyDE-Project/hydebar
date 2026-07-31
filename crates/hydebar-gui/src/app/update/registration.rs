@@ -59,8 +59,13 @@ const CONTROL_CENTER_CONSUMERS: [ModuleName; 7] = [
 /// The standalone processor and memory readouts render from the same sample
 /// as the combined monitor, so the sampler has to run while any of the three
 /// is on screen.
-const SYSTEM_INFO_CONSUMERS: [ModuleName; 3] =
-    [ModuleName::SystemInfo, ModuleName::Cpu, ModuleName::Memory];
+const SYSTEM_INFO_CONSUMERS: [ModuleName; 5] = [
+    ModuleName::SystemInfo,
+    ModuleName::Cpu,
+    ModuleName::Memory,
+    ModuleName::CpuTemp,
+    ModuleName::GpuTemp
+];
 
 impl App {
     /// Registers the background work of every module the layout draws, and
@@ -260,6 +265,13 @@ impl App {
             schedules.push((ModuleName::SystemInfo, schedule));
         }
 
+        if placed.contains(&ModuleName::CpuTemp)
+            && !placed.contains(&ModuleName::Cpu)
+            && let Some(schedule) = self.module_poll_schedule(&ModuleName::Cpu)
+        {
+            schedules.push((ModuleName::Cpu, schedule));
+        }
+
         let roster: Vec<ModuleName> = schedules.iter().map(|(name, _)| name.clone()).collect();
 
         self.attention.place(schedules);
@@ -276,13 +288,16 @@ impl App {
     /// Reports whether the monitor window can open while the monitor itself
     /// is not placed.
     ///
-    /// The standalone processor and memory entries open the monitor's window,
-    /// and an open menu attends its owner rather than the entry it was opened
-    /// from. Without the owner on the roster the fast clock would stand still
-    /// for exactly the window it exists to keep fresh.
+    /// The standalone entries open the monitor's windows, and an open menu
+    /// attends its owner rather than the entry it was opened from. Without
+    /// the owner on the roster the fast clock would stand still for exactly
+    /// the window it exists to keep fresh.
     fn monitor_window_needs_its_own_roster_entry(&self, placed: &[ModuleName]) -> bool {
         !placed.contains(&ModuleName::SystemInfo)
-            && (placed.contains(&ModuleName::Cpu) || placed.contains(&ModuleName::Memory))
+            && SYSTEM_INFO_CONSUMERS
+                .iter()
+                .skip(1)
+                .any(|name| placed.contains(name))
     }
 
     pub(super) fn update_custom_modules(&mut self, config: &Config, impact: &ConfigImpact) {

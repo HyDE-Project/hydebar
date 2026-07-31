@@ -5492,6 +5492,16 @@ impl SystemInfo {
     pub fn memory_content_height(&self) -> f32 {
         window::scoped_height(&self.data, Icons::Mem)
     }
+
+    /// Render the window of the standalone graphics entry.
+    pub fn gpu_menu_view(&self, icons: &IconTheme) -> Element<'_, Message> {
+        window::build_scoped_view(&self.data, Icons::Gpu, icons)
+    }
+
+    /// Height the standalone graphics window needs.
+    pub fn gpu_content_height(&self) -> f32 {
+        window::scoped_height(&self.data, Icons::Gpu)
+    }
 }
 
 impl<M> Module<M> for SystemInfo

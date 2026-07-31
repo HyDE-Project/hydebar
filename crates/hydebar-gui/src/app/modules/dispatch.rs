@@ -24,7 +24,11 @@ impl App {
             ModuleName::ControlCenter | ModuleName::Network => {
                 Module::<Message>::poll_schedule(&self.control_center)
             }
-            ModuleName::SystemInfo | ModuleName::Cpu | ModuleName::Memory => {
+            ModuleName::SystemInfo
+            | ModuleName::Cpu
+            | ModuleName::Memory
+            | ModuleName::CpuTemp
+            | ModuleName::GpuTemp => {
                 Module::<Message>::poll_schedule(&self.system_info)
             }
             _ => None
@@ -40,7 +44,11 @@ impl App {
             ModuleName::ControlCenter | ModuleName::Network => {
                 Module::<Message>::poll(&mut self.control_center, &ctx)
             }
-            ModuleName::SystemInfo | ModuleName::Cpu | ModuleName::Memory => {
+            ModuleName::SystemInfo
+            | ModuleName::Cpu
+            | ModuleName::Memory
+            | ModuleName::CpuTemp
+            | ModuleName::GpuTemp => {
                 Module::<Message>::poll(&mut self.system_info, &ctx)
             }
             _ => Ok(())
@@ -136,6 +144,18 @@ impl App {
                 self.appearance(),
                 self.icons()
             ),
+            ModuleName::CpuTemp => hydebar_core::modules::cpu_temp::bar_view(
+                self.system_info.data(),
+                &self.config.system,
+                self.appearance(),
+                self.icons()
+            ),
+            ModuleName::GpuTemp => hydebar_core::modules::gpu_temp::bar_view(
+                self.system_info.data(),
+                &self.config.system,
+                self.appearance(),
+                self.icons()
+            ),
             ModuleName::KeyboardLayout => self.keyboard_layout.view(&self.config.keyboard_layout),
             ModuleName::KeyboardSubmap => self.keyboard_submap.view(()),
             ModuleName::Tray => crate::views::tray::render_tray(&self.tray, id, opacity, self.icons())
@@ -207,7 +227,11 @@ impl App {
             ModuleName::Clipboard => self.clipboard.subscription(),
             ModuleName::Workspaces => self.workspaces.subscription(),
             ModuleName::WindowTitle => self.window_title.subscription(),
-            ModuleName::SystemInfo | ModuleName::Cpu | ModuleName::Memory => {
+            ModuleName::SystemInfo
+            | ModuleName::Cpu
+            | ModuleName::Memory
+            | ModuleName::CpuTemp
+            | ModuleName::GpuTemp => {
                 self.system_info.subscription()
             }
             ModuleName::KeyboardLayout => self.keyboard_layout.subscription(),
