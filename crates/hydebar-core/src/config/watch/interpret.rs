@@ -1,6 +1,12 @@
 //! Translation of inotify events into configuration updates.
 
-use std::{ffi::OsStr, fmt::Display, path::Path, pin::Pin, sync::Arc};
+use std::{
+    ffi::OsStr,
+    fmt::Display,
+    path::{Path, PathBuf},
+    pin::Pin,
+    sync::Arc
+};
 
 use iced::futures::{
     SinkExt, Stream, StreamExt,
@@ -109,6 +115,26 @@ where
     WatchLoopOutcome::StreamEnded
 }
 
+/// Loads the candidate on the blocking pool, mirroring the theme watcher.
+///
+/// The load opens and parses the file, reads the theme sources and may ask
+/// the compositor for its look — all blocking work that would otherwise park
+/// a runtime worker for the duration, in the middle of the reload burst that
+/// triggered it.
+async fn load_candidate_off_thread(
+    path: PathBuf,
+    manager: Arc<ConfigManager>
+) -> Result<crate::config::ConfigApplied, ConfigUpdateError> {
+    let read = tokio::task::spawn_blocking(move || load_candidate(&path, &manager)).await;
+
+    match read {
+        Ok(outcome) => outcome,
+        Err(error) => Err(ConfigUpdateError::state(format!(
+            "the configuration could not be read: {error}"
+        )))
+    }
+}
+
 /// Applies a watch event to the configuration and reports the outcome.
 pub(crate) async fn handle_watch_event(
     output: &mut Sender<ConfigEvent>,
@@ -120,7 +146,7 @@ pub(crate) async fn handle_watch_event(
         Event::Changed => {
             info!("Reload config file");
 
-            match load_candidate(path, &manager) {
+            match load_candidate_off_thread(path.to_owned(), Arc::clone(&manager)).await {
                 Ok(applied) => output.send(ConfigEvent::Applied(applied)).await,
                 Err(reason) => {
                     warn!("Configuration update failed: {reason}");
