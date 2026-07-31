@@ -45,3 +45,34 @@ from a live wait.
 - Software renderer comparison run (memory-driven).
 - In-process frame timing behind a debug feature, so animation work has a
   budget check instead of an eyeball check.
+
+## Second round — after the reaper and the optimization sweep
+
+Same method, same machine, measured after the orphan reaper, the single
+config parse, the theme cache and the rest of the sweep landed.
+
+| Metric | First round | Second round |
+| --- | --- | --- |
+| Startup to mapped surface, release | 115 ms | 53 ms |
+| Startup to mapped surface, debug | — | 99 ms |
+| Idle CPU, release | 0.40 % | 0.50 % |
+| Idle CPU, debug | 1.4 % | 1.2 % |
+| CPU with a menu opening and settling, release | 0.6 % | 0.50 % |
+| Resident memory, release | 136 MB | 127 MB |
+| Resident memory, debug | 178 MB | 166 MB |
+| Threads | 62–68 | 63 |
+| Open file descriptors | ~113 | 113 |
+| Zombie children | 122 | 0 |
+
+Reading the deltas:
+
+- Startup halved. The single TOML parse and the cached output geometry
+  removed duplicated work from the launch path.
+- An 8 s window containing a menu open now averages the same as idle: the
+  settle animation costs less than the sampling resolution.
+- Idle release moved 0.40 → 0.50 %; one scheduler tick over a 10 s window
+  is 0.1 %, so this is sampling noise, not a regression.
+- Memory dropped ~9 MB in both profiles — freed duplicate parses and the
+  leaked defunct table, still dominated by the GPU stack.
+- The zombie column is the reaper doing its job, verified live: a fresh
+  bar adopted 61 strays and the count reached zero within two sweeps.
