@@ -201,6 +201,7 @@ where
                                 match event {
                                     Ok(
                                         HyprlandWindowEvent::ActiveWindowChanged
+                                        | HyprlandWindowEvent::WindowTitleChanged
                                         | HyprlandWindowEvent::WindowClosed
                                         | HyprlandWindowEvent::WorkspaceFocusChanged
                                     ) => {

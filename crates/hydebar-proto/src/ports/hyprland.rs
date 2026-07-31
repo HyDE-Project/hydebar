@@ -220,6 +220,8 @@ impl fmt::Display for HyprlandWorkspaceSelector {
 pub enum HyprlandWindowEvent {
     /// The active window changed.
     ActiveWindowChanged,
+    /// A window changed its title in place, focus untouched.
+    WindowTitleChanged,
     /// A workspace focus change occurred.
     WorkspaceFocusChanged,
     /// A window was closed.

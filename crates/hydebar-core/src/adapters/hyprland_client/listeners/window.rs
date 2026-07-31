@@ -30,6 +30,16 @@ fn build_listener(tx: &WindowSender) -> AsyncEventListener {
         }
     });
 
+    listener.add_window_title_changed_handler({
+        let tx = tx.clone();
+        move |_| {
+            let tx = tx.clone();
+            Box::pin(async move {
+                publish(&tx, HyprlandWindowEvent::WindowTitleChanged).await;
+            })
+        }
+    });
+
     listener.add_window_closed_handler({
         let tx = tx.clone();
         move |_| {
