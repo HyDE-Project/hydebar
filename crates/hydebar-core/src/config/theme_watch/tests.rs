@@ -139,6 +139,10 @@ fn interpret_theme_event_reports_a_rewritten_stylesheet_as_changed() {
     for name in [
         "wall.dcol",
         "staterc",
+        "config",
+        "hyprland.conf",
+        "config.toml",
+        "env-theme",
         "theme.css",
         "global.css",
         "border-radius.css"
@@ -217,6 +221,8 @@ fn watch_targets_cover_every_file_the_theme_is_read_from() {
         vec![
             Path::new("/tmp/hydebar-fixture/cache/hyde").to_path_buf(),
             Path::new("/tmp/hydebar-fixture/state/hyde").to_path_buf(),
+            Path::new("/tmp/hydebar-fixture/config/hyde").to_path_buf(),
+            Path::new("/tmp/hydebar-fixture/data/hyde").to_path_buf(),
             Path::new("/tmp/hydebar-fixture/config/waybar").to_path_buf(),
             Path::new("/tmp/hydebar-fixture/config/waybar/includes").to_path_buf(),
         ]
@@ -231,6 +237,10 @@ fn watch_targets_cover_every_file_the_theme_is_read_from() {
         vec![
             OsString::from("wall.dcol"),
             OsString::from("staterc"),
+            OsString::from("config"),
+            OsString::from("hyprland.conf"),
+            OsString::from("config.toml"),
+            OsString::from("env-theme"),
             OsString::from("theme.css"),
             OsString::from("global.css"),
             OsString::from("border-radius.css"),

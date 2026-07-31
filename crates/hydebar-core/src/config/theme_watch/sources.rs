@@ -11,6 +11,22 @@ const WALL_DCOL: &str = "wall.dcol";
 /// State file under `~/.local/state/hyde` that names the theme in force.
 const STATERC: &str = "staterc";
 
+/// Flat settings export under `~/.local/state/hyde`, rewritten by the
+/// `hyde-config` daemon whenever the user edits `config.toml`.
+const CONFIG_EXPORT: &str = "config";
+
+/// Hyprland variable override under `~/.local/state/hyde`, regenerated from
+/// `config.toml` alongside the export; it carries the colour scheme.
+const HYPRLAND_OVERRIDE: &str = "hyprland.conf";
+
+/// The settings file itself under `~/.config/hyde`, read directly on installs
+/// old enough to keep flat assignments in it.
+const HYDE_CONFIG: &str = "config.toml";
+
+/// Shipped fallbacks under `~/.local/share/hyde`, the last link of the font
+/// and colour-scheme chains.
+const ENV_THEME: &str = "env-theme";
+
 /// Stylesheet under `~/.config/waybar` the bar falls back to.
 const THEME_CSS: &str = "theme.css";
 
@@ -87,7 +103,12 @@ impl ThemeRoots {
 
         vec![
             ThemeWatchTarget::new(self.dirs.hyde_cache_dir(), &[WALL_DCOL]),
-            ThemeWatchTarget::new(self.dirs.hyde_state_dir(), &[STATERC]),
+            ThemeWatchTarget::new(
+                self.dirs.hyde_state_dir(),
+                &[STATERC, CONFIG_EXPORT, HYPRLAND_OVERRIDE]
+            ),
+            ThemeWatchTarget::new(self.dirs.hyde_config_dir(), &[HYDE_CONFIG]),
+            ThemeWatchTarget::new(self.dirs.data.join("hyde"), &[ENV_THEME]),
             ThemeWatchTarget::new(waybar.clone(), &[THEME_CSS]),
             ThemeWatchTarget::new(waybar.join("includes"), &[GLOBAL_CSS, BORDER_RADIUS_CSS]),
         ]
@@ -102,10 +123,20 @@ impl ThemeRoots {
 /// redundant reload, which is cheaper than that bookkeeping.
 #[must_use]
 pub fn watched_names() -> Vec<OsString> {
-    [WALL_DCOL, STATERC, THEME_CSS, GLOBAL_CSS, BORDER_RADIUS_CSS]
-        .iter()
-        .map(OsString::from)
-        .collect()
+    [
+        WALL_DCOL,
+        STATERC,
+        CONFIG_EXPORT,
+        HYPRLAND_OVERRIDE,
+        HYDE_CONFIG,
+        ENV_THEME,
+        THEME_CSS,
+        GLOBAL_CSS,
+        BORDER_RADIUS_CSS
+    ]
+    .iter()
+    .map(OsString::from)
+    .collect()
 }
 
 /// Lists the directories to watch for the running session.
