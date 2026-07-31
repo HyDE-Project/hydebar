@@ -182,15 +182,27 @@ impl App {
                     impact
                 } = update;
 
-                let config = self.adopted(config);
-
                 // A theme switch reloads the file several times and most of
                 // those reloads carry exactly what the bar already runs on.
-                // The blur restatement still goes out — the compositor may
-                // have wiped the rules regardless of what the file says — but
-                // nothing else is worth re-deriving for a no-op.
-                if self.config == config {
+                // The raw text is compared before adoption on purpose:
+                // adoption clones the whole configuration and may ask the
+                // compositor four questions, and none of that is owed to a
+                // reload that changed nothing. The blur restatement still
+                // goes out — the compositor may have wiped the rules
+                // regardless of what the file says.
+                if self.raw_config.as_ref() == Some(&config) {
                     debug!("config reload carries no change");
+                    hydebar_core::outputs::restate_blur();
+
+                    return Task::none();
+                }
+
+                self.raw_config = Some(std::sync::Arc::clone(&config));
+
+                let config = self.adopted(config);
+
+                if self.config == config {
+                    debug!("config reload settles to what already runs");
                     hydebar_core::outputs::restate_blur();
 
                     return Task::none();

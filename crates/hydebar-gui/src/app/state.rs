@@ -44,7 +44,7 @@ use hydebar_core::{
 };
 use hydebar_proto::{
     compositor_look::CompositorLook,
-    config::{Appearance, Config},
+    config::{Appearance, AppearanceStyle, Config},
     ports::hyprland::HyprlandPort
 };
 use iced::{OutputEvent, SurfaceId as Id, Task};
@@ -124,7 +124,18 @@ pub struct App {
     /// The one tooltip lifecycle: dwell, warmth and the fade either way.
     pub hints: hydebar_core::tooltip::Hints,
     /// The greeting line, composed once when the greeting is armed.
-    pub greeting_line: String
+    pub greeting_line: String,
+    /// The last configuration as the file spelled it, before adoption.
+    ///
+    /// The cheap gate against reload bursts: a reload whose raw text matches
+    /// is finished before the adoption clone and the compositor questions it
+    /// asks.
+    pub(super) raw_config: Option<Arc<Config>>,
+    /// The layer metrics last stated to the compositor.
+    ///
+    /// Style, scale bits and height bits: while they stand still, a reload
+    /// does not re-state the size and exclusive zone of every bar surface.
+    pub(super) stated_layer_metrics: Option<(AppearanceStyle, u64, Option<u32>)>
 }
 
 #[derive(Debug, Clone)]
@@ -340,9 +351,22 @@ impl App {
         self.rebuild_theme();
 
         let blend_palette = appearance.animations.enabled;
-        let resize =
+
+        // the compositor is only told about the strip when the strip moved:
+        // a reload that recoloured the bar must not re-state the size and
+        // exclusive zone of every surface it did not touch
+        let metrics = (
+            appearance.style,
+            appearance.scale_factor.to_bits(),
+            appearance.height.map(f32::to_bits)
+        );
+        let resize = if self.stated_layer_metrics == Some(metrics) {
+            Task::none()
+        } else {
+            self.stated_layer_metrics = Some(metrics);
             self.outputs
-                .resize(appearance.style, appearance.scale_factor, appearance.height);
+                .resize(appearance.style, appearance.scale_factor, appearance.height)
+        };
 
         let incoming = self
             .themes
@@ -453,6 +477,8 @@ impl App {
             greeting_deadline: None,
             hints: hydebar_core::tooltip::Hints::default(),
             greeting_line: String::new(),
+            raw_config: None,
+            stated_layer_metrics: None,
             weather: Weather::new(
                 config.weather.location.clone(),
                 config.weather.api_key.clone(),
