@@ -52,6 +52,9 @@ use tokio::runtime::Handle;
 
 use super::{bus::BusFlushOutcome, shutdown::ShutdownSignal};
 
+/// How long the greeting stays before it fades on its own.
+pub(super) const GREETING_LIFETIME: std::time::Duration = std::time::Duration::from_secs(3);
+
 pub struct App {
     pub(super) config_path: PathBuf,
     pub(super) logger: LoggerHandle,
@@ -111,7 +114,13 @@ pub struct App {
     /// Signature the current or incoming theme crosses the bar with.
     pub sweep: hydebar_core::style::SweepStyle,
     /// Birth of the bar: the islands ride in on the theme's own wave once.
-    pub entrance: hydebar_core::animation::Spring
+    pub entrance: hydebar_core::animation::Spring,
+    /// Presence of the greeting shown mid-screen while the bar comes up.
+    pub greeting: hydebar_core::animation::Spring,
+    /// Whether the greeting currently holds the menu surfaces raised.
+    pub(super) greeting_raised: bool,
+    /// The frame instant past which the greeting lets itself out.
+    pub(super) greeting_deadline: Option<Instant>
 }
 
 #[derive(Debug, Clone)]
@@ -437,6 +446,9 @@ impl App {
             hover: HoverFades::default(),
             sweep: hydebar_core::style::SweepStyle::default(),
             entrance: hydebar_core::animation::Spring::new(0.0),
+            greeting: hydebar_core::animation::Spring::new(0.0),
+            greeting_raised: false,
+            greeting_deadline: None,
             weather: Weather::new(
                 config.weather.location.clone(),
                 config.weather.api_key.clone(),
@@ -458,6 +470,12 @@ impl App {
 
         if app.config.appearance.animations.enabled {
             app.entrance.set_target(1.0);
+
+            if app.config.appearance.greeting {
+                app.greeting = hydebar_core::animation::Spring::new(0.0)
+                    .with_response(hydebar_core::animation::STANDARD);
+                app.greeting.set_target(1.0);
+            }
         } else {
             app.entrance.snap_to(1.0);
         }

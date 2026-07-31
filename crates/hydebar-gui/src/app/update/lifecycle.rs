@@ -26,6 +26,45 @@ fn announcement(
 }
 
 impl App {
+    /// Raises the menu surfaces the greeting borrows, or hands them back.
+    ///
+    /// The greeting lives mid-screen on the menu surfaces, which idle on the
+    /// background layer; they are held on the overlay for exactly as long as
+    /// the greeting is present. Raising repeats every frame on purpose — the
+    /// real surfaces may only be created a few frames into the bar's life —
+    /// while the release fires once, and never touches a surface a menu has
+    /// meanwhile opened on.
+    fn greeting_surface_tasks(&mut self) -> Task<Message> {
+        let visible = self.greeting.value() > 0.004 || self.greeting.is_animating();
+
+        if visible {
+            self.greeting_raised = true;
+
+            return Task::batch(
+                self.outputs
+                    .menu_surfaces()
+                    .into_iter()
+                    .map(|(id, _)| iced::set_layer(id, iced::Layer::Overlay))
+                    .collect::<Vec<_>>()
+            );
+        }
+
+        if self.greeting_raised {
+            self.greeting_raised = false;
+
+            return Task::batch(
+                self.outputs
+                    .menu_surfaces()
+                    .into_iter()
+                    .filter(|(_, open)| !open)
+                    .map(|(id, _)| iced::set_layer(id, iced::Layer::Background))
+                    .collect::<Vec<_>>()
+            );
+        }
+
+        Task::none()
+    }
+
     /// Handles the messages this module owns.
     pub(super) fn update_lifecycle(&mut self, message: Message) -> Task<Message> {
         match message {
@@ -35,6 +74,21 @@ impl App {
                     .map(|last| now.saturating_duration_since(last))
                     .unwrap_or_default();
                 self.last_frame = Some(now);
+
+                // the greeting lets itself out: its deadline is anchored to
+                // the first frame it was alive on, and the frame clock is
+                // guaranteed to tick for as long as it shows
+                if self.greeting.target() > 0.0 {
+                    let deadline = *self
+                        .greeting_deadline
+                        .get_or_insert(now + super::super::state::GREETING_LIFETIME);
+
+                    if now >= deadline {
+                        debug!("the greeting's three seconds are up, letting it out");
+                        self.greeting.set_response(hydebar_core::animation::GENTLE);
+                        self.greeting.set_target(0.0);
+                    }
+                }
 
                 let popups_before = self.notification_popups.len();
                 hydebar_core::notifications_popup::prune(&mut self.notification_popups, now);
@@ -46,19 +100,26 @@ impl App {
                 let theme_animating = self.appearance_transition.advance(elapsed);
                 let hover_animating = self.hover.advance(elapsed);
                 let entering = self.entrance.advance(elapsed);
+                let greeting_animating = self.greeting.advance(elapsed);
+                let greeting_tasks = self.greeting_surface_tasks();
 
                 // rebuilt on the settling frame as well: the last advance
                 // lands exactly on the target after reporting it stopped
                 self.rebuild_theme();
 
-                if !menus_animating && !theme_animating && !hover_animating && !entering {
+                if !menus_animating
+                    && !theme_animating
+                    && !hover_animating
+                    && !entering
+                    && !greeting_animating
+                {
                     self.last_frame = None;
                 }
 
                 if popups_changed {
-                    Task::batch([menu_tasks, self.fit_notification_surface()])
+                    Task::batch([menu_tasks, greeting_tasks, self.fit_notification_surface()])
                 } else {
-                    menu_tasks
+                    Task::batch([menu_tasks, greeting_tasks])
                 }
             }
             Message::BusFlushed(outcome) => {

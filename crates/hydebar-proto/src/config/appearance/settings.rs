@@ -87,6 +87,9 @@ pub struct Appearance {
     pub menu:                     MenuAppearance,
     #[serde(default)]
     pub animations:               AnimationConfig,
+    /// Whether the bar greets the user while it is born.
+    #[serde(default = "default_greeting")]
+    pub greeting:                 bool,
     #[serde(default = "default_background_color")]
     pub background_color:         AppearanceColor,
     #[serde(default = "default_primary_color")]
@@ -122,6 +125,7 @@ impl Default for Appearance {
             bar_opacity:              default_bar_opacity(),
             menu:                     MenuAppearance::default(),
             animations:               AnimationConfig::default(),
+            greeting:                 default_greeting(),
             background_color:         default_background_color(),
             primary_color:            default_primary_color(),
             secondary_color:          default_secondary_color(),
@@ -159,6 +163,10 @@ where
     }
 
     Ok(value)
+}
+
+pub(super) fn default_greeting() -> bool {
+    true
 }
 
 pub(super) fn default_bar_opacity() -> f32 {

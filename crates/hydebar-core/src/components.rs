@@ -1,3 +1,4 @@
+pub mod greeting;
 pub mod icons;
 pub(crate) mod page;
 pub mod push_maybe;

@@ -57,6 +57,7 @@ fn catppuccin_mocha() -> Appearance {
             backdrop: 0.3
         },
         animations:               AnimationConfig::default(),
+        greeting:                 true,
         background_color:         AppearanceColor::Simple(HexColor::rgb(30, 30, 46)),
         primary_color:            AppearanceColor::Simple(HexColor::rgb(203, 166, 247)),
         secondary_color:          AppearanceColor::Simple(HexColor::rgb(137, 180, 250)),
@@ -100,6 +101,7 @@ fn catppuccin_macchiato() -> Appearance {
             backdrop: 0.3
         },
         animations:               AnimationConfig::default(),
+        greeting:                 true,
         background_color:         AppearanceColor::Simple(HexColor::rgb(36, 39, 58)),
         primary_color:            AppearanceColor::Simple(HexColor::rgb(198, 160, 246)),
         secondary_color:          AppearanceColor::Simple(HexColor::rgb(138, 173, 244)),
@@ -143,6 +145,7 @@ fn catppuccin_frappe() -> Appearance {
             backdrop: 0.3
         },
         animations:               AnimationConfig::default(),
+        greeting:                 true,
         background_color:         AppearanceColor::Simple(HexColor::rgb(48, 52, 70)),
         primary_color:            AppearanceColor::Simple(HexColor::rgb(202, 158, 230)),
         secondary_color:          AppearanceColor::Simple(HexColor::rgb(140, 170, 238)),
@@ -186,6 +189,7 @@ fn catppuccin_latte() -> Appearance {
             backdrop: 0.3
         },
         animations:               AnimationConfig::default(),
+        greeting:                 true,
         background_color:         AppearanceColor::Simple(HexColor::rgb(239, 241, 245)),
         primary_color:            AppearanceColor::Simple(HexColor::rgb(136, 57, 239)),
         secondary_color:          AppearanceColor::Simple(HexColor::rgb(30, 102, 245)),
@@ -227,6 +231,7 @@ fn dracula() -> Appearance {
             backdrop: 0.3
         },
         animations:               AnimationConfig::default(),
+        greeting:                 true,
         background_color:         AppearanceColor::Simple(HexColor::rgb(40, 42, 54)),
         primary_color:            AppearanceColor::Simple(HexColor::rgb(189, 147, 249)),
         secondary_color:          AppearanceColor::Simple(HexColor::rgb(139, 233, 253)),
@@ -264,6 +269,7 @@ fn nord() -> Appearance {
             backdrop: 0.3
         },
         animations:               AnimationConfig::default(),
+        greeting:                 true,
         background_color:         AppearanceColor::Simple(HexColor::rgb(46, 52, 64)),
         primary_color:            AppearanceColor::Simple(HexColor::rgb(136, 192, 208)),
         secondary_color:          AppearanceColor::Simple(HexColor::rgb(129, 161, 193)),
@@ -301,6 +307,7 @@ fn gruvbox_dark() -> Appearance {
             backdrop: 0.3
         },
         animations:               AnimationConfig::default(),
+        greeting:                 true,
         background_color:         AppearanceColor::Simple(HexColor::rgb(40, 40, 40)),
         primary_color:            AppearanceColor::Simple(HexColor::rgb(211, 134, 155)),
         secondary_color:          AppearanceColor::Simple(HexColor::rgb(131, 165, 152)),
@@ -338,6 +345,7 @@ fn gruvbox_light() -> Appearance {
             backdrop: 0.3
         },
         animations:               AnimationConfig::default(),
+        greeting:                 true,
         background_color:         AppearanceColor::Simple(HexColor::rgb(251, 241, 199)),
         primary_color:            AppearanceColor::Simple(HexColor::rgb(157, 0, 6)),
         secondary_color:          AppearanceColor::Simple(HexColor::rgb(7, 102, 120)),
@@ -375,6 +383,7 @@ fn tokyo_night() -> Appearance {
             backdrop: 0.3
         },
         animations:               AnimationConfig::default(),
+        greeting:                 true,
         background_color:         AppearanceColor::Simple(HexColor::rgb(26, 27, 38)),
         primary_color:            AppearanceColor::Simple(HexColor::rgb(187, 154, 247)),
         secondary_color:          AppearanceColor::Simple(HexColor::rgb(122, 162, 247)),
@@ -416,6 +425,7 @@ fn tokyo_night_storm() -> Appearance {
             backdrop: 0.3
         },
         animations:               AnimationConfig::default(),
+        greeting:                 true,
         background_color:         AppearanceColor::Simple(HexColor::rgb(36, 40, 59)),
         primary_color:            AppearanceColor::Simple(HexColor::rgb(187, 154, 247)),
         secondary_color:          AppearanceColor::Simple(HexColor::rgb(122, 162, 247)),
@@ -457,6 +467,7 @@ fn tokyo_night_light() -> Appearance {
             backdrop: 0.3
         },
         animations:               AnimationConfig::default(),
+        greeting:                 true,
         background_color:         AppearanceColor::Simple(HexColor::rgb(213, 214, 219)),
         primary_color:            AppearanceColor::Simple(HexColor::rgb(121, 94, 172)),
         secondary_color:          AppearanceColor::Simple(HexColor::rgb(52, 108, 197)),

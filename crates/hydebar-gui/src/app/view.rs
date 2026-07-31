@@ -268,6 +268,31 @@ impl App {
         }
     }
 
+    /// The greeting shown mid-screen while the bar comes up.
+    ///
+    /// Drawn on the idle menu surface, which spans the screen and is raised
+    /// for exactly the greeting's lifetime; it breathes in with the bar's
+    /// birth and lets itself out three seconds later. An empty row whenever
+    /// the greeting is over, disabled, or animations are off.
+    fn screen_greeting<'a>(&self) -> Element<'a, Message> {
+        let presence = self.greeting.value().clamp(0.0, 1.0);
+
+        if presence <= 0.004 {
+            return Row::new().into();
+        }
+
+        let line = iced::widget::text(hydebar_core::components::greeting::current())
+            .size(self.appearance().font_size_px() * 2.4)
+            .color(self.theme_cache.palette().text.scale_alpha(presence));
+
+        container(line)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .align_x(Alignment::Center)
+            .align_y(Alignment::Center)
+            .into()
+    }
+
     /// Wraps the bar so a press on it takes the open menu down.
     ///
     /// The menu backdrop covers the screen the bar leaves free and nothing
@@ -431,7 +456,7 @@ impl App {
 
                 match menu {
                     Some(menu) => self.faded_menu(menu, menu_progress),
-                    None => Row::new().into()
+                    None => self.screen_greeting()
                 }
             }
             Some(HasOutput::Notifications) => notifications_popup::view(

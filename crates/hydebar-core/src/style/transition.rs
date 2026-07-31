@@ -173,6 +173,7 @@ fn blend_appearance(from: &Appearance, to: &Appearance, t: f32) -> Appearance {
             backdrop: blend_f32(from.menu.backdrop, to.menu.backdrop, t)
         },
         animations:               to.animations.clone(),
+        greeting:                 to.greeting,
         background_color:         blend_color(from.background_color, to.background_color, t),
         primary_color:            blend_color(from.primary_color, to.primary_color, t),
         secondary_color:          blend_color(from.secondary_color, to.secondary_color, t),

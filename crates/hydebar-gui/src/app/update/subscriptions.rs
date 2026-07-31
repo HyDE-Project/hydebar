@@ -108,6 +108,8 @@ impl App {
             || self.appearance_transition.is_animating()
             || self.hover.is_animating()
             || self.entrance.is_animating()
+            || self.greeting.is_animating()
+            || self.greeting.target() > 0.0
         {
             iced::time::every(std::time::Duration::from_millis(16))
                 .map(|_| Message::Frame(std::time::Instant::now()))

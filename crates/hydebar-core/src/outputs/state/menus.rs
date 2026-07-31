@@ -57,6 +57,22 @@ impl Outputs {
             .unwrap_or(1.0)
     }
 
+    /// Menu surface of every output, with whether a menu is open on it.
+    ///
+    /// The greeting borrows these surfaces while the bar is born: they span
+    /// the screen and are idle at that moment, and the caller must know which
+    /// ones a menu actually owns before sending any of them back down.
+    pub fn menu_surfaces(&self) -> Vec<(Id, bool)> {
+        self.0
+            .iter()
+            .filter_map(|(_, shell_info, _)| {
+                shell_info
+                    .as_ref()
+                    .map(|shell_info| (shell_info.menu.id, shell_info.menu.is_open()))
+            })
+            .collect()
+    }
+
     pub fn get_menu_opacity(&self, id: Id) -> f32 {
         self.0
             .iter()
