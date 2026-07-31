@@ -26,6 +26,27 @@ impl App {
         self.attention.look_at(focus);
     }
 
+    /// Executes what the tooltip lifecycle asked for, if anything.
+    pub(super) fn run_hint_command(
+        &mut self,
+        command: Option<hydebar_core::tooltip::HintCommand>
+    ) -> Task<Message> {
+        use hydebar_core::tooltip::HintCommand;
+
+        match command {
+            Some(HintCommand::Show {
+                surface,
+                module,
+                info
+            }) => self.outputs.show_tooltip(surface, module, info),
+            Some(HintCommand::Hide {
+                surface,
+                owner
+            }) => self.outputs.hide_tooltip(surface, owner.as_ref()),
+            None => Task::none()
+        }
+    }
+
     /// Handles the messages this module owns.
     pub(super) fn update_menus(&mut self, message: Message) -> Task<Message> {
         match message {
@@ -49,13 +70,20 @@ impl App {
                     std::time::Duration::from_millis(animations.hover_duration_ms)
                 );
 
-                match tooltip {
-                    Some(info) => self.outputs.show_tooltip(surface, module, info),
-                    None if entered => self.outputs.hide_tooltip(surface, None),
-                    None => self.outputs.hide_tooltip(surface, Some(&module))
-                }
+                let command = self.hints.observe(
+                    surface,
+                    module,
+                    entered,
+                    tooltip,
+                    std::time::Instant::now(),
+                    animations.enabled
+                );
+
+                self.run_hint_command(command)
             }
             Message::ToggleMenu(menu_type, id, button_ui_ref) => {
+                self.hints.dismiss();
+
                 let mut cmd = vec![];
                 match &menu_type {
                     MenuType::Updates => {

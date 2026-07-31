@@ -90,6 +90,12 @@ impl App {
                     }
                 }
 
+                let animated = self.config.appearance.animations.enabled;
+                let served = self.hints.served(now, animated);
+                let (hints_fading, landed) = self.hints.advance(elapsed);
+                let tooltip_tasks =
+                    Task::batch([self.run_hint_command(served), self.run_hint_command(landed)]);
+
                 let popups_before = self.notification_popups.len();
                 hydebar_core::notifications_popup::prune(&mut self.notification_popups, now);
                 let popups_changed = popups_before != self.notification_popups.len();
@@ -112,14 +118,20 @@ impl App {
                     && !hover_animating
                     && !entering
                     && !greeting_animating
+                    && !hints_fading
                 {
                     self.last_frame = None;
                 }
 
                 if popups_changed {
-                    Task::batch([menu_tasks, greeting_tasks, self.fit_notification_surface()])
+                    Task::batch([
+                        menu_tasks,
+                        greeting_tasks,
+                        tooltip_tasks,
+                        self.fit_notification_surface()
+                    ])
                 } else {
-                    Task::batch([menu_tasks, greeting_tasks])
+                    Task::batch([menu_tasks, greeting_tasks, tooltip_tasks])
                 }
             }
             Message::BusFlushed(outcome) => {

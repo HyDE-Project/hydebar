@@ -120,7 +120,9 @@ pub struct App {
     /// Whether the greeting currently holds the menu surfaces raised.
     pub(super) greeting_raised: bool,
     /// The frame instant past which the greeting lets itself out.
-    pub(super) greeting_deadline: Option<Instant>
+    pub(super) greeting_deadline: Option<Instant>,
+    /// The one tooltip lifecycle: dwell, warmth and the fade either way.
+    pub hints: hydebar_core::tooltip::Hints
 }
 
 #[derive(Debug, Clone)]
@@ -449,6 +451,7 @@ impl App {
             greeting: hydebar_core::animation::Spring::new(0.0),
             greeting_raised: false,
             greeting_deadline: None,
+            hints: hydebar_core::tooltip::Hints::default(),
             weather: Weather::new(
                 config.weather.location.clone(),
                 config.weather.api_key.clone(),

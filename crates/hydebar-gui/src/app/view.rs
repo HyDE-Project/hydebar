@@ -465,7 +465,10 @@ impl App {
                 self.config.position
             ),
             Some(HasOutput::Tooltip) => match self.outputs.tooltip(id) {
-                Some(info) => tooltip_wrapper(info, self.config.position, self.appearance()),
+                Some(info) => self.faded_menu(
+                    tooltip_wrapper(info, self.config.position, self.appearance()),
+                    self.hints.presence()
+                ),
                 None => Row::new().into()
             },
             None => Row::new().into()

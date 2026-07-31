@@ -18,8 +18,10 @@
 
 mod anchor;
 mod info;
+mod life;
 mod wrapper;
 
 pub use anchor::{TooltipAnchor, tooltip_anchor};
 pub use info::TooltipInfo;
+pub use life::{HintCommand, Hints};
 pub use wrapper::{TOOLTIP_GAP_EM, tooltip_wrapper};
