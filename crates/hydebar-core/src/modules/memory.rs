@@ -34,10 +34,7 @@ where
         icons
     )?;
 
-    Some((
-        element,
-        Some(OnModulePress::ToggleMenu(MenuType::SystemInfo))
-    ))
+    Some((element, Some(OnModulePress::ToggleMenu(MenuType::Memory))))
 }
 
 /// States the memory pools for the pointer resting on the module.

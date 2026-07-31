@@ -141,7 +141,7 @@ impl App {
             layout.hosts_any(&SYSTEM_INFO_CONSUMERS),
             &mut self.system_info,
             ctx,
-            &self.config.system
+            (&self.config.system, layout.hosts(&ModuleName::SystemInfo))
         );
         gate(
             "keyboard-layout",

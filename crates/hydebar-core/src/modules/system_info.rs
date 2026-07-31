@@ -191,7 +191,8 @@ mod data {
         sensors:      HardwareSensors,
         disks:        Option<Disks>,
         networks:     Option<Networks>,
-        last_network: Option<NetworkSnapshot>
+        last_network: Option<NetworkSnapshot>,
+        full:         bool
     }
 
     impl Default for SystemInfoSampler {
@@ -212,13 +213,24 @@ mod data {
                 sensors:      HardwareSensors::new(),
                 disks:        None,
                 networks:     None,
-                last_network: None
+                last_network: None,
+                full:         true
             }
         }
 
         /// Pins the graphics device the readings come from.
         pub fn prefer_gpu(&mut self, preferred: Option<&str>) {
             self.sensors.prefer_gpu(preferred);
+        }
+
+        /// Narrows the sampling to the processor and memory readouts.
+        ///
+        /// A layout hosting only the processor and memory entries never draws
+        /// a disk, an interface or a sensor, and a sampler that read them
+        /// anyway would walk every mount and the whole hwmon tree a dozen
+        /// times a minute for nobody.
+        pub fn only_cpu_and_memory(&mut self) {
+            self.full = false;
         }
 
         fn ensure_disks(&mut self) {
@@ -259,6 +271,29 @@ mod data {
                 memory_swap_used,
                 memory_swap_total,
                 ..SystemInfoData::default()
+            }
+        }
+
+        /// Captures whatever the sampler's scope asks for.
+        ///
+        /// The full scope reads everything the monitor window can show. The
+        /// narrow one — see [`Self::only_cpu_and_memory`] — keeps the
+        /// processor and memory counters and the sensors, whose temperature
+        /// the standalone processor window states, and skips the walk over
+        /// every mount and interface nobody renders.
+        pub fn sample_scoped(&mut self) -> SystemInfoData {
+            if self.full {
+                self.sample_with_extras()
+            } else {
+                let mut data = self.sample();
+                let Readings {
+                    cpu,
+                    gpu
+                } = self.sensors.read();
+                data.cpu_temperature = cpu;
+                data.gpu = gpu;
+
+                data
             }
         }
 
@@ -826,7 +861,7 @@ mod runtime {
 
     impl MetricSource for SystemInfoSampler {
         fn sample(&mut self) -> SystemInfoData {
-            self.sample_with_extras()
+            self.sample_scoped()
         }
     }
 
@@ -879,10 +914,15 @@ mod runtime {
             &mut self,
             ctx: &ModuleContext,
             sender: ModuleEventSender<Message>,
-            preferred_gpu: Option<&str>
+            preferred_gpu: Option<&str>,
+            full: bool
         ) {
             let mut sampler = SystemInfoSampler::new();
             sampler.prefer_gpu(preferred_gpu);
+
+            if !full {
+                sampler.only_cpu_and_memory();
+            }
 
             self.spawn_from(ctx, sender, sampler);
         }
@@ -916,12 +956,32 @@ mod runtime {
                 let mut ticker = interval(REFRESH_INTERVAL);
                 ticker.set_missed_tick_behavior(MissedTickBehavior::Delay);
                 let _ = ticker.tick().await;
-                let _ = source.sample();
+
+                let Ok(mut source) =
+                    tokio::task::spawn_blocking(move || {
+                        let _ = source.sample();
+                        source
+                    })
+                    .await
+                else {
+                    error!("system info priming sample panicked; sampling stops");
+                    return;
+                };
+
                 tokio::time::sleep(WARMUP).await;
                 let mut published: Option<SystemInfoData> = None;
 
                 loop {
-                    let sample = source.sample();
+                    let Ok((returned, sample)) = tokio::task::spawn_blocking(move || {
+                        let sample = source.sample();
+                        (source, sample)
+                    })
+                    .await
+                    else {
+                        error!("system info sampling panicked; sampling stops");
+                        return;
+                    };
+                    source = returned;
 
                     if published
                         .as_ref()
@@ -1014,6 +1074,58 @@ mod runtime {
             }
         }
 
+        /// Waits for the next published event without touching the clock.
+        ///
+        /// Sampling runs on a real thread of the blocking pool, so the event
+        /// lands a moment after the paused clock says it is due; spinning on
+        /// yields, with a real nap now and then, lets that thread finish.
+        async fn next_event(
+            receiver: &mut crate::event_bus::EventReceiver
+        ) -> Option<BusEvent> {
+            for spin in 0..10_000u32 {
+                if let Some(event) = receiver.try_recv().expect("bus read") {
+                    return Some(event);
+                }
+
+                if spin % 64 == 63 {
+                    std::thread::sleep(std::time::Duration::from_millis(1));
+                }
+
+                yield_now().await;
+            }
+
+            None
+        }
+
+        /// Walks the paused clock forward until the next event is published.
+        ///
+        /// The sampler re-arms its timers from whatever the clock says when a
+        /// blocking sample lands, so one big advance from the test can slip
+        /// past a deadline registered a moment later; small steps with a spin
+        /// between them reach the deadline wherever it settled.
+        async fn next_event_advancing(
+            receiver: &mut crate::event_bus::EventReceiver,
+            step: std::time::Duration
+        ) -> Option<BusEvent> {
+            for _ in 0..32u32 {
+                for spin in 0..256u32 {
+                    if let Some(event) = receiver.try_recv().expect("bus read") {
+                        return Some(event);
+                    }
+
+                    if spin % 64 == 63 {
+                        std::thread::sleep(std::time::Duration::from_millis(1));
+                    }
+
+                    yield_now().await;
+                }
+
+                advance(step).await;
+            }
+
+            None
+        }
+
         #[tokio::test(start_paused = true)]
         async fn schedules_periodic_refreshes() {
             let (ctx, bus) = module_context();
@@ -1032,16 +1144,10 @@ mod runtime {
 
             assert!(receiver.try_recv().expect("initial queue state").is_none());
 
-            advance(WARMUP).await;
-            yield_now().await;
-
-            let event = receiver.try_recv().expect("queued refresh after warmup");
+            let event = next_event_advancing(&mut receiver, WARMUP / 2).await;
             expect_cpu_usage(event, 1);
 
-            advance(REFRESH_INTERVAL).await;
-            yield_now().await;
-
-            let event = receiver.try_recv().expect("queued refresh after interval");
+            let event = next_event_advancing(&mut receiver, REFRESH_INTERVAL / 2).await;
             expect_cpu_usage(event, 2);
         }
 
@@ -1060,10 +1166,8 @@ mod runtime {
                 }
             );
             yield_now().await;
-            advance(WARMUP).await;
-            yield_now().await;
 
-            let event = receiver.try_recv().expect("first published refresh");
+            let event = next_event_advancing(&mut receiver, WARMUP / 2).await;
             expect_cpu_usage(event, 1);
         }
 
@@ -1077,16 +1181,15 @@ mod runtime {
             polling.spawn_from(&ctx, sender, SteadyLoad);
             yield_now().await;
 
-            advance(WARMUP).await;
-            yield_now().await;
-
-            let first = receiver.try_recv().expect("first refresh after warmup");
+            let first = next_event_advancing(&mut receiver, WARMUP / 2).await;
             expect_cpu_usage(first, 7);
 
-            advance(REFRESH_INTERVAL).await;
-            yield_now().await;
-            advance(REFRESH_INTERVAL).await;
-            yield_now().await;
+            for _ in 0..4u32 {
+                advance(REFRESH_INTERVAL).await;
+                for _ in 0..64u32 {
+                    yield_now().await;
+                }
+            }
 
             assert!(
                 receiver
@@ -1111,16 +1214,13 @@ mod runtime {
                 }
             );
             yield_now().await;
-            advance(WARMUP).await;
-            yield_now().await;
 
-            let first = receiver.try_recv().expect("refresh after warmup");
+            let first = next_event_advancing(&mut receiver, WARMUP / 2).await;
             expect_cpu_usage(first, 1);
 
             polling.poke();
-            yield_now().await;
 
-            let poked = receiver.try_recv().expect("refresh after poke");
+            let poked = next_event(&mut receiver).await;
             expect_cpu_usage(poked, 2);
         }
 
@@ -1145,10 +1245,7 @@ mod runtime {
             );
             yield_now().await;
 
-            advance(WARMUP).await;
-            yield_now().await;
-
-            let first = receiver.try_recv().expect("first refresh after warmup");
+            let first = next_event_advancing(&mut receiver, WARMUP / 2).await;
             expect_cpu_usage(first, 1);
             assert!(receiver.try_recv().expect("drain first refresh").is_none());
 
@@ -1161,10 +1258,7 @@ mod runtime {
             );
             yield_now().await;
 
-            advance(WARMUP).await;
-            yield_now().await;
-
-            let second = receiver.try_recv().expect("refresh after respawn");
+            let second = next_event_advancing(&mut receiver, WARMUP / 2).await;
             expect_cpu_usage(second, 101);
             assert!(receiver.try_recv().expect("no duplicate refresh").is_none());
         }
@@ -4266,6 +4360,19 @@ mod window {
             format!("{} ({percent}%)", used_of_total(used, total))
         }
 
+        /// The one section a scoped window shows, picked by its icon.
+        ///
+        /// The standalone processor and memory entries open a window of their
+        /// own subject alone; the icon is the section's stable identity, so
+        /// the window and the full monitor can never disagree about the rows.
+        #[must_use]
+        pub fn scoped_section(
+            data: &SystemInfoData,
+            icon: crate::components::icons::Icons
+        ) -> Option<Section> {
+            sections(data).into_iter().find(|section| section.icon == icon)
+        }
+
         /// Everything the window says about the machine, in drawing order.
         ///
         /// A section the machine cannot fill is left out whole rather than
@@ -4511,6 +4618,18 @@ mod window {
             rule + heading + lines + gaps
         }
 
+        /// Height the window of one section needs.
+        pub fn scoped_height(
+            data: &SystemInfoData,
+            icon: crate::components::icons::Icons
+        ) -> f32 {
+            let body = model::scoped_section(data, icon)
+                .as_ref()
+                .map_or(0.0, section_height);
+
+            body + scale::scaled(2.0 * OUTER_PADDING)
+        }
+
         /// Height the menu content needs for the readouts it currently
         /// shows.
         pub fn content_height(data: &SystemInfoData, config: &SystemModuleConfig) -> f32 {
@@ -4573,6 +4692,28 @@ mod window {
 
             if !footnotes.is_empty() {
                 content = content.push(footnotes_view(footnotes));
+            }
+
+            content
+                .spacing(scale::scaled(SECTION_GAP))
+                .padding(scale::scaled(OUTER_PADDING))
+                .width(Length::Fixed(metrics::column_width()))
+                .into()
+        }
+
+        /// Render the window of one section, for a standalone entry.
+        ///
+        /// The section is the whole window: its own header names the subject,
+        /// so the monitor's title and the other sections stay out.
+        pub fn build_scoped_view<'a>(
+            data: &'a SystemInfoData,
+            section_icon: crate::components::icons::Icons,
+            icons: &IconTheme
+        ) -> Element<'a, Message> {
+            let mut content = Column::new();
+
+            if let Some(section) = model::scoped_section(data, section_icon) {
+                content = content.push(section_view(section, icons));
             }
 
             content
@@ -4719,8 +4860,8 @@ mod window {
         }
     }
 
-    pub use metrics::{content_height, content_width};
-    pub use render::build_menu_view;
+    pub use metrics::{content_height, content_width, scoped_height};
+    pub use render::{build_menu_view, build_scoped_view};
 
     #[cfg(test)]
     mod tests {
@@ -4939,7 +5080,10 @@ pub use window::build_menu_view;
 
 use super::{Module, ModuleError, OnModulePress};
 use crate::{
-    ModuleContext, attention::PollSchedule, components::icons::IconTheme, event_bus::ModuleEvent,
+    ModuleContext,
+    attention::PollSchedule,
+    components::icons::{IconTheme, Icons},
+    event_bus::ModuleEvent,
     format_cycle::FormatCycle
 };
 
@@ -5016,6 +5160,26 @@ impl SystemInfo {
     ) -> Element<'_, Message> {
         window::build_menu_view(&self.data, config, icons)
     }
+
+    /// Render the window of the standalone processor entry.
+    pub fn cpu_menu_view(&self, icons: &IconTheme) -> Element<'_, Message> {
+        window::build_scoped_view(&self.data, Icons::Cpu, icons)
+    }
+
+    /// Render the window of the standalone memory entry.
+    pub fn memory_menu_view(&self, icons: &IconTheme) -> Element<'_, Message> {
+        window::build_scoped_view(&self.data, Icons::Mem, icons)
+    }
+
+    /// Height the standalone processor window needs.
+    pub fn cpu_content_height(&self) -> f32 {
+        window::scoped_height(&self.data, Icons::Cpu)
+    }
+
+    /// Height the standalone memory window needs.
+    pub fn memory_content_height(&self) -> f32 {
+        window::scoped_height(&self.data, Icons::Mem)
+    }
 }
 
 impl<M> Module<M> for SystemInfo
@@ -5023,16 +5187,16 @@ where
     M: 'static + Clone + From<Message>
 {
     type ViewData<'a> = (&'a SystemModuleConfig, &'a Appearance, &'a IconTheme);
-    type RegistrationData<'a> = &'a SystemModuleConfig;
+    type RegistrationData<'a> = (&'a SystemModuleConfig, bool);
 
     fn register(
         &mut self,
         ctx: &ModuleContext,
-        config: Self::RegistrationData<'_>
+        (config, full): Self::RegistrationData<'_>
     ) -> Result<(), ModuleError> {
         let sender = ctx.module_sender(ModuleEvent::SystemInfo);
         self.polling
-            .spawn(ctx, sender, config.gpu.device.as_deref());
+            .spawn(ctx, sender, config.gpu.device.as_deref(), full);
 
         Ok(())
     }

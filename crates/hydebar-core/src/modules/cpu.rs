@@ -34,10 +34,7 @@ where
         icons
     )?;
 
-    Some((
-        element,
-        Some(OnModulePress::ToggleMenu(MenuType::SystemInfo))
-    ))
+    Some((element, Some(OnModulePress::ToggleMenu(MenuType::Cpu))))
 }
 
 /// States the processor for the pointer resting on the module.

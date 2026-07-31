@@ -247,6 +247,28 @@ impl App {
                 ),
                 Some(self.system_info.content_height(&self.config.system))
             )),
+            MenuType::Cpu => Some((
+                self.system_info
+                    .cpu_menu_view(self.icons())
+                    .map(Message::SystemInfo),
+                MenuSize::Content(
+                    hydebar_core::modules::system_info::SystemInfo::content_width(
+                        self.appearance().font_size_px()
+                    )
+                ),
+                Some(self.system_info.cpu_content_height())
+            )),
+            MenuType::Memory => Some((
+                self.system_info
+                    .memory_menu_view(self.icons())
+                    .map(Message::SystemInfo),
+                MenuSize::Content(
+                    hydebar_core::modules::system_info::SystemInfo::content_width(
+                        self.appearance().font_size_px()
+                    )
+                ),
+                Some(self.system_info.memory_content_height())
+            )),
             MenuType::Notifications => Some((
                 self.notifications
                     .menu_view(opacity, self.icons())

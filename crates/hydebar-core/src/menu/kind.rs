@@ -22,6 +22,10 @@ pub enum MenuType {
     Tray(String),
     MediaPlayer,
     SystemInfo,
+    /// Window of the standalone processor entry.
+    Cpu,
+    /// Window of the standalone memory entry.
+    Memory,
     Notifications,
     Screenshot,
     Calendar,
@@ -51,6 +55,8 @@ impl MenuType {
             Self::Tray(_) => ModuleName::Tray,
             Self::MediaPlayer => ModuleName::MediaPlayer,
             Self::SystemInfo => ModuleName::SystemInfo,
+            Self::Cpu => ModuleName::Cpu,
+            Self::Memory => ModuleName::Memory,
             Self::Notifications => ModuleName::Notifications,
             Self::Screenshot => ModuleName::Screenshot,
             Self::Calendar => ModuleName::Clock,
