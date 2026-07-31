@@ -312,6 +312,41 @@ fn reconnect_delay(failures: u32) -> Duration {
 }
 
 #[cfg(test)]
+mod link_refresh_tests {
+    use super::*;
+
+    #[test]
+    fn connection_changes_re_read_the_link() {
+        assert!(NetworkService::moves_the_link(
+            &NetworkEvent::ActiveConnections(Vec::new())
+        ));
+        assert!(NetworkService::moves_the_link(
+            &NetworkEvent::WirelessDevice {
+                wifi_present:           true,
+                wireless_access_points: Vec::new()
+            }
+        ));
+        assert!(NetworkService::moves_the_link(&NetworkEvent::Strength((
+            "home".to_owned(),
+            70
+        ))));
+    }
+
+    #[test]
+    fn scans_and_prompts_leave_the_link_alone() {
+        assert!(!NetworkService::moves_the_link(
+            &NetworkEvent::ScanningNearbyWifi
+        ));
+        assert!(!NetworkService::moves_the_link(
+            &NetworkEvent::RequestPasswordForSSID("home".to_owned())
+        ));
+        assert!(!NetworkService::moves_the_link(&NetworkEvent::WiFiEnabled(
+            true
+        )));
+    }
+}
+
+#[cfg(test)]
 mod backoff_tests {
     use super::{RECONNECT_MAX_DELAY, RECONNECT_MIN_DELAY, reconnect_delay};
 
