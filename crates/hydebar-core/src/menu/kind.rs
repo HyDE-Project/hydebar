@@ -26,6 +26,8 @@ pub enum MenuType {
     Cpu,
     /// Window of the standalone memory entry.
     Memory,
+    /// Window of the standalone processor temperature entry.
+    CpuTemp,
     /// Window of the standalone graphics temperature entry.
     Gpu,
     Notifications,
@@ -59,6 +61,7 @@ impl MenuType {
             Self::SystemInfo => ModuleName::SystemInfo,
             Self::Cpu => ModuleName::Cpu,
             Self::Memory => ModuleName::Memory,
+            Self::CpuTemp => ModuleName::CpuTemp,
             Self::Gpu => ModuleName::GpuTemp,
             Self::Notifications => ModuleName::Notifications,
             Self::Screenshot => ModuleName::Screenshot,

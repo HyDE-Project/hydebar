@@ -269,6 +269,17 @@ impl App {
                 ),
                 Some(self.system_info.memory_content_height())
             )),
+            MenuType::CpuTemp => Some((
+                self.system_info
+                    .cpu_temp_menu_view(self.icons())
+                    .map(Message::SystemInfo),
+                MenuSize::Content(
+                    hydebar_core::modules::system_info::SystemInfo::content_width(
+                        self.appearance().font_size_px()
+                    )
+                ),
+                Some(self.system_info.cpu_temp_content_height())
+            )),
             MenuType::Gpu => Some((
                 self.system_info
                     .gpu_menu_view(self.icons())

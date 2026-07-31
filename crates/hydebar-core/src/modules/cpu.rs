@@ -50,6 +50,9 @@ pub fn hint(data: &SystemInfoData) -> String {
 }
 
 /// The hint text, from facts alone.
+///
+/// The temperature is deliberately absent: the standalone temperature entry
+/// owns that reading, and each entry hints at its own subject alone.
 fn compose(data: &SystemInfoData, load: Option<(f64, f64, f64)>) -> String {
     let mut lines = vec![match data.cpu_count {
         0 => format!("CPU: {}%", data.cpu_usage),
@@ -62,10 +65,6 @@ fn compose(data: &SystemInfoData, load: Option<(f64, f64, f64)>) -> String {
         lines.push(format!("Load: {one:.2} · {five:.2} · {fifteen:.2}"));
     }
 
-    if let Some(temperature) = data.cpu_temperature {
-        lines.push(format!("Temperature: {temperature}°C"));
-    }
-
     lines.join("\n")
 }
 
@@ -74,7 +73,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_hint_states_the_load_the_averages_and_the_temperature() {
+    fn the_hint_states_the_load_and_the_averages_but_not_the_temperature() {
         let data = SystemInfoData {
             cpu_usage: 34,
             cpu_count: 32,
@@ -84,7 +83,8 @@ mod tests {
 
         assert_eq!(
             compose(&data, Some((1.245, 1.1, 0.949))),
-            "CPU: 34% of 32 threads\nLoad: 1.25 · 1.10 · 0.95\nTemperature: 56°C"
+            "CPU: 34% of 32 threads\nLoad: 1.25 · 1.10 · 0.95",
+            "the temperature belongs to the standalone temperature entry"
         );
     }
 

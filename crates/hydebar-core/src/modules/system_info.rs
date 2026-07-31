@@ -4620,15 +4620,44 @@ mod window {
 
         /// The one section a scoped window shows, picked by its icon.
         ///
-        /// The standalone processor and memory entries open a window of their
-        /// own subject alone; the icon is the section's stable identity, so
-        /// the window and the full monitor can never disagree about the rows.
+        /// The standalone entries open a window of their own subject alone;
+        /// the icon is the section's stable identity, so the window and the
+        /// full monitor can never disagree about the rows.
         #[must_use]
         pub fn scoped_section(
             data: &SystemInfoData,
             icon: crate::components::icons::Icons
         ) -> Option<Section> {
             sections(data).into_iter().find(|section| section.icon == icon)
+        }
+
+        /// The processor window of the standalone processor entry.
+        ///
+        /// The monitor's processor section minus the temperature: the
+        /// temperature entry owns that reading, and each window shows its
+        /// own subject and nothing of its neighbours'.
+        #[must_use]
+        pub fn processor_section(data: &SystemInfoData) -> Option<Section> {
+            let mut section = scoped_section(data, crate::components::icons::Icons::Cpu)?;
+
+            section.rows.retain(|row| {
+                !matches!(row, Row::Fact { label, .. } if label.starts_with("Temperature"))
+            });
+
+            Some(section)
+        }
+
+        /// The window of the standalone processor temperature entry.
+        #[must_use]
+        pub fn cpu_temperature_section(data: &SystemInfoData) -> Option<Section> {
+            let temperature = data.cpu_temperature?;
+
+            Some(Section {
+                icon:  crate::components::icons::Icons::Temp,
+                title: "CPU temperature",
+                note:  data.cpu_temperature_source.clone(),
+                rows:  vec![fact("Temperature", format!("{temperature}°C"))]
+            })
         }
 
         /// Everything the window says about the machine, in drawing order.
@@ -4930,13 +4959,8 @@ mod window {
         }
 
         /// Height the window of one section needs.
-        pub fn scoped_height(
-            data: &SystemInfoData,
-            icon: crate::components::icons::Icons
-        ) -> f32 {
-            let body = model::scoped_section(data, icon)
-                .as_ref()
-                .map_or(0.0, section_height);
+        pub fn section_window_height(section: Option<&Section>) -> f32 {
+            let body = section.map_or(0.0, section_height);
 
             body + scale::scaled(2.0 * OUTER_PADDING)
         }
@@ -5016,14 +5040,13 @@ mod window {
         ///
         /// The section is the whole window: its own header names the subject,
         /// so the monitor's title and the other sections stay out.
-        pub fn build_scoped_view<'a>(
-            data: &'a SystemInfoData,
-            section_icon: crate::components::icons::Icons,
+        pub fn build_section_window<'a>(
+            section: Option<Section>,
             icons: &IconTheme
         ) -> Element<'a, Message> {
             let mut content = Column::new();
 
-            if let Some(section) = model::scoped_section(data, section_icon) {
+            if let Some(section) = section {
                 content = content.push(section_view(section, icons));
             }
 
@@ -5171,8 +5194,8 @@ mod window {
         }
     }
 
-    pub use metrics::{content_height, content_width, scoped_height};
-    pub use render::{build_menu_view, build_scoped_view};
+    pub use metrics::{content_height, content_width, section_window_height};
+    pub use render::{build_menu_view, build_section_window};
 
     #[cfg(test)]
     mod tests {
@@ -5306,6 +5329,45 @@ mod window {
                 &processor.rows[1],
                 Row::Fact { label, value } if label == "Threads" && value == "32"
             ));
+        }
+
+        #[test]
+        fn the_processor_window_leaves_the_temperature_to_its_own_entry() {
+            let mut data = machine();
+            data.cpu_temperature_source = Some("k10temp Tctl".to_owned());
+
+            let section = model::processor_section(&data).expect("processor section");
+
+            assert!(
+                !section.rows.iter().any(|row| matches!(
+                    row,
+                    model::Row::Fact { label, .. } if label.starts_with("Temperature")
+                )),
+                "the temperature row belongs to the temperature window"
+            );
+        }
+
+        #[test]
+        fn the_temperature_window_names_its_sensor() {
+            let mut data = machine();
+            data.cpu_temperature_source = Some("k10temp Tctl".to_owned());
+
+            let section = model::cpu_temperature_section(&data).expect("temperature section");
+
+            assert_eq!(section.title, "CPU temperature");
+            assert_eq!(section.note.as_deref(), Some("k10temp Tctl"));
+            assert!(matches!(
+                &section.rows[0],
+                model::Row::Fact { label, value } if label == "Temperature" && value == "56°C"
+            ));
+        }
+
+        #[test]
+        fn a_machine_without_a_cpu_sensor_has_no_temperature_window() {
+            let mut data = machine();
+            data.cpu_temperature = None;
+
+            assert!(model::cpu_temperature_section(&data).is_none());
         }
 
         #[test]
@@ -5475,32 +5537,54 @@ impl SystemInfo {
 
     /// Render the window of the standalone processor entry.
     pub fn cpu_menu_view(&self, icons: &IconTheme) -> Element<'_, Message> {
-        window::build_scoped_view(&self.data, Icons::Cpu, icons)
+        window::build_section_window(window::model::processor_section(&self.data), icons)
     }
 
     /// Render the window of the standalone memory entry.
     pub fn memory_menu_view(&self, icons: &IconTheme) -> Element<'_, Message> {
-        window::build_scoped_view(&self.data, Icons::Mem, icons)
+        window::build_section_window(
+            window::model::scoped_section(&self.data, Icons::Mem),
+            icons
+        )
     }
 
     /// Height the standalone processor window needs.
     pub fn cpu_content_height(&self) -> f32 {
-        window::scoped_height(&self.data, Icons::Cpu)
+        window::section_window_height(window::model::processor_section(&self.data).as_ref())
     }
 
     /// Height the standalone memory window needs.
     pub fn memory_content_height(&self) -> f32 {
-        window::scoped_height(&self.data, Icons::Mem)
+        window::section_window_height(
+            window::model::scoped_section(&self.data, Icons::Mem).as_ref()
+        )
+    }
+
+    /// Render the window of the standalone processor temperature entry.
+    pub fn cpu_temp_menu_view(&self, icons: &IconTheme) -> Element<'_, Message> {
+        window::build_section_window(window::model::cpu_temperature_section(&self.data), icons)
+    }
+
+    /// Height the standalone processor temperature window needs.
+    pub fn cpu_temp_content_height(&self) -> f32 {
+        window::section_window_height(
+            window::model::cpu_temperature_section(&self.data).as_ref()
+        )
     }
 
     /// Render the window of the standalone graphics entry.
     pub fn gpu_menu_view(&self, icons: &IconTheme) -> Element<'_, Message> {
-        window::build_scoped_view(&self.data, Icons::Gpu, icons)
+        window::build_section_window(
+            window::model::scoped_section(&self.data, Icons::Gpu),
+            icons
+        )
     }
 
     /// Height the standalone graphics window needs.
     pub fn gpu_content_height(&self) -> f32 {
-        window::scoped_height(&self.data, Icons::Gpu)
+        window::section_window_height(
+            window::model::scoped_section(&self.data, Icons::Gpu).as_ref()
+        )
     }
 }
 

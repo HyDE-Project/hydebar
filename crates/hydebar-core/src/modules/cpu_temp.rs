@@ -34,7 +34,7 @@ where
         icons
     )?;
 
-    Some((element, Some(OnModulePress::ToggleMenu(MenuType::Cpu))))
+    Some((element, Some(OnModulePress::ToggleMenu(MenuType::CpuTemp))))
 }
 
 /// States what the number measures for the pointer resting on the module.
