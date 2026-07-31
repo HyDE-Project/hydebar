@@ -766,7 +766,8 @@ mod view {
             return note(NO_THEMES, font_size);
         }
 
-        let busy = switching.is_some() || installing.is_some() || updating.is_some();
+        let locked = switching.is_some() || installing.is_some();
+        let busy = locked || updating.is_some();
         let mut block =
             grid(font_size).push(update_all_row(busy, list_layout, font_size, opacity));
 
@@ -782,6 +783,8 @@ mod view {
                     (ThemeChip::Condemned, Message::Remove(name.clone()))
                 } else if fetching {
                     (ThemeChip::Applying(spinner), Message::Switch(name.clone()))
+                } else if locked {
+                    (ThemeChip::Blocked, Message::Switch(name.clone()))
                 } else {
                     (
                         chip_state(state, switching, spinner, name),
