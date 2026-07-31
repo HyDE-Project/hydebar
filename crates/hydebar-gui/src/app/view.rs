@@ -81,8 +81,21 @@ impl App {
             radius: self.appearance().pill_radius(),
             menu_backdrop: self.appearance().menu.backdrop,
             content_height: None,
+            available_height: self.menu_room(),
             progress
         }
+    }
+
+    /// Height a menu box may take before its content has to scroll.
+    ///
+    /// Derived from the reported screen, never from a button viewport: the
+    /// strip below the bar minus the box's own breathing room.
+    fn menu_room(&self) -> Option<f32> {
+        let bar = self.appearance().height.unwrap_or(HEIGHT as f32);
+
+        self.screen_height
+            .map(|screen| screen - bar - self.appearance().font_size_px() * 6.0)
+            .filter(|room| *room > 0.0)
     }
 
     /// Placement of a menu whose content height the caller measured.

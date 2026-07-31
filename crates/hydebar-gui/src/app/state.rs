@@ -75,6 +75,8 @@ pub struct App {
     pub(super) magnification: f32,
     /// Sizes the screen calls for, once an output has reported itself.
     pub(super) auto_metrics: Option<AutoMetrics>,
+    /// Logical height of the screen the bar stands on, once reported.
+    pub(super) screen_height: Option<f32>,
     pub config: Arc<Config>,
     pub outputs: Outputs,
     pub navigation_mode: bool,
@@ -440,6 +442,7 @@ impl App {
             icons: IconTheme::from_config(&config.icons)
                 .with_size(config.appearance.font_size_px()),
             auto_metrics: None,
+            screen_height: None,
             magnification: hydebar_core::components::scale::screen_factor(),
             outputs,
             navigation_mode: false,
