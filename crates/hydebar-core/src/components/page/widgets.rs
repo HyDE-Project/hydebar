@@ -365,7 +365,14 @@ pub(crate) fn theme_chip<'a, M: Clone + 'static>(
             );
         }
 
-        let mut pressable = iced::widget::mouse_area(face);
+        let mut pressable = button(face)
+            .padding(0)
+            .style(move |theme: &Theme, _| button::Style {
+                background: None,
+                text_color: card_colors(theme, paint_colors, state).1,
+                ..button::Style::default()
+            })
+            .width(Length::Fill);
 
         if state.is_pressable() {
             pressable = pressable.on_press(message);
@@ -409,7 +416,14 @@ pub(crate) fn theme_chip<'a, M: Clone + 'static>(
             None => name.into()
         };
 
-        let mut pressable = iced::widget::mouse_area(container(body).width(Length::Fill));
+        let mut pressable = button(container(body).width(Length::Fill))
+            .padding(0)
+            .style(move |theme: &Theme, _| button::Style {
+                background: None,
+                text_color: card_colors(theme, paint_colors, state).1,
+                ..button::Style::default()
+            })
+            .width(Length::Fill);
 
         if state.is_pressable() {
             pressable = pressable.on_press(message);
@@ -433,54 +447,11 @@ pub(crate) fn theme_chip<'a, M: Clone + 'static>(
     ]);
 
     card.style(move |theme: &Theme| {
-        let palette = theme.extended_palette();
-
-        let (base, text_colour, ring) = match paint_colors {
-            Some((background, text, accent)) => {
-                let share = fade_share(theme);
-
-                (
-                    background.scale_alpha(share),
-                    text.scale_alpha(share),
-                    accent.scale_alpha(share)
-                )
-            }
-            None => (
-                palette.background.weak.color,
-                palette.background.base.text,
-                palette.primary.base.color
-            )
-        };
-
-        let (background, text_color, ringed) = match state {
-            ThemeChip::Active => match paint_colors {
-                Some(_) => (base, text_colour, true),
-                None => (palette.primary.base.color, palette.primary.base.text, false)
-            },
-            ThemeChip::Idle => (base, text_colour, false),
-            ThemeChip::Applying(spinner) => match paint_colors {
-                Some(_) => (base.scale_alpha(spinner.pulse()), text_colour, true),
-                None => (
-                    palette.primary.base.color.scale_alpha(spinner.pulse()),
-                    palette.primary.base.text,
-                    false
-                )
-            },
-            ThemeChip::Blocked => (
-                base.scale_alpha(BLOCKED_ALPHA),
-                text_colour.scale_alpha(BLOCKED_ALPHA),
-                false
-            ),
-            ThemeChip::Condemned => (base, text_colour, true)
-        };
+        let (background, text_color, ringed) = card_colors(theme, paint_colors, state);
 
         let mut border = Border::default().rounded(style::corner_radius(font_size));
         if ringed {
-            let ring = if state == ThemeChip::Condemned {
-                theme.palette().danger
-            } else {
-                ring
-            };
+            let ring = card_ring(theme, paint_colors, state);
 
             border = border.color(ring).width(2.0);
         }
@@ -493,6 +464,62 @@ pub(crate) fn theme_chip<'a, M: Clone + 'static>(
         }
     })
     .into()
+}
+
+/// Surface, ink and whether a ring is due, for a card in `state`.
+fn card_colors(
+    theme: &Theme,
+    paint_colors: Option<(iced::Color, iced::Color, iced::Color)>,
+    state: ThemeChip
+) -> (iced::Color, iced::Color, bool) {
+    let palette = theme.extended_palette();
+
+    let (base, text_colour) = match paint_colors {
+        Some((background, text, _)) => {
+            let share = fade_share(theme);
+
+            (background.scale_alpha(share), text.scale_alpha(share))
+        }
+        None => (palette.background.weak.color, palette.background.base.text)
+    };
+
+    match state {
+        ThemeChip::Active => match paint_colors {
+            Some(_) => (base, text_colour, true),
+            None => (palette.primary.base.color, palette.primary.base.text, false)
+        },
+        ThemeChip::Idle => (base, text_colour, false),
+        ThemeChip::Applying(spinner) => match paint_colors {
+            Some(_) => (base.scale_alpha(spinner.pulse()), text_colour, true),
+            None => (
+                palette.primary.base.color.scale_alpha(spinner.pulse()),
+                palette.primary.base.text,
+                false
+            )
+        },
+        ThemeChip::Blocked => (
+            base.scale_alpha(BLOCKED_ALPHA),
+            text_colour.scale_alpha(BLOCKED_ALPHA),
+            false
+        ),
+        ThemeChip::Condemned => (base, text_colour, true)
+    }
+}
+
+/// The colour a card's ring is drawn in.
+fn card_ring(
+    theme: &Theme,
+    paint_colors: Option<(iced::Color, iced::Color, iced::Color)>,
+    state: ThemeChip
+) -> iced::Color {
+    if state == ThemeChip::Condemned {
+        return theme.palette().danger;
+    }
+
+    match paint_colors {
+        Some((_, _, accent)) => accent.scale_alpha(fade_share(theme)),
+        None => theme.extended_palette().primary.base.color
+    }
 }
 
 /// A strip sweeping under a chip that is being worked on.

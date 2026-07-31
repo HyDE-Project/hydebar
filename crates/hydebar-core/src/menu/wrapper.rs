@@ -103,44 +103,48 @@ pub fn menu_wrapper<Message: Clone + 'static>(
     }
 
     mouse_area(
-        container(mouse_area(menu_box).on_release(none_message))
-            .align_y(match layout.bar_position {
-                Position::Top => Vertical::Top,
-                Position::Bottom => Vertical::Bottom
-            })
-            .align_x(Horizontal::Left)
-            .padding({
-                let edge_gap = match layout.style {
-                    AppearanceStyle::Solid | AppearanceStyle::Gradient => 2.0,
-                    AppearanceStyle::Islands => 0.0
-                };
+        container(
+            mouse_area(menu_box)
+                .on_press(none_message.clone())
+                .on_right_press(none_message)
+        )
+        .align_y(match layout.bar_position {
+            Position::Top => Vertical::Top,
+            Position::Bottom => Vertical::Bottom
+        })
+        .align_x(Horizontal::Left)
+        .padding({
+            let edge_gap = match layout.style {
+                AppearanceStyle::Solid | AppearanceStyle::Gradient => 2.0,
+                AppearanceStyle::Islands => 0.0
+            };
 
-                let slide = SLIDE_EM * layout.font_size * (1.0 - layout.progress.clamp(0.0, 1.0));
+            let slide = SLIDE_EM * layout.font_size * (1.0 - layout.progress.clamp(0.0, 1.0));
 
-                Padding::new(0.)
-                    .top(if layout.bar_position == Position::Top {
-                        edge_gap + slide
-                    } else {
-                        0.0
-                    })
-                    .bottom(if layout.bar_position == Position::Bottom {
-                        edge_gap + slide
-                    } else {
-                        0.0
-                    })
-                    .left(MenuSize::left_offset(
-                        width,
-                        button_ui_ref.position.x,
-                        viewport_width,
-                        layout.font_size
-                    ))
-            })
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .style(menu_backdrop_style(
-                layout.menu_backdrop * layout.progress.clamp(0.0, 1.0)
-            ))
+            Padding::new(0.)
+                .top(if layout.bar_position == Position::Top {
+                    edge_gap + slide
+                } else {
+                    0.0
+                })
+                .bottom(if layout.bar_position == Position::Bottom {
+                    edge_gap + slide
+                } else {
+                    0.0
+                })
+                .left(MenuSize::left_offset(
+                    width,
+                    button_ui_ref.position.x,
+                    viewport_width,
+                    layout.font_size
+                ))
+        })
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .style(menu_backdrop_style(
+            layout.menu_backdrop * layout.progress.clamp(0.0, 1.0)
+        ))
     )
-    .on_release(close_menu_message)
+    .on_press(close_menu_message)
     .into()
 }
