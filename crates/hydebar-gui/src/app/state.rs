@@ -107,7 +107,9 @@ pub struct App {
     /// The one module the user is looking at, and the clocks that follow it.
     pub attention: Attention,
     /// Fade of the hover highlight of every module the pointer touched.
-    pub hover: HoverFades<ModuleName>
+    pub hover: HoverFades<ModuleName>,
+    /// Signature the current or incoming theme crosses the bar with.
+    pub sweep: hydebar_core::style::SweepStyle
 }
 
 #[derive(Debug, Clone)]
@@ -329,6 +331,14 @@ impl App {
             self.outputs
                 .resize(appearance.style, appearance.scale_factor, appearance.height);
 
+        let incoming = self
+            .themes
+            .switching()
+            .or(self.themes.hyde().theme.as_deref());
+        self.sweep = hydebar_core::style::SweepStyle::of(incoming, &appearance);
+        self.appearance_transition
+            .restyle(self.sweep.response, self.sweep.damping);
+
         self.appearance_transition
             .set_target(appearance, blend_palette);
 
@@ -423,6 +433,7 @@ impl App {
             notification_popups: Vec::new(),
             attention: Attention::default(),
             hover: HoverFades::default(),
+            sweep: hydebar_core::style::SweepStyle::default(),
             weather: Weather::new(
                 config.weather.location.clone(),
                 config.weather.api_key.clone(),

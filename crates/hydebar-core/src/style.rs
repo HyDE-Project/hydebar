@@ -1,5 +1,6 @@
 mod buttons;
 mod menus;
+mod sweep;
 mod theme;
 mod transition;
 
@@ -9,5 +10,6 @@ pub use buttons::{
     settings_button_style, workspace_button_style
 };
 pub use menus::{menu_backdrop_style, menu_container_style, tooltip_container_style};
+pub use sweep::SweepStyle;
 pub use theme::{backdrop_color, darken_color, faded_theme, hydebar_theme, text_input_style};
 pub use transition::AppearanceTransition;

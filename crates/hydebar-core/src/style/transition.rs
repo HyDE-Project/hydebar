@@ -66,6 +66,16 @@ impl AppearanceTransition {
         self.progress.is_animating()
     }
 
+    /// Retunes the spring to the pace and character of the incoming theme.
+    ///
+    /// Called before aiming at a new palette, so each theme rides in on its
+    /// own signature; a retune landing mid-flight only changes how the rest of
+    /// the travel moves.
+    pub fn restyle(&mut self, response: Duration, damping: f32) {
+        self.progress.set_response(response);
+        self.progress.set_damping_ratio(damping);
+    }
+
     /// How far the blend has travelled, zero at the old appearance and one at
     /// the new.
     #[must_use]

@@ -152,6 +152,15 @@ impl Spring {
         self.response = response.as_secs_f32().max(0.001);
     }
 
+    /// Replaces the damping ratio while the spring is live.
+    ///
+    /// Applied when the motion changes character between travels — a theme
+    /// whose entrance bounces retunes the same spring the previous theme rode
+    /// in on.
+    pub fn set_damping_ratio(&mut self, damping_ratio: f32) {
+        self.damping_ratio = damping_ratio.max(0.0);
+    }
+
     /// Points the spring at `target`, preserving the current velocity.
     pub fn set_target(&mut self, target: f32) {
         self.target = target;

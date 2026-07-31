@@ -5,20 +5,14 @@ use iced::{Alignment, Element, Length, Subscription, SurfaceId as Id, widget::ro
 
 use crate::app::state::{App, Message};
 
-/// Share of a theme change spent staggering the islands.
-///
-/// The rest is what each island spends on its own blend: high enough that the
-/// new palette visibly crosses the bar from its leading corner, low enough
-/// that no island ever sits still while its neighbours move.
-const SWEEP_SPREAD: f32 = 0.75;
-
 impl App {
     /// Theme of the island standing at `position` while a theme change runs.
     ///
-    /// `position` is zero at the corner the front starts from — the right end
-    /// of the bar — and one at the far end. [`None`] whenever the palette
-    /// rests, which is almost always, so the sweep costs nothing outside the
-    /// frames it actually travels.
+    /// `position` is zero at the corner the front starts from and one at the
+    /// far end; which corner leads, how wide the front is and how it moves all
+    /// come from the signature of the incoming theme. [`None`] whenever the
+    /// palette rests, which is almost always, so the sweep costs nothing
+    /// outside the frames it actually travels.
     fn sweep_theme(&self, position: f32) -> Option<iced::Theme> {
         if !self.appearance_transition.is_animating() {
             return None;
@@ -27,7 +21,7 @@ impl App {
         let local = hydebar_core::animation::sweep(
             self.appearance_transition.progress(),
             position,
-            SWEEP_SPREAD
+            self.sweep.spread
         );
 
         Some(hydebar_core::style::hydebar_theme(
@@ -118,7 +112,12 @@ impl App {
                 ModuleDef::Group(group) => self.group_module_wrapper(group, id, opacity)
             };
 
-            let position = 1.0 - ((island_offset + index) as f32 + 0.5) / total;
+            let ordinal = ((island_offset + index) as f32 + 0.5) / total;
+            let position = if self.sweep.from_left {
+                ordinal
+            } else {
+                1.0 - ordinal
+            };
 
             row = row.push_maybe(island.map(|island| self.swept_island(island, position)));
         }
