@@ -87,8 +87,16 @@ impl AppearanceTransition {
     /// Colours and opacities cross-fade; discrete settings such as the layout
     /// style or the scale factor switch instantly because the compositor side
     /// of the shell has to be reconfigured for them anyway.
+    ///
+    /// A target the transition is already aimed at changes nothing at all: a
+    /// theme switch reloads the configuration several times in a burst, and
+    /// the repeats must ride the running blend rather than cut it short.
     pub fn set_target(&mut self, appearance: Appearance, animated: bool) {
-        if !animated || appearance == self.to {
+        if animated && appearance == self.to {
+            return;
+        }
+
+        if !animated {
             self.from = appearance.clone();
             self.to = appearance.clone();
             self.current = appearance;
@@ -347,6 +355,29 @@ mod tests {
         transition.set_target(appearance_with_background(0), true);
 
         assert!(!transition.is_animating());
+    }
+
+    #[test]
+    fn a_repeated_target_rides_the_running_blend() {
+        let mut transition = AppearanceTransition::new(appearance_with_background(0));
+        transition.set_target(appearance_with_background(200), true);
+        let _ = transition.advance(Duration::from_millis(60));
+
+        let midway = transition.current().background_color;
+        transition.set_target(appearance_with_background(200), true);
+
+        assert!(
+            transition.is_animating(),
+            "a reload burst must not cut the blend short"
+        );
+        assert_eq!(transition.current().background_color, midway);
+
+        drain(&mut transition);
+
+        assert_eq!(
+            transition.current().background_color,
+            AppearanceColor::Simple(hex(200))
+        );
     }
 
     #[test]
