@@ -98,6 +98,176 @@ impl App {
         }
     }
 
+    /// Content, width and measured height of the window `menu_type` opens.
+    ///
+    /// The one table naming what every menu shows: the wrapping, placement and
+    /// fade around it are the same for all of them and live with the caller.
+    /// [`None`] stands for a menu whose owner is gone, such as a custom module
+    /// the configuration no longer declares.
+    #[allow(clippy::type_complexity)]
+    fn menu_page(
+        &self,
+        menu_type: &MenuType,
+        id: Id,
+        opacity: f32
+    ) -> Option<(Element<'_, Message>, MenuSize, Option<f32>)> {
+        match menu_type {
+            MenuType::Updates => Some((
+                self.updates
+                    .menu_view(id, opacity, self.icons())
+                    .map(Message::Updates),
+                MenuSize::Small,
+                None
+            )),
+            MenuType::Tray(name) => Some((
+                self.tray
+                    .menu_view(name, opacity, self.icons())
+                    .map(Message::Tray),
+                MenuSize::Small,
+                None
+            )),
+            MenuType::ControlCenter => Some((
+                self.control_center
+                    .menu_view(
+                        id,
+                        &self.config.control_center,
+                        opacity,
+                        self.config.position,
+                        self.icons()
+                    )
+                    .map(Message::ControlCenter),
+                MenuSize::Medium,
+                None
+            )),
+            MenuType::Audio => Some((
+                iced::widget::mouse_area(
+                    self.control_center
+                        .audio_menu(
+                            id,
+                            &self.config.control_center,
+                            opacity,
+                            self.config.position,
+                            self.icons()
+                        )
+                        .map(Message::ControlCenter)
+                )
+                .on_scroll(|delta| {
+                    Message::ControlCenter(hydebar_core::modules::control_center::Message::Audio(
+                        AudioMessage::SinkVolumeWheel(
+                            hydebar_core::modules::control_center::audio::wheel_direction(delta)
+                        )
+                    ))
+                })
+                .into(),
+                MenuSize::Medium,
+                None
+            )),
+            MenuType::Network => Some((
+                self.control_center
+                    .network_menu(id, &self.config.control_center, opacity, self.icons())
+                    .map(Message::ControlCenter),
+                MenuSize::Medium,
+                None
+            )),
+            MenuType::Bluetooth => Some((
+                self.control_center
+                    .bluetooth_menu(id, &self.config.control_center, opacity, self.icons())
+                    .map(Message::ControlCenter),
+                MenuSize::Medium,
+                None
+            )),
+            MenuType::PowerProfile => Some((
+                self.control_center
+                    .power_profile_menu(opacity, &self.config.control_center, self.icons())
+                    .map(Message::ControlCenter),
+                MenuSize::Small,
+                None
+            )),
+            MenuType::HydeMenu => Some((
+                self.hyde_menu.menu_view(id, opacity).map(Message::HydeMenu),
+                MenuSize::Small,
+                None
+            )),
+            MenuType::Settings => {
+                let metrics = self.settings.window_metrics(&self.config);
+
+                Some((
+                    self.settings
+                        .menu_view(
+                            &self.config,
+                            opacity,
+                            self.icons(),
+                            self.magnification,
+                            metrics.page_width
+                        )
+                        .map(Message::Settings),
+                    MenuSize::Content(metrics.width),
+                    Some(metrics.height)
+                ))
+            }
+            MenuType::Themes => {
+                let metrics = self.themes.window_metrics(&self.config);
+
+                Some((
+                    self.themes
+                        .menu_view(&self.config, opacity, metrics.page_width)
+                        .map(Message::Themes),
+                    MenuSize::Content(metrics.width),
+                    Some(metrics.height)
+                ))
+            }
+            MenuType::MediaPlayer => Some((
+                self.media_player
+                    .menu_view(&self.config.media_player, opacity, self.icons())
+                    .map(Message::MediaPlayer),
+                MenuSize::Large,
+                None
+            )),
+            MenuType::SystemInfo => Some((
+                self.system_info
+                    .menu_view(&self.config.system, self.icons())
+                    .map(Message::SystemInfo),
+                MenuSize::Medium,
+                None
+            )),
+            MenuType::Notifications => Some((
+                self.notifications
+                    .menu_view(opacity, self.icons())
+                    .map(Message::Notifications),
+                MenuSize::Medium,
+                None
+            )),
+            MenuType::Screenshot => Some((
+                self.screenshot
+                    .menu_view(opacity, self.icons())
+                    .map(Message::Screenshot),
+                MenuSize::Small,
+                None
+            )),
+            MenuType::Calendar => Some((
+                self.calendar.menu_view(self.icons()).map(Message::Calendar),
+                MenuSize::Content(hydebar_core::modules::calendar::Calendar::content_width(
+                    self.appearance().font_size_px()
+                )),
+                Some(hydebar_core::modules::calendar::Calendar::content_height())
+            )),
+            MenuType::Custom(name) => self
+                .config
+                .custom_modules
+                .iter()
+                .find(|definition| &definition.name == name)
+                .map(|definition| {
+                    (
+                        custom_module::menu_view(definition, self.appearance(), opacity, {
+                            move |entry| custom_menu_message(id, entry)
+                        }),
+                        MenuSize::Small,
+                        None
+                    )
+                })
+        }
+    }
+
     /// Wraps the bar so a press on it takes the open menu down.
     ///
     /// The menu backdrop covers the screen the bar leaves free and nothing
@@ -229,258 +399,34 @@ impl App {
             Some(HasOutput::Menu(menu_info)) => {
                 let menu_opacity = self.config.appearance.menu.opacity;
                 let menu_progress = self.outputs.get_menu_progress(id);
-                let menu: Element<'_, Message> = match menu_info {
-                    Some((MenuType::Updates, button_ui_ref)) => menu_wrapper(
-                        id,
-                        self.updates
-                            .menu_view(id, menu_opacity, self.icons())
-                            .map(Message::Updates),
-                        MenuSize::Small,
-                        *button_ui_ref,
-                        self.menu_layout(menu_opacity, menu_progress),
-                        Message::None,
-                        Message::CloseMenu(id)
-                    ),
-                    Some((MenuType::Tray(name), button_ui_ref)) => menu_wrapper(
-                        id,
-                        self.tray
-                            .menu_view(name, menu_opacity, self.icons())
-                            .map(Message::Tray),
-                        MenuSize::Small,
-                        *button_ui_ref,
-                        self.menu_layout(menu_opacity, menu_progress),
-                        Message::None,
-                        Message::CloseMenu(id)
-                    ),
-                    Some((MenuType::ControlCenter, button_ui_ref)) => menu_wrapper(
-                        id,
-                        self.control_center
-                            .menu_view(
-                                id,
-                                &self.config.control_center,
-                                menu_opacity,
-                                self.config.position,
-                                self.icons()
-                            )
-                            .map(Message::ControlCenter),
-                        MenuSize::Medium,
-                        *button_ui_ref,
-                        self.menu_layout(menu_opacity, menu_progress),
-                        Message::None,
-                        Message::CloseMenu(id)
-                    ),
-                    Some((MenuType::Audio, button_ui_ref)) => menu_wrapper(
-                        id,
-                        iced::widget::mouse_area(
-                            self.control_center
-                                .audio_menu(
-                                    id,
-                                    &self.config.control_center,
-                                    menu_opacity,
-                                    self.config.position,
-                                    self.icons()
-                                )
-                                .map(Message::ControlCenter)
-                        )
-                        .on_scroll(|delta| {
-                            Message::ControlCenter(
-                                hydebar_core::modules::control_center::Message::Audio(
-                                    AudioMessage::SinkVolumeWheel(
-                                        hydebar_core::modules::control_center::audio::wheel_direction(delta)
-                                    )
-                                )
-                            )
-                        })
-                        .into(),
-                        MenuSize::Medium,
-                        *button_ui_ref,
-                        self.menu_layout(menu_opacity, menu_progress),
-                        Message::None,
-                        Message::CloseMenu(id)
-                    ),
-                    Some((MenuType::Network, button_ui_ref)) => menu_wrapper(
-                        id,
-                        self.control_center
-                            .network_menu(
-                                id,
-                                &self.config.control_center,
-                                menu_opacity,
-                                self.icons()
-                            )
-                            .map(Message::ControlCenter),
-                        MenuSize::Medium,
-                        *button_ui_ref,
-                        self.menu_layout(menu_opacity, menu_progress),
-                        Message::None,
-                        Message::CloseMenu(id)
-                    ),
-                    Some((MenuType::Bluetooth, button_ui_ref)) => menu_wrapper(
-                        id,
-                        self.control_center
-                            .bluetooth_menu(
-                                id,
-                                &self.config.control_center,
-                                menu_opacity,
-                                self.icons()
-                            )
-                            .map(Message::ControlCenter),
-                        MenuSize::Medium,
-                        *button_ui_ref,
-                        self.menu_layout(menu_opacity, menu_progress),
-                        Message::None,
-                        Message::CloseMenu(id)
-                    ),
-                    Some((MenuType::PowerProfile, button_ui_ref)) => menu_wrapper(
-                        id,
-                        self.control_center
-                            .power_profile_menu(
-                                menu_opacity,
-                                &self.config.control_center,
-                                self.icons()
-                            )
-                            .map(Message::ControlCenter),
-                        MenuSize::Small,
-                        *button_ui_ref,
-                        self.menu_layout(menu_opacity, menu_progress),
-                        Message::None,
-                        Message::CloseMenu(id)
-                    ),
-                    Some((MenuType::HydeMenu, button_ui_ref)) => menu_wrapper(
-                        id,
-                        self.hyde_menu
-                            .menu_view(id, menu_opacity)
-                            .map(Message::HydeMenu),
-                        MenuSize::Small,
-                        *button_ui_ref,
-                        self.menu_layout(menu_opacity, menu_progress),
-                        Message::None,
-                        Message::CloseMenu(id)
-                    ),
-                    Some((MenuType::Settings, button_ui_ref)) => {
-                        let metrics = self.settings.window_metrics(&self.config);
 
-                        menu_wrapper(
-                            id,
-                            self.settings
-                                .menu_view(
-                                    &self.config,
-                                    menu_opacity,
-                                    self.icons(),
-                                    self.magnification,
-                                    metrics.page_width
-                                )
-                                .map(Message::Settings),
-                            MenuSize::Content(metrics.width),
-                            *button_ui_ref,
-                            self.measured_menu_layout(menu_opacity, menu_progress, metrics.height),
-                            Message::None,
-                            Message::CloseMenu(id)
-                        )
-                    }
-                    Some((MenuType::Themes, button_ui_ref)) => {
-                        let metrics = self.themes.window_metrics(&self.config);
+                let menu = menu_info.and_then(|(menu_type, button_ui_ref)| {
+                    self.menu_page(menu_type, id, menu_opacity).map(
+                        |(content, size, measured_height)| {
+                            let layout = match measured_height {
+                                Some(height) => {
+                                    self.measured_menu_layout(menu_opacity, menu_progress, height)
+                                }
+                                None => self.menu_layout(menu_opacity, menu_progress)
+                            };
 
-                        menu_wrapper(
-                            id,
-                            self.themes
-                                .menu_view(&self.config, menu_opacity, metrics.page_width)
-                                .map(Message::Themes),
-                            MenuSize::Content(metrics.width),
-                            *button_ui_ref,
-                            self.measured_menu_layout(menu_opacity, menu_progress, metrics.height),
-                            Message::None,
-                            Message::CloseMenu(id)
-                        )
-                    }
-                    Some((MenuType::MediaPlayer, button_ui_ref)) => menu_wrapper(
-                        id,
-                        self.media_player
-                            .menu_view(&self.config.media_player, menu_opacity, self.icons())
-                            .map(Message::MediaPlayer),
-                        MenuSize::Large,
-                        *button_ui_ref,
-                        self.menu_layout(menu_opacity, menu_progress),
-                        Message::None,
-                        Message::CloseMenu(id)
-                    ),
-                    Some((MenuType::SystemInfo, button_ui_ref)) => menu_wrapper(
-                        id,
-                        self.system_info
-                            .menu_view(&self.config.system, self.icons())
-                            .map(Message::SystemInfo),
-                        MenuSize::Medium,
-                        *button_ui_ref,
-                        self.menu_layout(menu_opacity, menu_progress),
-                        Message::None,
-                        Message::CloseMenu(id)
-                    ),
-                    Some((MenuType::Notifications, button_ui_ref)) => menu_wrapper(
-                        id,
-                        self.notifications
-                            .menu_view(menu_opacity, self.icons())
-                            .map(Message::Notifications),
-                        MenuSize::Medium,
-                        *button_ui_ref,
-                        self.menu_layout(menu_opacity, menu_progress),
-                        Message::None,
-                        Message::CloseMenu(id)
-                    ),
-                    Some((MenuType::Screenshot, button_ui_ref)) => menu_wrapper(
-                        id,
-                        self.screenshot
-                            .menu_view(menu_opacity, self.icons())
-                            .map(Message::Screenshot),
-                        MenuSize::Small,
-                        *button_ui_ref,
-                        self.menu_layout(menu_opacity, menu_progress),
-                        Message::None,
-                        Message::CloseMenu(id)
-                    ),
-                    Some((MenuType::Calendar, button_ui_ref)) => menu_wrapper(
-                        id,
-                        self.calendar.menu_view(self.icons()).map(Message::Calendar),
-                        MenuSize::Content(
-                            hydebar_core::modules::calendar::Calendar::content_width(
-                                self.appearance().font_size_px()
-                            )
-                        ),
-                        *button_ui_ref,
-                        self.measured_menu_layout(
-                            menu_opacity,
-                            menu_progress,
-                            hydebar_core::modules::calendar::Calendar::content_height()
-                        ),
-                        Message::None,
-                        Message::CloseMenu(id)
-                    ),
-                    Some((MenuType::Custom(name), button_ui_ref)) => {
-                        match self
-                            .config
-                            .custom_modules
-                            .iter()
-                            .find(|definition| &definition.name == name)
-                        {
-                            Some(definition) => menu_wrapper(
+                            menu_wrapper(
                                 id,
-                                custom_module::menu_view(
-                                    definition,
-                                    self.appearance(),
-                                    menu_opacity,
-                                    move |entry| custom_menu_message(id, entry)
-                                ),
-                                MenuSize::Small,
+                                content,
+                                size,
                                 *button_ui_ref,
-                                self.menu_layout(menu_opacity, menu_progress),
+                                layout,
                                 Message::None,
                                 Message::CloseMenu(id)
-                            ),
-                            None => Row::new().into()
+                            )
                         }
-                    }
-                    None => Row::new().into()
-                };
+                    )
+                });
 
-                self.faded_menu(menu, menu_progress)
+                match menu {
+                    Some(menu) => self.faded_menu(menu, menu_progress),
+                    None => Row::new().into()
+                }
             }
             Some(HasOutput::Notifications) => notifications_popup::view(
                 &self.notification_popups,
