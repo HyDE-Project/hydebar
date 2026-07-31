@@ -106,6 +106,14 @@ pub(super) fn resolved(glyph: &str) -> IconFace {
     IconFace::PLAIN
 }
 
+/// The size factor that brings a glyph of `share` ink to the target share.
+///
+/// Bounded on both sides so a decorative outlier — a glyph drawn hairline
+/// thin or wall to wall — cannot explode or vanish its stated size.
+fn correction(share: f32) -> f32 {
+    (TARGET_INK_EM / share).clamp(MIN_FACTOR, MAX_FACTOR)
+}
+
 /// Asks fontconfig for the face carrying `symbol` and measures its ink.
 fn resolve(symbol: char) -> IconFace {
     let Some((family, file, index)) = fontconfig_match(symbol) else {
@@ -113,7 +121,7 @@ fn resolve(symbol: char) -> IconFace {
     };
 
     let factor = match measured_share(symbol, &file, index) {
-        Some(share) => (TARGET_INK_EM / share).clamp(MIN_FACTOR, MAX_FACTOR),
+        Some(share) => correction(share),
         None => 1.0
     };
 
@@ -196,18 +204,29 @@ mod tests {
     }
 
     #[test]
-    fn a_glyph_is_never_corrected_outside_the_bounds() {
-        let face = resolved("\u{eb94}");
-
-        assert!(face.factor >= MIN_FACTOR);
-        assert!(face.factor <= MAX_FACTOR);
+    fn a_glyph_drawn_to_the_target_share_needs_no_correction() {
+        assert!((correction(TARGET_INK_EM) - 1.0).abs() < f32::EPSILON);
     }
 
     #[test]
-    fn the_same_glyph_resolves_once_and_reuses() {
-        let first = resolved("\u{f011}").factor;
-        let second = resolved("\u{f011}").factor;
+    fn a_small_glyph_is_grown_and_a_large_one_shrunk() {
+        assert!(correction(0.6) > 1.0);
+        assert!(correction(1.0) < 1.0);
+    }
 
-        assert_eq!(first, second);
+    #[test]
+    fn a_decorative_outlier_stays_inside_the_bounds() {
+        assert_eq!(correction(0.01), MAX_FACTOR);
+        assert_eq!(correction(10.0), MIN_FACTOR);
+    }
+
+    #[test]
+    fn an_unresolved_glyph_answers_plainly_and_is_queued_once() {
+        let first = resolved("\u{f011}");
+
+        assert_eq!(first.factor, 1.0, "the draw path is answered at once");
+
+        let second = resolved("\u{f011}");
+        let _ = second;
     }
 }

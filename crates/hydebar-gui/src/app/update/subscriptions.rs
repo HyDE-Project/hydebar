@@ -114,6 +114,7 @@ impl App {
             || self.clock.is_fading()
             || self.updates.is_fading()
             || self.keyboard_layout.is_fading()
+            || self.keyboard_submap.is_fading()
             || self.battery.is_fading()
         {
             iced::time::every(std::time::Duration::from_millis(16))

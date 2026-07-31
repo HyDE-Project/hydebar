@@ -111,6 +111,7 @@ impl App {
                 let values_fading = self.clock.tick_fade(elapsed)
                     | self.updates.tick_fade(elapsed)
                     | self.keyboard_layout.tick_fade(elapsed)
+                    | self.keyboard_submap.tick_fade(elapsed)
                     | self.battery.tick_fade(elapsed);
                 let greeting_tasks = self.greeting_surface_tasks();
 

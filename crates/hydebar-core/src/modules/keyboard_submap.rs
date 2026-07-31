@@ -13,7 +13,8 @@ pub struct KeyboardSubmap {
     hyprland: Arc<dyn HyprlandPort>,
     submap:   String,
     sender:   Option<ModuleEventSender<Message>>,
-    task:     Option<JoinHandle<()>>
+    task:     Option<JoinHandle<()>>,
+    shown:    crate::components::crossfade::Crossfade
 }
 
 const SUBMAP_EVENT_RETRY_DELAY: Duration = Duration::from_millis(500);
@@ -34,7 +35,8 @@ impl KeyboardSubmap {
             hyprland,
             submap: initial_submap,
             sender: None,
-            task: None
+            task: None,
+            shown: crate::components::crossfade::Crossfade::default()
         }
     }
 }
@@ -45,12 +47,26 @@ pub enum Message {
 }
 
 impl KeyboardSubmap {
-    pub fn update(&mut self, message: Message) {
+    /// `animated` decides whether the shown submap dissolves into its
+    /// replacement or swaps outright.
+    pub fn update(&mut self, message: Message, animated: bool) {
         match message {
             Message::SubmapChanged(submap) => {
                 self.submap = submap;
             }
         }
+
+        self.shown.set(self.submap.clone(), animated);
+    }
+
+    /// Advances the dissolve of the shown submap.
+    pub fn tick_fade(&mut self, elapsed: Duration) -> bool {
+        self.shown.advance(elapsed)
+    }
+
+    /// Whether the shown submap is still dissolving.
+    pub fn is_fading(&self) -> bool {
+        self.shown.is_animating()
     }
 
     #[cfg(test)]
@@ -128,8 +144,10 @@ where
     ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
         if self.submap.is_empty() {
             None
-        } else {
+        } else if self.shown.current().is_empty() {
             Some((text(self.submap.clone()).into(), None))
+        } else {
+            Some((self.shown.element(crate::components::scale::base()), None))
         }
     }
 
@@ -158,7 +176,7 @@ mod tests {
         let port_trait: Arc<dyn HyprlandPort> = port.clone();
         let mut module = KeyboardSubmap::new(port_trait);
 
-        module.update(Message::SubmapChanged("launch".into()));
+        module.update(Message::SubmapChanged("launch".into()), false);
 
         assert_eq!(module.submap(), "launch");
     }

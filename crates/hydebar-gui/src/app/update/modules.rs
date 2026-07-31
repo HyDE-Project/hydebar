@@ -160,7 +160,8 @@ impl App {
                 Task::none()
             }
             Message::KeyboardSubmap(message) => {
-                self.keyboard_submap.update(message);
+                self.keyboard_submap
+                    .update(message, self.config.appearance.animations.enabled);
                 Task::none()
             }
             Message::Tray(msg) => {
