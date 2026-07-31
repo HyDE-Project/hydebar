@@ -258,8 +258,21 @@ mod commands {
     pub(super) async fn update_hyde<F>(
         clone: &str,
         branch: &str,
-        mut publish: F
+        publish: F
     ) -> Result<(), CommandError>
+    where
+        F: FnMut(Vec<String>)
+    {
+        stream_shell(hyde_update_script(clone, branch), publish).await
+    }
+
+    /// Runs `script` without a terminal, narrating its output into `publish`
+    /// as the tail of the last few lines.
+    ///
+    /// Anything in the script that calls for elevation asks through the
+    /// desktop's polkit agent, and a closed stdin answers anything that would
+    /// have been a prompt.
+    async fn stream_shell<F>(script: String, mut publish: F) -> Result<(), CommandError>
     where
         F: FnMut(Vec<String>)
     {
@@ -268,7 +281,7 @@ mod commands {
         let mut spawner = process::Command::new("bash");
         spawner
             .arg("-c")
-            .arg(hyde_update_script(clone, branch))
+            .arg(script)
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
@@ -375,20 +388,16 @@ mod commands {
         format!("'{}'", value.replace('\'', "'\\''"))
     }
 
-    pub(super) async fn apply_updates(command: &str) -> Result<(), CommandError> {
-        let output = process::Command::new("bash")
-            .arg("-c")
-            .arg(command)
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status()
-            .await?;
-
-        if !output.success() {
-            return Err(CommandError::Status(output));
-        }
-
-        Ok(())
+    /// Applies the configured update command, narrating into `publish`.
+    ///
+    /// The command streams into the updates window like the HyDE update does;
+    /// a command that opens its own terminal still works, it just has nothing
+    /// to narrate.
+    pub(super) async fn apply_updates<F>(command: &str, publish: F) -> Result<(), CommandError>
+    where
+        F: FnMut(Vec<String>)
+    {
+        stream_shell(format!("exec 2>&1\n{command}\n"), publish).await
     }
 
     fn parse_updates(output: &str) -> Vec<Update> {
@@ -631,10 +640,16 @@ mod state {
         CheckFailed,
         /// The configured check cannot be run on this machine.
         UpdatesUnavailable,
-        UpdateFinished,
+        /// The package update ended, well or badly.
+        UpdateFinished {
+            failed: bool
+        },
+        /// The last lines the running package update printed.
+        UpdateLog(Vec<String>),
         ToggleUpdatesList,
         CheckNow,
-        Update(Id),
+        /// Apply the configured update command, narrating into the window.
+        Update,
         /// The HyDE clone was compared against upstream.
         HydeChecked(HydeSnapshot),
         ToggleHydeList,
@@ -669,6 +684,9 @@ mod state {
         hyde_updating:            bool,
         hyde_failed:              bool,
         hyde_log:                 Vec<String>,
+        applying:                 bool,
+        apply_failed:             bool,
+        apply_log:                Vec<String>,
         update_command:           Option<Arc<str>>,
         sender:                   Option<ModuleEventSender<Message>>,
         runtime:                  Option<Handle>,
@@ -725,6 +743,9 @@ mod state {
                 .field("hyde_updating", &self.hyde_updating)
                 .field("hyde_failed", &self.hyde_failed)
                 .field("hyde_log", &self.hyde_log)
+                .field("applying", &self.applying)
+                .field("apply_failed", &self.apply_failed)
+                .field("apply_log", &self.apply_log)
                 .field("update_command", &self.update_command)
                 .field("sender", &self.sender)
                 .field("runtime", &self.runtime)
@@ -746,6 +767,9 @@ mod state {
                 hyde_updating:        self.hyde_updating,
                 hyde_failed:          self.hyde_failed,
                 hyde_log:             self.hyde_log.clone(),
+                applying:             self.applying,
+                apply_failed:         self.apply_failed,
+                apply_log:            self.apply_log.clone(),
                 update_command:       self.update_command.clone(),
                 sender:               self.sender.clone(),
                 runtime:              self.runtime.clone(),
@@ -1029,7 +1053,7 @@ mod state {
             &mut self,
             message: Message,
             _config: &UpdatesModuleConfig,
-            outputs: &mut Outputs,
+            _outputs: &mut Outputs,
             main_config: &crate::config::Config
         ) {
             match message {
@@ -1040,39 +1064,69 @@ mod state {
                     }
                     None => warn!("the updates module has no schedule; skipping the manual check")
                 },
-                Message::Update(id) => {
-                    if let (Some(runtime), Some(sender), Some(update_command)) = (
+                Message::Update => {
+                    if self.applying {
+                        debug!("a package update is already running");
+                    } else if let (Some(runtime), Some(sender), Some(update_command)) = (
                         self.runtime.clone(),
                         self.sender.clone(),
                         self.update_command.clone()
                     ) {
-                        runtime.spawn(async move {
-                            if let Err(err) =
-                                commands::apply_updates(update_command.as_ref()).await
-                            {
-                                err.or_log("failed to execute update command");
-                            }
+                        self.applying = true;
+                        self.apply_failed = false;
+                        self.apply_log.clear();
 
-                            if let Err(err) = sender.try_send(Message::UpdateFinished) {
+                        let log_sender = sender.clone();
+
+                        runtime.spawn(async move {
+                            let publish = move |lines| {
+                                let _ = log_sender.try_send(Message::UpdateLog(lines));
+                            };
+
+                            let failed =
+                                match commands::apply_updates(update_command.as_ref(), publish)
+                                    .await
+                                {
+                                    Ok(()) => false,
+                                    Err(err) => {
+                                        err.or_log("the package update failed");
+
+                                        true
+                                    }
+                                };
+
+                            if let Err(err) = sender.try_send(Message::UpdateFinished {
+                                failed
+                            }) {
                                 error!("failed to publish update completion: {err}");
                             }
                         });
                     } else {
                         warn!("updates module is not fully initialised; skipping update command");
                     }
-
-                    let _ = outputs.close_menu_if::<Message>(id, MenuType::Updates, main_config);
                 }
-                Message::UpdateFinished => match self.schedule.as_ref() {
-                    Some(schedule) => {
-                        self.state = CheckState::Checking;
-                        schedule.request_check();
+                Message::UpdateFinished {
+                    failed
+                } => {
+                    self.applying = false;
+                    self.apply_failed = failed;
+                    self.apply_log.push(
+                        if failed {
+                            "· the update failed"
+                        } else {
+                            "· the update finished"
+                        }
+                        .to_owned()
+                    );
+
+                    match self.schedule.as_ref() {
+                        Some(schedule) => {
+                            self.state = CheckState::Checking;
+                            schedule.request_check();
+                        }
+                        None => self.state = CheckState::Ready
                     }
-                    None => {
-                        self.updates.clear();
-                        self.state = CheckState::Ready;
-                    }
-                },
+                }
                 Message::UpdateHyde => {
                     if self.hyde_updating {
                         debug!("a hyde update is already running");
@@ -1151,6 +1205,10 @@ mod state {
                 Message::UpdatesCheckCompleted(updates) => {
                     self.updates = updates;
                     self.state = CheckState::Ready;
+
+                    if !self.applying && !self.apply_failed {
+                        self.apply_log.clear();
+                    }
                 }
                 Message::CheckFailed => self.state = CheckState::Ready,
                 Message::UpdatesUnavailable => {
@@ -1175,6 +1233,11 @@ mod state {
                         self.hyde_log = lines;
                     }
                 }
+                Message::UpdateLog(lines) => {
+                    if self.applying {
+                        self.apply_log = lines;
+                    }
+                }
                 Message::HydeUpdateFinished {
                     failed
                 } => {
@@ -1190,8 +1253,10 @@ mod state {
                     );
                 }
                 Message::CheckNow
-                | Message::Update(_)
-                | Message::UpdateFinished
+                | Message::Update
+                | Message::UpdateFinished {
+                    ..
+                }
                 | Message::UpdateHyde => {}
             }
         }
@@ -1226,6 +1291,14 @@ mod state {
 
         pub(crate) fn hyde_log(&self) -> &[String] {
             &self.hyde_log
+        }
+
+        pub(crate) fn is_applying(&self) -> bool {
+            self.applying
+        }
+
+        pub(crate) fn apply_log(&self) -> &[String] {
+            &self.apply_log
         }
 
         /// Branch the HyDE clone is measured against.
@@ -1820,7 +1893,7 @@ mod view {
 
     pub(super) fn menu_view<'a>(
         updates: &'a Updates,
-        id: Id,
+        _id: Id,
         opacity: f32,
         icons: &IconTheme
     ) -> Element<'a, Message> {
@@ -1840,9 +1913,47 @@ mod view {
                 .push(rule::horizontal(1));
         }
 
-        menu.push(action_button("Update", Message::Update(id), opacity))
-            .push(check_now_button(updates, opacity, icons))
-            .into()
+        if updates.is_applying() {
+            menu = menu.push(
+                container(row!(
+                    text("Updating").width(Length::Fill),
+                    icon_component(icons, Icons::Refresh)
+                ))
+                .padding([scale::scaled(8.0), scale::scaled(8.0)])
+            );
+        } else {
+            menu = menu.push(action_button(
+                "Update",
+                (!updates.is_hyde_updating()).then_some(Message::Update),
+                opacity
+            ));
+        }
+
+        if !updates.apply_log().is_empty() {
+            menu = menu.push(log_block(updates.apply_log()));
+        }
+
+        menu.push(check_now_button(updates, opacity, icons)).into()
+    }
+
+    /// The tail of what a running update printed, as quiet small lines.
+    fn log_block(lines: &[String]) -> Element<'_, Message> {
+        container(
+            Column::with_children(
+                lines
+                    .iter()
+                    .map(|line| {
+                        text(truncated(line, 60).into_owned())
+                            .size(scale::scaled(10.0))
+                            .width(Length::Fill)
+                            .into()
+                    })
+                    .collect::<Vec<Element<'_, Message>>>()
+            )
+            .spacing(scale::scaled(2.0))
+        )
+        .padding([scale::scaled(4.0), scale::scaled(8.0)])
+        .into()
     }
 
     /// What the bar knows about the HyDE installation itself.
@@ -1924,28 +2035,15 @@ mod view {
                 );
             }
 
-            section = section.push(action_button("Update HyDE", Message::UpdateHyde, opacity));
+            section = section.push(action_button(
+                "Update HyDE",
+                (!updates.is_applying()).then_some(Message::UpdateHyde),
+                opacity
+            ));
         }
 
         if !updates.hyde_log().is_empty() {
-            section = section.push(
-                container(
-                    Column::with_children(
-                        updates
-                            .hyde_log()
-                            .iter()
-                            .map(|line| {
-                                text(truncated(line, 60).into_owned())
-                                    .size(scale::scaled(10.0))
-                                    .width(Length::Fill)
-                                    .into()
-                            })
-                            .collect::<Vec<Element<'_, Message>>>()
-                    )
-                    .spacing(scale::scaled(2.0))
-                )
-                .padding([scale::scaled(4.0), scale::scaled(8.0)])
-            );
+            section = section.push(log_block(updates.hyde_log()));
         }
 
         section.into()
@@ -2039,15 +2137,17 @@ mod view {
         .into()
     }
 
+    /// A full-width menu action; `message: None` draws it disabled, which is
+    /// how one update keeps the other from starting beside it.
     fn action_button<'a>(
         label: &'a str,
-        message: Message,
+        message: Option<Message>,
         opacity: f32
     ) -> iced::widget::Button<'a, Message> {
         button(label)
             .style(ghost_button_style(opacity))
             .padding([scale::scaled(8.0), scale::scaled(8.0)])
-            .on_press(message)
+            .on_press_maybe(message)
             .width(Length::Fill)
     }
 
