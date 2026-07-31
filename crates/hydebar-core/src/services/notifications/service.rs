@@ -32,36 +32,41 @@ impl NotificationsService {
         }
     }
 
-    pub fn get_notifications(&self) -> Vec<Notification> {
+    /// The storage, survivable even after a panic under the lock.
+    ///
+    /// A poisoned mutex here would otherwise take the notification path down
+    /// for the rest of the session; the storage holds plain data, so reading
+    /// whatever the panicking holder left behind is strictly better.
+    fn storage(&self) -> std::sync::MutexGuard<'_, NotificationStorage> {
         self.storage
             .lock()
-            .unwrap()
-            .get_all()
-            .iter()
-            .cloned()
-            .collect()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+
+    pub fn get_notifications(&self) -> Vec<Notification> {
+        self.storage().get_all().iter().cloned().collect()
     }
 
     pub fn unread_count(&self) -> usize {
-        self.storage.lock().unwrap().unread_count()
+        self.storage().unread_count()
     }
 
     pub fn dismiss(&mut self, id: u32) {
-        self.storage.lock().unwrap().remove(id);
+        self.storage().remove(id);
     }
 
     pub fn clear_all(&mut self) {
-        self.storage.lock().unwrap().clear();
+        self.storage().clear();
     }
 
     pub fn toggle_dnd(&mut self) {
-        let mut storage = self.storage.lock().unwrap();
+        let mut storage = self.storage();
         let current = storage.is_dnd();
         storage.set_dnd(!current);
     }
 
     pub fn is_dnd(&self) -> bool {
-        self.storage.lock().unwrap().is_dnd()
+        self.storage().is_dnd()
     }
 }
 
@@ -77,7 +82,7 @@ impl ReadOnlyService for NotificationsService {
                 // storing again listed every notification twice
             }
             NotificationEvent::Closed(id) => {
-                self.storage.lock().unwrap().remove(id);
+                self.storage().remove(id);
             }
             NotificationEvent::ActionInvoked(_, _) => {
                 // Actions handling can be added later

@@ -33,6 +33,18 @@ impl NotificationsServer {
     fn announce(&self, event: NotificationEvent) {
         let _ = self.announce.unbounded_send(event);
     }
+
+    /// The storage, survivable even after a panic under the lock.
+    ///
+    /// The server answers every notification the session sends; a poisoned
+    /// mutex propagated here would crash the bar on the next one. The storage
+    /// holds plain data, so reading what the panicking holder left is
+    /// strictly better.
+    fn storage(&self) -> std::sync::MutexGuard<'_, NotificationStorage> {
+        self.storage
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
 }
 
 #[interface(name = "org.freedesktop.Notifications")]
@@ -88,7 +100,7 @@ impl NotificationsServer {
             actions
         };
 
-        let mut storage = self.storage.lock().unwrap();
+        let mut storage = self.storage();
 
         // Check if should show (DND mode)
         if !storage.should_show(&urgency) {
@@ -111,7 +123,7 @@ impl NotificationsServer {
             ..notification
         }));
 
-        let storage = self.storage.lock().unwrap();
+        let storage = self.storage();
 
         // Play sound if enabled
         if storage.sounds_enabled() {
@@ -123,7 +135,7 @@ impl NotificationsServer {
 
     /// Close notification
     fn close_notification(&mut self, id: u32) {
-        self.storage.lock().unwrap().remove(id);
+        self.storage().remove(id);
         self.announce(NotificationEvent::Closed(id));
     }
 }
