@@ -17,6 +17,37 @@ pub use state::{HasOutput, Outputs};
 /// reload and lost.
 const RELOAD_TAIL: std::time::Duration = std::time::Duration::from_secs(5);
 
+/// Starts the watcher restating the blur rules the moment they are wiped.
+///
+/// The compositor forgets every dynamically stated rule when it reloads its
+/// configuration, and it announces that reload on its event socket. Answering
+/// the announcement is what keeps the bar's blur gap to a moment: the timed
+/// tail in [`restate_blur`] alone left the bar bare for however long the
+/// heaviest theme took to reach its reload, seconds on some. The tail stays as
+/// the backstop for a wipe the socket never announced.
+pub fn start_blur_guard() {
+    if std::env::var_os("HYPRLAND_INSTANCE_SIGNATURE").is_none() {
+        return;
+    }
+
+    std::thread::spawn(|| {
+        loop {
+            let mut listener = hyprland::event_listener::EventListener::new();
+
+            listener.add_config_reloaded_handler(|| {
+                log::debug!("compositor reloaded, restating the blur rules");
+                blur::request();
+            });
+
+            if let Err(err) = listener.start_listener() {
+                log::warn!("blur guard lost the compositor socket: {err}");
+            }
+
+            std::thread::sleep(RELOAD_TAIL);
+        }
+    });
+}
+
 /// Generation of the latest restatement request.
 ///
 /// Bumped on every call so the tail thread can tell whether another trigger

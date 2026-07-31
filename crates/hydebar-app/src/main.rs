@@ -99,6 +99,8 @@ fn reap_and_guard_children() {
 
     hydebar_core::utils::process_group::start_orphan_reaper();
 
+    hydebar_core::outputs::start_blur_guard();
+
     if let Err(err) = hydebar_core::utils::process_group::claim_orphans() {
         error!("failed to claim orphaned children, some may escape the bar: {err}");
     }
