@@ -68,6 +68,7 @@ impl NetworkBackend for NetworkDbus<'_> {
             wireless_access_points,
             known_connections,
             scanning_nearby_wifi: false,
+            link: Default::default(),
             last_error: None
         })
     }

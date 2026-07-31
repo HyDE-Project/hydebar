@@ -34,7 +34,34 @@ pub enum NetworkEvent {
     /// Requests a password for the given SSID.
     RequestPasswordForSSID(String),
     /// Indicates that the backend is scanning for Wi-Fi networks.
-    ScanningNearbyWifi
+    ScanningNearbyWifi,
+    /// Carries fresh facts about the link the default route rides on.
+    LinkDetails(LinkDetails)
+}
+
+/// Facts about the live link, read beside the backend rather than from it.
+///
+/// # Examples
+/// ```
+/// use hydebar_core::services::network::LinkDetails;
+///
+/// let details = LinkDetails::default();
+/// assert!(details.interface.is_none());
+/// ```
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct LinkDetails {
+    /// Interface the default route rides on.
+    pub interface:     Option<String>,
+    /// Wireless signal, in dBm.
+    pub signal_dbm:    Option<i32>,
+    /// Wireless channel frequency, in MHz.
+    pub frequency_mhz: Option<u32>,
+    /// First IPv4 address with its prefix, `addr/len`.
+    pub address:       Option<String>,
+    /// Gateway of the default route.
+    pub gateway:       Option<String>,
+    /// Netmask of that address, spelled dotted.
+    pub netmask:       Option<String>
 }
 
 /// Commands accepted by the [`NetworkService`].
@@ -101,6 +128,8 @@ pub struct NetworkData {
     pub connectivity:           ConnectivityState,
     /// Whether the backend is scanning for Wi-Fi.
     pub scanning_nearby_wifi:   bool,
+    /// Facts about the link the default route rides on.
+    pub link:                   LinkDetails,
     /// The last error encountered by the service, if any.
     pub last_error:             Option<NetworkServiceError>
 }

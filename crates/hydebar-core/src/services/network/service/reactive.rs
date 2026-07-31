@@ -66,6 +66,9 @@ impl ReadOnlyService for NetworkService {
             NetworkEvent::WirelessAccessPoint(wireless_access_points) => {
                 self.data.wireless_access_points = wireless_access_points;
             }
+            NetworkEvent::LinkDetails(link) => {
+                self.data.link = link;
+            }
             NetworkEvent::RequestPasswordForSSID(_) => {}
         }
     }

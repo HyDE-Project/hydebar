@@ -162,6 +162,11 @@ impl App {
                     .map(str::to_owned)
             ),
             ModuleName::Battery => Some(self.battery.data().map(battery_hint)),
+            ModuleName::Network => Some(Some(
+                self.control_center
+                    .network_hint()
+                    .unwrap_or_else(|| module_name.label().to_owned())
+            )),
             ModuleName::Clock => Some(Some(self.clock.data().format("%A, %-d %B %Y"))),
             ModuleName::Updates => Some(self.updates.tooltip()),
             ModuleName::KeyboardLayout => Some(Some(format!(

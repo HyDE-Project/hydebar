@@ -39,6 +39,32 @@ impl NetworkService {
         self.data.last_error = Some(error);
     }
 
+    /// Whether `event` moves the link enough to re-read its kernel facts.
+    ///
+    /// Connection changes and admitted strength steps do — a roam changes the
+    /// frequency and the address may follow — while scans and password
+    /// prompts leave the link exactly where it was.
+    fn moves_the_link(event: &NetworkEvent) -> bool {
+        matches!(
+            event,
+            NetworkEvent::ActiveConnections(_)
+                | NetworkEvent::WirelessDevice { .. }
+                | NetworkEvent::Strength(_)
+                | NetworkEvent::Connectivity(_)
+        )
+    }
+
+    /// Publishes a fresh read of the link's kernel facts.
+    pub(super) async fn publish_link_details<P>(publisher: &mut P)
+    where
+        P: ServiceEventPublisher<Self> + Send
+    {
+        let details = super::super::link::read().await;
+        let _ = publisher
+            .send(ServiceEvent::Update(NetworkEvent::LinkDetails(details)))
+            .await;
+    }
+
     pub(super) async fn consume_network_events<S, P>(
         mut events: S,
         publisher: &mut P,
@@ -59,7 +85,12 @@ impl NetworkService {
             }
 
             if gate.admits(&event) {
+                let refresh_link = Self::moves_the_link(&event);
                 let _ = publisher.send(ServiceEvent::Update(event)).await;
+
+                if refresh_link {
+                    Self::publish_link_details(publisher).await;
+                }
             }
 
             if exit_loop {
@@ -123,6 +154,7 @@ impl NetworkService {
                                     backend_choice: choice
                                 }))
                                 .await;
+                            Self::publish_link_details(publisher).await;
                             State::Active(conn, choice)
                         }
                         Err(err) => {
@@ -201,8 +233,13 @@ impl NetworkService {
                                 while let Some(events) = event_s.next().await {
                                     for event in events {
                                         if gate.admits(&event) {
+                                            let refresh_link = Self::moves_the_link(&event);
                                             let _ =
                                                 publisher.send(ServiceEvent::Update(event)).await;
+
+                                            if refresh_link {
+                                                Self::publish_link_details(publisher).await;
+                                            }
                                         }
                                     }
                                 }

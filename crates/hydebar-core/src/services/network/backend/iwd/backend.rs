@@ -66,6 +66,7 @@ impl NetworkBackend for IwdDbus<'_> {
             wireless_access_points,
             known_connections,
             scanning_nearby_wifi: is_scanning,
+            link: Default::default(),
             last_error: None
         })
     }
