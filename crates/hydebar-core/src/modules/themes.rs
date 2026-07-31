@@ -441,17 +441,26 @@ mod view {
     use iced::Element;
 
     use super::{Message, Spinner};
-    use crate::components::page::{
-        metrics::{
-            chip_cell_width, chip_width, indicator_width, status_row_width, text_width,
-            wrap_chips_into_rows
-        },
-        style, widgets,
-        widgets::{
-            ChipPaint, ThemeChip, grid, group, note, page, rows as row_stack, section, status_row,
-            theme_chip
+    use crate::components::{
+        icons::Icons,
+        page::{
+            metrics::{
+                chip_cell_width, chip_width, indicator_width, status_row_width, text_width,
+                wrap_chips_into_rows
+            },
+            style, widgets,
+            widgets::{
+                ChipPaint, ThemeChip, grid, group, note, page, rows as row_stack, section,
+                status_row, theme_chip
+            }
         }
     };
+
+    /// Height of a card's action row, in multiples of the control size.
+    const ACTIONS_ROW_EM: f32 = 1.8;
+
+    /// Height of the update-all row, in multiples of the control size.
+    const UPDATE_ALL_ROW_EM: f32 = 2.0;
 
     /// Theme chips a row is sized to hold.
     ///
@@ -461,10 +470,10 @@ mod view {
     const THEMES_PER_ROW: f32 = 3.0;
 
     /// Title of the section listing the installed themes.
-    const THEMES: &str = "Themes";
+    const THEMES: &str = "Installed";
 
     /// Title of the section listing the gallery the desktop can install from.
-    const GALLERY: &str = "Gallery";
+    const GALLERY: &str = "Available";
 
     /// Label of the row naming what the desktop is on.
     const ACTIVE: &str = "Active";
@@ -500,15 +509,21 @@ mod view {
         catalogue: &[super::gallery::GalleryTheme],
         installing: Option<&str>,
         condemned: Option<&str>,
+        updating: Option<&Option<String>>,
         spinner: Spinner,
         opacity: f32,
         font_size: f32,
         available_width: f32
     ) -> Element<'a, Message> {
+        let busy_glyph = if switching.is_some() || updating.is_some() {
+            Some(spinner.glyph())
+        } else {
+            None
+        };
         let active = row_stack(font_size).push(status_row(
             ACTIVE,
             active_label(state, switching),
-            switching.map(|_| spinner.glyph()),
+            busy_glyph,
             font_size
         ));
 
@@ -519,6 +534,9 @@ mod view {
                 swatches,
                 switching,
                 condemned,
+                updating,
+                installing,
+                catalogue,
                 spinner,
                 opacity,
                 font_size,
@@ -624,14 +642,19 @@ mod view {
                     ThemeChip::Idle
                 };
 
-                row = row.push(theme_chip(
-                    name.clone(),
-                    Message::Install(name.clone()),
-                    chip_state,
+                row = row.push(card(
+                    theme_chip(
+                        name.clone(),
+                        Message::Install(name.clone()),
+                        chip_state,
+                        font_size,
+                        opacity,
+                        cell,
+                        entry.map(offer_paint)
+                    ),
+                    vec![(Icons::Download, Message::Install(name.clone()), !busy)],
                     font_size,
-                    opacity,
-                    cell,
-                    entry.map(offer_paint)
+                    opacity
                 ));
             }
 
@@ -681,6 +704,9 @@ mod view {
         swatches: &HashMap<String, ThemeSwatch>,
         switching: Option<&str>,
         condemned: Option<&str>,
+        updating: Option<&Option<String>>,
+        installing: Option<&str>,
+        catalogue: &[super::gallery::GalleryTheme],
         spinner: Spinner,
         opacity: f32,
         font_size: f32,
@@ -690,9 +716,10 @@ mod view {
             return note(NO_THEMES, font_size);
         }
 
+        let busy = switching.is_some() || installing.is_some() || updating.is_some();
         let gap = style::group_gap(font_size);
         let cell = chip_cell_width(&state.themes, font_size);
-        let mut block = grid(font_size);
+        let mut block = grid(font_size).push(update_all_row(busy, font_size, opacity));
 
         for indices in wrap_chips_into_rows(&state.themes, available_width, font_size, gap) {
             let mut row = group(font_size);
@@ -700,15 +727,24 @@ mod view {
             for index in indices {
                 let name = &state.themes[index];
                 let doomed = condemned == Some(name.as_str());
+                let fetching = matches!(updating, Some(Some(one)) if one == name);
 
                 let (chip_state, press) = if doomed {
                     (ThemeChip::Condemned, Message::Remove(name.clone()))
+                } else if fetching {
+                    (ThemeChip::Applying(spinner), Message::Switch(name.clone()))
                 } else {
                     (
                         chip_state(state, switching, spinner, name),
                         Message::Switch(name.clone())
                     )
                 };
+
+                let paint = catalogue
+                    .iter()
+                    .find(|entry| same_theme(&entry.name, name))
+                    .map(offer_paint)
+                    .or_else(|| swatches.get(name).map(chip_paint));
 
                 let chip = theme_chip(
                     name.clone(),
@@ -717,18 +753,101 @@ mod view {
                     font_size,
                     opacity,
                     cell,
-                    swatches.get(name).map(chip_paint)
+                    paint
                 );
 
-                row = row.push(
-                    iced::widget::mouse_area(chip).on_right_press(Message::Condemn(name.clone()))
-                );
+                let trash = if doomed {
+                    Message::Remove(name.clone())
+                } else {
+                    Message::Condemn(name.clone())
+                };
+
+                row = row.push(card(
+                    iced::widget::mouse_area(chip)
+                        .on_right_press(Message::Condemn(name.clone()))
+                        .into(),
+                    vec![
+                        (Icons::Refresh, Message::Update(Some(name.clone())), !busy),
+                        (Icons::Trash, trash, !busy || doomed),
+                    ],
+                    font_size,
+                    opacity
+                ));
             }
 
             block = block.push(row);
         }
 
         block.into()
+    }
+
+    /// One card of either section: the chip above its row of actions.
+    ///
+    /// Both sections build through here, which is what keeps every card the
+    /// same shape whatever it offers.
+    fn card<'a>(
+        chip: Element<'a, Message>,
+        actions: Vec<(Icons, Message, bool)>,
+        font_size: f32,
+        opacity: f32
+    ) -> Element<'a, Message> {
+        use iced::widget::{Column, Row, button};
+
+        use crate::{
+            components::{icons::icon_raw, scale},
+            style::ghost_button_style
+        };
+
+        let control = style::control_size(font_size);
+        let mut row = Row::new()
+            .spacing(scale::icon_gap())
+            .align_y(iced::Alignment::Center);
+
+        for (glyph, message, enabled) in actions {
+            let mut control_button = button(icon_raw(glyph.default_glyph().to_owned()))
+                .padding(control * 0.2)
+                .style(ghost_button_style(opacity));
+
+            if enabled {
+                control_button = control_button.on_press(message);
+            }
+
+            row = row.push(control_button);
+        }
+
+        Column::new()
+            .push(chip)
+            .push(row)
+            .spacing(control * 0.2)
+            .align_x(iced::Alignment::Center)
+            .into()
+    }
+
+    /// The row offering the one fetch that updates every installed theme.
+    fn update_all_row<'a>(busy: bool, font_size: f32, opacity: f32) -> Element<'a, Message> {
+        use iced::widget::{Row, button};
+
+        use crate::{
+            components::{icons::icon_raw, scale},
+            style::ghost_button_style
+        };
+
+        let control = style::control_size(font_size);
+        let mut update = button(
+            Row::new()
+                .push(icon_raw(Icons::Refresh.default_glyph().to_owned()))
+                .push(crate::components::text::text("Update all").size(control))
+                .spacing(scale::icon_gap())
+                .align_y(iced::Alignment::Center)
+        )
+        .padding(control * 0.25)
+        .style(ghost_button_style(opacity));
+
+        if !busy {
+            update = update.on_press(Message::Update(None));
+        }
+
+        Row::new().push(update).into()
     }
 
     /// Restates a theme's swatch in the colours the renderer paints with.
@@ -886,7 +1005,9 @@ mod view {
         let offered_sections = if offered.is_empty() { 0.0 } else { 1.0 };
 
         let chip_rows = theme_rows(state, font_size, available_width) + offered_rows;
-        let dots = chip_rows * widgets::DOT_ROW_EM * style::control_size(font_size);
+        let control = style::control_size(font_size);
+        let actions = chip_rows * ACTIONS_ROW_EM * control + UPDATE_ALL_ROW_EM * control;
+        let dots = chip_rows * widgets::DOT_ROW_EM * control + actions;
 
         style::page_height(
             rows(state, font_size, available_width)
@@ -1121,16 +1242,18 @@ mod view {
         }
 
         #[test]
-        fn the_menu_height_follows_the_shared_row_pitch_plus_the_dot_rows() {
+        fn the_menu_height_counts_dots_actions_and_the_update_row() {
             let font_size = 16.0;
             let themes = state(&["Nord", "Mocha"], Some("Nord"));
+            let control = style::control_size(font_size);
+            let chip_rows = theme_rows(&themes, font_size, 400.0);
 
             assert_eq!(
                 desired_height(&themes, &[], font_size, 400.0),
                 style::page_height(rows(&themes, font_size, 400.0), font_size)
-                    + theme_rows(&themes, font_size, 400.0)
-                        * widgets::DOT_ROW_EM
-                        * style::control_size(font_size)
+                    + chip_rows * widgets::DOT_ROW_EM * control
+                    + chip_rows * ACTIONS_ROW_EM * control
+                    + UPDATE_ALL_ROW_EM * control
             );
         }
     }
@@ -1215,6 +1338,13 @@ pub enum Message {
         theme:   String,
         /// Why the removal failed, when it did.
         failure: Option<String>
+    },
+    /// Fetch updates for one installed theme, or all of them.
+    Update(Option<String>),
+    /// Report that an update fetch has ended.
+    Updated {
+        /// Why the fetch failed, when it did.
+        failure: Option<String>
     }
 }
 
@@ -1287,6 +1417,8 @@ pub struct Themes {
     installing: Option<String>,
     /// Theme whose removal waits for its confirming press, if one does.
     condemned:  Option<String>,
+    /// Theme an update is fetching, while one is; `None` name means all.
+    updating:   Option<Option<String>>,
     /// Frame the indicator of a running switch is on.
     ///
     /// Advanced on a tick rather than derived from a clock read while drawing,
@@ -1306,6 +1438,7 @@ impl Themes {
             catalogue:  Vec::new(),
             installing: None,
             condemned:  None,
+            updating:   None,
             spinner:    Spinner::default()
         }
     }
@@ -1359,7 +1492,7 @@ impl Themes {
     /// this holds.
     #[must_use]
     pub fn is_waiting(&self) -> bool {
-        if self.installing.is_some() {
+        if self.installing.is_some() || self.updating.is_some() {
             return true;
         }
 
@@ -1395,6 +1528,7 @@ impl Themes {
             &self.catalogue,
             self.installing.as_deref(),
             self.condemned.as_deref(),
+            self.updating.as_ref(),
             self.spinner,
             opacity,
             font_size,
@@ -1457,12 +1591,30 @@ impl Themes {
                 return self.load_swatches();
             }
             Message::Tick => {
-                if self.switching.is_some() || self.installing.is_some() {
+                if self.switching.is_some() || self.installing.is_some() || self.updating.is_some()
+                {
                     self.spinner.advance();
                 }
             }
             Message::SwatchesLoaded(swatches) => self.swatches = swatches,
-            Message::CatalogueLoaded(catalogue) => self.catalogue = catalogue,
+            Message::CatalogueLoaded(catalogue) => {
+                self.catalogue = catalogue;
+                return self.auto_update();
+            }
+            Message::Update(scope) => return self.fetch_updates(scope),
+            Message::Updated {
+                failure
+            } => {
+                self.updating = None;
+
+                if let Some(failure) = failure {
+                    report(config, &format!("updating HyDE themes failed: {failure}"));
+                }
+
+                self.refresh();
+
+                return self.load_swatches();
+            }
             Message::Install(theme) => {
                 self.condemned = None;
                 return self.install(theme, config);
@@ -1597,6 +1749,62 @@ impl Themes {
                 failure
             }
         )
+    }
+
+    /// Fetches theme updates through the desktop's own importer.
+    ///
+    /// One writer at a time over the theme directories: a fetch never starts
+    /// beside a switch, an install, or another fetch.
+    fn fetch_updates(&mut self, scope: Option<String>) -> Task<Message> {
+        if self.switching.is_some() || self.installing.is_some() || self.updating.is_some() {
+            return Task::none();
+        }
+
+        let command = match &scope {
+            Some(theme) => format!(
+                "hyde-shell theme.import --fetch '{}'",
+                theme.replace('\'', "'\\''")
+            ),
+            None => "hyde-shell theme.import --fetch all".to_owned()
+        };
+
+        info!("fetching HyDE theme updates: {command}");
+        self.updating = Some(scope);
+
+        Task::perform(hyde_shell::run(command), |failure| Message::Updated {
+            failure
+        })
+    }
+
+    /// Fetches all updates quietly, at most once a day.
+    ///
+    /// The professional half of the update button: opening the window checks
+    /// a stamp beside the catalogue cache, and a stale stamp starts the same
+    /// fetch the button runs — silently, with the same one-writer guards.
+    fn auto_update(&mut self) -> Task<Message> {
+        const STAMP_LIFE: std::time::Duration = std::time::Duration::from_secs(24 * 60 * 60);
+
+        let Some(stamp) = dirs::cache_dir().map(|dir| dir.join("hydebar/theme-update-stamp"))
+        else {
+            return Task::none();
+        };
+
+        let fresh = std::fs::metadata(&stamp)
+            .ok()
+            .and_then(|meta| meta.modified().ok())
+            .and_then(|modified| modified.elapsed().ok())
+            .is_some_and(|age| age < STAMP_LIFE);
+
+        if fresh {
+            return Task::none();
+        }
+
+        if let Some(dir) = stamp.parent() {
+            let _ = std::fs::create_dir_all(dir);
+        }
+        let _ = std::fs::write(&stamp, b"");
+
+        self.fetch_updates(None)
     }
 
     /// Starts the catalogue reader, for the gallery section of the menu.

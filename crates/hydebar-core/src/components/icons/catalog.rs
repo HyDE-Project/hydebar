@@ -7,6 +7,8 @@ pub enum Icons {
     AppLauncher,
     Clipboard,
     Refresh,
+    Trash,
+    Download,
     NoUpdatesAvailable,
     UpdatesAvailable,
     MenuClosed,
@@ -92,11 +94,13 @@ pub enum Icons {
 
 impl Icons {
     /// Every icon that can be overridden from the configuration.
-    pub const ALL: [Icons; 85] = [
+    pub const ALL: [Icons; 87] = [
         Icons::None,
         Icons::AppLauncher,
         Icons::Clipboard,
         Icons::Refresh,
+        Icons::Trash,
+        Icons::Download,
         Icons::NoUpdatesAvailable,
         Icons::UpdatesAvailable,
         Icons::MenuClosed,
@@ -188,6 +192,8 @@ impl Icons {
             Icons::AppLauncher => "app_launcher",
             Icons::Clipboard => "clipboard",
             Icons::Refresh => "refresh",
+            Icons::Trash => "trash",
+            Icons::Download => "download",
             Icons::NoUpdatesAvailable => "no_updates_available",
             Icons::UpdatesAvailable => "updates_available",
             Icons::MenuClosed => "menu_closed",
@@ -286,6 +292,8 @@ impl Icons {
             Icons::AppLauncher => "󱗼",
             Icons::Clipboard => "󰅌",
             Icons::Refresh => "󰑐",
+            Icons::Trash => "󰆴",
+            Icons::Download => "󰇚",
             Icons::NoUpdatesAvailable => "󰗠",
             Icons::UpdatesAvailable => "󰳛",
             Icons::MenuClosed => "",
