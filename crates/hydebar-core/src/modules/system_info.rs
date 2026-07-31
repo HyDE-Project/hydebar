@@ -4630,13 +4630,11 @@ mod window {
         pub fn sections(data: &SystemInfoData) -> Vec<Section> {
             let mut sections = Vec::new();
 
-            let mut processor = Vec::new();
-
-            if let Some(model) = data.cpu_model.as_ref() {
-                processor.push(fact("Model", model.clone()));
-            }
-
-            processor.push(meter("Load", format!("{}%", data.cpu_usage), data.cpu_usage));
+            let mut processor = vec![meter(
+                "Load",
+                format!("{}%", data.cpu_usage),
+                data.cpu_usage
+            )];
 
             match (data.cpu_cores, data.cpu_count) {
                 (Some(cores), count) if count > 0 => {
@@ -4683,7 +4681,7 @@ mod window {
             sections.push(Section {
                 icon:  Icons::Cpu,
                 title: "Processor",
-                note:  None,
+                note:  data.cpu_model.clone(),
                 rows:  processor
             });
 
