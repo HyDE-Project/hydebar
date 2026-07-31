@@ -67,10 +67,8 @@ pub(super) fn apply_global(theme: &mut HydeTheme, source: &str) {
                     theme.font_family = parse_font_family(&value);
                 }
             }
-            "font-size" => {
-                if theme.font_size_px.is_none() {
-                    theme.font_size_px = parse_length(&value, None);
-                }
+            "font-size" if theme.font_size_px.is_none() => {
+                theme.font_size_px = parse_length(&value, None);
             }
             _ => {}
         }

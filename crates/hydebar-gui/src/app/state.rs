@@ -319,9 +319,7 @@ impl App {
     /// The magnification the screen calls for is already folded into the
     /// configuration before the renderer starts, so nothing is added here.
     pub fn scaled_appearance(&self) -> Appearance {
-        let appearance = self.config.appearance.clone();
-
-        appearance
+        self.config.appearance.clone()
     }
 
     /// Rebuilds everything derived from the appearance after the sizes changed.

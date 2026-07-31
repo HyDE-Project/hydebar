@@ -1483,7 +1483,7 @@ mod view {
                 .fold(0.0_f32, f32::max);
 
             let card = labelled_row_width(font_size)
-                + button_row_width(ACTION_LABELS.into_iter(), control, gap)
+                + button_row_width(ACTION_LABELS, control, gap)
                 + style::card_overhead(font_size);
 
             tabs.max(widest_island).max(card)
@@ -1727,7 +1727,7 @@ mod view {
                 + style::row_gap(font_size)
                 + style::icon_width(font_size);
             let tab_row = metrics::button_row_width(
-                tabs.into_iter(),
+                tabs,
                 style::control_size(font_size),
                 style::group_gap(font_size)
             );
@@ -2275,7 +2275,7 @@ pub fn announce_source(source: NotificationSource, config: &Config) {
         notify(
             Notice::Info,
             ANNOUNCE_DURATION,
-            &compositor_color(config.appearance.primary_color.clone()),
+            &compositor_color(config.appearance.primary_color),
             config.appearance.font_size_px(),
             &message
         );

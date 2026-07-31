@@ -162,16 +162,17 @@ impl Hints {
     pub fn advance(&mut self, elapsed: Duration) -> (bool, Option<HintCommand>) {
         let fading = self.presence.advance(elapsed);
 
-        if !fading && self.presence.value() <= f32::EPSILON {
-            if let Some((surface, owner)) = self.closing.take() {
-                return (
-                    false,
-                    Some(HintCommand::Hide {
-                        surface,
-                        owner
-                    })
-                );
-            }
+        if !fading
+            && self.presence.value() <= f32::EPSILON
+            && let Some((surface, owner)) = self.closing.take()
+        {
+            return (
+                false,
+                Some(HintCommand::Hide {
+                    surface,
+                    owner
+                })
+            );
         }
 
         (fading, None)

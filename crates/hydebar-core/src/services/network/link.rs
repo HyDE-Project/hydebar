@@ -132,7 +132,6 @@ fn parse_wireless(report: &str) -> (Option<i32>, Option<u32>) {
 
         if let Some(rest) = line.strip_prefix("signal:") {
             dbm = rest
-                .trim()
                 .split_whitespace()
                 .next()
                 .and_then(|value| value.parse::<i32>().ok());

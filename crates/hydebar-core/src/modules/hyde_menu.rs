@@ -222,7 +222,7 @@ mod source {
                 Some((name, fallback)) => (name, Some(fallback)),
                 None => (inner, None)
             };
-            let fallback = fallback.map(|fallback| expand_plain(fallback));
+            let fallback = fallback.map(expand_plain);
 
             return format!(
                 "{}{}{}",

@@ -74,7 +74,7 @@ impl App {
             Urgency::Critical => Notice::Error
         };
 
-        let color = compositor_color(self.appearance().primary_color.clone());
+        let color = compositor_color(self.appearance().primary_color);
         let duration = hydebar_core::notifications_popup::lifetime_for(&notification.urgency);
         let message = if notification.body.is_empty() {
             notification.summary.clone()

@@ -520,7 +520,10 @@ mod state {
             if self.last.as_deref() == Some(reason) {
                 self.repeats += 1;
 
-                return (self.repeats % FAILURE_REPEAT == 0).then_some(self.repeats);
+                return self
+                    .repeats
+                    .is_multiple_of(FAILURE_REPEAT)
+                    .then_some(self.repeats);
             }
 
             self.last = Some(reason.to_owned());

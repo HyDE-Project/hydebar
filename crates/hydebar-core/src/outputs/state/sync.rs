@@ -50,7 +50,7 @@ impl Outputs {
             .iter()
             .filter_map(|(name, shell_info, wl_output)| {
                 if !is_output_requested(name.as_deref(), request_outputs) && shell_info.is_some() {
-                    Some(wl_output.clone())
+                    Some(*wl_output)
                 } else {
                     None
                 }
@@ -64,7 +64,7 @@ impl Outputs {
             .iter()
             .filter_map(|(name, shell_info, wl_output)| {
                 if is_output_requested(name.as_deref(), request_outputs) && shell_info.is_none() {
-                    Some((name.clone(), wl_output.clone()))
+                    Some((name.clone(), *wl_output))
                 } else {
                     None
                 }

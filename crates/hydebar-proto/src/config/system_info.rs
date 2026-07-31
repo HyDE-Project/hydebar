@@ -158,7 +158,7 @@ pub enum SystemIndicator {
 }
 
 /// System information module behaviour.
-#[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Clone, Debug, PartialEq, Eq, Default)]
 pub struct SystemModuleConfig {
     /// Readouts to draw, in the order they are drawn.
     ///
@@ -198,20 +198,6 @@ impl SystemModuleConfig {
     /// Reports whether a readout was explicitly turned off.
     pub fn hides(&self, indicator: &SystemIndicator) -> bool {
         self.hide.contains(indicator)
-    }
-}
-
-impl Default for SystemModuleConfig {
-    fn default() -> Self {
-        Self {
-            indicators:  Vec::new(),
-            hide:        Vec::new(),
-            cpu:         SystemInfoCpu::default(),
-            memory:      SystemInfoMemory::default(),
-            temperature: SystemInfoTemperature::default(),
-            gpu:         SystemInfoGpu::default(),
-            disk:        SystemInfoDisk::default()
-        }
     }
 }
 

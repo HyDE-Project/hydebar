@@ -20,21 +20,22 @@ static SHOT_ASKED: LazyLock<bool> = LazyLock::new(|| std::env::var_os("HYDEBAR_S
 
 impl App {
     pub fn update(&mut self, message: Message) -> Task<Message> {
-        if *SHOT_ASKED && !SHOT.load(Ordering::Relaxed) {
-            if let Some(id) = self.outputs.first_main_window_id() {
-                SHOT.store(true, Ordering::Relaxed);
+        if *SHOT_ASKED
+            && !SHOT.load(Ordering::Relaxed)
+            && let Some(id) = self.outputs.first_main_window_id()
+        {
+            SHOT.store(true, Ordering::Relaxed);
 
-                return self.update(Message::ToggleMenu(
-                    MenuType::Themes,
-                    id,
-                    ButtonUIRef {
-                        position: iced::Point {
-                            x: 960.0, y: 20.0
-                        },
-                        viewport: (1920.0, 1080.0)
-                    }
-                ));
-            }
+            return self.update(Message::ToggleMenu(
+                MenuType::Themes,
+                id,
+                ButtonUIRef {
+                    position: iced::Point {
+                        x: 960.0, y: 20.0
+                    },
+                    viewport: (1920.0, 1080.0)
+                }
+            ));
         }
 
         match message {

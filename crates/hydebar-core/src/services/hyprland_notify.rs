@@ -114,7 +114,7 @@ pub fn report(config: &Config, message: &str) {
         notify(
             Notice::Error,
             REFUSAL_DURATION,
-            &compositor_color(config.appearance.primary_color.clone()),
+            &compositor_color(config.appearance.primary_color),
             config.appearance.font_size_px(),
             message
         );

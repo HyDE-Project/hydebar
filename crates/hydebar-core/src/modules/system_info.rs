@@ -38,7 +38,7 @@ mod data {
     }
 
     /// Aggregated system information consumed by the UI layer.
-    #[derive(Debug, Clone, PartialEq)]
+    #[derive(Debug, Clone, PartialEq, Default)]
     pub struct SystemInfoData {
         pub cpu_usage:         u32,
         pub memory_usage:      u32,
@@ -54,22 +54,6 @@ mod data {
         pub gpu:               Option<GpuReadings>,
         pub disks:             Vec<(String, u32)>,
         pub network:           Option<NetworkData>
-    }
-
-    impl Default for SystemInfoData {
-        fn default() -> Self {
-            Self {
-                cpu_usage:         0,
-                memory_usage:      0,
-                memory_used:       0,
-                memory_swap_usage: 0,
-                memory_swap_used:  0,
-                cpu_temperature:   None,
-                gpu:               None,
-                disks:             Vec::new(),
-                network:           None
-            }
-        }
     }
 
     impl SystemInfoData {
@@ -3206,10 +3190,10 @@ pub mod sensors {
                 return None;
             }
 
-            if let Some(feed) = self.utility.take() {
-                if feed.vendor() == gpu.vendor {
-                    return Some(feed);
-                }
+            if let Some(feed) = self.utility.take()
+                && feed.vendor() == gpu.vendor
+            {
+                return Some(feed);
             }
 
             let utility = utility::for_vendor(gpu.vendor)?;
