@@ -1949,7 +1949,16 @@ impl Themes {
     }
 
     /// Starts the catalogue reader, for the gallery section of the menu.
+    ///
+    /// A catalogue already in hand is kept: the gallery changes on the scale
+    /// of weeks, and re-reading it on every menu open would probe the
+    /// capability binary and re-parse the index each time. The next bar start
+    /// reads it fresh.
     pub fn load_catalogue(&self) -> Task<Message> {
+        if !self.catalogue.is_empty() {
+            return Task::none();
+        }
+
         Task::perform(
             async { (gallery::load().await, gallery::local_author().await) },
             |(catalogue, author)| Message::CatalogueLoaded(catalogue, author)

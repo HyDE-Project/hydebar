@@ -8,10 +8,33 @@
 //! theme ships no palette of its own: they are clusters squeezed out of a
 //! picture, honest but muddy, and no substitute for the author's word.
 
-use std::fs;
+use std::{
+    collections::HashMap,
+    fs,
+    path::{Path, PathBuf},
+    sync::{LazyLock, Mutex, PoisonError},
+    time::SystemTime
+};
 
 use super::{color::parse_color, dcol::DcolPalette};
 use crate::{hyde_dirs::HydeDirs, theme_source::Rgba};
+
+/// Digest of a wallpaper file, remembered by the file's identity on disk.
+#[derive(Debug, Clone)]
+struct CachedDigest {
+    len:      u64,
+    modified: Option<SystemTime>,
+    digest:   String
+}
+
+/// Wallpaper digests already computed this session.
+///
+/// Hashing a wallpaper reads the whole multi-megabyte file, the menu asks for
+/// every theme's palette each time it opens, and wallpapers change rarely. An
+/// entry is revalidated by size and mtime, so an untouched file costs a stat
+/// and an edited one is read again.
+static DIGESTS: LazyLock<Mutex<HashMap<PathBuf, CachedDigest>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
 
 /// Extension of the per-application style files a theme ships.
 ///
@@ -145,14 +168,50 @@ fn pinned_palette(dirs: &HydeDirs, theme: &str) -> Option<DcolPalette> {
 /// key it, so the bar finds the palette wherever the wallpaper file lives.
 fn wallpaper_palette(dirs: &HydeDirs, theme: &str) -> Option<DcolPalette> {
     let image = fs::canonicalize(dirs.theme_dir(theme).join("wall.set")).ok()?;
-    let bytes = fs::read(image).ok()?;
-    let digest = sha1_smol::Sha1::from(&bytes).digest().to_string();
+    let digest = wallpaper_digest(&image)?;
     let cached = dirs
         .hyde_cache_dir()
         .join("dcols")
         .join(format!("{digest}.dcol"));
 
     DcolPalette::parse(&fs::read_to_string(cached).ok()?)
+}
+
+/// Digest of the image at `image`, hashed once per file version.
+///
+/// The read and the hash happen outside the lock: two themes pointing at two
+/// wallpapers hash in parallel, and the lock only guards the map itself.
+fn wallpaper_digest(image: &Path) -> Option<String> {
+    let metadata = fs::metadata(image).ok()?;
+    let len = metadata.len();
+    let modified = metadata.modified().ok();
+
+    {
+        let cache = DIGESTS.lock().unwrap_or_else(PoisonError::into_inner);
+        if let Some(hit) = cache.get(image)
+            && hit.len == len
+            && hit.modified == modified
+        {
+            return Some(hit.digest.clone());
+        }
+    }
+
+    let bytes = fs::read(image).ok()?;
+    let digest = sha1_smol::Sha1::from(&bytes).digest().to_string();
+
+    DIGESTS
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .insert(
+            image.to_owned(),
+            CachedDigest {
+                len,
+                modified,
+                digest: digest.clone()
+            }
+        );
+
+    Some(digest)
 }
 
 #[cfg(test)]
