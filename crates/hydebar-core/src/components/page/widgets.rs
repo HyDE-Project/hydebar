@@ -282,7 +282,9 @@ pub(crate) enum ThemeChip {
     /// The theme the running switch is on its way to.
     Applying(Spinner),
     /// A theme that cannot be pressed while another switch runs.
-    Blocked
+    Blocked,
+    /// A theme whose removal waits for one confirming press.
+    Condemned
 }
 
 impl ThemeChip {
@@ -292,7 +294,7 @@ impl ThemeChip {
     /// refusal is something the pointer meets rather than something the module
     /// has to log after the fact.
     pub(crate) fn is_pressable(self) -> bool {
-        matches!(self, Self::Active | Self::Idle)
+        matches!(self, Self::Active | Self::Idle | Self::Condemned)
     }
 }
 
@@ -324,11 +326,18 @@ pub(crate) fn theme_chip<'a, M: Clone + 'a>(
         .align_x(iced::Alignment::Center);
 
     let content: Element<'a, M> = match paint {
-        Some(paint) => Column::new()
-            .spacing(DOT_GAP_EM * control)
-            .push(name)
-            .push(palette_dots(paint.palette, control))
-            .into(),
+        Some(paint) => {
+            let mut column = Column::new()
+                .spacing(DOT_GAP_EM * control)
+                .push(name)
+                .push(palette_dots(paint.palette, control));
+
+            if let ThemeChip::Applying(spinner) = state {
+                column = column.push(busy_strip(spinner, control));
+            }
+
+            column.into()
+        }
         None => name.into()
     };
 
@@ -379,11 +388,18 @@ pub(crate) fn theme_chip<'a, M: Clone + 'a>(
                 base.scale_alpha(BLOCKED_ALPHA),
                 text_colour.scale_alpha(BLOCKED_ALPHA),
                 false
-            )
+            ),
+            ThemeChip::Condemned => (base, text_colour, true)
         };
 
         let mut border = Border::default().rounded(style::corner_radius(font_size));
         if ringed {
+            let ring = if state == ThemeChip::Condemned {
+                theme.palette().danger
+            } else {
+                ring
+            };
+
             border = border.color(ring).width(2.0);
         }
 
@@ -395,6 +411,31 @@ pub(crate) fn theme_chip<'a, M: Clone + 'a>(
         }
     })
     .into()
+}
+
+/// A strip sweeping under a chip that is being worked on.
+///
+/// Indeterminate on purpose: the desktop's own importer publishes no
+/// percentages, and a bar with invented numbers would be lying. The sweep
+/// rides the same spinner phase the glyph indicator uses, so one clock
+/// serves both.
+fn busy_strip<'a, M: 'a>(spinner: Spinner, control: f32) -> Element<'a, M> {
+    let phase = spinner.pulse();
+    let height = DOT_EM * control * 0.5;
+
+    container(Space::new().width(Length::Fill).height(height))
+        .style(move |theme: &Theme| container::Style {
+            background: Some(Background::Gradient(iced::Gradient::Linear(
+                iced::gradient::Linear::new(iced::Radians(std::f32::consts::FRAC_PI_2))
+                    .add_stop(0.0, theme.palette().primary.scale_alpha(0.15))
+                    .add_stop(phase.clamp(0.05, 0.95), theme.palette().primary)
+                    .add_stop(1.0, theme.palette().primary.scale_alpha(0.15))
+            ))),
+            border: Border::default().rounded(height / 2.0),
+            ..container::Style::default()
+        })
+        .width(Length::Fill)
+        .into()
 }
 
 /// Renders a note: a sentence a page states in place of a control it cannot

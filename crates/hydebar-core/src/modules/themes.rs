@@ -490,6 +490,7 @@ mod view {
         switching: Option<&str>,
         catalogue: &[super::gallery::GalleryTheme],
         installing: Option<&str>,
+        condemned: Option<&str>,
         spinner: Spinner,
         opacity: f32,
         font_size: f32,
@@ -508,6 +509,7 @@ mod view {
                 state,
                 swatches,
                 switching,
+                condemned,
                 spinner,
                 opacity,
                 font_size,
@@ -642,6 +644,7 @@ mod view {
         state: &HydeState,
         swatches: &HashMap<String, ThemeSwatch>,
         switching: Option<&str>,
+        condemned: Option<&str>,
         spinner: Spinner,
         opacity: f32,
         font_size: f32,
@@ -660,16 +663,30 @@ mod view {
 
             for index in indices {
                 let name = &state.themes[index];
+                let doomed = condemned == Some(name.as_str());
 
-                row = row.push(theme_chip(
+                let (chip_state, press) = if doomed {
+                    (ThemeChip::Condemned, Message::Remove(name.clone()))
+                } else {
+                    (
+                        chip_state(state, switching, spinner, name),
+                        Message::Switch(name.clone())
+                    )
+                };
+
+                let chip = theme_chip(
                     name.clone(),
-                    Message::Switch(name.clone()),
-                    chip_state(state, switching, spinner, name),
+                    press,
+                    chip_state,
                     font_size,
                     opacity,
                     cell,
                     swatches.get(name).map(chip_paint)
-                ));
+                );
+
+                row = row.push(
+                    iced::widget::mouse_area(chip).on_right_press(Message::Condemn(name.clone()))
+                );
             }
 
             block = block.push(row);
@@ -1151,6 +1168,17 @@ pub enum Message {
         theme:   String,
         /// Why the install failed, when it did.
         failure: Option<String>
+    },
+    /// Mark the named installed theme for removal, pending one more press.
+    Condemn(String),
+    /// Remove the named theme, previously condemned.
+    Remove(String),
+    /// Report that the removal of the named theme has ended.
+    Removed {
+        /// Theme the removal was asked for.
+        theme:   String,
+        /// Why the removal failed, when it did.
+        failure: Option<String>
     }
 }
 
@@ -1221,6 +1249,8 @@ pub struct Themes {
     catalogue:  Vec<gallery::GalleryTheme>,
     /// Theme an install is running for, while one is.
     installing: Option<String>,
+    /// Theme whose removal waits for its confirming press, if one does.
+    condemned:  Option<String>,
     /// Frame the indicator of a running switch is on.
     ///
     /// Advanced on a tick rather than derived from a clock read while drawing,
@@ -1239,6 +1269,7 @@ impl Themes {
             switching:  None,
             catalogue:  Vec::new(),
             installing: None,
+            condemned:  None,
             spinner:    Spinner::default()
         }
     }
@@ -1292,6 +1323,10 @@ impl Themes {
     /// this holds.
     #[must_use]
     pub fn is_waiting(&self) -> bool {
+        if self.installing.is_some() {
+            return true;
+        }
+
         self.switching.is_some()
     }
 
@@ -1323,6 +1358,7 @@ impl Themes {
             self.switching(),
             &self.catalogue,
             self.installing.as_deref(),
+            self.condemned.as_deref(),
             self.spinner,
             opacity,
             font_size,
@@ -1385,13 +1421,43 @@ impl Themes {
                 return self.load_swatches();
             }
             Message::Tick => {
-                if self.switching.is_some() {
+                if self.switching.is_some() || self.installing.is_some() {
                     self.spinner.advance();
                 }
             }
             Message::SwatchesLoaded(swatches) => self.swatches = swatches,
             Message::CatalogueLoaded(catalogue) => self.catalogue = catalogue,
-            Message::Install(theme) => return self.install(theme, config),
+            Message::Install(theme) => {
+                self.condemned = None;
+                return self.install(theme, config);
+            }
+            Message::Condemn(theme) => {
+                if self.switching.is_none()
+                    && self.installing.is_none()
+                    && self.hyde.theme.as_deref() != Some(theme.as_str())
+                    && self.hyde.themes.contains(&theme)
+                {
+                    self.condemned = Some(theme);
+                }
+            }
+            Message::Remove(theme) => return self.remove(theme, config),
+            Message::Removed {
+                theme,
+                failure
+            } => {
+                if let Some(failure) = failure {
+                    report(
+                        config,
+                        &format!("removing the HyDE theme `{theme}` failed: {failure}")
+                    );
+                } else {
+                    info!("the HyDE theme `{theme}` is removed");
+                }
+
+                self.refresh();
+
+                return self.load_swatches();
+            }
             Message::Installed {
                 theme,
                 failure
@@ -1453,6 +1519,48 @@ impl Themes {
                 failure
             }
         })
+    }
+
+    /// Removes a condemned theme's directory, once everything checks out.
+    ///
+    /// Only a theme the removal was armed for goes, never the one the desktop
+    /// is on, never during a switch or an install, and strictly the directory
+    /// the installed list names — nothing about the path comes from outside.
+    fn remove(&mut self, theme: String, config: &Config) -> Task<Message> {
+        if self.condemned.as_deref() != Some(theme.as_str()) {
+            return Task::none();
+        }
+
+        self.condemned = None;
+
+        if self.switching.is_some()
+            || self.installing.is_some()
+            || self.hyde.theme.as_deref() == Some(theme.as_str())
+            || !self.hyde.themes.contains(&theme)
+        {
+            return Task::none();
+        }
+
+        let Some(directory) = dirs::config_dir().map(|dir| dir.join("hyde/themes").join(&theme))
+        else {
+            report(config, "the theme directory cannot be located");
+            return Task::none();
+        };
+
+        info!("removing the HyDE theme `{theme}` at {directory:?}");
+
+        Task::perform(
+            async move {
+                tokio::fs::remove_dir_all(directory)
+                    .await
+                    .err()
+                    .map(|error| error.to_string())
+            },
+            move |failure| Message::Removed {
+                theme: theme.clone(),
+                failure
+            }
+        )
     }
 
     /// Starts the catalogue reader, for the gallery section of the menu.
