@@ -5,6 +5,39 @@ use serde::Deserialize;
 /// Seconds between two scheduled update checks when none is configured.
 pub const DEFAULT_CHECK_INTERVAL: u64 = 3600;
 
+/// Upstream branch the HyDE clone is measured and updated against.
+#[derive(Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum HydeBranch {
+    /// The released line, the branch upstream documents installing from.
+    #[default]
+    Master,
+    /// The development line, ahead of the releases and rougher.
+    Dev
+}
+
+impl HydeBranch {
+    /// Every branch the bar offers, in the order they are listed.
+    pub const ALL: [HydeBranch; 2] = [HydeBranch::Master, HydeBranch::Dev];
+
+    /// Name of the branch as git knows it.
+    #[must_use]
+    pub const fn git_name(self) -> &'static str {
+        match self {
+            Self::Master => "master",
+            Self::Dev => "dev"
+        }
+    }
+
+    /// Name shown on the choice.
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Master => "Master",
+            Self::Dev => "Dev"
+        }
+    }
+}
+
 /// Commands used to query and apply system package updates.
 #[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct UpdatesModuleConfig {
@@ -21,7 +54,10 @@ pub struct UpdatesModuleConfig {
         alias = "check-interval",
         alias = "check_interval_secs"
     )]
-    pub check_interval: u64
+    pub check_interval: u64,
+    /// Branch the HyDE clone follows.
+    #[serde(default, alias = "hyde-branch")]
+    pub hyde_branch:    HydeBranch
 }
 
 impl Default for UpdatesModuleConfig {
@@ -29,7 +65,8 @@ impl Default for UpdatesModuleConfig {
         Self {
             check_cmd:      String::new(),
             update_cmd:     String::new(),
-            check_interval: default_check_interval()
+            check_interval: default_check_interval(),
+            hyde_branch:    HydeBranch::default()
         }
     }
 }
@@ -61,5 +98,23 @@ mod tests {
 
         assert_eq!(dashed.check_interval, 900);
         assert_eq!(underscored.check_interval, 900);
+    }
+
+    #[test]
+    fn a_configuration_without_a_branch_follows_the_releases() {
+        let config: UpdatesModuleConfig =
+            toml::from_str("check_cmd = \"a\"\nupdate_cmd = \"b\"\n").expect("a valid section");
+
+        assert_eq!(config.hyde_branch, HydeBranch::Master);
+    }
+
+    #[test]
+    fn the_dev_branch_can_be_chosen() {
+        let config: UpdatesModuleConfig =
+            toml::from_str("check_cmd = \"a\"\nupdate_cmd = \"b\"\nhyde_branch = \"Dev\"\n")
+                .expect("a valid section");
+
+        assert_eq!(config.hyde_branch, HydeBranch::Dev);
+        assert_eq!(config.hyde_branch.git_name(), "dev");
     }
 }

@@ -720,7 +720,7 @@ mod view {
                 push_maybe::PushMaybe
             },
             config::{
-                Appearance, AppearanceStyle, BarLayer, Config, DEFAULT_FONT_SIZE,
+                Appearance, AppearanceStyle, BarLayer, Config, DEFAULT_FONT_SIZE, HydeBranch,
                 NotificationSource, Position
             },
             modules::settings::{Message, Settings}
@@ -779,6 +779,14 @@ mod view {
         /// Kept out of [`SECTIONS`] because its choices are named by the source
         /// list itself rather than written down here.
         const NOTIFICATIONS: &str = "Notifications";
+
+        /// Label of the row the HyDE branch is picked on.
+        ///
+        /// Kept out of [`SECTIONS`] like the notification row, and drawn only
+        /// while the updates module is configured: the choice is stored in
+        /// that module's section of the file, and writing into a section
+        /// that does not exist would leave one behind that cannot be read.
+        const HYDE_BRANCH: &str = "HyDE branch";
 
         /// Renders the appearance page against the running `config`.
         ///
@@ -902,22 +910,35 @@ mod view {
                     opacity
                 ));
 
-            let desktop = row_stack(font_size).push(choice_row(
-                NOTIFICATIONS,
-                NotificationSource::ALL
-                    .into_iter()
-                    .map(|source| {
-                        (
-                            source.label(),
-                            source,
-                            config.notifications.source == source
-                        )
-                    })
-                    .collect(),
-                Message::SetNotificationSource,
-                font_size,
-                opacity
-            ));
+            let desktop = row_stack(font_size)
+                .push(choice_row(
+                    NOTIFICATIONS,
+                    NotificationSource::ALL
+                        .into_iter()
+                        .map(|source| {
+                            (
+                                source.label(),
+                                source,
+                                config.notifications.source == source
+                            )
+                        })
+                        .collect(),
+                    Message::SetNotificationSource,
+                    font_size,
+                    opacity
+                ))
+                .push_maybe(config.updates.as_ref().map(|updates| {
+                    choice_row(
+                        HYDE_BRANCH,
+                        HydeBranch::ALL
+                            .into_iter()
+                            .map(|branch| (branch.label(), branch, updates.hyde_branch == branch))
+                            .collect(),
+                        Message::SetHydeBranch,
+                        font_size,
+                        opacity
+                    )
+                }));
 
             page(font_size)
                 .push(section(PLACEMENT, placement.into(), font_size))
@@ -932,11 +953,13 @@ mod view {
         /// [`SECTIONS`], so it is added here rather than baked into a
         /// literal that could drift.
         #[must_use]
-        pub(super) fn rows(auto_scale: bool) -> f32 {
+        pub(super) fn rows(auto_scale: bool, hyde_branch: bool) -> f32 {
             let settings: usize = SECTIONS.iter().map(|(_, rows)| rows.len()).sum();
             let scaled = if auto_scale { SCALED_ROWS } else { 0.0 };
+            let branch = if hyde_branch { 1.0 } else { 0.0 };
 
-            SECTIONS.len() as f32 * style::SECTION_TITLE_ROWS + settings as f32 + 1.0 - scaled
+            SECTIONS.len() as f32 * style::SECTION_TITLE_ROWS + settings as f32 + 1.0 + branch
+                - scaled
         }
 
         /// Longest row of this page, which is how wide the window has to be.
@@ -953,18 +976,22 @@ mod view {
                     .map(NotificationSource::label),
                 font_size
             );
+            let branches = row_width(
+                HydeBranch::ALL.into_iter().map(HydeBranch::label),
+                font_size
+            );
 
             SECTIONS
                 .into_iter()
                 .flat_map(|(_, rows)| rows.iter())
                 .map(|(_, controls)| row_width(controls.iter().copied(), font_size))
-                .fold(notifications, f32::max)
+                .fold(notifications.max(branches), f32::max)
         }
 
         /// Height this page needs.
         #[must_use]
-        pub(super) fn desired_height(font_size: f32, auto_scale: bool) -> f32 {
-            style::page_height(rows(auto_scale), font_size)
+        pub(super) fn desired_height(font_size: f32, auto_scale: bool, hyde_branch: bool) -> f32 {
+            style::page_height(rows(auto_scale, hyde_branch), font_size)
         }
 
         #[cfg(test)]
@@ -1021,8 +1048,16 @@ mod view {
 
             #[test]
             fn the_page_reserves_a_row_for_every_row_and_every_heading_it_draws() {
-                assert_eq!(rows(false), labels().len() as f32 + SECTIONS.len() as f32);
-                assert_eq!(rows(true), rows(false) - SCALED_ROWS);
+                assert_eq!(
+                    rows(false, false),
+                    labels().len() as f32 + SECTIONS.len() as f32
+                );
+                assert_eq!(rows(true, false), rows(false, false) - SCALED_ROWS);
+            }
+
+            #[test]
+            fn a_configured_updates_module_earns_the_branch_row() {
+                assert_eq!(rows(false, true), rows(false, false) + 1.0);
             }
 
             #[test]
@@ -1063,8 +1098,8 @@ mod view {
                 let font_size = 16.0;
 
                 assert_eq!(
-                    desired_height(font_size, false),
-                    style::page_height(rows(false), font_size)
+                    desired_height(font_size, false, false),
+                    style::page_height(rows(false, false), font_size)
                 );
             }
         }
@@ -1765,9 +1800,11 @@ mod view {
             let header = style::row_height(font_size);
             let tabs = style::row_height(font_size);
             let page = match self.tab() {
-                Tab::Appearance => {
-                    appearance::desired_height(font_size, config.appearance.auto_scale)
-                }
+                Tab::Appearance => appearance::desired_height(
+                    font_size,
+                    config.appearance.auto_scale,
+                    config.updates.is_some()
+                ),
                 Tab::Modules => modules::desired_height(config, font_size, self.section())
             };
 
@@ -1785,8 +1822,8 @@ mod view {
             let font_size = 16.0;
             let config = Config::default();
             assert_eq!(
-                appearance::desired_height(font_size, false),
-                style::page_height(appearance::rows(false), font_size)
+                appearance::desired_height(font_size, false, false),
+                style::page_height(appearance::rows(false, false), font_size)
             );
             assert_eq!(
                 modules::desired_height(&config, font_size, Section::Left),
@@ -1809,7 +1846,8 @@ mod view {
             let config = Config::default();
 
             assert!(
-                appearance::desired_height(20.0, false) > appearance::desired_height(16.0, false)
+                appearance::desired_height(20.0, false, false)
+                    > appearance::desired_height(16.0, false, false)
             );
             assert!(
                 modules::desired_height(&config, 20.0, Section::Left)
@@ -1826,7 +1864,11 @@ mod view {
             assert!(
                 settings.content_height(&config)
                     >= 2.0 * style::row_height(font_size)
-                        + appearance::desired_height(font_size, config.appearance.auto_scale)
+                        + appearance::desired_height(
+                            font_size,
+                            config.appearance.auto_scale,
+                            config.updates.is_some()
+                        )
             );
         }
 
@@ -2182,7 +2224,7 @@ mod writer {
 
 use std::path::{Path, PathBuf};
 
-use hydebar_proto::config::{Config, ModuleDef, Modules, NotificationSource};
+use hydebar_proto::config::{Config, HydeBranch, ModuleDef, Modules, NotificationSource};
 use iced::{Element, Task};
 pub use layout::{LayoutEdit, Section, Slot};
 use log::warn;
@@ -2251,6 +2293,8 @@ pub enum Message {
     SetOpacity(f32),
     /// Choose who draws the notification popups.
     SetNotificationSource(NotificationSource),
+    /// Follow the given branch of the HyDE clone.
+    SetHydeBranch(HydeBranch),
     /// Show another page of the window.
     SelectTab(Tab),
     /// Rearrange the modules of the bar.
@@ -2298,6 +2342,7 @@ impl Message {
             Self::SetFontSize(_) => &["appearance", "font_size"],
             Self::SetOpacity(_) => &["appearance", "opacity"],
             Self::SetNotificationSource(_) => &["notifications", "source"],
+            Self::SetHydeBranch(_) => &["updates", "hyde_branch"],
             Self::SelectTab(_)
             | Self::EditLayout(_)
             | Self::SelectSlot(_)
@@ -2331,6 +2376,10 @@ impl Message {
                 NotificationSource::Builtin => "Builtin".into(),
                 NotificationSource::Compositor => "Compositor".into(),
                 NotificationSource::Daemon => "Daemon".into()
+            },
+            Self::SetHydeBranch(branch) => match branch {
+                HydeBranch::Master => "Master".into(),
+                HydeBranch::Dev => "Dev".into()
             },
             Self::SelectTab(_)
             | Self::EditLayout(_)

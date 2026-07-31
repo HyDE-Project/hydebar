@@ -50,7 +50,7 @@ pub use system_info::{
     SystemInfoTemperature, SystemModuleConfig
 };
 pub use themes::PresetTheme;
-pub use updates::UpdatesModuleConfig;
+pub use updates::{HydeBranch, UpdatesModuleConfig};
 pub use validation::ConfigValidationError;
 pub use weather::WeatherModuleConfig;
 pub use window_title::{WindowTitleConfig, WindowTitleMode};
