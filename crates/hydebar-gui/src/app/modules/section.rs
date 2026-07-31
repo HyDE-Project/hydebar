@@ -10,7 +10,7 @@ use crate::app::state::{App, Message};
 /// The rest is what each island spends on its own blend: high enough that the
 /// new palette visibly crosses the bar from its leading corner, low enough
 /// that no island ever sits still while its neighbours move.
-const SWEEP_SPREAD: f32 = 0.6;
+const SWEEP_SPREAD: f32 = 0.75;
 
 impl App {
     /// Theme of the island standing at `position` while a theme change runs.

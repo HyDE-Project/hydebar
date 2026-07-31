@@ -49,7 +49,7 @@ impl AppearanceTransition {
         Self {
             from:     appearance.clone(),
             to:       appearance.clone(),
-            progress: Spring::new(1.0).with_response(crate::animation::GENTLE),
+            progress: Spring::new(1.0).with_response(crate::animation::SWEEP),
             current:  appearance
         }
     }

@@ -36,6 +36,14 @@ pub const STANDARD: Duration = Duration::from_millis(220);
 /// Response of the spring behind whole-surface changes: theme, layout.
 pub const GENTLE: Duration = Duration::from_millis(320);
 
+/// Response of the spring carrying a palette across the bar.
+///
+/// Far slower than [`GENTLE`] on purpose: the front has to be seen crossing
+/// island after island, and it travels beside the desktop's own wallpaper
+/// sweep, which takes a couple of seconds. At menu speeds the whole crossing
+/// fits in two frames and reads as everything changing at once.
+pub const SWEEP: Duration = Duration::from_millis(1100);
+
 /// Default time the spring needs to travel most of the way to its target.
 const DEFAULT_RESPONSE: f32 = 0.22;
 
