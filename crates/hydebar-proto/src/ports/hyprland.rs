@@ -140,6 +140,8 @@ pub struct HyprlandMonitorInfo {
     pub id:                   i32,
     /// Human readable monitor name.
     pub name:                 String,
+    /// ID of the workspace shown on this monitor, if known.
+    pub active_workspace_id:  Option<i32>,
     /// ID of the special workspace focused on this monitor, if any.
     pub special_workspace_id: Option<i32>
 }

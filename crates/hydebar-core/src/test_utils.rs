@@ -36,6 +36,7 @@ impl Default for MockHyprlandPort {
                 monitors:            vec![HyprlandMonitorInfo {
                     id:                   0,
                     name:                 "MockMonitor".into(),
+                    active_workspace_id:  Some(1),
                     special_workspace_id: None
                 }],
                 workspaces:          vec![HyprlandWorkspaceInfo {

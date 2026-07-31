@@ -146,6 +146,8 @@ impl HyprlandPort for HyprlandClient {
                 .map(|monitor| HyprlandMonitorInfo {
                     id:                   i32::try_from(monitor.id).unwrap_or(i32::MAX),
                     name:                 monitor.name,
+                    active_workspace_id:  (monitor.active_workspace.id != 0)
+                        .then_some(monitor.active_workspace.id),
                     special_workspace_id: (monitor.special_workspace.id != 0)
                         .then_some(monitor.special_workspace.id)
                 })

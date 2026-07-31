@@ -52,6 +52,13 @@ fn get_workspaces(port: &dyn HyprlandPort, config: &WorkspacesModuleConfig) -> V
     map_snapshot_to_workspaces(&snapshot, config)
 }
 
+/// Maps a compositor snapshot onto the indicators the bar draws.
+///
+/// A workspace is drawn active when its own monitor shows it, so every
+/// monitor of a multi-head setup highlights its current workspace rather
+/// than only the one holding the focus. A snapshot whose monitors report no
+/// active workspace falls back to the single focused one, which is what a
+/// minimal test double provides.
 fn map_snapshot_to_workspaces(
     snapshot: &HyprlandWorkspaceSnapshot,
     config: &WorkspacesModuleConfig
@@ -87,14 +94,22 @@ fn map_snapshot_to_workspaces(
         });
     }
 
+    let any_monitor_reports = monitors.iter().any(|m| m.active_workspace_id.is_some());
+
     // Map normal workspaces.
     for w in normal.iter() {
+        let shown = if any_monitor_reports {
+            monitors.iter().any(|m| m.active_workspace_id == Some(w.id))
+        } else {
+            Some(w.id) == active
+        };
+
         result.push(Workspace {
             id:         w.id,
             name:       w.name.clone(),
             monitor_id: w.monitor_id,
             monitor:    w.monitor_name.clone(),
-            active:     Some(w.id) == active,
+            active:     shown,
             windows:    w.window_count
         });
     }
