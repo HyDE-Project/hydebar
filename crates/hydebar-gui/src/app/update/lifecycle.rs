@@ -178,6 +178,19 @@ impl App {
                 } = update;
 
                 let config = self.adopted(config);
+
+                // A theme switch reloads the file several times and most of
+                // those reloads carry exactly what the bar already runs on.
+                // The blur restatement still goes out — the compositor may
+                // have wiped the rules regardless of what the file says — but
+                // nothing else is worth re-deriving for a no-op.
+                if self.config == config {
+                    debug!("config reload carries no change");
+                    hydebar_core::outputs::restate_blur();
+
+                    return Task::none();
+                }
+
                 let source_changed =
                     self.config.notifications.source != config.notifications.source;
 
