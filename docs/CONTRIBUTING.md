@@ -79,7 +79,7 @@ Help others understand hydebar:
 
 ### Prerequisites
 
-- **Rust** 1.70+ (edition 2024)
+- **Rust** 1.97+ (edition 2024, see `rust-version` in `Cargo.toml`)
 - **Cargo** package manager
 - **Hyprland** compositor (for testing)
 - **Wayland** development libraries
@@ -164,18 +164,15 @@ git diff
 git add file1.rs file2.rs
 
 # Commit with descriptive message
-git commit -m "#123: add feature X
-
-Detailed explanation of what changed and why.
-"
+git commit -m "#123 feat: add feature X"
 ```
 
 **Commit message format:**
-- Start with issue number: `#123:`
+- Start with the issue number and a type: `#123 feat:`, `#123 fix:`
 - Use imperative mood: "add feature" not "added feature"
 - Keep first line under 72 characters
 - Add detailed explanation in body if needed
-- No AI mentions or generated content markers
+- No tool credit lines or trailers
 
 ### 4. Push and Create PR
 
@@ -306,42 +303,46 @@ mod tests {
 ### Creating a New Theme
 
 1. **Choose colors** - Pick a cohesive palette
-2. **Add to PresetTheme enum** in `crates/hydebar-proto/src/config/themes.rs`:
+2. **Add to PresetTheme enum** in `crates/hydebar-proto/src/config/themes.rs`
+   (the enum is `#[serde(rename_all = "kebab-case")]`, so `YourThemeName`
+   becomes `appearance = "your-theme-name"`):
 
 ```rust
-#[derive(Deserialize, Clone, Copy, Debug, PartialEq, Eq,)]
+#[derive(Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
 pub enum PresetTheme {
     // ... existing themes
-    YourThemeName,
+    YourThemeName
 }
 ```
 
-3. **Implement theme function**:
+3. **Implement theme function** — follow the existing constructors in
+   `themes.rs`; colors are `AppearanceColor::Simple(HexColor::rgb(r, g, b))`:
 
 ```rust
-pub fn your_theme_name() -> Appearance {
+fn your_theme_name() -> Appearance {
     Appearance {
         style: AppearanceStyle::Islands,
         opacity: 0.95,
-        background_color: AppearanceColor::from_hex("#1a1b26"),
-        primary_color: AppearanceColor::from_hex("#7aa2f7"),
-        secondary_color: AppearanceColor::from_hex("#16161e"),
-        success_color: AppearanceColor::from_hex("#9ece6a"),
-        danger_color: AppearanceColor::from_hex("#f7768e"),
-        text_color: AppearanceColor::from_hex("#c0caf5"),
+        background_color: AppearanceColor::Simple(HexColor::rgb(26, 27, 38)),
+        primary_color: AppearanceColor::Simple(HexColor::rgb(122, 162, 247)),
+        secondary_color: AppearanceColor::Simple(HexColor::rgb(22, 22, 30)),
+        success_color: AppearanceColor::Simple(HexColor::rgb(158, 206, 106)),
+        danger_color: AppearanceColor::Simple(HexColor::rgb(247, 118, 142)),
+        warning_color: AppearanceColor::Simple(HexColor::rgb(224, 175, 104)),
+        text_color: AppearanceColor::Simple(HexColor::rgb(192, 202, 245)),
         workspace_colors: vec![
-            AppearanceColor::from_hex("#7aa2f7"),
-            AppearanceColor::from_hex("#bb9af7"),
-            AppearanceColor::from_hex("#7dcfff"),
+            AppearanceColor::Simple(HexColor::rgb(122, 162, 247)),
+            AppearanceColor::Simple(HexColor::rgb(187, 154, 247)),
         ],
-        special_workspace_colors: vec![
-            AppearanceColor::from_hex("#f7768e"),
-        ],
+        special_workspace_colors: Some(vec![AppearanceColor::Simple(
+            HexColor::rgb(247, 118, 142)
+        )]),
         menu: MenuAppearance {
             opacity: 0.95,
-            backdrop: 0.3,
+            backdrop: 0.3
         },
-        animations: AnimationConfig::default(),
+        ..Appearance::default()
     }
 }
 ```
@@ -392,39 +393,29 @@ appearance = "your-theme-name"
 
 ### Creating a New Module
 
-Modules follow a specific architecture:
+A module lives in `crates/hydebar-core/src/modules/` and implements the
+`Module` trait from `crates/hydebar-core/src/modules.rs` (`register`,
+`deregister`, `poll_schedule`/`poll`, `view`, `subscription`). Wiring it up
+touches four places:
 
-1. **State** - `crates/hydebar-core/src/modules/your_module/state.rs`
-2. **View** - `crates/hydebar-gui/src/modules/your_module/view.rs`
-3. **Integration** - Update `crates/hydebar-core/src/modules.rs`
+1. **Name** - add a variant to `ModuleName` (and its `BUILT_IN` list,
+   `as_str`, `label`) in `crates/hydebar-proto/src/config/modules.rs`
+2. **Module** - the state, logic and iced view in
+   `crates/hydebar-core/src/modules/your_module.rs` (split into
+   `state`/`view`/`commands` submodules when it grows)
+3. **Events** - a `ModuleEvent` variant in
+   `crates/hydebar-core/src/event_bus.rs` if the module publishes background
+   updates
+4. **Registration and dispatch** - `crates/hydebar-gui/src/app/` —
+   `update/registration.rs` (register while hosted, release when not),
+   `update/modules.rs` and the module actions/element wiring under
+   `app/modules/`
 
-Example structure:
+Any per-module configuration gets its own file under
+`crates/hydebar-proto/src/config/` and a field on `Config`.
 
-```rust
-// state.rs
-pub struct YourModuleState {
-    // Module data
-}
-
-impl YourModuleState {
-    pub fn new() -> Self {
-        Self {
-            // Initialize
-        }
-    }
-
-    pub fn update(&mut self) {
-        // Update logic
-    }
-}
-
-// view.rs
-pub fn view(state: &YourModuleState) -> Element<Message> {
-    // Render UI
-}
-```
-
-See existing modules for reference.
+See existing modules for reference; `modules/weather.rs` is a small
+self-contained example, `modules/media_player/` a split one.
 
 ---
 
@@ -506,10 +497,8 @@ pub struct AnimationConfig {
 ### User Documentation
 
 Update relevant docs:
-- `README.md` - Overview and quick start
+- `README.md` - Overview, quick start, custom modules, system info
 - `docs/GETTING_STARTED.md` - First-time setup
-- `docs/CONFIGURATION.md` - Config options
-- `docs/MODULES.md` - Module-specific settings
 - `docs/THEMES.md` - Theme showcase
 - `docs/TROUBLESHOOTING.md` - Common issues
 - `docs/FAQ.md` - Frequently asked questions
@@ -522,8 +511,8 @@ Maintainers handle releases:
 
 1. Update version in `Cargo.toml`
 2. Update `CHANGELOG.md`
-3. Create git tag: `git tag v0.7.0`
-4. Push tag: `git push origin v0.7.0`
+3. Create git tag: `git tag vX.Y.Z`
+4. Push tag: `git push origin vX.Y.Z`
 5. GitHub Actions builds packages
 6. Publish to AUR, Nix, etc.
 

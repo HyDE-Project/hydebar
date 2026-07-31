@@ -220,15 +220,19 @@ justifies stage 2 below.
 
 ## 4. What to move to Rust
 
-Current state: `crates/hydebar-proto/src/theme_source/theme.rs:50-68` reads
-`~/.config/waybar/theme.css`, `~/.config/waybar/includes/global.css` and
-`includes/border-radius.css`; `hyde_state/state.rs:76-81` reads `staterc` + the themes
-directory; `compositor_look.rs:29-36` already queries `hyprctl` for rounding and gaps. The
-overlay is applied in `config.rs:210-239` and only runs when the **hydebar config file**
-changes (`config/watch/recipe.rs:135-140` watches only that one path). So today a HyDE
-theme switch does not repaint the bar at all until its own config is touched or it restarts.
+Current state: stages 1–3 below have landed.
+`crates/hydebar-proto/src/theme_source/` reads the palette from
+`~/.cache/hyde/wall.dcol` (`dcol.rs`), resolves the font natively through the
+HyDE chain (`font.rs`), takes the radius from the compositor
+(`compositor_look.rs`) and keeps the waybar stylesheets (`waybar.rs`,
+`css.rs`) only as a last resort; `hyde_state/` reads `staterc` and the themes
+directory. A dedicated theme watcher
+(`crates/hydebar-core/src/config/theme_watch/`) follows the HyDE files and
+re-runs the config load on any change, so the bar repaints on a HyDE theme
+switch without its own config being touched. The stage descriptions are kept
+below as the record of why each step was taken.
 
-### Stage 1 — read the colours from the source, not from waybar's stylesheet
+### Stage 1 — read the colours from the source, not from waybar's stylesheet ✅ done
 
 Add a `dcol` reader to `hydebar-proto`: parse `~/.cache/hyde/wall.dcol` (89 lines of
 `key="value"`, the same grammar `staterc.rs` already handles) into a palette
@@ -258,14 +262,14 @@ palette (index `5-i`, `dcol_invt` instead of `dcol_mode`) when `revert_colors` a
 
 Keep the waybar stylesheet reader as a fallback for setups without a `.dcol`.
 
-### Stage 2 — watch, and repaint without a config reload
+### Stage 2 — watch, and repaint without a config reload ✅ done
 
 Generalise `config/watch` from "one file" to "a set of paths", and add a theme watcher that
 emits a palette message instead of a full config reload. See §5 for the exact paths and the
 inotify subtleties. This is the change that removes the perceived delay entirely: the bar
 repaints as soon as `wall.dcol` moves, without waiting for any consumer script.
 
-### Stage 3 — fonts and radius natively, dropping the waybar files
+### Stage 3 — fonts and radius natively, dropping the waybar files ✅ done
 
 - Font family/size: implement the `waybar.py:888-911` chain in Rust —
   `~/.config/hyde/config.toml` (`WAYBAR_FONT`/`WAYBAR_SCALE`) →
@@ -295,8 +299,10 @@ running, and it is one `sed` render (~3 ms) on the wallbash side.
 
 ### Stage 5 — perform the switch from the bar
 
-Replace the single `hyde-shell theme.switch -s <name>` shell-out
-(`utils/hyde_shell.rs:19`) with a split:
+Done differently than sketched here: instead of a native `staterc` write, the
+bar runs its own `scripts/theme-switch` wrapper (§6), which performs the stock
+HyDE switch with the waybar templates excluded. The native split below remains
+an option if the shell dependency should ever go entirely:
 
 1. natively write `HYDE_THEME="<name>"` into `~/.local/state/hyde/staterc`
    (the `set_conf` semantics of `globalcontrol.sh:258-267`: replace the line if the key

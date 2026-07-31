@@ -112,10 +112,10 @@ that the interval can be short when someone is looking and long when nobody is.
 | Brightness, idle inhibitor, tray, privacy | bus | correct |
 | Power, network, bluetooth, media, notifications | bus, with a timer or a spawned command alongside | correct in the main path; the leftovers below are the whole defect |
 | Audio | the sound server's own library | correct |
-| Clock | timer | correct, and it should tick on the minute rather than on an interval |
+| Clock | timer, aligned to the boundary of its period | correct — a bar showing minutes ticks on the minute |
 | Temperatures, load, memory | timer over `/sys` and `/proc` | correct |
 | Updates, weather | timer over a command | correct in kind |
-| User-defined modules | a shell loop that never exits | wrong in kind, see below |
+| User-defined modules | a reading (`exec` + `interval`, re-run on a signal) or a stream (`listen_cmd`), chosen by the configuration | correct in kind; the streams are supervised as described below |
 
 Four leftovers ask a program a question the process could answer itself:
 the bluetooth service and both network backends shell out to a kill-switch
@@ -125,11 +125,12 @@ publishes.
 
 ## The shape that causes the process problem
 
-A user-defined module runs as a shell loop — `while :; do command; sleep 5;
-done` — that lives as long as the bar. Every difficulty in supervising child
-processes follows from that one decision. A loop that never exits has to be
-tracked, cancelled and cleaned up after; its helpers are grandchildren, and
-most kernel guarantees do not reach a grandchild.
+A user-defined module written the traditional way runs as a shell loop —
+`while :; do command; sleep 5; done` — that lives as long as the bar. Every
+difficulty in supervising child processes follows from that one decision. A
+loop that never exits has to be tracked, cancelled and cleaned up after; its
+helpers are grandchildren, and most kernel guarantees do not reach a
+grandchild.
 
 A command run once, which exits on its own, needs none of it. Nothing to track,
 nothing to cancel, nothing to leak. The bar already owns a schedule; the loop

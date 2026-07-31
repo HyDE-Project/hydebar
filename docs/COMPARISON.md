@@ -9,19 +9,20 @@ Detailed comparison of Wayland panel solutions for Hyprland.
 | Feature | hydebar | Waybar | HyprPanel |
 |---------|---------|--------|-----------|
 | **Language** | Rust | C++ | TypeScript |
-| **UI Framework** | iced | GTK3 | GTK3 (Astal) |
-| **Memory (idle)** | ~10MB* | ~10MB | ~30MB |
-| **CPU (idle)** | < 2%* | ~2% | ~3% |
-| **Startup time** | ~100ms* | ~100ms | ~200ms |
+| **UI Framework** | iced (layer-shell) | GTK3 | GTK3 (Astal) |
+| **Memory (idle)** | ~127MB* (GPU stack) | ~10MB | ~30MB |
+| **CPU (idle)** | ~0.5%* | ~2% | ~3% |
+| **Startup time** | ~53ms* | ~100ms | ~200ms |
 | **Config format** | TOML | JSON | TypeScript |
 | **Hot reload** | ✅ Yes | ⚠️ Partial | ✅ Yes |
-| **GUI config** | 🔜 Planned | ❌ No | ✅ Yes |
-| **Preset themes** | ✅ 11 themes | ❌ No | ✅ Yes |
+| **GUI config** | ⚠️ Settings window (layout, appearance) | ❌ No | ✅ Yes |
+| **Preset themes** | ✅ 11 themes + HyDE following | ❌ No | ✅ Yes |
 | **Animations** | ✅ Smooth | ⚠️ Basic | ✅ Smooth |
 | **Wayland-native** | ✅ Yes | ✅ Yes | ✅ Yes |
 | **Multi-monitor** | ✅ Yes | ✅ Yes | ✅ Yes |
 
-\* Current measurements, target improvements in v0.8.0
+\* Measured, release build — see [perf-baseline-2026-07.md](perf-baseline-2026-07.md).
+The memory figure is the wgpu/Vulkan rendering stack, not the modules.
 
 ---
 
@@ -44,16 +45,16 @@ Detailed comparison of Wayland panel solutions for Hyprland.
 | **Updates** | ✅ Yes | ⚠️ Basic | ✅ Yes |
 | **Keyboard layout** | ✅ Yes | ✅ Yes | ✅ Yes |
 | **Privacy indicators** | ✅ Yes | ❌ No | ⚠️ Basic |
-| **Notifications** | ✅ Yes (D-Bus) | ⚠️ Dunst | ✅ Yes |
-| **Weather** | 🔜 v1.1.0 | ⚠️ Basic | ✅ Yes |
-| **Calendar** | 🔜 v1.1.0 | ❌ No | ⚠️ Basic |
+| **Notifications** | ✅ Yes (selectable source) | ⚠️ Dunst | ✅ Yes |
+| **Weather** | ✅ Yes (OpenWeatherMap) | ⚠️ Basic | ✅ Yes |
+| **Calendar** | ✅ Yes | ❌ No | ⚠️ Basic |
 
 ### Advanced Features
 
 | Feature | hydebar | Waybar | HyprPanel |
 |---------|---------|--------|-----------|
-| **Custom modules** | ✅ Yes (Rust) | ✅ Yes (Script) | ✅ Yes (TS) |
-| **Module ordering** | ✅ Config | ✅ Config | ✅ GUI |
+| **Custom modules** | ✅ Yes (script, Waybar-style) | ✅ Yes (Script) | ✅ Yes (TS) |
+| **Module ordering** | ✅ Config + settings window | ✅ Config | ✅ GUI |
 | **Inline controls** | ✅ Yes (sliders) | ❌ No | ✅ Yes |
 | **Screenshot tool** | ✅ Yes (grim/wf-recorder) | ❌ No | ✅ Yes |
 | **Power menu** | ✅ Yes | ⚠️ Basic | ✅ Yes |
@@ -63,43 +64,45 @@ Detailed comparison of Wayland panel solutions for Hyprland.
 
 ## Performance Comparison
 
-### Memory Usage (All modules enabled)
+Measured hydebar numbers come from
+[perf-baseline-2026-07.md](perf-baseline-2026-07.md) (release build, 4K
+output); the others are typical figures.
+
+### Memory Usage
 
 ```
-hydebar:   ~10MB (baseline) → Target: ~5MB (v0.8.0)
-Waybar:    ~10MB
-HyprPanel: ~30MB (TypeScript + GTK overhead)
+hydebar:   ~127MB resident — dominated by the wgpu/Vulkan rendering stack
+Waybar:    ~10MB (GTK, CPU-rendered)
+HyprPanel: ~30MB+ (TypeScript + GTK overhead)
 ```
 
-**Winner:** 🏆 hydebar (target) / Waybar (current)
+**Winner:** 🏆 Waybar — hydebar pays for GPU rendering in resident memory
 
 ### CPU Usage
 
 **Idle:**
 ```
-hydebar:   < 2% → Target: < 1% (v0.8.0)
+hydebar:   ~0.5%
 Waybar:    ~2%
 HyprPanel: ~3%
 ```
 
-**Active (module updates):**
+**Active (menu opening and settling):**
 ```
-hydebar:   < 10% → Target: < 5% (v0.8.0)
-Waybar:    ~8%
-HyprPanel: ~12%
+hydebar:   ~0.5% — indistinguishable from idle
 ```
 
-**Winner:** 🏆 hydebar (target) / Waybar (current)
+**Winner:** 🏆 hydebar
 
 ### Startup Time
 
 ```
-hydebar:   ~100ms → Target: < 50ms (v0.8.0)
+hydebar:   ~53ms to mapped surface
 Waybar:    ~100ms
 HyprPanel: ~200ms (TypeScript compilation)
 ```
 
-**Winner:** 🏆 hydebar (target) / Waybar (current)
+**Winner:** 🏆 hydebar
 
 ---
 
@@ -110,23 +113,21 @@ HyprPanel: ~200ms (TypeScript compilation)
 **hydebar:**
 ```toml
 # Clean, typed TOML
-[appearance]
-theme = "catppuccin-mocha"  # v0.7.0
+appearance = "catppuccin-mocha"
 
-[modules.clock]
+[clock]
 format = "%H:%M"
 ```
 
 **Pros:**
 - ✅ Type-safe
-- ✅ Schema validation
+- ✅ Validation on load
 - ✅ Hot reload
-- ✅ IDE autocomplete (with schema)
-- 🔜 GUI config (v1.0.0)
+- ✅ Settings window for layout and appearance
+- ✅ Script-driven custom modules (Waybar-style `exec`/`listen_cmd`)
 
 **Cons:**
-- ⚠️ Less flexible than scripting
-- ⚠️ No Lua/script modules (yet)
+- ⚠️ Less flexible than full scripting
 
 ---
 
@@ -181,21 +182,24 @@ export default {
 
 ## Theming
 
-### hydebar (v0.7.0+)
+### hydebar
 
 **Preset themes:**
 - Catppuccin (Mocha, Macchiato, Frappe, Latte)
 - Dracula
 - Nord
-- Gruvbox
-- Tokyo Night
+- Gruvbox (Dark, Light)
+- Tokyo Night (Night, Storm, Light)
 
-**Custom:**
+**One line:**
 ```toml
-theme = "catppuccin-mocha"  # One line!
+appearance = "catppuccin-mocha"
 ```
 
-**Winner:** 🏆 hydebar (v0.7.0) / HyprPanel (current)
+Plus HyDE theme following: with no `appearance` at all the bar recolours
+itself with the desktop on every HyDE theme switch.
+
+**Winner:** 🏆 hydebar
 
 ### Waybar
 
@@ -224,8 +228,6 @@ theme = "catppuccin-mocha"  # One line!
 - Gruvbox
 - Nord
 
-**Winner:** 🏆 HyprPanel (current) → hydebar (v0.7.0)
-
 ---
 
 ## Development Experience
@@ -239,8 +241,8 @@ theme = "catppuccin-mocha"  # One line!
 | **Type safety** | ✅ Strong | ⚠️ Manual | ✅ Strong |
 | **Build time** | ~5min | ~2min | ~1min |
 | **Hot reload** | ✅ Yes | ❌ No | ✅ Yes |
-| **Test coverage** | ✅ 100% | ⚠️ Partial | ⚠️ Partial |
-| **Documentation** | 🔜 v1.0.0 | ✅ Good | ✅ Good |
+| **Test coverage** | ✅ Extensive | ⚠️ Partial | ⚠️ Partial |
+| **Documentation** | ⚠️ Growing | ✅ Good | ✅ Good |
 
 **Best for contributors:**
 - **Beginners:** HyprPanel (TypeScript)
@@ -253,7 +255,7 @@ theme = "catppuccin-mocha"  # One line!
 
 ### hydebar
 - **Status:** Active development 🚧
-- **Maturity:** Beta (v0.6.7)
+- **Maturity:** Beta
 - **Breaking changes:** Possible before v1.0.0
 - **Community:** Growing
 - **Updates:** Frequent
@@ -279,17 +281,17 @@ theme = "catppuccin-mocha"  # One line!
 ### hydebar 🦀
 
 **Why choose:**
-1. ⚡ **Blazing fast** - Rust performance, < 5MB RAM target
+1. ⚡ **Blazing fast** - ~53ms startup, ~0.5% idle CPU, event-driven
 2. 🛡️ **Memory safe** - Zero segfaults, data race free
 3. 🎯 **Typed config** - Catch errors before runtime
-4. 🧪 **100% tested** - Full test coverage
-5. 🔜 **Modern UX** - Preset themes, animations, GUI config
-6. 🔧 **Extensible** - Custom modules in Rust
+4. 🧪 **Well tested** - Extensive test suite
+5. ✨ **Modern UX** - Preset themes, HyDE following, animations, settings window
+6. 🔧 **Extensible** - Waybar-style custom modules
 
 **Best for:**
 - Performance enthusiasts
 - Rust developers
-- Minimalists (small binary, low overhead)
+- HyDE users (session bar, theme following, HyDE menu)
 - Reliability-focused users
 
 ---
@@ -354,28 +356,26 @@ theme = "catppuccin-mocha"  # One line!
 
 **Pros:**
 - ✅ Much faster (Rust vs TS)
-- ✅ Lower memory usage
 - ✅ Simpler config (TOML vs TS)
+- ✅ Notifications, weather, calendar and screenshot included
 
 **Cons:**
-- ⚠️ No GUI config yet (v1.0.0)
-- ⚠️ Fewer themes (v0.7.0)
-- ⚠️ Some features missing (notifications, weather)
+- ⚠️ Settings window covers layout and appearance, not every option
+- ⚠️ Beta software
 
 **Steps:**
-1. Wait for v0.9.0 for feature parity
-2. Use preset themes (v0.7.0)
-3. Convert config manually
+1. Use a preset theme or let the bar follow HyDE
+2. Convert config manually
 
 ---
 
 ## Roadmap Comparison
 
-### hydebar 2025 Plans
-- ✅ v0.7.0: Preset themes (Q1)
-- ✅ v0.8.0: Performance optimization (Q1)
-- ✅ v0.9.0: Notification center, enhanced modules (Q2)
-- ✅ v1.0.0: GUI config, full docs (Q2)
+### hydebar
+- ✅ Preset themes and animations — delivered
+- ✅ Performance work with a measured baseline — delivered
+- ✅ Notification center, screenshot, weather, calendar — delivered
+- 🔜 Settings window growth, documentation site — see [ROADMAP.md](../ROADMAP.md)
 
 ### Waybar
 - Stable, incremental improvements
@@ -392,11 +392,11 @@ theme = "catppuccin-mocha"  # One line!
 ## Conclusion
 
 ### Choose **hydebar** if you want:
-- ⚡ Maximum performance
+- ⚡ Maximum performance (startup, idle CPU)
 - 🛡️ Memory safety (Rust)
-- 🔜 Modern UX (v0.7.0+)
+- ✨ Modern UX: themes, HyDE following, animations
 - 🎯 Type-safe configuration
-- 🧪 Reliability (100% tested)
+- 🧪 Reliability (extensively tested)
 
 ### Choose **Waybar** if you want:
 - 🏆 Battle-tested stability
@@ -407,17 +407,13 @@ theme = "catppuccin-mocha"  # One line!
 
 ### Choose **HyprPanel** if you want:
 - 🎨 Beautiful out-of-box
-- ⚙️ GUI configuration NOW
-- ✨ Smooth animations NOW
-- 📦 Full features NOW
+- ⚙️ Full GUI configuration
 - 💻 TypeScript development
 
 ---
 
 **Our goal:** Combine Waybar's stability and performance with HyprPanel's beauty and UX.
 
-**ETA:** v1.0.0 in Q2 2025
-
 ---
 
-**Last updated:** 2025-10-08
+**Last updated:** 2026-07

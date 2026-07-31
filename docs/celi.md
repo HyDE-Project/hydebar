@@ -1,37 +1,37 @@
-Принято. Ниже — готовые **task-промпты для Codex**, без системного вступления, только то, что вставлять в задачу. Копируй, подставляй <> и жми. Комментарии в коде — на английском; версии и changelog не трогать.
+Готовые **task-промпты** для постановки задач по проекту — только то, что вставлять в задачу. Копируй, подставляй <> и жми. Комментарии в коде — на английском; версии и changelog не трогать.
 
 ---
 
-## 1) Фича: новый модуль (hydebar-mod-<name>)
+## 1) Фича: новый модуль (<name>)
 
 ```
 ЗАДАЧА: Реализовать модуль <name> для Hyprland-панели (hydebar), UI через iced, слой iced_layershell.
 
 СКОУП:
-- Ввести модульный контракт: Module/ModuleConfig/ModuleEvent уже в проекте; следовать ему.
-- Реализовать модуль hydebar-mod-<name>: локальная модель, init с подписками/таймером, неблокирующая очередь событий.
-- Добавить view-адаптер в hydebar-gui (без прямых вызовов iced из модуля).
-- Конфиг: схема, валидация, hot-reload изменяет только этот модуль.
+- Модульный контракт уже в проекте (trait Module в crates/hydebar-core/src/modules.rs: register/deregister, poll_schedule/poll, view, subscription); следовать ему.
+- Реализовать модуль в crates/hydebar-core/src/modules/<name>.rs: локальная модель, register с подписками/расписанием, публикация через ModuleContext в event bus.
+- Проводка в hydebar-gui: регистрация в app/update/registration.rs (по закону «зарегистрирован, пока layout его рисует»), диспетчеризация в app/update/modules.rs и app/modules/.
+- Конфиг: секция в crates/hydebar-proto/src/config/<name>.rs (serde), валидация, hot-reload изменяет только этот модуль.
 
 ВНЕ СКОУПА: версия crates/toolchain, CHANGELOG, общий рефактор ядра.
 
 AR/DoD:
 - `cargo check && cargo test --all` зелёные, `cargo fmt --all && cargo clippy --all-targets -- -D warnings` чисто.
-- Модуль включается/выключается из конфига; при невалидном конфиге модуль не падает, логирует ошибку и сохраняет предыдущее состояние.
-- События модуля: DataUpdated/Redraw/PopupToggle; без panic/unwrap/unsafe, минимум clone().
+- Модуль включается/выключается из layout в конфиге; при невалидном конфиге модуль не падает, логирует ошибку и сохраняет предыдущее состояние.
+- События модуля идут через BusEvent/ModuleEvent (event_bus.rs); без panic/unwrap/unsafe, минимум clone().
 
 ПЛАН:
-1) Создать крейт/модуль hydebar-mod-<name>, описать Config + Validate.
-2) Реализовать Module/Ticked: init, poll, on_tick, reconfigure, shutdown.
-3) hydebar-gui: добавить View/Message-мост, батчить Redraw.
-4) Конфиг-схема + hot-reload.
+1) Вариант в ModuleName (crates/hydebar-proto/src/config/modules.rs) + конфиг-секция.
+2) Реализовать Module: register, poll_schedule/poll, view.
+3) hydebar-gui: регистрация + диспетчеризация, батчить Redraw.
+4) Hot-reload.
 5) Юнит-тесты на логику; интеграционный на событие→GUI.
 
 ТОЧКИ ИЗМЕНЕНИЙ:
-- crates/hydebar-mod-<name>/**
-- crates/hydebar-gui/src/views/<name>.rs
-- crates/hydebar-core/src/registry.rs (регистрация)
-- crates/hydebar-core/src/config/schema/<name>.json / examples/*.toml
+- crates/hydebar-core/src/modules/<name>.rs
+- crates/hydebar-proto/src/config/modules.rs (ModuleName) и config/<name>.rs
+- crates/hydebar-core/src/event_bus.rs (вариант ModuleEvent)
+- crates/hydebar-gui/src/app/update/registration.rs, app/update/modules.rs (регистрация и диспетчеризация)
 
 КОМАНДЫ: `cargo check && cargo test --all && cargo fmt --all && cargo clippy --all-targets -- -D warnings`
 
@@ -60,7 +60,7 @@ AR/DoD:
 2) GUI: общий PopupManager, слой, фокус/esc, auto-close.
 3) Мини-тесты на логику; ручная проверка.
 
-ТОЧКИ ИЗМЕНЕНИЙ: crates/hydebar-mod-<name>/**, crates/hydebar-gui/src/popup/**, crates/hydebar-gui/src/app.rs
+ТОЧКИ ИЗМЕНЕНИЙ: crates/hydebar-core/src/modules/<name>/**, crates/hydebar-core/src/menu/** (MenuType), crates/hydebar-gui/src/app/
 
 КОМАНДЫ: `cargo check && cargo test --all && cargo fmt --all && cargo clippy -- -D warnings`
 
@@ -69,7 +69,7 @@ AR/DoD:
 
 ---
 
-## 3) Рефактор: выделить порт Hyprland
+## 3) Рефактор: выделить порт Hyprland (реализовано — шаблон для аналогичных портов)
 
 ```
 ЗАДАЧА: Вынести Hyprland-интеграцию в порт (trait + адаптер), убрать прямые вызовы из модулей/GUI.
@@ -92,7 +92,7 @@ AR/DoD:
 3) Миграция вызовов по участкам, удаление прямых зависимостей.
 4) Тест/проверка.
 
-ИЗМЕНЕНИЯ: crates/hydebar-proto/src/ports/**, crates/hydebar-core/src/adapters/hyprland/**, обновления imports в модулях.
+ИЗМЕНЕНИЯ: crates/hydebar-proto/src/ports/**, crates/hydebar-core/src/adapters/hyprland_client/**, обновления imports в модулях.
 
 КОМАНДЫ: стандартный набор (check/test/fmt/clippy).
 
@@ -101,14 +101,13 @@ AR/DoD:
 
 ---
 
-## 4) Горячая перезагрузка конфига
+## 4) Горячая перезагрузка конфига (база реализована в crates/hydebar-core/src/config/watch)
 
 ```
 ЗАДАЧА: Реализовать hot-reload конфигов модулей с безопасной валидацией и частичной перезагрузкой.
 
 СКОУП:
-- Схемы JSON/TOML, версия config_version.
-- Валидатор + миграции vN→vN+1 (минимальные).
+- TOML-схема через serde (crates/hydebar-proto/src/config), валидация при загрузке.
 - Перезагружать только изменившиеся модули; при ошибке откатывать к предыдущей валидной конфигурации.
 
 AR/DoD:
@@ -117,12 +116,12 @@ AR/DoD:
 - Тесты: валидный/невалидный конфиг, миграция.
 
 ПЛАН:
-1) Ввести Schema + Validate + Migrate.
-2) Watch через notify; debounce.
+1) Схема + валидация.
+2) Watch через inotify; debounce/батчинг.
 3) Частичная перезагрузка, транзакционность.
 4) Тесты.
 
-ИЗМЕНЕНИЯ: crates/hydebar-core/src/config/**, crates/hydebar-core/src/config/schema/**, examples/**
+ИЗМЕНЕНИЯ: crates/hydebar-core/src/config/**, crates/hydebar-proto/src/config/**
 
 КОМАНДЫ: стандартный набор.
 
@@ -131,7 +130,7 @@ AR/DoD:
 
 ---
 
-## 5) Производительность: батчинг Redraw
+## 5) Производительность: батчинг Redraw (коалесцирование уже есть в event_bus.rs, окно ~8ms)
 
 ```
 ЗАДАЧА: Снизить частоту перерисовок, внедрив батчинг Redraw и микро-тики.
@@ -149,7 +148,7 @@ AR/DoD:
 2) Микро-тикер в GUI.
 3) Бенч/замер.
 
-ИЗМЕНЕНИЯ: crates/hydebar-core/src/bus.rs, crates/hydebar-gui/src/app.rs
+ИЗМЕНЕНИЯ: crates/hydebar-core/src/event_bus.rs, crates/hydebar-gui/src/app/
 
 КОМАНДЫ: стандарт.
 
@@ -205,7 +204,7 @@ AR/DoD:
 2) Исправить владение/отписки/Drop.
 3) Повторные тесты.
 
-ИЗМЕНЕНИЯ: crates/hydebar-mod-<name>/**
+ИЗМЕНЕНИЯ: crates/hydebar-core/src/modules/<name>/**
 
 КОМАНДЫ: стандарт.
 
@@ -214,17 +213,16 @@ AR/DoD:
 
 ---
 
-## 8) Рефактор: разрез монолита на крейты
+## 8) Рефактор: разрез монолита на крейты (реализовано: proto/core/gui/app)
 
 ```
-ЗАДАЧА: Разбить репозиторий на workspace: hydebar-proto, hydebar-core, hydebar-gui, hydebar-mod-*, без изменения поведения.
+ЗАДАЧА: Разбить репозиторий на workspace: hydebar-proto, hydebar-core, hydebar-gui, hydebar-app, без изменения поведения.
 
 СКОУП:
-- Вынести общие типы/трейты в hydebar-proto.
-- Ядро (event-bus, registry, конфиг) в hydebar-core.
+- Вынести общие типы/трейты и конфиг-схему в hydebar-proto.
+- Ядро (event bus, модули, сервисы) в hydebar-core.
 - GUI в hydebar-gui.
 - Приложение-обёртка и CLI в hydebar-app.
-- Модули в отдельные крейты.
 
 AR/DoD:
 - Поведение идентично; тесты зелёные; docs обновлены.
@@ -247,10 +245,10 @@ AR/DoD:
 ## 9) DX: шаблон модуля и генератор
 
 ```
-ЗАДАЧА: Добавить rust-шаблон и cargo-генератор для нового модуля hydebar-mod-<name>.
+ЗАДАЧА: Добавить rust-шаблон и cargo-генератор для нового модуля <name>.
 
 СКОУП:
-- cargo xtask или cargo generate шаблон: минимальный модуль с Config/Module/Ticked; тесты-заглушки.
+- cargo xtask или cargo generate шаблон: минимальный модуль с конфиг-секцией и trait Module; тесты-заглушки.
 - Док из 1 страницы: как написать модуль за 10 минут.
 
 AR/DoD:
@@ -260,7 +258,7 @@ AR/DoD:
 1) Шаблон + скрипт генерации.
 2) Док.
 
-ИЗМЕНЕНИЯ: xtask/**, templates/hydebar-mod-template/**, docs/dev/modules.md
+ИЗМЕНЕНИЯ: xtask/**, templates/hydebar-module-template/**, docs/dev/modules.md
 
 КОМАНДЫ: стандарт.
 ```
@@ -327,9 +325,9 @@ AR/DoD:
 ПЛАН:
 1) Добавить workflow с шагами check/test/fmt/clippy.
 2) Артефакты логов и junit (если есть).
-3) Док коротко в CONTRIBUTING.md.
+3) Док коротко в docs/CONTRIBUTING.md.
 
-ИЗМЕНЕНИЯ: .github/workflows/ci.yml, CONTRIBUTING.md
+ИЗМЕНЕНИЯ: .github/workflows/ci.yml, docs/CONTRIBUTING.md
 
 КОМАНДЫ: n/a (это CI).
 
@@ -338,4 +336,4 @@ AR/DoD:
 
 ---
 
-Хватит, чтобы грузить Codex сутками и не развалить проект. Чёткие DoD, явный план, ограниченный скоуп, стандартный гейт. Если где-то начнёт «умничать» и лезть в версионирование — вставляй эту фразу в конец промпта: **«Запрещено менять версии crates/toolchain и править CHANGELOG/Cargo.lock без отдельной задачи.»**
+Хватит, чтобы грузить работу сутками и не развалить проект. Чёткие DoD, явный план, ограниченный скоуп, стандартный гейт. Если задача начнёт разрастаться в версионирование — вставляй эту фразу в конец промпта: **«Запрещено менять версии crates/toolchain и править CHANGELOG/Cargo.lock без отдельной задачи.»**

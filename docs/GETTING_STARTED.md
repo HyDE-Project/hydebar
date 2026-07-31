@@ -41,6 +41,11 @@ cargo build --release
 # Binary will be at: target/release/hydebar-app
 ```
 
+Or run `./install.sh`, which builds the release binary and installs it as
+`hydebar` together with the `hydebar-theme-switch` script; `./install.sh
+--hyde` also registers the bar as the HyDE session bar (see
+[hyde-session.md](hyde-session.md)).
+
 ## First Run
 
 ### Basic Setup
@@ -55,6 +60,10 @@ mkdir -p ~/.config/hydebar
 # Use a preset theme
 appearance = "catppuccin-mocha"
 ```
+
+An empty (or absent) config also works: the bar then follows the theme
+published by the HyDE Project — colours, font and corner radius — and
+repaints on every desktop theme switch.
 
 3. Run hydebar:
 ```bash
@@ -77,7 +86,7 @@ hydebar includes 11 beautiful preset themes. Try them by editing your config:
 
 ```toml
 # Dark themes
-appearance = "catppuccin-mocha"      # Purple/pink (default)
+appearance = "catppuccin-mocha"      # Purple/pink
 appearance = "dracula"               # Purple/pink
 appearance = "nord"                  # Cool blue
 appearance = "gruvbox-dark"          # Warm retro
@@ -105,16 +114,23 @@ right = ["SystemInfo", "Clock", "Battery", "Settings"]
 Available modules:
 - `Workspaces` - Hyprland workspaces
 - `WindowTitle` - Active window
-- `SystemInfo` - CPU/RAM/temp/network
-- `Clock` - Date and time
+- `SystemInfo` - CPU/RAM/temperatures/GPU/disk/network
+- `Clock` - Date and time, with a calendar menu and optional weather readout
 - `Battery` - Battery status with power profiles
 - `MediaPlayer` - Music controls (MPRIS)
 - `Tray` - System tray icons
+- `Updates` - Package update check (needs `[updates]` commands)
+- `Clipboard` - Clipboard history picker
+- `AppLauncher` - Application launcher button
+- `KeyboardLayout` / `KeyboardSubmap` - Layout and active submap
 - `Privacy` - Camera/mic/screenshare indicators
 - `Notifications` - Notification center with DND mode
 - `Screenshot` - Screenshot and screen recording
 - `IdleInhibitor` - Toggle keeping the session awake (caffeine)
-- `Settings` - Comprehensive settings panel
+- `ControlCenter` - Quick settings panel: audio, network, bluetooth, power
+- `Audio` / `Network` / `Bluetooth` / `PowerProfile` - Standalone readouts from the control center
+- `Settings` - The bar's own settings window (layout and appearance)
+- `Themes` / `Wallpaper` / `HydeMenu` - HyDE desktop theme switcher, wallpaper cycling, HyDE menu tree
 - Custom modules (see Advanced section)
 
 ## Common Configurations
@@ -152,6 +168,21 @@ indicators = ["Cpu", "Memory", "CpuTemperature", "DownloadSpeed"]
 # Configure clock
 [clock]
 format = "%a %d %b %H:%M"
+```
+
+### Weather
+
+The weather readout rides with the clock:
+
+```toml
+[clock]
+show_weather = true
+
+[weather]
+location = "London"
+api_key = "..."               # OpenWeatherMap API key
+use_celsius = true
+update_interval_minutes = 30
 ```
 
 ## Alternative Formats
@@ -240,17 +271,17 @@ enabled = false
 
 ## Next Steps
 
-- [Full Configuration Guide](CONFIGURATION.md) - All options explained
 - [Theme Showcase](THEMES.md) - Preview all themes
 - [Troubleshooting](TROUBLESHOOTING.md) - Common issues
-- [Module Reference](MODULES.md) - Per-module settings
+- [FAQ](FAQ.md) - Frequently asked questions
+- [README](../README.md) - Custom modules, system info and power menu configuration
 
 ## Quick Tips
 
 1. **Config reloads automatically** - Edit and save, changes appear instantly
 2. **Use preset themes** - Easier than manual colors
 3. **Group modules** - Use nested arrays: `["Clock", "Battery"]`
-4. **Check logs** - Run with `RUST_LOG=debug hydebar` for debugging
+4. **Check logs** - Run with `RUST_LOG=debug hydebar` (or set `log_level = "debug"` in the config); log files land in `/tmp/hydebar/`
 
 ## Getting Help
 

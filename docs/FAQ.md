@@ -20,11 +20,11 @@ hydebar is a fast, beautiful Wayland status bar built specifically for Hyprland.
 - ✅ Lower resource usage
 - ✅ Native Wayland (no GTK overhead)
 - ✅ More stable
-- ❌ Currently fewer widgets (weather, calendar coming soon)
+- ✅ Weather, calendar and notification center included
 
 ### Is it stable for daily use?
 
-Yes! hydebar is actively developed and tested. Current version (v0.6.7) is stable for daily use. Report any bugs on [GitHub Issues](https://github.com/RAprogramm/hydebar/issues).
+Yes! hydebar is actively developed and tested, and is stable for daily use. Report any bugs on [GitHub Issues](https://github.com/RAprogramm/hydebar/issues).
 
 ---
 
@@ -71,10 +71,14 @@ No! hydebar automatically reloads when you save config changes.
 
 ### Can I use multiple config files?
 
-Yes, pass a custom config path:
+You can pass a custom config path:
 ```bash
 hydebar --config-path ~/my-config.toml
 ```
+
+Note that only one bar runs per user: starting hydebar again replaces the
+running instance, so `--config-path` selects which configuration the single
+bar reads rather than starting a second one.
 
 ### How do I reset to defaults?
 
@@ -129,20 +133,27 @@ Yes! See [Contributing](#contributing) below.
 
 - Workspaces
 - Window Title
-- System Info (CPU, RAM, temp, disk, network)
-- Clock
+- System Info (CPU, RAM, temperatures, GPU, disk, network)
+- Clock (with calendar menu and optional weather)
 - Battery
 - Network (WiFi, VPN)
 - Audio
 - Bluetooth
-- Brightness
+- Brightness (inside the control center)
+- Power Profile
 - Media Player
 - Tray
 - Updates
-- Privacy (camera/mic indicators)
-- Keyboard Layout
+- Clipboard
+- Privacy (camera/mic/screenshare indicators)
+- Keyboard Layout / Keyboard Submap
 - App Launcher
-- Settings Panel
+- Notifications (with DND mode and selectable source)
+- Screenshot / screen recording
+- Idle Inhibitor
+- Control Center (quick settings + power menu)
+- Settings (the bar's own settings window)
+- Themes / Wallpaper / HyDE Menu (drive the HyDE desktop)
 - Custom modules
 
 ### Can I reorder modules?
@@ -191,15 +202,18 @@ Advanced custom modules can update dynamically. See [README.md](../README.md#cus
 
 ### How much RAM does hydebar use?
 
-Typically < 10MB idle, target is < 5MB.
+Around 127MB resident in a release build. Almost all of it is the GPU
+rendering stack (wgpu over Vulkan) — the price of the renderer, not of the
+modules. See [perf-baseline-2026-07.md](perf-baseline-2026-07.md).
 
 ### How much CPU does it use?
 
-< 1% idle, < 5% during active use (menu open, animations).
+Around 0.5% idle; a menu opening and settling costs the same. The bar is
+event-driven and wakes only for its pollers.
 
 ### How fast is startup?
 
-Target is < 50ms first paint. Actual depends on your system and enabled modules.
+Around 53ms from launch to a mapped surface (release build, measured).
 
 ### How can I reduce resource usage?
 
@@ -209,13 +223,12 @@ Target is < 50ms first paint. Actual depends on your system and enabled modules.
 enabled = false
 ```
 
-2. Use fewer modules:
+2. Use fewer modules — a module absent from the layout starts no background
+work at all:
 ```toml
 [modules]
 right = ["Clock"]
 ```
-
-3. Reduce system info updates (future feature)
 
 ---
 
@@ -230,10 +243,10 @@ WGPU_BACKEND=gl hydebar
 
 ### Icons show as boxes
 
-Install icon fonts:
-```bash
-sudo pacman -S ttf-font-awesome ttf-nerd-fonts-symbols
-```
+The symbols font (Nerd Font glyphs) ships inside the binary, so the built-in
+icons need no font package. Boxes usually mean a custom `font_name` without
+the glyphs you configured in `[icons]` or in a custom module — pick glyphs
+your font carries, or drop the override.
 
 ### Battery module doesn't appear
 
@@ -276,7 +289,16 @@ Generic modules (Clock, System Info, Tray) should work on other compositors, but
 
 ### Is there a notification center?
 
-Not yet. Planned for v0.9.0. Track progress: [#65](https://github.com/RAprogramm/hydebar/issues/65)
+Yes. Add `Notifications` to your layout. The source is selectable — the bar's
+own popups, Hyprland's native notifications, or the session's daemon:
+
+```toml
+[notifications]
+source = "Daemon"   # or "Builtin", "Compositor"
+```
+
+See [notification-source.md](notification-source.md) for how the three modes
+work.
 
 ### Can I have a vertical panel?
 
@@ -300,11 +322,11 @@ Yes! Contributions welcome. See [Contributing](#contributing) section below.
 
 ### What's the development stack?
 
-- **Language:** 100% Rust (edition 2024)
-- **GUI:** iced (Pop!_OS fork)
-- **IPC:** Hyprland socket
+- **Language:** 100% Rust (edition 2024, rust-version 1.97)
+- **GUI:** iced via the `iced_layershell` fork (Wayland layer-shell)
+- **IPC:** Hyprland socket (hyprland-rs)
 - **D-Bus:** zbus for system integration
-- **Build:** Cargo
+- **Build:** Cargo workspace (`hydebar-proto`, `hydebar-core`, `hydebar-gui`, `hydebar-app`)
 
 ### Where's the source code?
 
@@ -395,28 +417,13 @@ Yes! Open a discussion or issue describing:
 
 ### What's planned for the future?
 
-See [ROADMAP.md](../ROADMAP.md) for detailed timeline.
+See [ROADMAP.md](../ROADMAP.md). The notification center, weather, calendar,
+screenshot tools and the performance work have already landed.
 
-**Upcoming (v0.8.0):**
-- Performance optimizations
-- Memory improvements
-- Faster startup
-
-**Future (v0.9.0+):**
-- Notification center
-- Weather widget
-- Calendar widget
-- More module improvements
-
-### When is v1.0.0?
-
-Target: Q2 2025
-
-v1.0.0 will include:
-- Full feature parity with HyprPanel
-- GUI configuration panel
-- Professional documentation
-- Stable API
+**Future:**
+- More of the configuration editable from the settings window
+- Documentation website
+- Vertical panel, auto-hide, plugin system (ideas)
 
 ---
 
@@ -427,9 +434,10 @@ v1.0.0 will include:
 | Feature | hydebar | Waybar |
 |---------|---------|--------|
 | Language | Rust | C++ |
-| Startup | <50ms | ~100ms |
-| Memory | <5MB | ~10MB |
-| Themes | 11 built-in | Manual CSS |
+| Startup | ~53ms | ~100ms |
+| Idle CPU | ~0.5% | ~2% |
+| Memory | ~127MB (GPU stack) | ~10MB (GTK) |
+| Themes | 11 built-in + HyDE following | Manual CSS |
 | Animations | Yes, smooth | Limited |
 | Hyprland | Deep integration | Generic |
 
@@ -439,9 +447,8 @@ v1.0.0 will include:
 |---------|---------|-----------|
 | Language | Rust | TypeScript |
 | Performance | Fast | Moderate |
-| Memory | <10MB | ~50MB+ |
-| Startup | <50ms | ~500ms |
-| Widgets | Growing | More |
+| Startup | ~53ms | ~500ms |
+| Widgets | Full set incl. weather, calendar, notifications | More |
 | Stability | High | Moderate |
 
 ---

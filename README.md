@@ -21,8 +21,9 @@
 ### Core Modules
 - 🪟 **Workspaces** - Hyprland workspace integration
 - 📝 **Window Title** - Active window information
-- ⏰ **Clock** - Customizable date/time format
-- 📊 **System Info** - CPU, RAM, temperature, disk, network speeds
+- ⏰ **Clock** - Customizable date/time format, alternative formats cycled on click, calendar menu
+- 🌤️ **Weather** - OpenWeatherMap readout attached to the clock (`clock.show_weather` + `[weather]`)
+- 📊 **System Info** - CPU, RAM, temperature, GPU, disk, network speeds; readouts auto-detected
 - 🔋 **Battery** - Battery status and power profiles
 - 📡 **Network** - WiFi with signal strength %, VPN, connection management
 - 🔊 **Audio** - Volume control with inline sliders, sink/source selection
@@ -31,23 +32,29 @@
 - 🔵 **Bluetooth** - Device management with quick connect/disconnect, battery levels
 - 📋 **Tray** - System tray support
 - 🔄 **Updates** - Package update notifications
+- 📋 **Clipboard** - Clipboard history picker (cliphist by default)
 - 🔒 **Privacy** - Camera/microphone/screenshare indicators
-- ⌨️ **Keyboard Layout** - Layout switching with custom labels
+- ⌨️ **Keyboard Layout / Submap** - Layout switching with custom labels, active submap
 - 🚀 **App Launcher** - Quick app launcher button
-- 🔔 **Notifications** - Notification center with D-Bus integration, DND mode
+- 🔔 **Notifications** - Notification center with selectable source: built-in popups, Hyprland, or the session daemon
 - 📸 **Screenshot** - Screenshot and screen recording (grim/slurp/wf-recorder)
 - ☕ **Idle Inhibitor** - One click toggle keeping the session awake
-- ⚙️ **Settings Panel** - Comprehensive settings menu
+- 🎛️ **Control Center** - Quick settings panel: audio, network, bluetooth, power profile, power menu
+- ⚙️ **Settings** - The bar's own settings window: module layout and appearance, written back to the config
+- 🖼️ **Themes / Wallpaper / HyDE Menu** - Drive the HyDE desktop theme, cycle the wallpaper, open the HyDE menu tree
 
 ### Visual Features
 - 🎨 **11 Built-in Themes** - Catppuccin, Dracula, Nord, Gruvbox, Tokyo Night
+- 🖥️ **HyDE Integration** - Follows the HyDE desktop theme by default (`follow_hyde`), colours, font and radius included
 - ✨ **Smooth Animations** - Menu fade in/out, hover effects
 - 🏝️ **Multiple Styles** - Islands, Solid, Gradient
 - 🎭 **Opacity Control** - Transparent backgrounds and menus
+- 🔍 **Auto Scale** - The bar magnifies itself for the screen it lands on (`auto_scale`)
 
 ### Customization
 - 📦 **Custom Modules** - Extend with your own scripts
 - 🎨 **Full Color Control** - Customize every color
+- 🔣 **Icon Overrides** - Replace any built-in glyph via the `[icons]` table
 - 📐 **Flexible Layout** - Position modules left/center/right
 - 🔄 **Hot Reload** - Config changes apply instantly
 
@@ -73,10 +80,6 @@ sudo apt-get install hydebar
 
 #### Nix
 ```bash
-# Stable
-nix profile install github:RAprogramm/hydebar?ref=0.6.7
-
-# Latest
 nix profile install github:RAprogramm/hydebar
 ```
 
@@ -102,6 +105,7 @@ text_color = "#cdd6f4"
 [appearance.animations]
 enabled = true
 menu_fade_duration_ms = 200
+hover_duration_ms = 100
 
 # Module layout
 [modules]
@@ -129,25 +133,10 @@ appearance = "tokyo-night-storm"
 appearance = "tokyo-night-light"
 ```
 
----
-
-## Screenshots
-
-### Themes
-
-| Catppuccin Mocha | Dracula |
-|------------------|---------|
-| ![Mocha](https://raw.githubusercontent.com/RAprogramm/hydebar/main/screenshots/hydebar.png) | ![Dracula](https://raw.githubusercontent.com/RAprogramm/hydebar/main/screenshots/hydebar-gradient.png) |
-
-### Menus
-
-| Settings Panel | Power Menu |
-|----------------|------------|
-| ![Settings](https://raw.githubusercontent.com/RAprogramm/hydebar/main/screenshots/settings-panel.png) | ![Power](https://raw.githubusercontent.com/RAprogramm/hydebar/main/screenshots/power-menu.png) |
-
-| Network Menu | Bluetooth Menu |
-|--------------|----------------|
-| ![Network](https://raw.githubusercontent.com/RAprogramm/hydebar/main/screenshots/network-menu.png) | ![Bluetooth](https://raw.githubusercontent.com/RAprogramm/hydebar/main/screenshots/bluetooth-menu.png) |
+Without any `appearance` setting the bar follows the theme published by the
+HyDE Project: colours, font and corner radius are read from the HyDE state
+directories and the bar repaints on every theme switch. Set
+`follow_hyde = false` under `[appearance]` to opt out.
 
 ---
 
@@ -261,7 +250,7 @@ alert_threshold = 85
 ### Power Management
 
 ```toml
-[settings]
+[control_center]
 lock_cmd = "hyprlock &"
 shutdown_cmd = "shutdown now"
 suspend_cmd = "systemctl suspend"
@@ -269,18 +258,24 @@ reboot_cmd = "systemctl reboot"
 logout_cmd = "loginctl kill-user $(whoami)"
 ```
 
+The section was previously named `[settings]`; that spelling is still accepted
+as an alias.
+
 Full configuration reference at [docs/configuration](https://raprogramm.github.io/hydebar/docs/configuration).
 
 ---
 
 ## Performance
 
-- 🚀 **Fast Startup** - < 50ms first paint
-- 💾 **Low Memory** - < 5MB idle
-- ⚡ **Efficient** - < 1% CPU when idle
+Measured on a 4K output, release build (see
+[docs/perf-baseline-2026-07.md](docs/perf-baseline-2026-07.md)):
+
+- 🚀 **Fast Startup** - ~53ms from launch to mapped surface
+- ⚡ **Efficient** - ~0.5% CPU when idle; a menu opening and settling costs the same
+- 💾 **Memory** - ~127MB resident, dominated by the GPU rendering stack (wgpu over Vulkan)
 - 🦀 **100% Rust** - Memory-safe, zero-cost abstractions
 
-See [PERFORMANCE.md](PERFORMANCE.md) for benchmarks.
+See [PERFORMANCE.md](PERFORMANCE.md) for the full numbers and methodology.
 
 ---
 
@@ -294,6 +289,11 @@ cd hydebar
 cargo build --release
 ./target/release/hydebar-app
 ```
+
+`./install.sh` builds the release binary and installs it as `hydebar`, together
+with the `hydebar-theme-switch` script. `./install.sh --hyde` additionally
+registers the bar as the HyDE session bar (see
+[docs/hyde-session.md](docs/hyde-session.md)).
 
 ### Contributing
 
@@ -339,7 +339,7 @@ A lock file left behind by a crashed bar never blocks a restart.
 Currently relies on [hyprland-rs](https://github.com/hyprland-community/hyprland-rs) for:
 - Active window information
 - Workspace management
-- Keyboard layout
+- Keyboard layout and submap
 
 Support for other compositors is planned but not yet implemented.
 

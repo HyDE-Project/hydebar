@@ -12,6 +12,12 @@ appearance = "theme-name"
 
 Changes apply instantly!
 
+Without any `appearance` setting the bar follows the theme published by the
+HyDE Project instead: colours, font and radius come from the desktop and the
+bar repaints on every HyDE theme switch. A preset theme pins the colours but
+still takes the font and radius from HyDE where you set none; `follow_hyde =
+false` under `[appearance]` turns the following off entirely.
+
 ---
 
 ## Catppuccin Themes
@@ -166,7 +172,7 @@ opacity = 0.85  # More transparent
 
 [appearance.menu]
 opacity = 0.90
-backdrop = 0.5  # Stronger backdrop blur
+backdrop = 0.5  # Dim the screen behind an open menu
 ```
 
 ### Change Visual Style
@@ -199,6 +205,7 @@ primary_color = "#7aa2f7"
 secondary_color = "#16161e"
 success_color = "#9ece6a"
 danger_color = "#f7768e"
+warning_color = "#e0af68"
 text_color = "#c0caf5"
 
 # Workspace colors (one per monitor)
@@ -219,8 +226,8 @@ Each color can be a simple hex or a full palette:
 ```toml
 [appearance.primary_color]
 base = "#7aa2f7"
-strong = "#89b4fa"    # Hover state
-weak = "#6c8ec0"      # Disabled state
+strong = "#89b4fa"    # Stronger shade
+weak = "#6c8ec0"      # Weaker shade, used for hover surfaces
 text = "#1a1b26"      # Text on this background
 ```
 
@@ -253,7 +260,7 @@ text = "#1a1b26"      # Text on this background
 
 ## Contributing Themes
 
-Want to add a new theme? See [Contributing Guide](../CONTRIBUTING.md) for details.
+Want to add a new theme? See [Contributing Guide](CONTRIBUTING.md) for details.
 
 Popular themes to consider:
 - Solarized Dark/Light

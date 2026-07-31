@@ -62,16 +62,12 @@ opacity = 1.0  # Fully opaque
 
 **Solutions:**
 
-1. Install required fonts:
-```bash
-# Arch Linux
-sudo pacman -S ttf-font-awesome ttf-nerd-fonts-symbols
+1. The built-in glyphs need no font package — the Nerd Font symbols font ships
+inside the binary. Boxes point at glyphs you configured yourself: check any
+`[icons]` overrides and custom module `icon` values against the glyphs your
+configured `font_name` actually carries.
 
-# Ubuntu/Debian
-sudo apt install fonts-font-awesome fonts-nerd-font
-```
-
-2. Check tray icon theme:
+2. Check tray icon theme (tray icons come from the icon theme, not the font):
 ```bash
 # Verify icon theme is installed
 ls ~/.local/share/icons
@@ -93,19 +89,16 @@ ls /usr/share/icons
 RUST_LOG=debug hydebar 2>&1 | grep -i update
 ```
 
-2. Disable expensive modules:
+2. Disable expensive modules — a module absent from the layout starts no
+background work at all:
 ```toml
 [modules]
 # Remove or comment out heavy modules
 right = ["Clock", "Settings"]  # Minimal config
 ```
 
-3. Increase update intervals:
-```toml
-[system]
-# Reduce system monitoring frequency
-update_interval_ms = 2000  # Update every 2 seconds
-```
+3. For a custom module driven by `exec`, raise its `interval`; for the
+updates module, raise `check_interval`.
 
 ### High Memory Usage
 
@@ -144,7 +137,7 @@ ps aux | grep hydebar > memory-report.txt
 1. Verify Hyprland socket:
 ```bash
 echo $HYPRLAND_INSTANCE_SIGNATURE
-ls /tmp/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket.sock
+ls $XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket.sock
 ```
 
 2. Restart Hyprland IPC:
@@ -281,7 +274,7 @@ primary_color = "#cba6f7"
 1. Update Rust:
 ```bash
 rustup update stable
-rustc --version  # Should be 1.70+
+rustc --version  # Should match rust-version in Cargo.toml (1.97)
 ```
 
 2. Clean and rebuild:
@@ -371,7 +364,7 @@ sudo pacman -S networkmanager
 
 3. Configure network command:
 ```toml
-[settings]
+[control_center]
 wifi_more_cmd = "nm-connection-editor"
 ```
 
@@ -423,11 +416,17 @@ RUST_LOG=debug hydebar 2>&1 | tee hydebar.log
 RUST_LOG=hydebar_core::modules::workspaces=trace hydebar
 ```
 
-### Check System Logs
+### Check Log Files
+
+The bar writes rotating log files regardless of how it was started:
 
 ```bash
-journalctl --user -u hydebar -f
+ls /tmp/hydebar/
+tail -f /tmp/hydebar/*.log
 ```
+
+The level comes from `log_level` in the config (default `warn`); `RUST_LOG`
+overrides it.
 
 ---
 
@@ -484,9 +483,9 @@ enabled = false
 right = ["Clock"]  # Minimal
 ```
 
-3. **Use lightweight themes:**
-```toml
-appearance = "nord"  # Simpler colors
+3. **Try the OpenGL backend** if Vulkan misbehaves on your hardware:
+```bash
+WGPU_BACKEND=gl hydebar
 ```
 
 ---

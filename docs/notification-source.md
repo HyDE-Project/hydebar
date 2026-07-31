@@ -111,17 +111,19 @@ file so a session with no daemon needs no configuration at all, and make the
 session-level choice explicit at install time for a session that already has
 one. Never at runtime, and never by ending someone else's process.
 
-## What is wrong in the bar today
+## What was wrong in the bar, and how it was fixed
 
 | Symptom | Cause |
 |---|---|
-| The setting says the bar's own popups, the daemon's appear | the queued reply was read as success |
+| The setting said the bar's own popups, the daemon's appeared | the queued reply was read as success |
 | A refused action showed a compositor bubble regardless of the setting | the bar's own notices bypassed the chosen source |
 | A notice stayed on screen until dismissed by hand | it was sent at critical urgency, which a daemon is entitled to keep up forever |
 
-The first two are fixed by reading the reply and by routing the bar's own
-notices through the chosen source; the third by sending at ordinary urgency
-with an explicit lifetime. None of them requires touching another process.
+All three are fixed in the current code: the name request reads the reply and
+treats *queued* as failure (`services/notifications/service.rs`), the bar's
+own notices route through the chosen source, and they go out at ordinary
+urgency with an explicit lifetime (`services/hyprland_notify.rs`). None of it
+required touching another process.
 
 ## Sources
 
