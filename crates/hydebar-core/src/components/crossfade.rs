@@ -15,6 +15,36 @@ use iced::{
 
 use crate::animation::{STANDARD, Spring};
 
+/// Colour the dissolving text is painted in, named by meaning.
+///
+/// Carried as a role rather than a colour so the text keeps following the
+/// palette: a value warning about itself stays a warning through every theme
+/// the bar switches to, dissolve or no dissolve.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Role {
+    /// The ordinary text colour.
+    #[default]
+    Text,
+    /// The palette's success colour.
+    Success,
+    /// The palette's warning colour.
+    Warning,
+    /// The palette's danger colour.
+    Danger
+}
+
+impl Role {
+    /// The colour this role names in `theme`.
+    fn color(self, theme: &Theme) -> iced::Color {
+        match self {
+            Role::Text => theme.palette().text,
+            Role::Success => theme.palette().success,
+            Role::Warning => theme.palette().warning,
+            Role::Danger => theme.palette().danger
+        }
+    }
+}
+
 /// A displayed string and the one it is dissolving out of.
 ///
 /// # Examples
@@ -103,12 +133,18 @@ impl Crossfade {
     /// short strings are cheaper than a lifetime through every module.
     #[must_use]
     pub fn element<M: 'static>(&self, size: f32) -> Element<'static, M> {
+        self.element_role(size, Role::Text)
+    }
+
+    /// [`Crossfade::element`], painted in the colour `role` names.
+    #[must_use]
+    pub fn element_role<M: 'static>(&self, size: f32, role: Role) -> Element<'static, M> {
         let share = self.progress.value().clamp(0.0, 1.0);
 
         let incoming = text(self.current.clone())
             .size(size)
             .style(move |theme: &Theme| text::Style {
-                color: Some(theme.palette().text.scale_alpha(share))
+                color: Some(role.color(theme).scale_alpha(share))
             });
 
         match &self.previous {
@@ -116,15 +152,15 @@ impl Crossfade {
                 text(previous.clone())
                     .size(size)
                     .style(move |theme: &Theme| text::Style {
-                        color: Some(theme.palette().text.scale_alpha(1.0 - share))
+                        color: Some(role.color(theme).scale_alpha(1.0 - share))
                     }),
                 incoming
             ]
             .into(),
             _ => text(self.current.clone())
                 .size(size)
-                .style(|theme: &Theme| text::Style {
-                    color: Some(theme.palette().text)
+                .style(move |theme: &Theme| text::Style {
+                    color: Some(role.color(theme))
                 })
                 .into()
         }

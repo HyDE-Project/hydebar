@@ -205,7 +205,8 @@ impl App {
                 Task::none()
             }
             Message::Battery(message) => {
-                self.battery.update(message);
+                self.battery
+                    .update(message, self.config.appearance.animations.enabled);
                 Task::none()
             }
             Message::Privacy(msg) => {

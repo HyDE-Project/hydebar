@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use iced::Element;
 use log::warn;
 
 use crate::{
@@ -144,8 +145,8 @@ pub enum Message {
 /// Battery monitoring module
 #[derive(Debug, Default)]
 pub struct Battery {
-    data: Option<BatteryData> /* sender: Option<ModuleEventSender<BatteryEvent>>, // Unused -
-                               * battery events not sent to UI */
+    data:  Option<BatteryData>,
+    shown: crate::components::crossfade::Crossfade
 }
 
 impl Battery {
@@ -160,10 +161,41 @@ impl Battery {
 
     /// Registers module with event system
     /// Processes incoming messages from GUI layer
-    pub fn update(&mut self, message: Message) {
+    ///
+    /// `animated` decides whether the shown percentage dissolves into its
+    /// replacement or swaps outright.
+    pub fn update(&mut self, message: Message, animated: bool) {
         match message {
             Message::Event(event) => self.handle_service_event(event)
         }
+
+        if let Some(data) = &self.data {
+            self.shown.set(format!("{}%", data.capacity), animated);
+        }
+    }
+
+    /// Advances the dissolve of the shown percentage.
+    pub fn tick_fade(&mut self, elapsed: std::time::Duration) -> bool {
+        self.shown.advance(elapsed)
+    }
+
+    /// Whether the shown percentage is still dissolving.
+    pub fn is_fading(&self) -> bool {
+        self.shown.is_animating()
+    }
+
+    /// The percentage as the bar shows it, painted by the indicator state.
+    pub fn percent_element<M: 'static>(&self, size: f32) -> Element<'static, M> {
+        use crate::components::crossfade::Role;
+
+        let role = match self.data.as_ref().map(|data| data.indicator_state) {
+            Some(IndicatorState::Success) => Role::Success,
+            Some(IndicatorState::Warning) => Role::Warning,
+            Some(IndicatorState::Danger) => Role::Danger,
+            _ => Role::Text
+        };
+
+        self.shown.element_role(size, role)
     }
 
     fn handle_service_event(&mut self, event: ServiceEvent<UPowerService>) {

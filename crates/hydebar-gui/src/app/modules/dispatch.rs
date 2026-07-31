@@ -111,7 +111,9 @@ impl App {
                     crate::views::battery::render_battery(
                         data,
                         &self.config.battery,
-                        self.icons()
+                        self.icons(),
+                        self.battery
+                            .percent_element(hydebar_core::components::scale::base())
                     ),
                     self.config
                         .battery
