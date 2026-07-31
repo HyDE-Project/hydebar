@@ -17,6 +17,16 @@ pub use state::{HasOutput, Outputs};
 /// reload and lost.
 const RELOAD_TAIL: std::time::Duration = std::time::Duration::from_secs(5);
 
+/// Generation of the latest restatement request.
+///
+/// Bumped on every call so the tail thread can tell whether another trigger
+/// arrived while it slept, and owes the far side of that reload a statement
+/// too.
+static RESTATE_GENERATION: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// Whether a tail thread is already awake and will cover new generations.
+static TAIL_RUNNING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
 /// States the blur rules to the compositor again, off the caller's thread.
 ///
 /// The rules are handed over dynamically and the compositor forgets them on
@@ -26,10 +36,43 @@ const RELOAD_TAIL: std::time::Duration = std::time::Duration::from_secs(5);
 /// statement lands on the far side of the reload that follows the switch. A
 /// bar that only asked at startup keeps its blur until the first theme switch
 /// and looks broken ever after.
+///
+/// A theme switch reloads the configuration several times in a burst, and each
+/// reload calls here. One tail thread serves the whole burst: triggers landing
+/// while it sleeps bump the generation and the thread keeps restating until a
+/// full tail passes with no new trigger, instead of every reload paying for a
+/// thread and a dozen compositor round trips of its own.
 pub fn restate_blur() {
+    use std::sync::atomic::Ordering;
+
+    RESTATE_GENERATION.fetch_add(1, Ordering::SeqCst);
+
+    if TAIL_RUNNING.swap(true, Ordering::SeqCst) {
+        return;
+    }
+
     std::thread::spawn(|| {
         blur::request();
-        std::thread::sleep(RELOAD_TAIL);
-        blur::request();
+
+        let mut seen = RESTATE_GENERATION.load(Ordering::SeqCst);
+
+        loop {
+            std::thread::sleep(RELOAD_TAIL);
+            blur::request();
+
+            let current = RESTATE_GENERATION.load(Ordering::SeqCst);
+
+            if current == seen {
+                break;
+            }
+
+            seen = current;
+        }
+
+        TAIL_RUNNING.store(false, Ordering::SeqCst);
+
+        if RESTATE_GENERATION.load(Ordering::SeqCst) != seen {
+            restate_blur();
+        }
     });
 }

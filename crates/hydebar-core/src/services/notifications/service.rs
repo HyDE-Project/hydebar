@@ -176,7 +176,7 @@ impl ReadOnlyService for NotificationsService {
                                 return;
                             };
 
-                            if !takeover::stop(&unit) {
+                            if !takeover::stop(&unit).await {
                                 error!("{unit} holds the notification bus and would not stop");
                                 return;
                             }

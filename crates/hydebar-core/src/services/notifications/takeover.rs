@@ -14,9 +14,10 @@
 //! would take everything else in it down as well, which is not a hypothetical:
 //! it took a terminal down once.
 
-use std::{fs, process::Command};
+use std::fs;
 
 use log::{debug, warn};
+use tokio::process::Command;
 use zbus::{Connection, fdo::DBusProxy, names::BusName};
 
 /// Name a notification server answers to.
@@ -35,7 +36,7 @@ pub async fn replaceable_unit(connection: &Connection) -> Option<String> {
     let holder = proxy.get_connection_unix_process_id(name).await.ok()?;
     let unit = unit_of(holder)?;
 
-    owns_unit(&unit, holder).then_some(unit)
+    owns_unit(&unit, holder).await.then_some(unit)
 }
 
 /// Service named by the control group of `pid`.
@@ -63,10 +64,15 @@ fn named_unit(cgroup: &str) -> Option<String> {
 /// ending it ends the daemon. A unit that merely contains the holder among
 /// other processes — a session application unit holding a whole terminal, for
 /// instance — reports a different main process, and is refused.
-fn owns_unit(unit: &str, pid: u32) -> bool {
+///
+/// The service manager is awaited rather than waited on: this runs on the
+/// shared runtime, and a manager that answers slowly must cost this task time,
+/// not a worker thread.
+async fn owns_unit(unit: &str, pid: u32) -> bool {
     let Ok(output) = Command::new(SERVICE_MANAGER)
         .args(["--user", "show", "-p", "MainPID", "--value", unit])
         .output()
+        .await
     else {
         return false;
     };
@@ -82,10 +88,11 @@ fn owns_unit(unit: &str, pid: u32) -> bool {
 /// Stopping rather than killing is deliberate: a killed service is started
 /// again by the manager that owns it, and the bar would be fighting a
 /// supervisor rather than replacing a daemon.
-pub fn stop(unit: &str) -> bool {
+pub async fn stop(unit: &str) -> bool {
     match Command::new(SERVICE_MANAGER)
         .args(["--user", "stop", unit])
         .status()
+        .await
     {
         Ok(status) if status.success() => {
             debug!("stopped {unit} so the bar can serve notifications");
