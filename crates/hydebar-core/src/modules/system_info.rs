@@ -37,6 +37,202 @@ mod data {
         }
     }
 
+    pub(super) mod hardware {
+        //! What the machine is: names, ratings and firmware revisions.
+        //!
+        //! The identity of the hardware does not move between samples, so it
+        //! is read once and stamped onto every sample; only the frequency,
+        //! the governor and the page cache are re-read, because those are
+        //! the machine living, not the machine being.
+
+        use std::{fs, sync::LazyLock};
+
+        /// Step the current frequency is damped to, in MHz.
+        ///
+        /// An idle processor wanders by tens of MHz between samples; a
+        /// window repainting on that wander would keep the whole bar warm
+        /// for a number nobody can read that fast.
+        const FREQUENCY_STEP_MHZ: u32 = 50;
+
+        /// Step the page cache reading is damped to.
+        const CACHE_STEP_BYTES: u64 = 64 * 1024 * 1024;
+
+        /// The unchanging part, read once per process.
+        pub struct Identity {
+            pub model:     Option<String>,
+            pub cores:     Option<u32>,
+            pub max_mhz:   Option<u32>,
+            pub microcode: Option<String>,
+            pub kernel:    Option<String>,
+            pub swap:      Option<String>
+        }
+
+        static IDENTITY: LazyLock<Identity> = LazyLock::new(|| {
+            let cpuinfo = fs::read_to_string("/proc/cpuinfo").unwrap_or_default();
+            let (model, cores, microcode) = parse_cpuinfo(&cpuinfo);
+
+            Identity {
+                model,
+                cores,
+                max_mhz: read_khz("/sys/devices/system/cpu/cpufreq/policy0/cpuinfo_max_freq"),
+                microcode,
+                kernel: fs::read_to_string("/proc/sys/kernel/osrelease")
+                    .ok()
+                    .map(|kernel| kernel.trim().to_owned()),
+                swap: swap_backend()
+            }
+        });
+
+        /// The unchanging part of the machine.
+        pub fn identity() -> &'static Identity {
+            &IDENTITY
+        }
+
+        /// Fastest core right now, damped, in MHz.
+        pub fn current_mhz() -> Option<u32> {
+            let policies = fs::read_dir("/sys/devices/system/cpu/cpufreq").ok()?;
+
+            policies
+                .flatten()
+                .filter_map(|policy| {
+                    read_khz(policy.path().join("scaling_cur_freq").to_str()?)
+                })
+                .max()
+                .map(|mhz| mhz / FREQUENCY_STEP_MHZ * FREQUENCY_STEP_MHZ)
+        }
+
+        /// Governor steering the first policy, which steers them all on any
+        /// machine that has not been hand-tuned per core.
+        pub fn governor() -> Option<String> {
+            fs::read_to_string("/sys/devices/system/cpu/cpufreq/policy0/scaling_governor")
+                .ok()
+                .map(|governor| governor.trim().to_owned())
+                .filter(|governor| !governor.is_empty())
+        }
+
+        /// Page cache and reclaimable slab, damped, in bytes.
+        pub fn cached_bytes() -> u64 {
+            let meminfo = fs::read_to_string("/proc/meminfo").unwrap_or_default();
+
+            parse_cached_kib(&meminfo) * 1024 / CACHE_STEP_BYTES * CACHE_STEP_BYTES
+        }
+
+        /// A frequency file stated in kHz, read as MHz.
+        fn read_khz(path: &str) -> Option<u32> {
+            fs::read_to_string(path)
+                .ok()?
+                .trim()
+                .parse::<u32>()
+                .ok()
+                .map(|khz| khz / 1000)
+        }
+
+        /// Model, physical cores and microcode out of `/proc/cpuinfo`.
+        pub(super) fn parse_cpuinfo(
+            cpuinfo: &str
+        ) -> (Option<String>, Option<u32>, Option<String>) {
+            let field = |name: &str| {
+                cpuinfo.lines().find_map(|line| {
+                    let (key, value) = line.split_once(':')?;
+
+                    (key.trim() == name).then(|| value.trim().to_owned())
+                })
+            };
+
+            (
+                field("model name"),
+                field("cpu cores").and_then(|cores| cores.parse().ok()),
+                field("microcode")
+            )
+        }
+
+        /// Cached and reclaimable slab out of `/proc/meminfo`, in KiB.
+        pub(super) fn parse_cached_kib(meminfo: &str) -> u64 {
+            let field = |name: &str| {
+                meminfo.lines().find_map(|line| {
+                    let (key, value) = line.split_once(':')?;
+
+                    (key.trim() == name)
+                        .then(|| value.trim().trim_end_matches(" kB").trim().parse().ok())?
+                })
+            };
+
+            field("Cached").unwrap_or(0u64) + field("SReclaimable").unwrap_or(0)
+        }
+
+        /// The device swap lives on, with its compression when it is zram.
+        fn swap_backend() -> Option<String> {
+            let swaps = fs::read_to_string("/proc/swaps").ok()?;
+            let device = swaps.lines().nth(1)?.split_whitespace().next()?.to_owned();
+            let name = device.rsplit('/').next().unwrap_or(&device);
+
+            let algorithm = name.starts_with("zram").then(|| {
+                fs::read_to_string(format!("/sys/block/{name}/comp_algorithm"))
+                    .ok()
+                    .and_then(|algorithms| selected_algorithm(&algorithms))
+            });
+
+            Some(match algorithm.flatten() {
+                Some(algorithm) => format!("{device} · zram ({algorithm})"),
+                None => device
+            })
+        }
+
+        /// The bracketed choice out of a kernel choice list like
+        /// `lzo lz4 [zstd] deflate`.
+        pub(super) fn selected_algorithm(algorithms: &str) -> Option<String> {
+            let start = algorithms.find('[')?;
+            let end = algorithms[start..].find(']')? + start;
+
+            Some(algorithms[start + 1..end].to_owned())
+        }
+
+        #[cfg(test)]
+        mod tests {
+            use super::*;
+
+            const CPUINFO: &str = "processor\t: 0\n\
+                model name\t: AMD RYZEN AI MAX+ 395 w/ Radeon 8060S\n\
+                microcode\t: 0xb700037\n\
+                cpu cores\t: 16\n";
+
+            #[test]
+            fn the_model_the_cores_and_the_microcode_are_read() {
+                let (model, cores, microcode) = parse_cpuinfo(CPUINFO);
+
+                assert_eq!(
+                    model.as_deref(),
+                    Some("AMD RYZEN AI MAX+ 395 w/ Radeon 8060S")
+                );
+                assert_eq!(cores, Some(16));
+                assert_eq!(microcode.as_deref(), Some("0xb700037"));
+            }
+
+            #[test]
+            fn a_machine_stating_nothing_reads_as_nothing() {
+                assert_eq!(parse_cpuinfo(""), (None, None, None));
+            }
+
+            #[test]
+            fn the_page_cache_counts_the_reclaimable_slab() {
+                let meminfo = "Buffers:              16 kB\n\
+                    Cached:         19290036 kB\n\
+                    SReclaimable:     182832 kB\n";
+
+                assert_eq!(parse_cached_kib(meminfo), 19_290_036 + 182_832);
+            }
+
+            #[test]
+            fn the_selected_compression_is_the_bracketed_one() {
+                assert_eq!(
+                    selected_algorithm("lzo-rle lzo lz4 lz4hc [zstd] deflate 842").as_deref(),
+                    Some("zstd")
+                );
+                assert_eq!(selected_algorithm("zstd"), None);
+            }
+        }
+    }
+
     /// Usage of one mounted filesystem.
     #[derive(Debug, Clone, PartialEq, Eq)]
     pub struct DiskData {
@@ -73,7 +269,28 @@ mod data {
         /// device.
         pub gpu:               Option<GpuReadings>,
         pub disks:             Vec<DiskData>,
-        pub network:           Option<NetworkData>
+        pub network:           Option<NetworkData>,
+        /// Processor model name, as the kernel states it.
+        pub cpu_model:         Option<String>,
+        /// Physical cores behind [`Self::cpu_count`] logical threads.
+        pub cpu_cores:         Option<u32>,
+        /// Highest boost frequency the processor is rated for, in MHz.
+        pub cpu_max_mhz:       Option<u32>,
+        /// Fastest core at the moment of the sample, in MHz, damped to
+        /// 50 MHz steps so an idle machine does not repaint on jitter.
+        pub cpu_current_mhz:   Option<u32>,
+        /// Frequency governor steering the processor.
+        pub cpu_governor:      Option<String>,
+        /// Microcode revision the processor runs — the freshness of the
+        /// firmware side of its driver stack.
+        pub cpu_microcode:     Option<String>,
+        /// Kernel release, the freshness of the in-tree drivers.
+        pub kernel:            Option<String>,
+        /// Page cache and reclaimable slab, in bytes: memory in use that an
+        /// allocation could still claim back.
+        pub memory_cached:     u64,
+        /// The device swap lives on, with its compression when it is zram.
+        pub swap_backend:      Option<String>
     }
 
     impl SystemInfoData {
@@ -106,6 +323,9 @@ mod data {
                 && self.cpu_temperature == other.cpu_temperature
                 && self.gpu == other.gpu
                 && self.disks == other.disks
+                && self.cpu_current_mhz == other.cpu_current_mhz
+                && self.cpu_governor == other.cpu_governor
+                && self.memory_cached == other.memory_cached
         }
     }
 
@@ -261,7 +481,7 @@ mod data {
             let (memory_swap_usage, memory_swap_used) =
                 memory_share(memory_swap_total, self.system.free_swap());
 
-            SystemInfoData {
+            let mut data = SystemInfoData {
                 cpu_usage,
                 cpu_count,
                 memory_usage,
@@ -271,7 +491,10 @@ mod data {
                 memory_swap_used,
                 memory_swap_total,
                 ..SystemInfoData::default()
-            }
+            };
+            stamp_environment(&mut data);
+
+            data
         }
 
         /// Captures whatever the sampler's scope asks for.
@@ -359,7 +582,7 @@ mod data {
                 })
                 .unwrap_or_default();
 
-            SystemInfoData {
+            let mut data = SystemInfoData {
                 cpu_usage,
                 cpu_count,
                 memory_usage,
@@ -371,9 +594,28 @@ mod data {
                 cpu_temperature,
                 gpu,
                 disks,
-                network
-            }
+                network,
+                ..SystemInfoData::default()
+            };
+            stamp_environment(&mut data);
+
+            data
         }
+    }
+
+    /// Stamps the machine's identity and its living readings onto a sample.
+    fn stamp_environment(data: &mut SystemInfoData) {
+        let identity = hardware::identity();
+
+        data.cpu_model = identity.model.clone();
+        data.cpu_cores = identity.cores;
+        data.cpu_max_mhz = identity.max_mhz;
+        data.cpu_microcode = identity.microcode.clone();
+        data.kernel = identity.kernel.clone();
+        data.swap_backend = identity.swap.clone();
+        data.cpu_current_mhz = hardware::current_mhz();
+        data.cpu_governor = hardware::governor();
+        data.memory_cached = hardware::cached_bytes();
     }
 
     fn percentage(used: u64, total: u64) -> u32 {
@@ -4142,7 +4384,8 @@ mod view {
                     total:         100 * 1024 * 1024 * 1024,
                     usage_percent: 60
                 }],
-                network:           None
+                network:           None,
+                ..SystemInfoData::default()
             }
         }
 
@@ -4360,6 +4603,11 @@ mod window {
             format!("{} ({percent}%)", used_of_total(used, total))
         }
 
+        /// A frequency stated in MHz, spelled in GHz.
+        fn gigahertz(mhz: u32) -> String {
+            format!("{:.2}", f64::from(mhz) / 1000.0)
+        }
+
         /// The one section a scoped window shows, picked by its icon.
         ///
         /// The standalone processor and memory entries open a window of their
@@ -4382,18 +4630,54 @@ mod window {
         pub fn sections(data: &SystemInfoData) -> Vec<Section> {
             let mut sections = Vec::new();
 
-            let mut processor = vec![meter(
-                "Load",
-                format!("{}%", data.cpu_usage),
-                data.cpu_usage
-            )];
+            let mut processor = Vec::new();
 
-            if data.cpu_count > 0 {
-                processor.push(fact("Threads", data.cpu_count.to_string()));
+            if let Some(model) = data.cpu_model.as_ref() {
+                processor.push(fact("Model", model.clone()));
+            }
+
+            processor.push(meter("Load", format!("{}%", data.cpu_usage), data.cpu_usage));
+
+            match (data.cpu_cores, data.cpu_count) {
+                (Some(cores), count) if count > 0 => {
+                    processor.push(fact("Cores", format!("{cores} ({count} threads)")));
+                }
+                (None, count) if count > 0 => {
+                    processor.push(fact("Threads", count.to_string()));
+                }
+                _ => {}
+            }
+
+            match (data.cpu_current_mhz, data.cpu_max_mhz) {
+                (Some(current), Some(max)) => {
+                    processor.push(fact(
+                        "Frequency",
+                        format!("{} / {} GHz", gigahertz(current), gigahertz(max))
+                    ));
+                }
+                (Some(current), None) => {
+                    processor.push(fact("Frequency", format!("{} GHz", gigahertz(current))));
+                }
+                (None, Some(max)) => {
+                    processor.push(fact("Max frequency", format!("{} GHz", gigahertz(max))));
+                }
+                (None, None) => {}
+            }
+
+            if let Some(governor) = data.cpu_governor.as_ref() {
+                processor.push(fact("Governor", governor.clone()));
             }
 
             if let Some(temperature) = data.cpu_temperature {
                 processor.push(fact("Temperature", format!("{temperature}°C")));
+            }
+
+            if let Some(microcode) = data.cpu_microcode.as_ref() {
+                processor.push(fact("Microcode", microcode.clone()));
+            }
+
+            if let Some(kernel) = data.kernel.as_ref() {
+                processor.push(fact("Kernel", kernel.clone()));
             }
 
             sections.push(Section {
@@ -4421,6 +4705,16 @@ mod window {
                 ));
             }
 
+            if data.memory_cached > 0 {
+                memory.push(fact(
+                    "Cached",
+                    format!(
+                        "{} GiB",
+                        super::super::view::gigabytes(data.memory_cached)
+                    )
+                ));
+            }
+
             if data.memory_swap_total > 0 {
                 memory.push(meter(
                     "Swap",
@@ -4431,6 +4725,10 @@ mod window {
                     ),
                     data.memory_swap_usage
                 ));
+
+                if let Some(backend) = data.swap_backend.as_ref() {
+                    memory.push(fact("Swap device", backend.clone()));
+                }
             }
 
             sections.push(Section {
@@ -4910,7 +5208,8 @@ mod window {
                     1500,
                     120,
                     std::time::Instant::now()
-                ))
+                )),
+                ..SystemInfoData::default()
             }
         }
 
