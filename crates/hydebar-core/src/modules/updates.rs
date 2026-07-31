@@ -125,6 +125,110 @@ mod commands {
         Ok(())
     }
 
+    /// Branch the HyDE clone is updated against.
+    ///
+    /// Upstream documents its update path against `master` and has never
+    /// shipped another branch; a rename upstream makes the fetch fail, the
+    /// failure is logged, and the section simply stops refreshing.
+    const HYDE_BRANCH: &str = "master";
+
+    /// Asks the HyDE clone how far behind upstream it is.
+    ///
+    /// Only remote-tracking refs are touched: the fetch never rewrites the
+    /// working tree, so a clone holding local work is read, not disturbed.
+    pub(super) async fn check_hyde(clone: &str) -> Result<(String, Vec<String>), CommandError> {
+        git(clone, &["fetch", "--quiet", "origin", HYDE_BRANCH]).await?;
+
+        let version = git(clone, &["describe", "--tags", "--always"]).await?;
+        let range = format!("HEAD..origin/{HYDE_BRANCH}");
+        let log = git(clone, &["log", "--pretty=format:%s", &range]).await?;
+
+        Ok((version.trim().to_owned(), parse_hyde_commits(&log)))
+    }
+
+    /// Runs one git command inside `clone` and returns its stdout.
+    async fn git(clone: &str, args: &[&str]) -> Result<String, CommandError> {
+        let mut spawner = process::Command::new("git");
+        spawner
+            .arg("-C")
+            .arg(clone)
+            .args(args)
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+
+        let output = crate::utils::process_group::guarded_output(&mut spawner).await?;
+
+        if !output.status.success() {
+            return Err(CommandError::Status(output.status));
+        }
+
+        Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+    }
+
+    fn parse_hyde_commits(log: &str) -> Vec<String> {
+        log.lines()
+            .map(str::trim)
+            .filter(|line| !line.is_empty())
+            .map(ToOwned::to_owned)
+            .collect()
+    }
+
+    /// Brings the HyDE clone up to date the way upstream documents it.
+    ///
+    /// The sequence runs in a terminal of its own — the restore step asks
+    /// questions and prints a report the user should see — and refuses to
+    /// touch a clone that is off `master` or carries uncommitted work, since
+    /// the documented path is a hard reset that would discard both.
+    pub(super) async fn update_hyde(clone: &str) -> Result<(), CommandError> {
+        let status = process::Command::new("xdg-terminal-exec")
+            .arg("--title=hyde-update")
+            .arg("--")
+            .arg("bash")
+            .arg("-c")
+            .arg(hyde_update_script(clone))
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .await?;
+
+        if !status.success() {
+            return Err(CommandError::Status(status));
+        }
+
+        Ok(())
+    }
+
+    /// The script the update terminal runs.
+    fn hyde_update_script(clone: &str) -> String {
+        let quoted = shell_quote(clone);
+
+        format!(
+            concat!(
+                "cd {clone} || exit 1\n",
+                "if [ -n \"$(git status --porcelain)\" ]",
+                " || [ \"$(git rev-parse --abbrev-ref HEAD)\" != '{branch}' ]; then\n",
+                "  echo 'The HyDE clone carries local work;",
+                " bring {branch} up to date by hand.'\n",
+                "else\n",
+                "  git fetch --update-shallow origin '{branch}' \\\n",
+                "    && git reset --hard 'origin/{branch}' \\\n",
+                "    && ./Scripts/install.sh -r\n",
+                "fi\n",
+                "printf 'Press Enter to close...'\n",
+                "read -r _\n"
+            ),
+            clone = quoted,
+            branch = HYDE_BRANCH
+        )
+    }
+
+    /// Wraps `value` so a shell reads it as one literal word.
+    fn shell_quote(value: &str) -> String {
+        format!("'{}'", value.replace('\'', "'\\''"))
+    }
+
     pub(super) async fn apply_updates(command: &str) -> Result<(), CommandError> {
         let output = process::Command::new("bash")
             .arg("-c")
@@ -236,6 +340,33 @@ mod commands {
 
             assert!(updates.is_empty());
         }
+
+        #[test]
+        fn hyde_commits_skip_blank_lines() {
+            let commits = parse_hyde_commits("fix: one\n\n  feat: two  \n");
+
+            assert_eq!(commits, vec!["fix: one".to_owned(), "feat: two".to_owned()]);
+        }
+
+        #[test]
+        fn a_quoted_path_survives_an_apostrophe() {
+            assert_eq!(
+                shell_quote("/home/o'brien/HyDE"),
+                "'/home/o'\\''brien/HyDE'"
+            );
+        }
+
+        /// The documented update is a hard reset; the script must refuse to
+        /// run it against a clone holding work of its own.
+        #[test]
+        fn the_update_script_guards_local_work() {
+            let script = hyde_update_script("/home/user/HyDE");
+
+            assert!(script.contains("git status --porcelain"));
+            assert!(script.contains("rev-parse --abbrev-ref HEAD"));
+            assert!(script.contains("cd '/home/user/HyDE'"));
+            assert!(script.contains("reset --hard 'origin/master'"));
+        }
     }
 }
 mod state {
@@ -287,6 +418,15 @@ mod state {
         pub(super) to:      String
     }
 
+    /// What one look at the HyDE clone reported.
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    pub struct HydeSnapshot {
+        /// Version the clone describes itself as.
+        pub(crate) version: String,
+        /// Subjects of the upstream commits the clone has not taken yet.
+        pub(crate) commits: Vec<String>
+    }
+
     #[derive(Debug, Clone)]
     pub enum Message {
         UpdatesCheckCompleted(Vec<Update>),
@@ -297,7 +437,12 @@ mod state {
         UpdateFinished,
         ToggleUpdatesList,
         CheckNow,
-        Update(Id)
+        Update(Id),
+        /// The HyDE clone was compared against upstream.
+        HydeChecked(HydeSnapshot),
+        ToggleHydeList,
+        /// Bring the HyDE clone up to date in a terminal of its own.
+        UpdateHyde(Id)
     }
 
     #[derive(Debug, Default, Clone, Eq, PartialEq)]
@@ -314,6 +459,9 @@ mod state {
         state:                    CheckState,
         updates:                  Vec<Update>,
         pub is_updates_list_open: bool,
+        is_hyde_list_open:        bool,
+        hyde:                     Option<HydeSnapshot>,
+        hyde_clone:               Option<Arc<str>>,
         update_command:           Option<Arc<str>>,
         sender:                   Option<ModuleEventSender<Message>>,
         runtime:                  Option<Handle>,
@@ -328,14 +476,32 @@ mod state {
         /// from such a bar, so there is nothing to explain.
         #[must_use]
         pub fn tooltip(&self) -> Option<String> {
-            match self.state {
-                CheckState::Checking => Some("Updates: checking".to_owned()),
-                CheckState::Ready => Some(match self.updates.len() {
+            let line = match self.state {
+                CheckState::Checking => "Updates: checking".to_owned(),
+                CheckState::Ready => match self.updates.len() {
                     0 => "Updates: none pending".to_owned(),
                     pending => format!("Updates: {pending} pending")
-                }),
-                CheckState::Unavailable => None
-            }
+                },
+                CheckState::Unavailable => return None
+            };
+
+            Some(match self.hyde_pending() {
+                0 => line,
+                behind => format!("{line} · HyDE: {behind} commits behind")
+            })
+        }
+
+        /// Folds both open lists shut, the state a freshly opened menu shows.
+        pub fn collapse(&mut self) {
+            self.is_updates_list_open = false;
+            self.is_hyde_list_open = false;
+        }
+
+        /// How many upstream commits the HyDE clone has not taken yet.
+        fn hyde_pending(&self) -> usize {
+            self.hyde
+                .as_ref()
+                .map_or(0, |snapshot| snapshot.commits.len())
         }
     }
 
@@ -345,6 +511,9 @@ mod state {
                 .field("state", &self.state)
                 .field("updates", &self.updates)
                 .field("is_updates_list_open", &self.is_updates_list_open)
+                .field("is_hyde_list_open", &self.is_hyde_list_open)
+                .field("hyde", &self.hyde)
+                .field("hyde_clone", &self.hyde_clone)
                 .field("update_command", &self.update_command)
                 .field("sender", &self.sender)
                 .field("runtime", &self.runtime)
@@ -359,6 +528,9 @@ mod state {
                 state:                self.state.clone(),
                 updates:              self.updates.clone(),
                 is_updates_list_open: self.is_updates_list_open,
+                is_hyde_list_open:    self.is_hyde_list_open,
+                hyde:                 self.hyde.clone(),
+                hyde_clone:           self.hyde_clone.clone(),
                 update_command:       self.update_command.clone(),
                 sender:               self.sender.clone(),
                 runtime:              self.runtime.clone(),
@@ -401,13 +573,20 @@ mod state {
             runtime: &Handle,
             sender: ModuleEventSender<Message>,
             command: Arc<str>,
-            interval: Duration
+            interval: Duration,
+            hyde_clone: Option<Arc<str>>
         ) -> Self {
             let wake = Arc::new(Notify::new());
             let loop_wake = Arc::clone(&wake);
             let loop_command = Arc::clone(&command);
 
-            let handle = runtime.spawn(check_loop(sender, loop_command, interval, loop_wake));
+            let handle = runtime.spawn(check_loop(
+                sender,
+                loop_command,
+                interval,
+                loop_wake,
+                hyde_clone
+            ));
 
             Self {
                 command,
@@ -438,13 +617,19 @@ mod state {
     }
 
     /// Runs the check command forever, once per interval and on request.
+    ///
+    /// A HyDE clone, when one is known, is compared against upstream on the
+    /// same cadence and by the same single runner, so the two checks can
+    /// never race each other over the network.
     async fn check_loop(
         sender: ModuleEventSender<Message>,
         command: Arc<str>,
         interval: Duration,
-        wake: Arc<Notify>
+        wake: Arc<Notify>,
+        hyde_clone: Option<Arc<str>>
     ) {
         let mut failures = FailureLog::default();
+        let mut hyde_failures = FailureLog::default();
 
         loop {
             let outcome = check_once(command.as_ref(), &mut failures).await;
@@ -453,11 +638,75 @@ mod state {
                 error!("failed to publish the updates check result: {err}");
             }
 
+            if let Some(clone) = hyde_clone.as_deref()
+                && let Some(snapshot) = check_hyde_once(clone, &mut hyde_failures).await
+                && let Err(err) = sender.try_send(Message::HydeChecked(snapshot))
+            {
+                error!("failed to publish the hyde check result: {err}");
+            }
+
             tokio::select! {
                 () = sleep(interval) => {}
                 () = wake.notified() => {}
             }
         }
+    }
+
+    /// Compares the HyDE clone against upstream once.
+    ///
+    /// A failure keeps the last snapshot standing: an unreachable forge is no
+    /// reason to tell the user their desktop stopped existing.
+    async fn check_hyde_once(clone: &str, failures: &mut FailureLog) -> Option<HydeSnapshot> {
+        match tokio::time::timeout(CHECK_TIMEOUT, commands::check_hyde(clone)).await {
+            Ok(Ok((version, commits))) => {
+                failures.clear();
+
+                Some(HydeSnapshot {
+                    version,
+                    commits
+                })
+            }
+            Ok(Err(err)) => {
+                report(failures, format!("the hyde check failed: {err}"));
+
+                None
+            }
+            Err(_) => {
+                report(
+                    failures,
+                    format!("the hyde check did not finish within {CHECK_TIMEOUT:?}")
+                );
+
+                None
+            }
+        }
+    }
+
+    /// Finds the HyDE clone this machine was installed from, if any.
+    ///
+    /// The path is what `version.sh --cache` recorded in the state directory,
+    /// with the conventional `~/HyDE` as the fallback; either way it only
+    /// counts when a git repository actually stands there.
+    fn find_hyde_clone() -> Option<std::path::PathBuf> {
+        let recorded = dirs::state_dir()
+            .map(|state| state.join("hyde").join("version"))
+            .and_then(|version| std::fs::read_to_string(version).ok())
+            .and_then(|content| clone_path_from(&content));
+
+        recorded
+            .into_iter()
+            .chain(dirs::home_dir().map(|home| home.join("HyDE")))
+            .find(|path| path.join(".git").exists())
+    }
+
+    /// Reads `HYDE_CLONE_PATH` out of the cached version file.
+    fn clone_path_from(content: &str) -> Option<std::path::PathBuf> {
+        content.lines().find_map(|line| {
+            line.strip_prefix("HYDE_CLONE_PATH=")
+                .map(|value| value.trim().trim_matches('\'').trim_matches('"'))
+                .filter(|value| !value.is_empty())
+                .map(std::path::PathBuf::from)
+        })
     }
 
     /// Runs the check command once and turns whatever happened into a message.
@@ -585,6 +834,27 @@ mod state {
 
                     let _ = outputs.close_menu_if::<Message>(id, MenuType::Updates, main_config);
                 }
+                Message::UpdateHyde(id) => {
+                    if let (Some(runtime), Some(sender), Some(clone)) = (
+                        self.runtime.clone(),
+                        self.sender.clone(),
+                        self.hyde_clone.clone()
+                    ) {
+                        runtime.spawn(async move {
+                            if let Err(err) = commands::update_hyde(clone.as_ref()).await {
+                                err.or_log("failed to run the hyde update");
+                            }
+
+                            if let Err(err) = sender.try_send(Message::CheckNow) {
+                                error!("failed to ask for a check after the hyde update: {err}");
+                            }
+                        });
+                    } else {
+                        warn!("no hyde clone is known; skipping the hyde update");
+                    }
+
+                    let _ = outputs.close_menu_if::<Message>(id, MenuType::Updates, main_config);
+                }
                 observed => self.observe(observed)
             }
 
@@ -627,7 +897,13 @@ mod state {
                 Message::ToggleUpdatesList => {
                     self.is_updates_list_open = !self.is_updates_list_open;
                 }
-                Message::CheckNow | Message::Update(_) => {}
+                Message::HydeChecked(snapshot) => {
+                    self.hyde = Some(snapshot);
+                }
+                Message::ToggleHydeList => {
+                    self.is_hyde_list_open = !self.is_hyde_list_open;
+                }
+                Message::CheckNow | Message::Update(_) | Message::UpdateHyde(_) => {}
             }
         }
 
@@ -647,11 +923,20 @@ mod state {
             &self.state
         }
 
+        pub(crate) fn hyde(&self) -> Option<&HydeSnapshot> {
+            self.hyde.as_ref()
+        }
+
+        pub(crate) fn is_hyde_list_open(&self) -> bool {
+            self.is_hyde_list_open
+        }
+
         /// Ends the schedule and forgets what it was started for.
         fn stop(&mut self) {
             self.schedule = None;
             self.update_command = None;
             self.sender = None;
+            self.hyde_clone = None;
         }
     }
 
@@ -687,6 +972,8 @@ mod state {
             let interval = check_interval(definition);
 
             self.update_command = Some(Arc::from(definition.update_cmd.as_str()));
+            self.hyde_clone =
+                find_hyde_clone().map(|path| Arc::from(path.to_string_lossy().as_ref()));
 
             if self
                 .schedule
@@ -706,7 +993,8 @@ mod state {
                 ctx.runtime_handle(),
                 sender,
                 check_command,
-                interval
+                interval,
+                self.hyde_clone.clone()
             ));
 
             info!("checking for updates every {interval:?}");
@@ -735,6 +1023,7 @@ mod state {
                 view::icon(
                     &self.state,
                     self.updates.len(),
+                    self.hyde_pending(),
                     self.shown_count.element(crate::components::scale::base()),
                     icons
                 )
@@ -997,7 +1286,8 @@ mod state {
                 ctx.runtime_handle(),
                 ctx.module_sender(ModuleEvent::Updates),
                 Arc::from(command.as_str()),
-                Duration::from_millis(10)
+                Duration::from_millis(10),
+                None
             );
 
             runtime.block_on(async {
@@ -1109,6 +1399,57 @@ mod state {
         }
 
         #[test]
+        fn a_stale_hyde_clone_reaches_the_menu() {
+            let mut updates = Updates::default();
+
+            updates.observe(Message::HydeChecked(HydeSnapshot {
+                version: "v25.10.1".to_owned(),
+                commits: vec!["fix: one".to_owned()]
+            }));
+
+            assert_eq!(updates.hyde_pending(), 1);
+        }
+
+        #[test]
+        fn collapsing_folds_both_lists_shut() {
+            let mut updates = Updates::default();
+            updates.is_updates_list_open = true;
+            updates.observe(Message::ToggleHydeList);
+
+            updates.collapse();
+
+            assert!(!updates.is_updates_list_open);
+            assert!(!updates.is_hyde_list_open);
+        }
+
+        #[test]
+        fn the_tooltip_names_a_hyde_clone_that_fell_behind() {
+            let mut updates = Updates::default();
+            updates.state = CheckState::Ready;
+            updates.observe(Message::HydeChecked(HydeSnapshot {
+                version: "v25.10.1".to_owned(),
+                commits: vec!["fix: one".to_owned(), "feat: two".to_owned()]
+            }));
+
+            assert_eq!(
+                updates.tooltip().expect("a tooltip"),
+                "Updates: none pending · HyDE: 2 commits behind"
+            );
+        }
+
+        #[test]
+        fn the_clone_path_is_read_from_the_version_file() {
+            let content = "HYDE_BRANCH='master'\nHYDE_CLONE_PATH='/home/user/HyDE'\n";
+
+            assert_eq!(
+                clone_path_from(content),
+                Some(std::path::PathBuf::from("/home/user/HyDE"))
+            );
+            assert_eq!(clone_path_from("HYDE_CLONE_PATH=''\n"), None);
+            assert_eq!(clone_path_from("nothing here"), None);
+        }
+
+        #[test]
         fn an_unavailable_check_clears_what_the_bar_knew() {
             let mut updates = Updates::default();
             updates.updates = vec![Update {
@@ -1149,32 +1490,114 @@ mod view {
         opacity: f32,
         icons: &IconTheme
     ) -> Element<'a, Message> {
-        column!(
-            if updates.updates().is_empty() {
-                container(text("Up to date ;)"))
-                    .padding([scale::scaled(8.0), scale::scaled(8.0)])
-                    .into()
-            } else {
-                build_updates_list(updates, opacity, icons)
-            },
-            rule::horizontal(1),
-            action_button("Update", Message::Update(id), opacity),
-            check_now_button(updates, opacity, icons),
-        )
-        .spacing(scale::scaled(4.0))
-        .into()
+        let packages: Element<'a, Message> = if updates.updates().is_empty() {
+            container(text("Up to date ;)"))
+                .padding([scale::scaled(8.0), scale::scaled(8.0)])
+                .into()
+        } else {
+            build_updates_list(updates, opacity, icons)
+        };
+
+        let mut menu = column!(packages, rule::horizontal(1)).spacing(scale::scaled(4.0));
+
+        if let Some(snapshot) = updates.hyde() {
+            menu = menu
+                .push(hyde_section(snapshot, updates, id, opacity, icons))
+                .push(rule::horizontal(1));
+        }
+
+        menu.push(action_button("Update", Message::Update(id), opacity))
+            .push(check_now_button(updates, opacity, icons))
+            .into()
+    }
+
+    /// What the bar knows about the HyDE installation itself.
+    ///
+    /// Reads like the package block above it: a current clone is one quiet
+    /// line, a stale one unfolds into the upstream commits it is missing and
+    /// offers to take them.
+    fn hyde_section<'a>(
+        snapshot: &'a super::state::HydeSnapshot,
+        updates: &'a Updates,
+        id: Id,
+        opacity: f32,
+        icons: &IconTheme
+    ) -> Element<'a, Message> {
+        if snapshot.commits.is_empty() {
+            return container(text(format!("HyDE {} · up to date", snapshot.version)))
+                .padding([scale::scaled(8.0), scale::scaled(8.0)])
+                .into();
+        }
+
+        let mut section = column!(
+            button(row!(
+                text(format!(
+                    "HyDE {} · {} commits behind",
+                    snapshot.version,
+                    snapshot.commits.len()
+                ))
+                .width(Length::Fill),
+                icon_component(
+                    icons,
+                    if updates.is_hyde_list_open() {
+                        Icons::MenuClosed
+                    } else {
+                        Icons::MenuOpen
+                    }
+                )
+            ))
+            .style(ghost_button_style(opacity))
+            .padding([scale::scaled(8.0), scale::scaled(8.0)])
+            .on_press(Message::ToggleHydeList)
+            .width(Length::Fill),
+        );
+
+        if updates.is_hyde_list_open() {
+            section = section.push(
+                container(scrollable(
+                    Column::with_children(
+                        snapshot
+                            .commits
+                            .iter()
+                            .map(|subject| {
+                                text(truncated(subject, 48).into_owned())
+                                    .size(scale::scaled(10.0))
+                                    .width(Length::Fill)
+                                    .into()
+                            })
+                            .collect::<Vec<Element<'_, Message>>>()
+                    )
+                    .padding(Padding::ZERO.right(16))
+                    .spacing(scale::scaled(4.0))
+                ))
+                .padding([scale::scaled(8.0), scale::scaled(0.0)])
+                .max_height(300)
+            );
+        }
+
+        section
+            .push(action_button(
+                "Update HyDE",
+                Message::UpdateHyde(id),
+                opacity
+            ))
+            .spacing(scale::scaled(4.0))
+            .into()
     }
 
     pub(super) fn icon(
         state: &CheckState,
         update_count: usize,
+        hyde_pending: usize,
         count: Element<'static, Message>,
         icons: &IconTheme
     ) -> Element<'static, Message> {
         let icon = match state {
             CheckState::Checking => Icons::Refresh,
             CheckState::Unavailable => Icons::NoUpdatesAvailable,
-            CheckState::Ready if update_count == 0 => Icons::NoUpdatesAvailable,
+            CheckState::Ready if update_count == 0 && hyde_pending == 0 => {
+                Icons::NoUpdatesAvailable
+            }
             CheckState::Ready => Icons::UpdatesAvailable
         };
 
@@ -1262,11 +1685,11 @@ mod view {
             .width(Length::Fill)
     }
 
-    fn check_now_button(
-        updates: &Updates,
+    fn check_now_button<'a>(
+        updates: &'a Updates,
         opacity: f32,
         icons: &IconTheme
-    ) -> iced::widget::Button<'static, Message> {
+    ) -> iced::widget::Button<'a, Message> {
         let mut content = row!(text("Check now").width(Length::Fill));
 
         if matches!(updates.state(), CheckState::Checking) {

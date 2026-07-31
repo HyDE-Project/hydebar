@@ -89,7 +89,7 @@ impl App {
                 let mut cmd = vec![];
                 match &menu_type {
                     MenuType::Updates => {
-                        self.updates.is_updates_list_open = false;
+                        self.updates.collapse();
                     }
                     MenuType::Tray(name) => {
                         if let Some(_tray) = self
