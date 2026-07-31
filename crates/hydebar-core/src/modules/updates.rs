@@ -185,8 +185,15 @@ mod commands {
     /// the helper `SUDO_ASKPASS` names — once per elevated run, with its usual
     /// grace period after, unlike polkit's per-command prompting that turned a
     /// long install into a hail of dialogs.
+    ///
+    /// The question is asked by rofi where it exists: on a HyDE desktop rofi
+    /// already wears the theme in force, where the GTK dialogs answer to
+    /// nobody's palette. Zenity stays as the fallback.
     const ASKPASS: &str = concat!(
         "#!/usr/bin/env bash\n",
+        "if command -v rofi >/dev/null 2>&1; then\n",
+        "  exec rofi -dmenu -password -p \"${1:-Password}\" </dev/null\n",
+        "fi\n",
         "exec zenity --password --title='Updates' \"$@\"\n"
     );
 
@@ -219,7 +226,9 @@ mod commands {
 
         let path = std::env::var_os("PATH")?;
 
-        if !std::env::split_paths(&path).any(|dir| dir.join("zenity").exists()) {
+        if !std::env::split_paths(&path)
+            .any(|dir| dir.join("rofi").exists() || dir.join("zenity").exists())
+        {
             return None;
         }
 
@@ -540,6 +549,7 @@ mod commands {
             let _ = std::fs::remove_dir_all(&dir);
 
             assert_eq!(mode & 0o111, 0o111);
+            assert!(content.contains("rofi -dmenu -password"));
             assert!(content.contains("zenity --password"));
         }
 
