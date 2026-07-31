@@ -31,8 +31,14 @@ impl App {
         String::from("hydebar")
     }
 
-    pub fn theme(&self, _id: Id) -> Theme {
-        self.theme_cache.clone()
+    pub fn theme(&self, id: Id) -> Theme {
+        let fade = self.outputs.menu_fade(id);
+
+        if fade < 1.0 {
+            hydebar_core::style::faded_theme(&self.theme_cache, fade)
+        } else {
+            self.theme_cache.clone()
+        }
     }
 
     pub fn style(&self, theme: &Theme) -> Style {

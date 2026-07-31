@@ -57,6 +57,23 @@ impl Outputs {
             .unwrap_or(1.0)
     }
 
+    /// Share of full presence the menu surface `id` is drawn at.
+    ///
+    /// One while the menu rests open — and for every surface that is not a
+    /// drawing menu — so the theme it feeds only diverges from the cached one
+    /// while a fade actually travels.
+    pub fn menu_fade(&self, id: Id) -> f32 {
+        self.0
+            .iter()
+            .find_map(|(_, shell_info, _)| {
+                shell_info.as_ref().and_then(|shell_info| {
+                    (shell_info.menu.id == id && shell_info.menu.menu_info.is_some())
+                        .then(|| shell_info.menu.progress())
+                })
+            })
+            .unwrap_or(1.0)
+    }
+
     pub fn get_menu_opacity(&self, id: Id) -> f32 {
         self.0
             .iter()
