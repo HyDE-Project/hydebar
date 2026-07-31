@@ -16,7 +16,7 @@ use hydebar_proto::config::ModuleName;
 use iced::SurfaceId as Id;
 
 use super::TooltipInfo;
-use crate::animation::{SNAPPY, Spring};
+use crate::animation::{GENTLE, SNAPPY, Spring};
 
 /// How long the pointer rests on a module before its tooltip shows.
 const DWELL: Duration = Duration::from_secs(1);
@@ -197,6 +197,11 @@ impl Hints {
     }
 
     /// Starts showing a hint, fading it in unless fades are off.
+    ///
+    /// The entrance is gentle on purpose — a hint is passive information, and
+    /// arriving softly is what tells it apart from something demanding
+    /// attention. The exit in [`Hints::hide`] is quicker: a hint on its way
+    /// out is in the way.
     fn show(
         &mut self,
         surface: Id,
@@ -208,6 +213,7 @@ impl Hints {
         self.closing = None;
 
         if animated {
+            self.presence.set_response(GENTLE);
             self.presence.set_target(1.0);
         } else {
             self.presence.snap_to(1.0);
@@ -235,6 +241,7 @@ impl Hints {
 
         if animated && self.presence.value() > f32::EPSILON {
             self.closing = Some((surface, owner));
+            self.presence.set_response(SNAPPY);
             self.presence.set_target(0.0);
 
             return None;
