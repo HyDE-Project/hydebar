@@ -1,11 +1,23 @@
 //! Glyph table assembled from the configuration overrides.
 
-use std::collections::HashMap;
+use std::{
+    collections::{HashMap, HashSet},
+    sync::{LazyLock, Mutex, PoisonError}
+};
 
 use hydebar_proto::config::IconsConfig;
 use log::warn;
 
 use super::catalog::Icons;
+
+/// Every glyph string handed to the renderer so far.
+///
+/// The renderer demands `'static` glyphs, and each one is leaked to get
+/// there; the set is what makes the leak once per distinct glyph instead of
+/// once per reload — a theme switch reloads in a burst, and a bar left
+/// running would otherwise grow by its overrides on every one of them.
+static GLYPHS: LazyLock<Mutex<HashSet<&'static str>>> =
+    LazyLock::new(|| Mutex::new(HashSet::new()));
 
 /// Glyph table handed to the rendering helpers.
 ///
@@ -111,9 +123,18 @@ mod tests {
 /// A glyph made immortal for the renderer.
 ///
 /// The same bargain the font family cache strikes: a handful of bytes per
-/// configured override per reload, in exchange for never allocating on the
-/// draw path. A configuration is reloaded by hand and holds a few overrides
-/// at most, so the leak is bounded by use, not by time.
+/// distinct glyph, in exchange for never allocating on the draw path. A glyph
+/// seen before is answered from the set, so reloading the same configuration
+/// a thousand times costs what loading it once did.
 fn leaked(glyph: &str) -> &'static str {
-    Box::leak(glyph.to_owned().into_boxed_str())
+    let mut glyphs = GLYPHS.lock().unwrap_or_else(PoisonError::into_inner);
+
+    if let Some(&known) = glyphs.get(glyph) {
+        return known;
+    }
+
+    let immortal: &'static str = Box::leak(glyph.to_owned().into_boxed_str());
+    glyphs.insert(immortal);
+
+    immortal
 }
