@@ -18,7 +18,8 @@ pub struct KeyboardLayout {
     multiple_layout: bool,
     active:          String,
     sender:          Option<ModuleEventSender<Message>>,
-    task:            Option<JoinHandle<()>>
+    task:            Option<JoinHandle<()>>,
+    shown:           crate::components::crossfade::Crossfade
 }
 
 impl std::fmt::Debug for KeyboardLayout {
@@ -40,7 +41,8 @@ impl Clone for KeyboardLayout {
             multiple_layout: self.multiple_layout,
             active:          self.active.clone(),
             sender:          self.sender.clone(),
-            task:            None // JoinHandle can't be cloned
+            task:            None, // JoinHandle can't be cloned
+            shown:           self.shown.clone()
         }
     }
 }
@@ -69,11 +71,19 @@ impl KeyboardLayout {
             multiple_layout: has_multiple_layouts,
             active: active_layout,
             sender: None,
-            task: None
+            task: None,
+            shown: crate::components::crossfade::Crossfade::default()
         }
     }
 
-    pub fn update(&mut self, message: Message) {
+    /// `animated` decides whether the shown label dissolves into its
+    /// replacement or swaps outright.
+    pub fn update(
+        &mut self,
+        message: Message,
+        config: &KeyboardLayoutModuleConfig,
+        animated: bool
+    ) {
         match message {
             Message::ActiveLayoutChanged(layout) => {
                 self.active = layout;
@@ -85,6 +95,22 @@ impl KeyboardLayout {
                 }
             }
         }
+
+        let label = match config.labels.get(&self.active) {
+            Some(value) => value.to_string(),
+            None => self.active.clone()
+        };
+        self.shown.set(label, animated);
+    }
+
+    /// Advances the dissolve of the shown label.
+    pub fn tick_fade(&mut self, elapsed: Duration) -> bool {
+        self.shown.advance(elapsed)
+    }
+
+    /// Whether the shown label is still dissolving.
+    pub fn is_fading(&self) -> bool {
+        self.shown.is_animating()
     }
 
     /// Layout currently in force, as the compositor names it.
@@ -176,13 +202,19 @@ where
         if !self.multiple_layout {
             None
         } else {
-            let active = match config.labels.get(&self.active) {
-                Some(value) => value.to_string(),
-                None => self.active.clone()
+            let label = if self.shown.current().is_empty() {
+                let active = match config.labels.get(&self.active) {
+                    Some(value) => value.to_string(),
+                    None => self.active.clone()
+                };
+
+                text(active).into()
+            } else {
+                self.shown.element(crate::components::scale::base())
             };
+
             Some((
-                text(active).into(),
-                None // Action handled in GUI layer
+                label, None // Action handled in GUI layer
             ))
         }
     }
@@ -210,7 +242,11 @@ mod tests {
         let port_trait: Arc<dyn HyprlandPort> = port.clone();
         let mut module = KeyboardLayout::new(port_trait);
 
-        module.update(Message::ChangeLayout);
+        module.update(
+            Message::ChangeLayout,
+            &hydebar_proto::config::KeyboardLayoutModuleConfig::default(),
+            false
+        );
 
         assert_eq!(port.switch_layout_calls(), 1);
     }

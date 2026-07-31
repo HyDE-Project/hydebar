@@ -152,7 +152,11 @@ impl App {
                 Task::none()
             }
             Message::KeyboardLayout(message) => {
-                self.keyboard_layout.update(message);
+                self.keyboard_layout.update(
+                    message,
+                    &self.config.keyboard_layout,
+                    self.config.appearance.animations.enabled
+                );
                 Task::none()
             }
             Message::KeyboardSubmap(message) => {

@@ -317,7 +317,8 @@ mod state {
         update_command:           Option<Arc<str>>,
         sender:                   Option<ModuleEventSender<Message>>,
         runtime:                  Option<Handle>,
-        schedule:                 Option<Schedule>
+        schedule:                 Option<Schedule>,
+        shown_count:              crate::components::crossfade::Crossfade
     }
 
     impl Updates {
@@ -361,7 +362,8 @@ mod state {
                 update_command:       self.update_command.clone(),
                 sender:               self.sender.clone(),
                 runtime:              self.runtime.clone(),
-                schedule:             None
+                schedule:             None,
+                shown_count:          self.shown_count.clone()
             }
         }
     }
@@ -585,6 +587,21 @@ mod state {
                 }
                 observed => self.observe(observed)
             }
+
+            self.shown_count.set(
+                self.updates.len().to_string(),
+                main_config.appearance.animations.enabled
+            );
+        }
+
+        /// Advances the dissolve of the count on the bar.
+        pub fn tick_fade(&mut self, elapsed: std::time::Duration) -> bool {
+            self.shown_count.advance(elapsed)
+        }
+
+        /// Whether the count on the bar is still dissolving.
+        pub fn is_fading(&self) -> bool {
+            self.shown_count.is_animating()
         }
 
         /// Folds everything a check reports into what the bar shows.
@@ -715,7 +732,13 @@ mod state {
             }
 
             Some((
-                view::icon(&self.state, self.updates.len(), icons).map(M::from),
+                view::icon(
+                    &self.state,
+                    self.updates.len(),
+                    self.shown_count.element(crate::components::scale::base()),
+                    icons
+                )
+                .map(M::from),
                 Some(OnModulePress::ToggleMenu(MenuType::Updates))
             ))
         }
@@ -1145,6 +1168,7 @@ mod view {
     pub(super) fn icon(
         state: &CheckState,
         update_count: usize,
+        count: Element<'static, Message>,
         icons: &IconTheme
     ) -> Element<'static, Message> {
         let icon = match state {
@@ -1159,7 +1183,7 @@ mod view {
             .spacing(scale::icon_gap());
 
         if update_count > 0 {
-            content = content.push(text(update_count));
+            content = content.push(count);
         }
 
         content.into()

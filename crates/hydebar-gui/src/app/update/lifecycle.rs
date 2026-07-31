@@ -108,7 +108,9 @@ impl App {
                 let hover_animating = self.hover.advance(elapsed);
                 let entering = self.entrance.advance(elapsed);
                 let greeting_animating = self.greeting.advance(elapsed);
-                let values_fading = self.clock.tick_fade(elapsed);
+                let values_fading = self.clock.tick_fade(elapsed)
+                    | self.updates.tick_fade(elapsed)
+                    | self.keyboard_layout.tick_fade(elapsed);
                 let greeting_tasks = self.greeting_surface_tasks();
 
                 // rebuilt only when the palette moved, settling frame
