@@ -20,9 +20,24 @@
 //! configuration. A Hyprland reading the older configuration format has no
 //! evaluator at all. Both spellings are therefore offered, the Lua one first.
 
-use std::process::Command;
+use std::{
+    process::Command,
+    sync::atomic::{AtomicU8, Ordering}
+};
 
 use super::wayland::MAIN_NAMESPACE;
+
+/// Marker for a session whose accepted spelling is not yet known.
+const SPELLING_UNKNOWN: u8 = u8::MAX;
+
+/// Index of the spelling this session accepted, once one has been.
+///
+/// The parser a session runs does not change while it runs, and the bar
+/// restates its rules after every compositor reload — a burst of them on a
+/// theme switch. Remembering the accepted spelling turns each restatement
+/// into one process instead of a probe of up to three per rule, the same
+/// bargain the dispatch dialect strikes.
+static ACCEPTED_SPELLING: AtomicU8 = AtomicU8::new(SPELLING_UNKNOWN);
 
 /// Alpha at or below which a pixel of the bar is not worth blurring behind.
 ///
@@ -109,23 +124,44 @@ fn hyprctl(command: &str, argument: &str) -> Option<String> {
 /// keyword command outright, while a session that has none simply answers that
 /// it does not know the command, which costs a moment and nothing else.
 fn state(rule: &Rule) -> bool {
-    for (command, argument) in [
+    let spellings = [
         ("eval", rule.lua.as_str()),
         ("keyword", rule.keyword.as_str()),
         ("keyword", rule.positional.as_str())
-    ] {
-        let spelled = if command == "keyword" {
-            format!("layerrule {argument}")
-        } else {
-            argument.to_owned()
-        };
+    ];
 
-        if hyprctl(command, &spelled).is_some_and(|answer| accepted(&answer)) {
+    let known = ACCEPTED_SPELLING.load(Ordering::Relaxed);
+    if let Some(&(command, argument)) = spellings.get(usize::from(known)) {
+        if try_spelling(command, argument) {
+            return true;
+        }
+
+        ACCEPTED_SPELLING.store(SPELLING_UNKNOWN, Ordering::Relaxed);
+    }
+
+    for (index, (command, argument)) in spellings.into_iter().enumerate() {
+        if index == usize::from(known) {
+            continue;
+        }
+
+        if try_spelling(command, argument) {
+            ACCEPTED_SPELLING.store(index as u8, Ordering::Relaxed);
             return true;
         }
     }
 
     false
+}
+
+/// Hands one spelling over and reads whether the compositor took it.
+fn try_spelling(command: &str, argument: &str) -> bool {
+    let spelled = if command == "keyword" {
+        format!("layerrule {argument}")
+    } else {
+        argument.to_owned()
+    };
+
+    hyprctl(command, &spelled).is_some_and(|answer| accepted(&answer))
 }
 
 /// Asks the compositor to blur what shows through the bar.
