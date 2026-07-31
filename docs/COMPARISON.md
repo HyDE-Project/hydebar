@@ -14,12 +14,12 @@ Detailed comparison of Wayland panel solutions for Hyprland.
 | **CPU (idle)** | ~0.5%* | ~2% | ~3% |
 | **Startup time** | ~53ms* | ~100ms | ~200ms |
 | **Config format** | TOML | JSON | TypeScript |
-| **Hot reload** | ✅ Yes | ⚠️ Partial | ✅ Yes |
-| **GUI config** | ⚠️ Settings window (layout, appearance) | ❌ No | ✅ Yes |
-| **Preset themes** | ✅ 11 themes + HyDE following | ❌ No | ✅ Yes |
-| **Animations** | ✅ Smooth | ⚠️ Basic | ✅ Smooth |
-| **Wayland-native** | ✅ Yes | ✅ Yes | ✅ Yes |
-| **Multi-monitor** | ✅ Yes | ✅ Yes | ✅ Yes |
+| **Hot reload** |  Yes |  Partial |  Yes |
+| **GUI config** |  Settings window (layout, appearance) |  No |  Yes |
+| **Preset themes** |  11 themes + HyDE following |  No |  Yes |
+| **Animations** |  Smooth |  Basic |  Smooth |
+| **Wayland-native** |  Yes |  Yes |  Yes |
+| **Multi-monitor** |  Yes |  Yes |  Yes |
 
 \* Measured, release build — see [perf-baseline-2026-07.md](perf-baseline-2026-07.md).
 The memory figure is the wgpu/Vulkan rendering stack, not the modules.
@@ -32,33 +32,33 @@ The memory figure is the wgpu/Vulkan rendering stack, not the modules.
 
 | Module | hydebar | Waybar | HyprPanel |
 |--------|---------|--------|-----------|
-| **Workspaces** | ✅ Full | ✅ Full | ✅ Full |
-| **Window title** | ✅ Yes | ✅ Yes | ✅ Yes |
-| **Clock** | ✅ Yes | ✅ Yes | ✅ Yes |
-| **Battery** | ✅ Full | ✅ Full | ✅ Full |
-| **Network** | ✅ Full | ✅ Full | ✅ Full |
-| **Bluetooth** | ✅ Full | ⚠️ Basic | ✅ Full |
-| **Audio** | ✅ Full | ✅ Full | ✅ Full |
-| **Brightness** | ✅ Yes | ⚠️ Basic | ✅ Yes |
-| **Media player** | ✅ MPRIS | ✅ MPRIS | ✅ MPRIS |
-| **System tray** | ✅ Yes | ✅ Yes | ✅ Yes |
-| **Updates** | ✅ Yes | ⚠️ Basic | ✅ Yes |
-| **Keyboard layout** | ✅ Yes | ✅ Yes | ✅ Yes |
-| **Privacy indicators** | ✅ Yes | ❌ No | ⚠️ Basic |
-| **Notifications** | ✅ Yes (selectable source) | ⚠️ Dunst | ✅ Yes |
-| **Weather** | ✅ Yes (OpenWeatherMap) | ⚠️ Basic | ✅ Yes |
-| **Calendar** | ✅ Yes | ❌ No | ⚠️ Basic |
+| **Workspaces** |  Full |  Full |  Full |
+| **Window title** |  Yes |  Yes |  Yes |
+| **Clock** |  Yes |  Yes |  Yes |
+| **Battery** |  Full |  Full |  Full |
+| **Network** |  Full |  Full |  Full |
+| **Bluetooth** |  Full |  Basic |  Full |
+| **Audio** |  Full |  Full |  Full |
+| **Brightness** |  Yes |  Basic |  Yes |
+| **Media player** |  MPRIS |  MPRIS |  MPRIS |
+| **System tray** |  Yes |  Yes |  Yes |
+| **Updates** |  Yes |  Basic |  Yes |
+| **Keyboard layout** |  Yes |  Yes |  Yes |
+| **Privacy indicators** |  Yes |  No |  Basic |
+| **Notifications** |  Yes (selectable source) |  Dunst |  Yes |
+| **Weather** |  Yes (OpenWeatherMap) |  Basic |  Yes |
+| **Calendar** |  Yes |  No |  Basic |
 
 ### Advanced Features
 
 | Feature | hydebar | Waybar | HyprPanel |
 |---------|---------|--------|-----------|
-| **Custom modules** | ✅ Yes (script, Waybar-style) | ✅ Yes (Script) | ✅ Yes (TS) |
-| **Module ordering** | ✅ Config + settings window | ✅ Config | ✅ GUI |
-| **Inline controls** | ✅ Yes (sliders) | ❌ No | ✅ Yes |
-| **Screenshot tool** | ✅ Yes (grim/wf-recorder) | ❌ No | ✅ Yes |
-| **Power menu** | ✅ Yes | ⚠️ Basic | ✅ Yes |
-| **Clipboard history** | ✅ Yes | ❌ No | ⚠️ Basic |
+| **Custom modules** |  Yes (script, Waybar-style) |  Yes (Script) |  Yes (TS) |
+| **Module ordering** |  Config + settings window |  Config |  GUI |
+| **Inline controls** |  Yes (sliders) |  No |  Yes |
+| **Screenshot tool** |  Yes (grim/wf-recorder) |  No |  Yes |
+| **Power menu** |  Yes |  Basic |  Yes |
+| **Clipboard history** |  Yes |  No |  Basic |
 
 ---
 
@@ -76,7 +76,7 @@ Waybar:    ~10MB (GTK, CPU-rendered)
 HyprPanel: ~30MB+ (TypeScript + GTK overhead)
 ```
 
-**Winner:** 🏆 Waybar — hydebar pays for GPU rendering in resident memory
+**Winner:**  Waybar — hydebar pays for GPU rendering in resident memory
 
 ### CPU Usage
 
@@ -92,7 +92,7 @@ HyprPanel: ~3%
 hydebar:   ~0.5% — indistinguishable from idle
 ```
 
-**Winner:** 🏆 hydebar
+**Winner:**  hydebar
 
 ### Startup Time
 
@@ -102,7 +102,7 @@ Waybar:    ~100ms
 HyprPanel: ~200ms (TypeScript compilation)
 ```
 
-**Winner:** 🏆 hydebar
+**Winner:**  hydebar
 
 ---
 
@@ -120,14 +120,14 @@ format = "%H:%M"
 ```
 
 **Pros:**
-- ✅ Type-safe
-- ✅ Validation on load
-- ✅ Hot reload
-- ✅ Settings window for layout and appearance
-- ✅ Script-driven custom modules (Waybar-style `exec`/`listen_cmd`)
+- Type-safe
+- Validation on load
+- Hot reload
+- Settings window for layout and appearance
+- Script-driven custom modules (Waybar-style `exec`/`listen_cmd`)
 
 **Cons:**
-- ⚠️ Less flexible than full scripting
+- Less flexible than full scripting
 
 ---
 
@@ -142,15 +142,15 @@ format = "%H:%M"
 ```
 
 **Pros:**
-- ✅ Well-documented
-- ✅ Large user base
-- ✅ Script modules
+- Well-documented
+- Large user base
+- Script modules
 
 **Cons:**
-- ❌ JSON (no comments, strict)
-- ❌ No hot reload (full)
-- ❌ No GUI config
-- ❌ Manual theming
+- JSON (no comments, strict)
+- No hot reload (full)
+- No GUI config
+- Manual theming
 
 ---
 
@@ -168,15 +168,15 @@ export default {
 ```
 
 **Pros:**
-- ✅ Full TypeScript power
-- ✅ GUI config available
-- ✅ Preset themes
-- ✅ Hot reload
+- Full TypeScript power
+- GUI config available
+- Preset themes
+- Hot reload
 
 **Cons:**
-- ⚠️ Requires TypeScript knowledge
-- ⚠️ More complex setup
-- ⚠️ Heavier runtime
+- Requires TypeScript knowledge
+- More complex setup
+- Heavier runtime
 
 ---
 
@@ -199,7 +199,7 @@ appearance = "catppuccin-mocha"
 Plus HyDE theme following: with no `appearance` at all the bar recolours
 itself with the desktop on every HyDE theme switch.
 
-**Winner:** 🏆 hydebar
+**Winner:**  hydebar
 
 ### Waybar
 
@@ -213,16 +213,16 @@ itself with the desktop on every HyDE theme switch.
 ```
 
 **Pros:**
-- ✅ Full CSS control
+- Full CSS control
 
 **Cons:**
-- ❌ Manual color management
-- ❌ No preset themes
-- ❌ Tedious for theme changes
+- Manual color management
+- No preset themes
+- Tedious for theme changes
 
 ### HyprPanel
 
-**Preset themes:** ✅ Yes
+**Preset themes:**  Yes
 - Catppuccin
 - Dracula
 - Gruvbox
@@ -238,11 +238,11 @@ itself with the desktop on every HyDE theme switch.
 |--------|---------|--------|-----------|
 | **Language** | Rust | C++ | TypeScript |
 | **Learning curve** | Medium | High | Low |
-| **Type safety** | ✅ Strong | ⚠️ Manual | ✅ Strong |
+| **Type safety** |  Strong |  Manual |  Strong |
 | **Build time** | ~5min | ~2min | ~1min |
-| **Hot reload** | ✅ Yes | ❌ No | ✅ Yes |
-| **Test coverage** | ✅ Extensive | ⚠️ Partial | ⚠️ Partial |
-| **Documentation** | ⚠️ Growing | ✅ Good | ✅ Good |
+| **Hot reload** |  Yes |  No |  Yes |
+| **Test coverage** |  Extensive |  Partial |  Partial |
+| **Documentation** |  Growing |  Good |  Good |
 
 **Best for contributors:**
 - **Beginners:** HyprPanel (TypeScript)
@@ -254,21 +254,21 @@ itself with the desktop on every HyDE theme switch.
 ## Stability & Maintenance
 
 ### hydebar
-- **Status:** Active development 🚧
+- **Status:** Active development 
 - **Maturity:** Beta
 - **Breaking changes:** Possible before v1.0.0
 - **Community:** Growing
 - **Updates:** Frequent
 
 ### Waybar
-- **Status:** Mature, stable ✅
+- **Status:** Mature, stable 
 - **Maturity:** Production (v0.9+)
 - **Breaking changes:** Rare
 - **Community:** Large, active
 - **Updates:** Regular
 
 ### HyprPanel
-- **Status:** Active development 🚧
+- **Status:** Active development 
 - **Maturity:** Beta
 - **Breaking changes:** Moderate
 - **Community:** Growing
@@ -278,15 +278,15 @@ itself with the desktop on every HyDE theme switch.
 
 ## Unique Selling Points
 
-### hydebar 🦀
+### hydebar 
 
 **Why choose:**
-1. ⚡ **Blazing fast** - ~53ms startup, ~0.5% idle CPU, event-driven
-2. 🛡️ **Memory safe** - Zero segfaults, data race free
-3. 🎯 **Typed config** - Catch errors before runtime
-4. 🧪 **Well tested** - Extensive test suite
-5. ✨ **Modern UX** - Preset themes, HyDE following, animations, settings window
-6. 🔧 **Extensible** - Waybar-style custom modules
+1.  **Blazing fast** - ~53ms startup, ~0.5% idle CPU, event-driven
+2.  **Memory safe** - Zero segfaults, data race free
+3.  **Typed config** - Catch errors before runtime
+4.  **Well tested** - Extensive test suite
+5.  **Modern UX** - Preset themes, HyDE following, animations, settings window
+6.  **Extensible** - Waybar-style custom modules
 
 **Best for:**
 - Performance enthusiasts
@@ -296,14 +296,14 @@ itself with the desktop on every HyDE theme switch.
 
 ---
 
-### Waybar 📊
+### Waybar 
 
 **Why choose:**
-1. 🏆 **Battle-tested** - Years of production use
-2. 📚 **Well-documented** - Extensive wiki
-3. 👥 **Large community** - Easy to find help
-4. 🔧 **Highly customizable** - CSS + script modules
-5. 🌐 **Multi-compositor** - Sway, Hyprland, river, etc.
+1.  **Battle-tested** - Years of production use
+2.  **Well-documented** - Extensive wiki
+3.  **Large community** - Easy to find help
+4.  **Highly customizable** - CSS + script modules
+5.  **Multi-compositor** - Sway, Hyprland, river, etc.
 
 **Best for:**
 - Users wanting stability
@@ -313,14 +313,14 @@ itself with the desktop on every HyDE theme switch.
 
 ---
 
-### HyprPanel 🎨
+### HyprPanel 
 
 **Why choose:**
-1. 🎨 **Beautiful out-of-box** - Preset themes, polish
-2. ⚙️ **GUI configuration** - No file editing
-3. ✨ **Smooth animations** - Polished feel
-4. 📦 **Full-featured** - Weather, notifications, calendar
-5. 🚀 **Modern stack** - TypeScript, hot reload
+1.  **Beautiful out-of-box** - Preset themes, polish
+2.  **GUI configuration** - No file editing
+3.  **Smooth animations** - Polished feel
+4.  **Full-featured** - Weather, notifications, calendar
+5.  **Modern stack** - TypeScript, hot reload
 
 **Best for:**
 - Users wanting beauty first
@@ -335,14 +335,14 @@ itself with the desktop on every HyDE theme switch.
 ### From Waybar to hydebar
 
 **Pros:**
-- ✅ Better performance
-- ✅ Type-safe config
-- ✅ Memory safety
+- Better performance
+- Type-safe config
+- Memory safety
 
 **Cons:**
-- ⚠️ Different config format (TOML vs JSON)
-- ⚠️ Some modules may differ
-- ⚠️ Beta software
+- Different config format (TOML vs JSON)
+- Some modules may differ
+- Beta software
 
 **Steps:**
 1. Install hydebar
@@ -355,13 +355,13 @@ itself with the desktop on every HyDE theme switch.
 ### From HyprPanel to hydebar
 
 **Pros:**
-- ✅ Much faster (Rust vs TS)
-- ✅ Simpler config (TOML vs TS)
-- ✅ Notifications, weather, calendar and screenshot included
+- Much faster (Rust vs TS)
+- Simpler config (TOML vs TS)
+- Notifications, weather, calendar and screenshot included
 
 **Cons:**
-- ⚠️ Settings window covers layout and appearance, not every option
-- ⚠️ Beta software
+- Settings window covers layout and appearance, not every option
+- Beta software
 
 **Steps:**
 1. Use a preset theme or let the bar follow HyDE
@@ -372,10 +372,10 @@ itself with the desktop on every HyDE theme switch.
 ## Roadmap Comparison
 
 ### hydebar
-- ✅ Preset themes and animations — delivered
-- ✅ Performance work with a measured baseline — delivered
-- ✅ Notification center, screenshot, weather, calendar — delivered
-- 🔜 Settings window growth, documentation site — see [ROADMAP.md](../ROADMAP.md)
+- Preset themes and animations — delivered
+- Performance work with a measured baseline — delivered
+- Notification center, screenshot, weather, calendar — delivered
+- Settings window growth, documentation site — see [ROADMAP.md](../ROADMAP.md)
 
 ### Waybar
 - Stable, incremental improvements
@@ -392,23 +392,23 @@ itself with the desktop on every HyDE theme switch.
 ## Conclusion
 
 ### Choose **hydebar** if you want:
-- ⚡ Maximum performance (startup, idle CPU)
-- 🛡️ Memory safety (Rust)
-- ✨ Modern UX: themes, HyDE following, animations
-- 🎯 Type-safe configuration
-- 🧪 Reliability (extensively tested)
+- Maximum performance (startup, idle CPU)
+- Memory safety (Rust)
+- Modern UX: themes, HyDE following, animations
+- Type-safe configuration
+- Reliability (extensively tested)
 
 ### Choose **Waybar** if you want:
-- 🏆 Battle-tested stability
-- 📚 Extensive documentation
-- 👥 Large community support
-- 🌐 Multi-compositor support
-- 🔧 Full CSS customization
+- Battle-tested stability
+- Extensive documentation
+- Large community support
+- Multi-compositor support
+- Full CSS customization
 
 ### Choose **HyprPanel** if you want:
-- 🎨 Beautiful out-of-box
-- ⚙️ Full GUI configuration
-- 💻 TypeScript development
+- Beautiful out-of-box
+- Full GUI configuration
+- TypeScript development
 
 ---
 

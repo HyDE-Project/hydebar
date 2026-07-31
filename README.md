@@ -12,52 +12,51 @@
 
 [![Packaging status](https://repology.org/badge/vertical-allrepos/hydebar.svg)](https://repology.org/project/hydebar/versions)
 
-> ⚡ Blazing fast • 🎨 Beautiful themes • 🔧 Easy configuration
+>  Blazing fast •  Beautiful themes •  Easy configuration
 
 ---
 
 ## Features
 
 ### Core Modules
-- 🪟 **Workspaces** - Hyprland workspace integration
-- 📝 **Window Title** - Active window information
-- ⏰ **Clock** - Customizable date/time format, alternative formats cycled on click, calendar menu
-- 🌤️ **Weather** - OpenWeatherMap readout attached to the clock (`clock.show_weather` + `[weather]`)
-- 📊 **System Info** - CPU, RAM, temperature, GPU, disk, network speeds; readouts auto-detected
-- 📈 **CPU / Memory** - Standalone processor and memory entries over the same sampler
-- 🔋 **Battery** - Battery status and power profiles
-- 📡 **Network** - WiFi with signal strength %, VPN, connection management
-- 🔊 **Audio** - Volume control with inline sliders, sink/source selection
-- 🎵 **Media Player** - MPRIS integration with playback controls
-- 💡 **Brightness** - Screen brightness control with inline slider
-- 🔵 **Bluetooth** - Device management with quick connect/disconnect, battery levels
-- 📋 **Tray** - System tray support
-- 🔄 **Updates** - Package updates applied right in the menu; on HyDE the clone itself is watched and updated alongside, branch selectable
-- 📋 **Clipboard** - Clipboard history picker (cliphist by default)
-- 🔒 **Privacy** - Camera/microphone/screenshare indicators
-- ⌨️ **Keyboard Layout / Submap** - Layout switching with custom labels, active submap
-- 🚀 **App Launcher** - Quick app launcher button
-- 🔔 **Notifications** - Notification center with selectable source: built-in popups, Hyprland, or the session daemon
-- 📸 **Screenshot** - Screenshot and screen recording (grim/slurp/wf-recorder)
-- ☕ **Idle Inhibitor** - One click toggle keeping the session awake
-- 🎛️ **Control Center** - Quick settings panel: audio, network, bluetooth, power profile, power menu
-- ⚙️ **Settings** - The bar's own settings window: module layout and appearance, written back to the config
-- 🖼️ **Themes / Wallpaper / HyDE Menu** - Drive the HyDE desktop theme, cycle the wallpaper, open the HyDE menu tree
+- **Workspaces** - Hyprland workspace integration
+- **Window Title** - Active window information
+- **Clock** - Customizable date/time format, alternative formats cycled on click, calendar menu
+- **Weather** - OpenWeatherMap readout attached to the clock (`clock.show_weather` + `[weather]`)
+- **System Info** - CPU, RAM, temperature, GPU, disk, network speeds; readouts auto-detected, also placeable as standalone CPU and Memory entries
+- **Battery** - Battery status and power profiles
+- **Network** - WiFi with signal strength %, VPN, connection management
+- **Audio** - Volume control with inline sliders, sink/source selection
+- **Media Player** - MPRIS integration with playback controls
+- **Brightness** - Screen brightness control with inline slider
+- **Bluetooth** - Device management with quick connect/disconnect, battery levels
+- **Tray** - System tray support
+- **Updates** - Package updates applied right in the menu; on HyDE the clone itself is watched and updated alongside, branch selectable
+- **Clipboard** - Clipboard history picker (cliphist by default)
+- **Privacy** - Camera/microphone/screenshare indicators
+- **Keyboard Layout / Submap** - Layout switching with custom labels, active submap
+- **App Launcher** - Quick app launcher button
+- **Notifications** - Notification center with selectable source: built-in popups, Hyprland, or the session daemon
+- **Screenshot** - Screenshot and screen recording (grim/slurp/wf-recorder)
+- **Idle Inhibitor** - One click toggle keeping the session awake
+- **Control Center** - Quick settings panel: audio, network, bluetooth, power profile, power menu
+- **Settings** - The bar's own settings window: module layout and appearance, written back to the config
+- **Themes / Wallpaper / HyDE Menu** - Drive the HyDE desktop theme, cycle the wallpaper, open the HyDE menu tree
 
 ### Visual Features
-- 🎨 **11 Built-in Themes** - Catppuccin, Dracula, Nord, Gruvbox, Tokyo Night
-- 🖥️ **HyDE Integration** - Follows the HyDE desktop theme by default (`follow_hyde`), colours, font and radius included
-- ✨ **Smooth Animations** - Menu fade in/out, hover effects
-- 🏝️ **Multiple Styles** - Islands, Solid, Gradient
-- 🎭 **Opacity Control** - Transparent backgrounds and menus
-- 🔍 **Auto Scale** - The bar magnifies itself for the screen it lands on (`auto_scale`)
+- **11 Built-in Themes** - Catppuccin, Dracula, Nord, Gruvbox, Tokyo Night
+- **HyDE Integration** - Follows the HyDE desktop theme by default (`follow_hyde`), colours, font and radius included
+- **Smooth Animations** - Menu fade in/out, hover effects
+- **Multiple Styles** - Islands, Solid, Gradient
+- **Opacity Control** - Transparent backgrounds and menus
+- **Auto Scale** - The bar magnifies itself for the screen it lands on (`auto_scale`)
 
 ### Customization
-- 📦 **Custom Modules** - Extend with your own scripts
-- 🎨 **Full Color Control** - Customize every color
-- 🔣 **Icon Overrides** - Replace any built-in glyph via the `[icons]` table
-- 📐 **Flexible Layout** - Position modules left/center/right
-- 🔄 **Hot Reload** - Config changes apply instantly
+- **Custom Modules** - Extend with your own scripts
+- **Full Color Control** - Customize every color
+- **Icon Overrides** - Replace any built-in glyph via the `[icons]` table
+- **Flexible Layout** - Position modules left/center/right
+- **Hot Reload** - Config changes apply instantly
 
 ---
 
@@ -143,10 +142,10 @@ directories and the bar repaints on every theme switch. Set
 
 ## Documentation
 
-- 📖 [Configuration Guide](https://raprogramm.github.io/hydebar/docs/configuration) - All configuration options
-- 🎨 [Theme Guide](https://raprogramm.github.io/hydebar/docs/themes) - Creating custom themes
-- 🔧 [Module Reference](https://raprogramm.github.io/hydebar/docs/modules) - Module-specific settings
-- 🐛 [Troubleshooting](https://raprogramm.github.io/hydebar/docs/troubleshooting) - Common issues
+- [Configuration Guide](https://raprogramm.github.io/hydebar/docs/configuration) - All configuration options
+- [Theme Guide](https://raprogramm.github.io/hydebar/docs/themes) - Creating custom themes
+- [Module Reference](https://raprogramm.github.io/hydebar/docs/modules) - Module-specific settings
+- [Troubleshooting](https://raprogramm.github.io/hydebar/docs/troubleshooting) - Common issues
 
 ---
 
@@ -271,10 +270,10 @@ Full configuration reference at [docs/configuration](https://raprogramm.github.i
 Measured on a 4K output, release build (see
 [docs/perf-baseline-2026-07.md](docs/perf-baseline-2026-07.md)):
 
-- 🚀 **Fast Startup** - ~53ms from launch to mapped surface
-- ⚡ **Efficient** - ~0.5% CPU when idle; a menu opening and settling costs the same
-- 💾 **Memory** - ~127MB resident, dominated by the GPU rendering stack (wgpu over Vulkan)
-- 🦀 **100% Rust** - Memory-safe, zero-cost abstractions
+- **Fast Startup** - ~53ms from launch to mapped surface
+- **Efficient** - ~0.5% CPU when idle; a menu opening and settling costs the same
+- **Memory** - ~127MB resident, dominated by the GPU rendering stack (wgpu over Vulkan)
+- **100% Rust** - Memory-safe, zero-cost abstractions
 
 See [PERFORMANCE.md](PERFORMANCE.md) for the full numbers and methodology.
 
@@ -301,11 +300,11 @@ registers the bar as the HyDE session bar (see
 Contributions are welcome! See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for detailed guidelines.
 
 Quick links:
-- 🎨 [Submit new themes](docs/CONTRIBUTING.md#theme-development)
-- 🐛 [Report bugs](docs/CONTRIBUTING.md#report-bugs)
-- ✨ [Request features](docs/CONTRIBUTING.md#request-features)
-- 💻 [Development workflow](docs/CONTRIBUTING.md#development-workflow)
-- 📋 [Roadmap](ROADMAP.md)
+- [Submit new themes](docs/CONTRIBUTING.md#theme-development)
+- [Report bugs](docs/CONTRIBUTING.md#report-bugs)
+- [Request features](docs/CONTRIBUTING.md#request-features)
+- [Development workflow](docs/CONTRIBUTING.md#development-workflow)
+- [Roadmap](ROADMAP.md)
 
 ---
 
@@ -358,6 +357,6 @@ Licensed under the MIT License. See [LICENSE](LICENSE) for details.
 
 ---
 
-**Made with ❤️ for the Hyprland community**
+**Made with  for the Hyprland community**
 
 [Website](https://raprogramm.github.io/hydebar) • [Issues](https://github.com/RAprogramm/hydebar/issues) • [Discussions](https://github.com/RAprogramm/hydebar/discussions)

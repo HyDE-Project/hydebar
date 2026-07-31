@@ -9,18 +9,18 @@ hydebar is a fast, beautiful Wayland status bar built specifically for Hyprland.
 ### Why use hydebar instead of Waybar or HyprPanel?
 
 **vs Waybar:**
-- ✅ Faster (100% Rust vs C++)
-- ✅ Better Hyprland integration
-- ✅ Built-in themes
-- ✅ Smooth animations
-- ✅ Lower memory usage
+- Faster (100% Rust vs C++)
+- Better Hyprland integration
+- Built-in themes
+- Smooth animations
+- Lower memory usage
 
 **vs HyprPanel:**
-- ✅ Much faster (Rust vs TypeScript/GTK)
-- ✅ Lower resource usage
-- ✅ Native Wayland (no GTK overhead)
-- ✅ More stable
-- ✅ Weather, calendar and notification center included
+- Much faster (Rust vs TypeScript/GTK)
+- Lower resource usage
+- Native Wayland (no GTK overhead)
+- More stable
+- Weather, calendar and notification center included
 
 ### Is it stable for daily use?
 
@@ -180,7 +180,7 @@ See configuration example:
 ```toml
 [[CustomModule]]
 name = "MyModule"
-icon = "🔔"
+icon = ""
 command = "notify-send 'Clicked!'"
 ```
 

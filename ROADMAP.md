@@ -6,19 +6,19 @@
 
 ---
 
-## 🎯 Core Principles
+## Core Principles
 
-1. **⚡ Blazing Fast** - events over polling, sub-1% idle CPU, ~50ms startup
-2. **🎨 Beautiful** - Preset themes, HyDE theme following, smooth animations
-3. **🛠️ Easy to Configure** - Settings window, hot-reload, sensible defaults
-4. **🔧 Extensible** - Custom modules, plugin system (future)
+1. ** Blazing Fast** - events over polling, sub-1% idle CPU, ~50ms startup
+2. ** Beautiful** - Preset themes, HyDE theme following, smooth animations
+3. ** Easy to Configure** - Settings window, hot-reload, sensible defaults
+4. ** Extensible** - Custom modules, plugin system (future)
 5. **100% Rust** - Memory safe, zero-cost abstractions
 
 ---
 
-## 📊 Current State
+## Current State
 
-### ✅ Implemented Features
+### Implemented Features
 
 **Core Modules:**
 - Workspaces (Hyprland integration)
@@ -58,7 +58,7 @@
 - Config hot-reload; theme watcher for HyDE state
 - Single-instance takeover; child process supervision and orphan reaping
 
-### 🔧 Current Limitations
+### Current Limitations
 
 - Hyprland-only for workspaces, window title, keyboard layout
 - TOML configuration; the settings window covers layout and appearance, not every option
@@ -67,19 +67,19 @@
 
 ---
 
-## 🗓️ Development Phases
+## Development Phases
 
 The first three phases — visual polish (preset themes, animations),
 performance (measured baseline, startup and idle work, process hygiene) and
 enhanced features (notification center, screenshot/recording, inline
 controls, weather and calendar) — are **delivered**. What remains:
 
-## Phase: User Experience 🎯
+## Phase: User Experience 
 
-- ⚙️ **Settings window growth** - more of the configuration editable from the bar
-- 📚 **Documentation** - configuration reference, module reference, website
+- **Settings window growth** - more of the configuration editable from the bar
+- **Documentation** - configuration reference, module reference, website
 
-## Phase: Extra Features 🌟
+## Phase: Extra Features 
 
 ### Future Ideas
 - Plugin system (Lua/WASM)
@@ -91,28 +91,28 @@ controls, weather and calendar) — are **delivered**. What remains:
 
 ---
 
-## 🎯 Success Metrics
+## Success Metrics
 
 ### Performance (measured, see [docs/perf-baseline-2026-07.md](docs/perf-baseline-2026-07.md))
-- ✅ **Fast startup:** ~53ms to mapped surface (Waybar: ~100ms)
-- ✅ **Low idle CPU:** ~0.5% (Waybar: ~2%)
-- ⚠️ **Memory:** ~127MB resident — dominated by the GPU rendering stack, not the modules
+- **Fast startup:** ~53ms to mapped surface (Waybar: ~100ms)
+- **Low idle CPU:** ~0.5% (Waybar: ~2%)
+- **Memory:** ~127MB resident — dominated by the GPU rendering stack, not the modules
 
 ### Features (vs HyprPanel)
-- ✅ Core feature parity, including notifications, screenshot, weather, calendar
-- ✅ Better performance (Rust vs TypeScript/GTK)
-- ✅ Deep HyDE integration (theme following, session bar, HyDE menu)
+- Core feature parity, including notifications, screenshot, weather, calendar
+- Better performance (Rust vs TypeScript/GTK)
+- Deep HyDE integration (theme following, session bar, HyDE menu)
 
 ### Adoption
-- 🎯 100+ GitHub stars
-- 🎯 10+ contributors
-- 🎯 Featured in Hyprland showcase
-- ✅ AUR package
-- 🎯 Mentioned in r/hyprland
+- 100+ GitHub stars
+- 10+ contributors
+- Featured in Hyprland showcase
+- AUR package
+- Mentioned in r/hyprland
 
 ---
 
-## 📋 Prioritization Framework
+## Prioritization Framework
 
 **Priority Levels:**
 
@@ -128,7 +128,7 @@ controls, weather and calendar) — are **delivered**. What remains:
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Want to help? Check out:
 - Issues labeled `good first issue`
@@ -142,13 +142,13 @@ Want to help? Check out:
 
 ---
 
-## 📞 Feedback
+## Feedback
 
 Have ideas? Open an issue or discussion!
 
-- 🐛 Bugs: [Issues](https://github.com/RAprogramm/hydebar/issues)
-- 💡 Feature requests: [Discussions](https://github.com/RAprogramm/hydebar/discussions)
+- Bugs: [Issues](https://github.com/RAprogramm/hydebar/issues)
+- Feature requests: [Discussions](https://github.com/RAprogramm/hydebar/discussions)
 
 ---
 
-**Status:** Active development 🚧
+**Status:** Active development 
