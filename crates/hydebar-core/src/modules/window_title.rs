@@ -1,6 +1,6 @@
 use std::{sync::Arc, time::Duration};
 
-use hydebar_proto::ports::hyprland::{HyprlandPort, HyprlandWindowEvent};
+use hydebar_proto::ports::hyprland::{HyprlandPort, HyprlandWindowEvent, HyprlandWindowInfo};
 use iced::{Element, widget::text};
 use log::error;
 use tokio::{task::JoinHandle, time::sleep};
@@ -18,18 +18,44 @@ const WINDOW_EVENT_RETRY_DELAY: Duration = Duration::from_millis(500);
 
 use super::{Module, ModuleError, OnModulePress};
 
+/// Resolves the focused window off the async workers and publishes it.
+///
+/// The port call blocks on the compositor socket with retries; resolving it
+/// here keeps both the runtime workers and the update thread free, and the
+/// message arrives carrying its data instead of an order to go fetch some.
+async fn publish_active_window(
+    port: &Arc<dyn HyprlandPort>,
+    sender: &crate::ModuleEventSender<Message>
+) {
+    let port = Arc::clone(port);
+
+    match tokio::task::spawn_blocking(move || port.active_window()).await {
+        Ok(Ok(window)) => {
+            if let Err(err) = sender.try_send(Message::TitleChanged(window)) {
+                error!("failed to publish window title update: {err}");
+            }
+        }
+        Ok(Err(err)) => error!("failed to retrieve active window: {err}"),
+        Err(err) => error!("active window task failed: {err}")
+    }
+}
+
 fn get_window(port: &dyn HyprlandPort, config: &WindowTitleConfig) -> Option<String> {
     match port.active_window() {
-        Ok(Some(window)) => Some(match config.mode {
-            WindowTitleMode::Title => window.title,
-            WindowTitleMode::Class => window.class
-        }),
-        Ok(None) => None,
+        Ok(window) => shown_field(window, config),
         Err(err) => {
             error!("failed to retrieve active window: {err}");
             None
         }
     }
+}
+
+/// Field of the focused window the configured mode shows.
+fn shown_field(window: Option<HyprlandWindowInfo>, config: &WindowTitleConfig) -> Option<String> {
+    window.map(|window| match config.mode {
+        WindowTitleMode::Title => window.title,
+        WindowTitleMode::Class => window.class
+    })
 }
 
 /// The title as the bar draws it.
@@ -59,7 +85,7 @@ pub struct WindowTitle {
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    TitleChanged
+    TitleChanged(Option<HyprlandWindowInfo>)
 }
 
 impl WindowTitle {
@@ -107,7 +133,7 @@ mod tests {
         let config = WindowTitleConfig::default();
 
         let mut module = WindowTitle::new(port_trait, &config);
-        module.update(Message::TitleChanged, &config);
+        module.update(Message::TitleChanged(None), &config);
 
         assert_eq!(module.current_value(), None);
     }
@@ -148,7 +174,13 @@ mod tests {
         };
 
         let mut module = WindowTitle::new(port_trait, &config);
-        module.update(Message::TitleChanged, &config);
+        module.update(
+            Message::TitleChanged(Some(HyprlandWindowInfo {
+                title: "a window with a very long title indeed".to_owned(),
+                class: "Class".to_owned()
+            })),
+            &config
+        );
 
         assert_eq!(
             module.current_value(),
@@ -161,8 +193,8 @@ mod tests {
 impl WindowTitle {
     pub fn update(&mut self, message: Message, config: &WindowTitleConfig) {
         match message {
-            Message::TitleChanged => {
-                self.value = get_window(self.hyprland.as_ref(), config);
+            Message::TitleChanged(window) => {
+                self.value = shown_field(window, config);
             }
         }
     }
@@ -205,9 +237,7 @@ where
                                         | HyprlandWindowEvent::WindowClosed
                                         | HyprlandWindowEvent::WorkspaceFocusChanged
                                     ) => {
-                                        if let Err(err) = sender.try_send(Message::TitleChanged) {
-                                            error!("failed to publish window title update: {err}");
-                                        }
+                                        publish_active_window(&hyprland, &sender).await;
                                     }
                                     Err(err) => {
                                         error!("window event stream error: {err}");

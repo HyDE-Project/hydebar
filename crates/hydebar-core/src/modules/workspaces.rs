@@ -155,6 +155,7 @@ pub struct Workspaces {
     hyprland:   Arc<dyn HyprlandPort>,
     workspaces: Vec<Workspace>,
     sender:     Option<ModuleEventSender<Message>>,
+    runtime:    Option<tokio::runtime::Handle>,
     task:       Option<JoinHandle<()>>
 }
 
@@ -166,6 +167,7 @@ impl Workspaces {
             hyprland,
             workspaces,
             sender: None,
+            runtime: None,
             task: None
         }
     }
@@ -174,11 +176,39 @@ impl Workspaces {
     pub(crate) fn items(&self) -> &[Workspace] {
         &self.workspaces
     }
+
+    /// Runs a compositor dispatch off the thread the bar draws on.
+    ///
+    /// The port retries with a timeout when the compositor socket stalls;
+    /// waiting that out on the update thread would freeze every module. A
+    /// module that was never registered has no runtime and dispatches inline,
+    /// which keeps tests synchronous.
+    fn spawn_dispatch(
+        &self,
+        dispatch: impl FnOnce() -> Result<(), hydebar_proto::ports::hyprland::HyprlandError>
+        + Send
+        + 'static
+    ) {
+        match &self.runtime {
+            Some(runtime) => {
+                runtime.spawn_blocking(move || {
+                    if let Err(err) = dispatch() {
+                        error!("failed to dispatch workspace command: {err}");
+                    }
+                });
+            }
+            None => {
+                if let Err(err) = dispatch() {
+                    error!("failed to dispatch workspace command: {err}");
+                }
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    WorkspacesChanged,
+    WorkspacesChanged(HyprlandWorkspaceSnapshot),
     ChangeWorkspace(i32),
     ToggleSpecialWorkspace(i32)
 }
@@ -186,20 +216,18 @@ pub enum Message {
 impl Workspaces {
     pub fn update(&mut self, message: Message, config: &WorkspacesModuleConfig) {
         match message {
-            Message::WorkspacesChanged => {
-                self.workspaces = get_workspaces(self.hyprland.as_ref(), config);
+            Message::WorkspacesChanged(snapshot) => {
+                self.workspaces = map_snapshot_to_workspaces(&snapshot, config);
             }
             Message::ChangeWorkspace(id) => {
                 if id > 0 {
                     let already_active = self.workspaces.iter().any(|w| w.active && w.id == id);
                     if !already_active {
                         debug!("changing workspace to: {id}");
-                        let res = self
-                            .hyprland
-                            .change_workspace(HyprlandWorkspaceSelector::Id(id));
-                        if let Err(e) = res {
-                            error!("failed to dispatch workspace change: {e}");
-                        }
+                        let port = Arc::clone(&self.hyprland);
+                        self.spawn_dispatch(move || {
+                            port.change_workspace(HyprlandWorkspaceSelector::Id(id))
+                        });
                     }
                 }
             }
@@ -207,24 +235,51 @@ impl Workspaces {
                 if let Some(special) = self.workspaces.iter().find(|w| w.id == id && w.id < 0) {
                     debug!("toggle special workspace: {id}");
 
-                    // Prefer focusing by monitor index if present; otherwise, fall back to monitor
-                    // name.
                     let monitor_ident = match special.monitor_id {
                         Some(idx) => HyprlandMonitorSelector::Id(idx),
                         None => HyprlandMonitorSelector::Name(special.monitor.clone())
                     };
+                    let name = special.name.clone();
+                    let port = Arc::clone(&self.hyprland);
 
-                    let res = self
-                        .hyprland
-                        .focus_and_toggle_special_workspace(monitor_ident, &special.name);
-
-                    if let Err(e) = res {
-                        error!("failed to dispatch special workspace toggle: {e}");
-                    }
+                    self.spawn_dispatch(move || {
+                        port.focus_and_toggle_special_workspace(monitor_ident, &name)
+                    });
                 }
             }
         }
     }
+}
+
+/// Resolves a fresh snapshot off the async workers and publishes it.
+///
+/// The port call blocks on the compositor socket with retries, so it runs on
+/// the blocking pool rather than on a runtime worker the other modules share.
+async fn publish_snapshot(port: &Arc<dyn HyprlandPort>, sender: &ModuleEventSender<Message>) {
+    let port = Arc::clone(port);
+
+    match tokio::task::spawn_blocking(move || port.workspace_snapshot()).await {
+        Ok(Ok(snapshot)) => {
+            if let Err(err) = sender.try_send(Message::WorkspacesChanged(snapshot)) {
+                error!("failed to publish workspace update: {err}");
+            }
+        }
+        Ok(Err(err)) => error!("failed to retrieve workspace snapshot: {err}"),
+        Err(err) => error!("workspace snapshot task failed: {err}")
+    }
+}
+
+/// Swallows the rest of an event burst before the snapshot is taken.
+///
+/// A window being dragged across monitors lands as a handful of events within
+/// a few milliseconds; one snapshot at the end of the burst shows the same
+/// state as one per event, without the round-trips.
+async fn drain_burst(
+    stream: &mut hydebar_proto::ports::hyprland::HyprlandEventStream<HyprlandWorkspaceEvent>
+) {
+    const SETTLE: Duration = Duration::from_millis(25);
+
+    while let Ok(Some(_)) = tokio::time::timeout(SETTLE, stream.next()).await {}
 }
 
 impl<M> Module<M> for Workspaces
@@ -237,11 +292,10 @@ where
     fn register(
         &mut self,
         ctx: &ModuleContext,
-        config: Self::RegistrationData<'_>
+        _config: Self::RegistrationData<'_>
     ) -> Result<(), ModuleError> {
-        self.workspaces = get_workspaces(self.hyprland.as_ref(), config);
-
         self.sender = Some(ctx.module_sender(ModuleEvent::Workspaces));
+        self.runtime = Some(ctx.runtime_handle().clone());
 
         if let Some(handle) = self.task.take() {
             handle.abort();
@@ -250,6 +304,8 @@ where
         if let Some(sender) = self.sender.clone() {
             let hyprland = Arc::clone(&self.hyprland);
             self.task = Some(ctx.runtime_handle().spawn(async move {
+                publish_snapshot(&hyprland, &sender).await;
+
                 loop {
                     match hyprland.workspace_events() {
                         Ok(mut stream) => {
@@ -267,11 +323,8 @@ where
                                         | HyprlandWorkspaceEvent::WindowMoved
                                         | HyprlandWorkspaceEvent::ActiveMonitorChanged
                                     ) => {
-                                        if let Err(err) =
-                                            sender.try_send(Message::WorkspacesChanged)
-                                        {
-                                            error!("failed to publish workspace update: {err}");
-                                        }
+                                        drain_burst(&mut stream).await;
+                                        publish_snapshot(&hyprland, &sender).await;
                                     }
                                     Err(err) => {
                                         error!("workspace event stream error: {err}");
@@ -287,12 +340,6 @@ where
                     sleep(WORKSPACE_EVENT_RETRY_DELAY).await;
                 }
             }));
-        }
-
-        if let Some(sender) = self.sender.clone()
-            && let Err(err) = sender.try_send(Message::WorkspacesChanged)
-        {
-            error!("failed to enqueue initial workspace refresh: {err}");
         }
 
         Ok(())
