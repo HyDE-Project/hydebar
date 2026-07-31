@@ -7,7 +7,10 @@
 //!
 //! Order, highest first, mirroring what HyDE itself does:
 //!
-//! 1. `~/.config/hyde/config.toml` — `WAYBAR_FONT`, `WAYBAR_SCALE`
+//! 1. `~/.local/state/hyde/config` — the flat export the `hyde-config` daemon
+//!    writes out of `config.toml`; `~/.config/hyde/config.toml` itself is the
+//!    fallback for installs old enough to keep flat assignments there —
+//!    `WAYBAR_FONT`, `WAYBAR_SCALE`
 //! 2. `~/.config/hyde/themes/<theme>/hypr.theme` — `$BAR_FONT`,
 //!    `$BAR_FONT_SIZE`
 //! 3. `~/.local/state/hyde/staterc` — `BAR_FONT`, `BAR_FONT_SIZE`
@@ -92,9 +95,12 @@ impl Sources {
         let hypr_theme = shell_vars::value_of(&staterc, THEME_KEY)
             .and_then(|theme| fs::read_to_string(dirs.hypr_theme(&theme)).ok())
             .unwrap_or_default();
+        let config = fs::read_to_string(dirs.hyde_config_export())
+            .or_else(|_| fs::read_to_string(dirs.hyde_config()))
+            .unwrap_or_default();
 
         Self {
-            config: fs::read_to_string(dirs.hyde_config()).unwrap_or_default(),
+            config,
             hypr_theme,
             staterc,
             env_theme: fs::read_to_string(dirs.env_theme()).unwrap_or_default()
@@ -176,6 +182,11 @@ mod tests {
             self.write(path, contents)
         }
 
+        fn config_export(self, contents: &str) -> Self {
+            let path = self.dirs.hyde_config_export();
+            self.write(path, contents)
+        }
+
         fn env_theme(self, contents: &str) -> Self {
             let path = self.dirs.env_theme();
             self.write(path, contents)
@@ -223,6 +234,26 @@ mod tests {
             .hyde_config("WAYBAR_FONT=\"Cantarell\"\n");
 
         assert_eq!(read(&install.dirs).family, "Cantarell");
+    }
+
+    #[test]
+    fn the_flat_export_outranks_the_settings_file_it_was_generated_from() {
+        let install = Install::new()
+            .hyde_config("WAYBAR_FONT=\"Cantarell\"\n")
+            .config_export("export WAYBAR_FONT=\"Mononoki Nerd Font\"\n");
+
+        assert_eq!(read(&install.dirs).family, "Mononoki Nerd Font");
+    }
+
+    #[test]
+    fn a_sectioned_settings_file_yields_to_the_export_that_flattens_it() {
+        let install = Install::new()
+            .hyde_config("[waybar]\nfont = \"Cantarell\"\n")
+            .config_export("export WAYBAR_FONT=\"Cantarell\"\nexport WAYBAR_SCALE=\"12\"\n");
+
+        let font = read(&install.dirs);
+        assert_eq!(font.family, "Cantarell");
+        assert_eq!(font.size_px, 12.0);
     }
 
     #[test]

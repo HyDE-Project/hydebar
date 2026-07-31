@@ -101,6 +101,18 @@ impl HydeDirs {
         self.hyde_config_dir().join("config.toml")
     }
 
+    /// The flat settings export, `~/.local/state/hyde/config`.
+    ///
+    /// The `hyde-config` daemon parses `config.toml` into `export KEY=value`
+    /// lines here, and HyDE's own tools read the settings from this export
+    /// rather than from the TOML. The bar does the same: the TOML grew
+    /// sections a shell-assignment parser cannot follow, while the export
+    /// stays flat by construction.
+    #[must_use]
+    pub fn hyde_config_export(&self) -> PathBuf {
+        self.hyde_state_dir().join("config")
+    }
+
     /// The session state file, `~/.local/state/hyde/staterc`.
     ///
     /// Carries the active theme, `enableWallDcol` and the bar font overrides,
