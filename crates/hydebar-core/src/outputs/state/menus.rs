@@ -21,7 +21,7 @@ impl Outputs {
         self.0.iter().any(|(_, shell_info, _)| {
             shell_info
                 .as_ref()
-                .map(|shell_info| shell_info.menu.menu_info.is_some())
+                .map(|shell_info| shell_info.menu.is_open())
                 .unwrap_or_default()
         })
     }
@@ -34,6 +34,7 @@ impl Outputs {
         self.0.iter().find_map(|(_, shell_info, _)| {
             shell_info
                 .as_ref()
+                .filter(|shell_info| shell_info.menu.is_open())
                 .and_then(|shell_info| shell_info.menu.menu_info.as_ref())
                 .map(|(menu_type, _)| menu_type)
         })
@@ -71,21 +72,26 @@ impl Outputs {
             .unwrap_or(0.0)
     }
 
-    /// Update menu animations. Returns true if any menu is currently animating.
-    pub fn tick_menu_animations(
+    /// Update menu animations. Returns whether any menu is still animating,
+    /// together with the tasks finishing the closes that just completed.
+    pub fn tick_menu_animations<Message: 'static>(
         &mut self,
         animation_config: &crate::config::AnimationConfig,
         elapsed: std::time::Duration
-    ) -> bool {
+    ) -> (bool, Task<Message>) {
         let mut is_animating = false;
+        let mut tasks = Vec::new();
+
         for (_, shell_info, _) in &mut self.0 {
-            if let Some(shell_info) = shell_info
-                && shell_info.menu.tick_animation(animation_config, elapsed)
-            {
-                is_animating = true;
+            if let Some(shell_info) = shell_info {
+                let (running, task) = shell_info.menu.tick_animation(animation_config, elapsed);
+
+                is_animating |= running;
+                tasks.push(task);
             }
         }
-        is_animating
+
+        (is_animating, Task::batch(tasks))
     }
 
     /// Returns whether any menu still has an unfinished animation.
@@ -285,7 +291,7 @@ impl Outputs {
                 .iter_mut()
                 .map(|(_, shell_info, _)| {
                     if let Some(shell_info) = shell_info {
-                        if shell_info.menu.menu_info.is_some() {
+                        if shell_info.menu.is_open() {
                             shell_info.menu.close(config)
                         } else {
                             Task::none()

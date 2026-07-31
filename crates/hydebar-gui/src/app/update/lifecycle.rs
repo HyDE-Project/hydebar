@@ -40,7 +40,7 @@ impl App {
                 hydebar_core::notifications_popup::prune(&mut self.notification_popups, now);
                 let popups_changed = popups_before != self.notification_popups.len();
 
-                let menus_animating = self
+                let (menus_animating, menu_tasks) = self
                     .outputs
                     .tick_menu_animations(&self.config.appearance.animations, elapsed);
                 let theme_animating = self.appearance_transition.advance(elapsed);
@@ -55,9 +55,9 @@ impl App {
                 }
 
                 if popups_changed {
-                    self.fit_notification_surface()
+                    Task::batch([menu_tasks, self.fit_notification_surface()])
                 } else {
-                    Task::none()
+                    menu_tasks
                 }
             }
             Message::BusFlushed(outcome) => {
