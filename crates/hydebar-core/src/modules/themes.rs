@@ -642,19 +642,19 @@ mod view {
                     ThemeChip::Idle
                 };
 
-                row = row.push(card(
-                    theme_chip(
-                        name.clone(),
-                        Message::Install(name.clone()),
-                        chip_state,
-                        font_size,
-                        opacity,
-                        cell,
-                        entry.map(offer_paint)
-                    ),
-                    vec![(Icons::Download, Message::Install(name.clone()), !busy)],
+                row = row.push(theme_chip(
+                    name.clone(),
+                    Message::Install(name.clone()),
+                    chip_state,
                     font_size,
-                    opacity
+                    opacity,
+                    cell,
+                    entry.map(offer_paint),
+                    vec![(
+                        Icons::Download.default_glyph(),
+                        Message::Install(name.clone()),
+                        !busy
+                    )]
                 ));
             }
 
@@ -740,11 +740,18 @@ mod view {
                     )
                 };
 
-                let paint = catalogue
-                    .iter()
-                    .find(|entry| same_theme(&entry.name, name))
-                    .map(offer_paint)
-                    .or_else(|| swatches.get(name).map(chip_paint));
+                let paint = swatches.get(name).map(chip_paint).or_else(|| {
+                    catalogue
+                        .iter()
+                        .find(|entry| same_theme(&entry.name, name))
+                        .map(offer_paint)
+                });
+
+                let trash = if doomed {
+                    Message::Remove(name.clone())
+                } else {
+                    Message::Condemn(name.clone())
+                };
 
                 let chip = theme_chip(
                     name.clone(),
@@ -753,74 +760,26 @@ mod view {
                     font_size,
                     opacity,
                     cell,
-                    paint
+                    paint,
+                    vec![
+                        (
+                            Icons::Refresh.default_glyph(),
+                            Message::Update(Some(name.clone())),
+                            !busy
+                        ),
+                        (Icons::Trash.default_glyph(), trash, !busy || doomed),
+                    ]
                 );
 
-                let trash = if doomed {
-                    Message::Remove(name.clone())
-                } else {
-                    Message::Condemn(name.clone())
-                };
-
-                row = row.push(card(
-                    iced::widget::mouse_area(chip)
-                        .on_right_press(Message::Condemn(name.clone()))
-                        .into(),
-                    vec![
-                        (Icons::Refresh, Message::Update(Some(name.clone())), !busy),
-                        (Icons::Trash, trash, !busy || doomed),
-                    ],
-                    font_size,
-                    opacity
-                ));
+                row = row.push(
+                    iced::widget::mouse_area(chip).on_right_press(Message::Condemn(name.clone()))
+                );
             }
 
             block = block.push(row);
         }
 
         block.into()
-    }
-
-    /// One card of either section: the chip above its row of actions.
-    ///
-    /// Both sections build through here, which is what keeps every card the
-    /// same shape whatever it offers.
-    fn card<'a>(
-        chip: Element<'a, Message>,
-        actions: Vec<(Icons, Message, bool)>,
-        font_size: f32,
-        opacity: f32
-    ) -> Element<'a, Message> {
-        use iced::widget::{Column, Row, button};
-
-        use crate::{
-            components::{icons::icon_raw, scale},
-            style::ghost_button_style
-        };
-
-        let control = style::control_size(font_size);
-        let mut row = Row::new()
-            .spacing(scale::icon_gap())
-            .align_y(iced::Alignment::Center);
-
-        for (glyph, message, enabled) in actions {
-            let mut control_button = button(icon_raw(glyph.default_glyph().to_owned()))
-                .padding(control * 0.2)
-                .style(ghost_button_style(opacity));
-
-            if enabled {
-                control_button = control_button.on_press(message);
-            }
-
-            row = row.push(control_button);
-        }
-
-        Column::new()
-            .push(chip)
-            .push(row)
-            .spacing(control * 0.2)
-            .align_x(iced::Alignment::Center)
-            .into()
     }
 
     /// The row offering the one fetch that updates every installed theme.

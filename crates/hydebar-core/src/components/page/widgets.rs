@@ -309,14 +309,15 @@ impl ThemeChip {
 /// for — the grid becomes a palette of the themes themselves — and the theme
 /// in force is told apart by a ring of its own accent, since a fill can no
 /// longer mark it.
-pub(crate) fn theme_chip<'a, M: Clone + 'a>(
+pub(crate) fn theme_chip<'a, M: Clone + 'static>(
     label: String,
     message: M,
     state: ThemeChip,
     font_size: f32,
     opacity: f32,
     cell: f32,
-    paint: Option<ChipPaint>
+    paint: Option<ChipPaint>,
+    actions: Vec<(&'static str, M, bool)>
 ) -> Element<'a, M> {
     let control = style::control_size(font_size);
 
@@ -325,7 +326,7 @@ pub(crate) fn theme_chip<'a, M: Clone + 'a>(
         .width(iced::Length::Fill)
         .align_x(iced::Alignment::Center);
 
-    let content: Element<'a, M> = match paint {
+    let body: Element<'a, M> = match paint {
         Some(paint) => {
             let mut column = Column::new()
                 .spacing(DOT_GAP_EM * control)
@@ -341,16 +342,43 @@ pub(crate) fn theme_chip<'a, M: Clone + 'a>(
         None => name.into()
     };
 
-    let mut chip = button(content).width(cell).padding([
+    let mut pressable = iced::widget::mouse_area(container(body).width(Length::Fill));
+
+    if state.is_pressable() {
+        pressable = pressable.on_press(message);
+    }
+
+    let mut content = Column::new()
+        .push(pressable)
+        .spacing(DOT_GAP_EM * control)
+        .align_x(Alignment::Center);
+
+    if !actions.is_empty() {
+        let mut deeds = Row::new()
+            .spacing(DOT_GAP_EM * control)
+            .align_y(Alignment::Center);
+
+        for (glyph, deed, enabled) in actions {
+            let mut deed_button = button(icon_raw_sized(glyph.to_owned(), Some(control * 0.9)))
+                .padding(control * 0.15)
+                .style(crate::style::ghost_button_style(opacity));
+
+            if enabled {
+                deed_button = deed_button.on_press(deed);
+            }
+
+            deeds = deeds.push(deed_button);
+        }
+
+        content = content.push(deeds);
+    }
+
+    let card = container(content).width(cell).padding([
         style::CHIP_PADDING_EM[0] * control,
         style::CHIP_PADDING_EM[1] * control
     ]);
 
-    if state.is_pressable() {
-        chip = chip.on_press(message);
-    }
-
-    chip.style(move |theme: &Theme, _status| {
+    card.style(move |theme: &Theme| {
         let palette = theme.extended_palette();
 
         let (base, text_colour, ring) = match paint {
@@ -403,11 +431,11 @@ pub(crate) fn theme_chip<'a, M: Clone + 'a>(
             border = border.color(ring).width(2.0);
         }
 
-        button::Style {
+        container::Style {
             background: Some(Background::Color(background.scale_alpha(opacity))),
-            text_color,
+            text_color: Some(text_color),
             border,
-            ..button::Style::default()
+            ..container::Style::default()
         }
     })
     .into()
