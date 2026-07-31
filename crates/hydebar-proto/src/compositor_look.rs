@@ -15,10 +15,12 @@ use std::{
 ///
 /// A single theme reload asks for the look more than once — the watcher reads
 /// it for the theme and the window re-reads it to adopt the screen — and each
-/// uncached reading costs four spawned processes. The compositor's own look
-/// changes on the pace of a config edit, so a moment of staleness is
-/// invisible while the duplicate spawns are not.
-const FRESH_FOR: Duration = Duration::from_secs(1);
+/// uncached reading costs four spawned processes. The window is a backstop:
+/// the compositor announces a configuration reload on its event socket and
+/// [`CompositorLook::invalidate`] answers it, so an edit lands on the next
+/// read and the clock only covers changes the socket never announced, such as
+/// a keyword set by hand.
+const FRESH_FOR: Duration = Duration::from_secs(30);
 
 /// The last look read, and when it was read.
 static LAST_READ: Mutex<Option<(Instant, CompositorLook)>> = Mutex::new(None);
@@ -44,19 +46,29 @@ impl CompositorLook {
     /// [`FRESH_FOR`] answers again instead of asking the compositor over.
     #[must_use]
     pub fn read() -> Self {
-        let now = Instant::now();
-        let mut last = LAST_READ.lock().unwrap_or_else(PoisonError::into_inner);
-
-        if let Some((at, look)) = *last
-            && now.duration_since(at) < FRESH_FOR
         {
-            return look;
+            let last = LAST_READ.lock().unwrap_or_else(PoisonError::into_inner);
+
+            if let Some((at, look)) = *last
+                && at.elapsed() < FRESH_FOR
+            {
+                return look;
+            }
         }
 
         let look = Self::query_compositor();
-        *last = Some((now, look));
+        *LAST_READ.lock().unwrap_or_else(PoisonError::into_inner) = Some((Instant::now(), look));
 
         look
+    }
+
+    /// Forgets the cached reading, so the next read asks the compositor.
+    ///
+    /// Called when the compositor announces a configuration reload: the look
+    /// may have changed with it, and waiting out the freshness window would
+    /// leave the bar drawn against the old one.
+    pub fn invalidate() {
+        *LAST_READ.lock().unwrap_or_else(PoisonError::into_inner) = None;
     }
 
     /// Asks the compositor for every part of the look.

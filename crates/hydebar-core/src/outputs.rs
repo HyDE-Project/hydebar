@@ -36,6 +36,7 @@ pub fn start_blur_guard() {
 
             listener.add_config_reloaded_handler(|| {
                 log::debug!("compositor reloaded, restating the blur rules");
+                hydebar_proto::compositor_look::CompositorLook::invalidate();
                 blur::request();
             });
 
