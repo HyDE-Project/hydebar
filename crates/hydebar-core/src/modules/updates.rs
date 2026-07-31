@@ -179,55 +179,47 @@ mod commands {
     /// message would redraw the window hundreds of times for one update.
     const LOG_FLUSH: std::time::Duration = std::time::Duration::from_millis(150);
 
-    /// Wrapper that answers `sudo` through the desktop's polkit agent.
+    /// The dialog sudo raises when it has no terminal to ask on.
     ///
-    /// The update runs without a terminal, so sudo has nowhere to ask for a
-    /// password. The desktop already has a window for exactly that — the
-    /// polkit agent — but sudo does not speak polkit. This wrapper, placed
-    /// first on the update's `PATH` under the name `sudo`, hands the command
-    /// to `pkexec` instead, and the agent asks on screen. Session flags like
-    /// `-v` succeed quietly: polkit has no session to warm up.
-    const SUDO_SHIM: &str = concat!(
+    /// The update runs without a terminal, and sudo in that position turns to
+    /// the helper `SUDO_ASKPASS` names — once per elevated run, with its usual
+    /// grace period after, unlike polkit's per-command prompting that turned a
+    /// long install into a hail of dialogs.
+    const ASKPASS: &str = concat!(
         "#!/usr/bin/env bash\n",
-        "user=''\n",
-        "while [ \"$#\" -gt 0 ]; do\n",
-        "  case \"$1\" in\n",
-        "    -v|-k|-K|--validate) exit 0 ;;\n",
-        "    -u|--user) user=\"$2\"; shift 2 ;;\n",
-        "    --) shift; break ;;\n",
-        "    -*) shift ;;\n",
-        "    *) break ;;\n",
-        "  esac\n",
-        "done\n",
-        "[ \"$#\" -gt 0 ] || exit 0\n",
-        "if [ -n \"$user\" ]; then exec pkexec --user \"$user\" \"$@\"; fi\n",
-        "exec pkexec \"$@\"\n"
+        "exec zenity --password --title='Updates' \"$@\"\n"
     );
 
-    /// Writes the sudo wrapper into `dir` and returns its path.
-    fn write_sudo_shim(dir: &std::path::Path) -> Option<std::path::PathBuf> {
+    /// Writes the password dialog helper into `dir` and returns its path.
+    fn write_askpass(dir: &std::path::Path) -> Option<std::path::PathBuf> {
         use std::os::unix::fs::PermissionsExt;
 
         std::fs::create_dir_all(dir).ok()?;
 
-        let shim = dir.join("sudo");
-        std::fs::write(&shim, SUDO_SHIM).ok()?;
+        let helper = dir.join("askpass");
+        std::fs::write(&helper, ASKPASS).ok()?;
 
-        let mut permissions = std::fs::metadata(&shim).ok()?.permissions();
+        let mut permissions = std::fs::metadata(&helper).ok()?.permissions();
         permissions.set_mode(0o755);
-        std::fs::set_permissions(&shim, permissions).ok()?;
+        std::fs::set_permissions(&helper, permissions).ok()?;
 
-        Some(shim)
+        Some(helper)
     }
 
-    /// A `PATH` whose `sudo` asks through the polkit agent, when it can.
+    /// The password helper the update should run with, when one is needed.
     ///
-    /// Without `pkexec` there is no polkit to hand the password question to,
-    /// and the update runs with the environment it inherited.
-    fn polkit_path() -> Option<std::ffi::OsString> {
-        let current = std::env::var_os("PATH")?;
+    /// An environment that already names one is respected; otherwise the
+    /// zenity dialog is offered, provided zenity is installed at all.
+    fn askpass_helper() -> Option<std::path::PathBuf> {
+        if let Some(existing) = std::env::var_os("SUDO_ASKPASS")
+            && !existing.is_empty()
+        {
+            return Some(std::path::PathBuf::from(existing));
+        }
 
-        if !std::env::split_paths(&current).any(|dir| dir.join("pkexec").exists()) {
+        let path = std::env::var_os("PATH")?;
+
+        if !std::env::split_paths(&path).any(|dir| dir.join("zenity").exists()) {
             return None;
         }
 
@@ -235,14 +227,8 @@ mod commands {
             .or_else(dirs::cache_dir)?
             .join("hydebar")
             .join("elevate");
-        let shim = write_sudo_shim(&dir)?;
-        let dir = shim.parent()?;
 
-        let mut joined = std::ffi::OsString::from(dir);
-        joined.push(":");
-        joined.push(current);
-
-        Some(joined)
+        write_askpass(&dir)
     }
 
     /// Brings the HyDE clone up to date the way upstream documents it,
@@ -287,8 +273,8 @@ mod commands {
             .stderr(Stdio::null())
             .kill_on_drop(true);
 
-        if let Some(path) = polkit_path() {
-            spawner.env("PATH", path);
+        if let Some(helper) = askpass_helper() {
+            spawner.env("SUDO_ASKPASS", helper);
         }
 
         let mut child = spawner.spawn()?;
@@ -532,37 +518,29 @@ mod commands {
             assert!(script.contains("reset --hard 'origin/''dev'"));
         }
 
-        /// Session flags must succeed quietly and commands must go to pkexec,
-        /// or the installer's `sudo -v` warm-up would kill the whole update.
         #[test]
-        fn the_sudo_shim_speaks_polkit() {
-            assert!(SUDO_SHIM.contains("exec pkexec"));
-            assert!(SUDO_SHIM.contains("-v|-k|-K|--validate) exit 0"));
-        }
-
-        #[test]
-        fn the_shim_lands_executable() {
+        fn the_password_dialog_lands_executable() {
             let dir = std::env::temp_dir().join(format!(
-                "hydebar-shim-{}-{:?}",
+                "hydebar-askpass-{}-{:?}",
                 std::process::id(),
                 std::thread::current().id()
             ));
 
-            let shim = write_sudo_shim(&dir).expect("the shim is written");
+            let helper = write_askpass(&dir).expect("the helper is written");
 
             let mode = {
                 use std::os::unix::fs::PermissionsExt;
 
-                std::fs::metadata(&shim)
-                    .expect("the shim exists")
+                std::fs::metadata(&helper)
+                    .expect("the helper exists")
                     .permissions()
                     .mode()
             };
-            let content = std::fs::read_to_string(&shim).expect("the shim reads back");
+            let content = std::fs::read_to_string(&helper).expect("the helper reads back");
             let _ = std::fs::remove_dir_all(&dir);
 
             assert_eq!(mode & 0o111, 0o111);
-            assert!(content.contains("pkexec"));
+            assert!(content.contains("zenity --password"));
         }
 
         #[test]
@@ -717,9 +695,24 @@ mod state {
         }
 
         /// Folds both open lists shut, the state a freshly opened menu shows.
+        ///
+        /// Leftover narration goes with them: a log that outlived its run was
+        /// read in the window that witnessed it, and a window opened anew
+        /// should not still be reporting last time's weather. A run still
+        /// going keeps its lines.
         pub fn collapse(&mut self) {
             self.is_updates_list_open = false;
             self.is_hyde_list_open = false;
+
+            if !self.applying {
+                self.apply_log.clear();
+                self.apply_failed = false;
+            }
+
+            if !self.hyde_updating {
+                self.hyde_log.clear();
+                self.hyde_failed = false;
+            }
         }
 
         /// How many upstream commits the HyDE clone has not taken yet.
