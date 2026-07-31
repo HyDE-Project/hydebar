@@ -138,7 +138,8 @@ impl App {
             ),
             ModuleName::KeyboardLayout => self.keyboard_layout.view(&self.config.keyboard_layout),
             ModuleName::KeyboardSubmap => self.keyboard_submap.view(()),
-            ModuleName::Tray => self.tray.view((id, opacity)),
+            ModuleName::Tray => crate::views::tray::render_tray(&self.tray, id, opacity, self.icons())
+                .map(|content| (content, None)),
             ModuleName::Clock => self.clock.view(&self.config.clock),
             ModuleName::HydeMenu => self.hyde_menu.view(self.icons()),
             ModuleName::Battery => self.battery.data().map(|data| {

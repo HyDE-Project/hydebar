@@ -98,14 +98,14 @@ mod module {
             self.sender = None;
         }
 
+        /// The bar strip is rendered by the GUI layer, like the battery: each
+        /// icon toggles its own positioned menu, and those messages carry a
+        /// [`ButtonUIRef`](crate::position_button::ButtonUIRef) that a view
+        /// generic over its message type cannot construct.
         fn view(
             &self,
             (_id, _opacity): Self::ViewData<'_>
         ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
-            // TODO: Tray view needs special handling for position_button messages
-            // This requires GUI layer integration as buttons need to construct messages
-            // with ButtonUIRef which can't be done generically in core.
-            // For now, disabled to allow compilation.
             None
         }
 
