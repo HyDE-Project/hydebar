@@ -56,7 +56,7 @@ impl App {
             .map(|(content, action)| (content, self.module_actions(module_name, action)));
 
         module.map(|(content, actions)| {
-            let module = self.module_element(content, actions, id, false);
+            let module = self.module_element(content, actions, module_name, id, false);
 
             self.with_tooltip(module_name, module, id)
         })
@@ -70,6 +70,7 @@ impl App {
         &'a self,
         content: Element<'a, Message>,
         actions: ModuleActions,
+        module_name: &ModuleName,
         id: Id,
         grouped: bool
     ) -> Element<'a, Message> {
@@ -86,7 +87,8 @@ impl App {
                             self.appearance().opacity,
                             self.appearance().pill_radius(),
                             grouped,
-                            false
+                            false,
+                            self.hover.progress(module_name)
                         ));
 
                 attach_module_actions(button, actions, id).into()
@@ -231,7 +233,8 @@ impl App {
                     modules
                         .into_iter()
                         .map(|(module_name, content, actions)| {
-                            let module = self.module_element(content, actions, id, true);
+                            let module =
+                                self.module_element(content, actions, module_name, id, true);
 
                             self.with_tooltip(module_name, module, id)
                         })

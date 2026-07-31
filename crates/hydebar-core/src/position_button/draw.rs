@@ -132,7 +132,8 @@ mod tests {
                 1.0,
                 PILL_RADIUS,
                 false,
-                false
+                false,
+                1.0
             )
         };
 

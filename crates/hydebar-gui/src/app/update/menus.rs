@@ -41,6 +41,14 @@ impl App {
                     self.outputs.menu_is_open()
                 );
 
+                let animations = &self.config.appearance.animations;
+                self.hover.point(
+                    module.clone(),
+                    entered,
+                    animations.enabled,
+                    std::time::Duration::from_millis(animations.hover_duration_ms)
+                );
+
                 match tooltip {
                     Some(info) => self.outputs.show_tooltip(surface, module, info),
                     None if entered => self.outputs.hide_tooltip(surface, None),

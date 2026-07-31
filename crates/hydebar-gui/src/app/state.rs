@@ -3,6 +3,7 @@ use std::{collections::HashMap, path::PathBuf, sync::Arc, time::Instant};
 use flexi_logger::LoggerHandle;
 use hydebar_core::{
     ModuleContext,
+    animation::HoverFades,
     attention::Attention,
     components::icons::IconTheme,
     config::{ConfigApplied, ConfigDegradation, ConfigManager, ModuleDef, ModuleName},
@@ -104,7 +105,9 @@ pub struct App {
     /// Notifications currently shown as popups.
     pub notification_popups: Vec<notifications_popup::Popup>,
     /// The one module the user is looking at, and the clocks that follow it.
-    pub attention: Attention
+    pub attention: Attention,
+    /// Fade of the hover highlight of every module the pointer touched.
+    pub hover: HoverFades<ModuleName>
 }
 
 #[derive(Debug, Clone)]
@@ -419,6 +422,7 @@ impl App {
             wallpaper: Wallpaper::new(),
             notification_popups: Vec::new(),
             attention: Attention::default(),
+            hover: HoverFades::default(),
             weather: Weather::new(
                 config.weather.location.clone(),
                 config.weather.api_key.clone(),

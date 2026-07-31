@@ -13,25 +13,40 @@ use crate::config::AppearanceStyle;
 /// `radius` is the corner radius of the pill, in pixels; callers pass
 /// [`Appearance::pill_radius`](crate::config::Appearance::pill_radius) so the
 /// configured or HyDE provided value reaches the border.
+///
+/// `hover` is how far the hover fade of this module has travelled, zero at
+/// rest and one fully lit. The background is blended from it rather than from
+/// the widget's own hover status: the fade spring is what carries the pointer
+/// entering and leaving, so the highlight breathes in and out instead of
+/// flipping.
 pub fn module_button_style(
     style: AppearanceStyle,
     opacity: f32,
     radius: f32,
     transparent: bool,
-    focused: bool
+    focused: bool,
+    hover: f32
 ) -> impl Fn(&Theme, Status) -> button::Style {
-    move |theme, status| {
-        let mut base = button::Style {
-            background: match style {
-                AppearanceStyle::Solid | AppearanceStyle::Gradient => None,
-                AppearanceStyle::Islands => {
-                    if transparent {
-                        None
-                    } else {
-                        Some(theme.palette().background.scale_alpha(opacity).into())
-                    }
+    move |theme, _status| {
+        let rest = match style {
+            AppearanceStyle::Solid | AppearanceStyle::Gradient => None,
+            AppearanceStyle::Islands => {
+                if transparent {
+                    None
+                } else {
+                    Some(theme.palette().background.scale_alpha(opacity))
                 }
-            },
+            }
+        };
+        let lit = theme
+            .extended_palette()
+            .background
+            .weak
+            .color
+            .scale_alpha(opacity);
+
+        button::Style {
+            background: blend_background(rest, lit, hover.clamp(0.0, 1.0)).map(Into::into),
             border: if focused {
                 Border {
                     width:  2.0,
@@ -47,23 +62,24 @@ pub fn module_button_style(
             },
             text_color: theme.palette().text,
             ..button::Style::default()
-        };
-        match status {
-            Status::Active => base,
-            Status::Hovered => {
-                base.background = Some(
-                    theme
-                        .extended_palette()
-                        .background
-                        .weak
-                        .color
-                        .scale_alpha(opacity)
-                        .into()
-                );
-                base
-            }
-            _ => base
         }
+    }
+}
+
+/// Mixes the resting background into the lit one by `t`.
+///
+/// A resting side that paints nothing fades the lit colour in through its
+/// alpha, and stays truly unpainted at zero so an idle pill costs no quad.
+fn blend_background(rest: Option<Color>, lit: Color, t: f32) -> Option<Color> {
+    match rest {
+        None if t <= 0.0 => None,
+        None => Some(lit.scale_alpha(t)),
+        Some(rest) => Some(Color {
+            r: rest.r + (lit.r - rest.r) * t,
+            g: rest.g + (lit.g - rest.g) * t,
+            b: rest.b + (lit.b - rest.b) * t,
+            a: rest.a + (lit.a - rest.a) * t
+        })
     }
 }
 
@@ -76,10 +92,10 @@ mod tests {
     fn the_configured_radius_reaches_the_border() {
         let theme = Theme::Dark;
 
-        let styled = module_button_style(AppearanceStyle::Islands, 1.0, 9.0, false, false);
+        let styled = module_button_style(AppearanceStyle::Islands, 1.0, 9.0, false, false, 0.0);
         assert_eq!(styled(&theme, Status::Active).border.radius, 9.0.into());
 
-        let focused = module_button_style(AppearanceStyle::Islands, 1.0, 9.0, false, true);
+        let focused = module_button_style(AppearanceStyle::Islands, 1.0, 9.0, false, true, 0.0);
         assert_eq!(focused(&theme, Status::Active).border.radius, 9.0.into());
     }
 
@@ -93,11 +109,46 @@ mod tests {
             1.0,
             appearance.pill_radius(),
             false,
-            false
+            false,
+            0.0
         );
         assert_eq!(
             styled(&Theme::Dark, Status::Active).border.radius,
             4.0.into()
         );
+    }
+
+    #[test]
+    fn the_hover_fade_carries_the_background_between_rest_and_lit() {
+        let theme = Theme::Dark;
+        let at = |hover: f32| {
+            let styled =
+                module_button_style(AppearanceStyle::Islands, 1.0, 4.0, false, false, hover);
+            match styled(&theme, Status::Active).background {
+                Some(iced::Background::Color(color)) => color,
+                other => panic!("expected a colour background, got {other:?}")
+            }
+        };
+
+        let rest = at(0.0);
+        let lit = at(1.0);
+        let midway = at(0.5);
+
+        assert_eq!(rest, theme.palette().background);
+        assert_eq!(lit, theme.extended_palette().background.weak.color);
+        assert!(midway.r > rest.r.min(lit.r) - f32::EPSILON);
+        assert_ne!(midway, rest);
+        assert_ne!(midway, lit);
+    }
+
+    #[test]
+    fn a_transparent_pill_at_rest_paints_nothing() {
+        let theme = Theme::Dark;
+
+        let resting = module_button_style(AppearanceStyle::Islands, 1.0, 4.0, true, false, 0.0);
+        assert!(resting(&theme, Status::Active).background.is_none());
+
+        let lit = module_button_style(AppearanceStyle::Islands, 1.0, 4.0, true, false, 1.0);
+        assert!(lit(&theme, Status::Active).background.is_some());
     }
 }
