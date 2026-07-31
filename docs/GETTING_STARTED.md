@@ -119,7 +119,8 @@ Available modules:
 - `Battery` - Battery status with power profiles
 - `MediaPlayer` - Music controls (MPRIS)
 - `Tray` - System tray icons
-- `Updates` - Package update check (needs `[updates]` commands)
+- `Updates` - Package updates and, on HyDE, the HyDE clone itself (needs `[updates]` commands)
+- `Cpu` / `Memory` - Standalone processor and memory readouts over the same sampler as `SystemInfo`
 - `Clipboard` - Clipboard history picker
 - `AppLauncher` - Application launcher button
 - `KeyboardLayout` / `KeyboardSubmap` - Layout and active submap
@@ -169,6 +170,30 @@ indicators = ["Cpu", "Memory", "CpuTemperature", "DownloadSpeed"]
 [clock]
 format = "%a %d %b %H:%M"
 ```
+
+### Updates
+
+```toml
+[updates]
+check_cmd = "checkupdates; paru -Qua"
+update_cmd = "hyde-shell pm --no-confirm fetch && hyde-shell pm --no-confirm upgrade"
+check_interval = 3600    # seconds between checks
+hyde_branch = "Master"   # or "Dev"; also switchable from the settings window
+```
+
+Pressing **Update** runs `update_cmd` without a terminal: the output streams
+into the menu as the tail of its last lines, anything that needs elevation
+asks through the desktop's polkit agent, and when the command ends the
+pending count is re-checked rather than assumed. Pick a command that asks no
+questions — the button press is the confirmation. A command that opens a
+terminal of its own still works; it just has nothing to narrate.
+
+On a HyDE desktop the same menu watches the HyDE clone itself: it names the
+branch it follows, unfolds the upstream commits it is missing, and
+**Update HyDE** brings the clone up to date the way upstream documents it —
+fetch, hard reset, restore — narrating in place. A clone carrying
+uncommitted work is refused; a clean clone standing on another branch is
+switched, and the branch it left keeps its commits.
 
 ### Weather
 
@@ -267,6 +292,17 @@ Disable animations entirely:
 ```toml
 [appearance.animations]
 enabled = false
+```
+
+## Greeting
+
+The first bar of a session greets you mid-screen for a few seconds and gets
+out of the way; reloads and restarts within the same session stay silent.
+On by default:
+
+```toml
+[appearance]
+greeting = false   # turn it off
 ```
 
 ## Next Steps

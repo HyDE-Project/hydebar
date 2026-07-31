@@ -24,6 +24,7 @@
 - ⏰ **Clock** - Customizable date/time format, alternative formats cycled on click, calendar menu
 - 🌤️ **Weather** - OpenWeatherMap readout attached to the clock (`clock.show_weather` + `[weather]`)
 - 📊 **System Info** - CPU, RAM, temperature, GPU, disk, network speeds; readouts auto-detected
+- 📈 **CPU / Memory** - Standalone processor and memory entries over the same sampler
 - 🔋 **Battery** - Battery status and power profiles
 - 📡 **Network** - WiFi with signal strength %, VPN, connection management
 - 🔊 **Audio** - Volume control with inline sliders, sink/source selection
@@ -31,7 +32,7 @@
 - 💡 **Brightness** - Screen brightness control with inline slider
 - 🔵 **Bluetooth** - Device management with quick connect/disconnect, battery levels
 - 📋 **Tray** - System tray support
-- 🔄 **Updates** - Package update notifications
+- 🔄 **Updates** - Package updates applied right in the menu; on HyDE the clone itself is watched and updated alongside, branch selectable
 - 📋 **Clipboard** - Clipboard history picker (cliphist by default)
 - 🔒 **Privacy** - Camera/microphone/screenshare indicators
 - ⌨️ **Keyboard Layout / Submap** - Layout switching with custom labels, active submap
