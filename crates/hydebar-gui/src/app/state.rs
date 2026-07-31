@@ -471,7 +471,9 @@ impl App {
         if app.config.appearance.animations.enabled {
             app.entrance.set_target(1.0);
 
-            if app.config.appearance.greeting {
+            if app.config.appearance.greeting
+                && hydebar_core::components::greeting::claim_first_entry()
+            {
                 app.greeting = hydebar_core::animation::Spring::new(0.0)
                     .with_response(hydebar_core::animation::STANDARD);
                 app.greeting.set_target(1.0);
