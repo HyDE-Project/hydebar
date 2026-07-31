@@ -10,7 +10,7 @@ use iced::Element;
 
 use super::{
     OnModulePress,
-    system_info::{Message, SystemInfoData, single_indicator, used_of_total}
+    system_info::{Message, SystemInfoData, gigabytes, single_indicator, used_of_total}
 };
 use crate::{components::icons::IconTheme, menu::MenuType};
 
@@ -40,8 +40,11 @@ where
     ))
 }
 
-/// States the memory pools in a line or two, for the pointer resting on the
-/// module.
+/// States the memory pools for the pointer resting on the module.
+///
+/// The available line answers the question the used line raises — how much a
+/// new allocation could still claim — and it counts the reclaimable cache,
+/// the way the sampler already does.
 #[must_use]
 pub fn hint(data: &SystemInfoData) -> String {
     let mut lines = vec![format!(
@@ -49,6 +52,13 @@ pub fn hint(data: &SystemInfoData) -> String {
         used_of_total(data.memory_used, data.memory_total),
         data.memory_usage
     )];
+
+    if data.memory_total > 0 {
+        lines.push(format!(
+            "Available: {} GiB",
+            gigabytes(data.memory_total.saturating_sub(data.memory_used))
+        ));
+    }
 
     if data.memory_swap_total > 0 {
         lines.push(format!(
@@ -81,7 +91,7 @@ mod tests {
 
         assert_eq!(
             hint(&data),
-            "Memory: 9.0 / 62.0 GiB (15%)\nSwap: 0.5 / 8.0 GiB (6%)"
+            "Memory: 9.0 / 62.0 GiB (15%)\nAvailable: 53.0 GiB\nSwap: 0.5 / 8.0 GiB (6%)"
         );
     }
 
@@ -94,6 +104,9 @@ mod tests {
             ..SystemInfoData::default()
         };
 
-        assert_eq!(hint(&data), "Memory: 8.0 / 16.0 GiB (50%)");
+        assert_eq!(
+            hint(&data),
+            "Memory: 8.0 / 16.0 GiB (50%)\nAvailable: 8.0 GiB"
+        );
     }
 }

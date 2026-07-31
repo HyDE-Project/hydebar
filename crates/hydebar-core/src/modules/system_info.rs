@@ -54,6 +54,9 @@ mod data {
     #[derive(Debug, Clone, PartialEq, Default)]
     pub struct SystemInfoData {
         pub cpu_usage:         u32,
+        /// Logical processors the load is averaged over; zero before the
+        /// first real sample.
+        pub cpu_count:         u32,
         pub memory_usage:      u32,
         /// Memory in use, in bytes, behind [`Self::memory_usage`].
         pub memory_used:       u64,
@@ -93,6 +96,7 @@ mod data {
 
             network_matches
                 && self.cpu_usage == other.cpu_usage
+                && self.cpu_count == other.cpu_count
                 && self.memory_usage == other.memory_usage
                 && self.memory_used == other.memory_used
                 && self.memory_total == other.memory_total
@@ -237,6 +241,7 @@ mod data {
             self.system.refresh_memory();
 
             let cpu_usage = self.system.global_cpu_usage().floor() as u32;
+            let cpu_count = self.system.cpus().len() as u32;
             let memory_total = self.system.total_memory();
             let memory_swap_total = self.system.total_swap();
             let (memory_usage, memory_used) =
@@ -246,6 +251,7 @@ mod data {
 
             SystemInfoData {
                 cpu_usage,
+                cpu_count,
                 memory_usage,
                 memory_used,
                 memory_total,
@@ -282,6 +288,7 @@ mod data {
             self.last_network = observation;
 
             let cpu_usage = self.system.global_cpu_usage().floor() as u32;
+            let cpu_count = self.system.cpus().len() as u32;
             let memory_total = self.system.total_memory();
             let memory_swap_total = self.system.total_swap();
             let (memory_usage, memory_used) =
@@ -319,6 +326,7 @@ mod data {
 
             SystemInfoData {
                 cpu_usage,
+                cpu_count,
                 memory_usage,
                 memory_used,
                 memory_total,
@@ -4025,6 +4033,7 @@ mod view {
         fn data_fixture() -> SystemInfoData {
             SystemInfoData {
                 cpu_usage:         25,
+                cpu_count:         8,
                 memory_usage:      50,
                 memory_used:       8 * 1024 * 1024 * 1024,
                 memory_total:      16 * 1024 * 1024 * 1024,
@@ -4272,6 +4281,10 @@ mod window {
                 data.cpu_usage
             )];
 
+            if data.cpu_count > 0 {
+                processor.push(fact("Threads", data.cpu_count.to_string()));
+            }
+
             if let Some(temperature) = data.cpu_temperature {
                 processor.push(fact("Temperature", format!("{temperature}°C")));
             }
@@ -4288,6 +4301,18 @@ mod window {
                 pool(data.memory_used, data.memory_total, data.memory_usage),
                 data.memory_usage
             )];
+
+            if data.memory_total > 0 {
+                memory.push(fact(
+                    "Available",
+                    format!(
+                        "{} GiB",
+                        super::super::view::gigabytes(
+                            data.memory_total.saturating_sub(data.memory_used)
+                        )
+                    )
+                ));
+            }
 
             if data.memory_swap_total > 0 {
                 memory.push(meter(
@@ -4715,6 +4740,7 @@ mod window {
         fn machine() -> SystemInfoData {
             SystemInfoData {
                 cpu_usage:         34,
+                cpu_count:         32,
                 memory_usage:      15,
                 memory_used:       9 * GIB,
                 memory_total:      62 * GIB,
@@ -4790,7 +4816,11 @@ mod window {
                 .find(|section| section.title == "Memory")
                 .expect("memory section");
 
-            assert_eq!(memory.rows.len(), 1);
+            assert_eq!(memory.rows.len(), 2);
+            assert!(matches!(
+                &memory.rows[1],
+                Row::Fact { label, value } if label == "Available" && value == "53.0 GiB"
+            ));
         }
 
         #[test]
@@ -4802,9 +4832,26 @@ mod window {
                 .expect("memory section");
 
             assert!(matches!(
-                &memory.rows[1],
+                &memory.rows[2],
                 Row::Meter { label, value, percent: 6 }
                     if label == "Swap" && value == "0.5 / 8.0 GiB (6%)"
+            ));
+        }
+
+        /// The window says how many threads the load percentage averages
+        /// over, so `3%` on a 32-thread machine reads as the light load it
+        /// is.
+        #[test]
+        fn the_processor_section_counts_its_threads() {
+            let sections = model::sections(&machine());
+            let processor = sections
+                .iter()
+                .find(|section| section.title == "Processor")
+                .expect("processor section");
+
+            assert!(matches!(
+                &processor.rows[1],
+                Row::Fact { label, value } if label == "Threads" && value == "32"
             ));
         }
 
@@ -4886,8 +4933,8 @@ use iced::Element;
 pub use indicators::{IndicatorStatus, Unavailable};
 pub use runtime::REFRESH_INTERVAL;
 pub use sensors::{GpuPlacement, GpuReadings, GpuVendor, HardwareSensors};
-pub(crate) use view::used_of_total;
 pub use view::{build_indicator_view, indicator_elements, single_indicator};
+pub(crate) use view::{gigabytes, used_of_total};
 pub use window::build_menu_view;
 
 use super::{Module, ModuleError, OnModulePress};

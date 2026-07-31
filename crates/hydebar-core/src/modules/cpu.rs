@@ -40,11 +40,30 @@ where
     ))
 }
 
-/// States the processor in a line or two, for the pointer resting on the
-/// module.
+/// States the processor for the pointer resting on the module.
+///
+/// The load averages are read here rather than carried in the sample: they
+/// move on every reading, and a sample that always differs would defeat the
+/// deduplication that keeps an idle bar from repainting.
 #[must_use]
 pub fn hint(data: &SystemInfoData) -> String {
-    let mut lines = vec![format!("CPU: {}%", data.cpu_usage)];
+    let load = sysinfo::System::load_average();
+
+    compose(data, Some((load.one, load.five, load.fifteen)))
+}
+
+/// The hint text, from facts alone.
+fn compose(data: &SystemInfoData, load: Option<(f64, f64, f64)>) -> String {
+    let mut lines = vec![match data.cpu_count {
+        0 => format!("CPU: {}%", data.cpu_usage),
+        count => format!("CPU: {}% of {count} threads", data.cpu_usage)
+    }];
+
+    if let Some((one, five, fifteen)) = load
+        && (one > 0.0 || five > 0.0 || fifteen > 0.0)
+    {
+        lines.push(format!("Load: {one:.2} · {five:.2} · {fifteen:.2}"));
+    }
 
     if let Some(temperature) = data.cpu_temperature {
         lines.push(format!("Temperature: {temperature}°C"));
@@ -58,14 +77,18 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_hint_states_the_load_and_the_temperature() {
+    fn the_hint_states_the_load_the_averages_and_the_temperature() {
         let data = SystemInfoData {
             cpu_usage: 34,
+            cpu_count: 32,
             cpu_temperature: Some(56),
             ..SystemInfoData::default()
         };
 
-        assert_eq!(hint(&data), "CPU: 34%\nTemperature: 56°C");
+        assert_eq!(
+            compose(&data, Some((1.245, 1.1, 0.949))),
+            "CPU: 34% of 32 threads\nLoad: 1.25 · 1.10 · 0.95\nTemperature: 56°C"
+        );
     }
 
     #[test]
@@ -75,6 +98,22 @@ mod tests {
             ..SystemInfoData::default()
         };
 
-        assert_eq!(hint(&data), "CPU: 7%");
+        assert_eq!(compose(&data, None), "CPU: 7%");
+    }
+
+    /// A platform that reports no averages — all zeroes — earns no line of
+    /// noise for them.
+    #[test]
+    fn silent_averages_are_left_out() {
+        let data = SystemInfoData {
+            cpu_usage: 12,
+            cpu_count: 8,
+            ..SystemInfoData::default()
+        };
+
+        assert_eq!(
+            compose(&data, Some((0.0, 0.0, 0.0))),
+            "CPU: 12% of 8 threads"
+        );
     }
 }
