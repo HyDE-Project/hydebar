@@ -16,7 +16,7 @@ use super::BackendHandle;
 /// Field order is load bearing: the introspector borrows the context and the
 /// context registers io events on the mainloop, so both must be torn down
 /// before the mainloop. Dropping the mainloop first makes libpulse abort the
-
+/// process.
 pub(super) struct PulseAudioServer {
     pub(super) introspector: Introspector,
     pub(super) context:      Context,

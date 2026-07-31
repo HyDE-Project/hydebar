@@ -46,7 +46,7 @@ impl<'a> NetworkDbus<'a> {
             }
         }
 
-        all.sort_by(|a, b| b.strength.cmp(&a.strength));
+        all.sort_by_key(|ap| std::cmp::Reverse(ap.strength));
 
         Ok(all)
     }

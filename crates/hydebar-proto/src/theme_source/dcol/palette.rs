@@ -104,8 +104,8 @@ impl DcolPalette {
             primary[group] = hex(source, &format!("dcol_pry{number}"))?;
             text[group] = hex(source, &format!("dcol_txt{number}"))?;
 
-            for step in 0..STEPS {
-                accents[group][step] = hex(source, &format!("dcol_{number}xa{}", step + 1))?;
+            for (step, accent) in accents[group].iter_mut().enumerate() {
+                *accent = hex(source, &format!("dcol_{number}xa{}", step + 1))?;
             }
         }
 

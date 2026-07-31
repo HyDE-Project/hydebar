@@ -2446,12 +2446,13 @@ pub mod bluetooth {
                     None,
                     self.state == BluetoothState::Active,
                     Message::Bluetooth(BluetoothMessage::Toggle),
-                    Some((
-                        SubMenu::Bluetooth,
-                        sub_menu,
-                        Message::ToggleSubMenu(SubMenu::Bluetooth)
-                    ))
-                    .filter(|_| self.state == BluetoothState::Active),
+                    (self.state == BluetoothState::Active).then(|| {
+                        (
+                            SubMenu::Bluetooth,
+                            sub_menu,
+                            Message::ToggleSubMenu(SubMenu::Bluetooth)
+                        )
+                    }),
                     opacity
                 ),
                 sub_menu
@@ -2867,12 +2868,13 @@ pub mod network {
                             .map(|(name, strength, _)| format!("{name} ({}%)", strength,)),
                         self.wifi_enabled,
                         Message::Network(NetworkMessage::ToggleWiFi),
-                        Some((
-                            SubMenu::Wifi,
-                            sub_menu,
-                            Message::ToggleSubMenu(SubMenu::Wifi)
-                        ))
-                        .filter(|_| self.wifi_enabled),
+                        self.wifi_enabled.then(|| {
+                            (
+                                SubMenu::Wifi,
+                                sub_menu,
+                                Message::ToggleSubMenu(SubMenu::Wifi)
+                            )
+                        }),
                         opacity
                     ),
                     sub_menu
