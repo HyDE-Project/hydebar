@@ -701,7 +701,8 @@ mod view {
                         Icons::Download.default_glyph(),
                         Message::Install(name.clone()),
                         !busy
-                    )]
+                    )],
+                    list_layout
                 ));
             }
 
@@ -816,7 +817,8 @@ mod view {
                             !busy
                         ),
                         (Icons::Trash.default_glyph(), trash, !busy || doomed),
-                    ]
+                    ],
+                    list_layout
                 );
 
                 row = row.push(

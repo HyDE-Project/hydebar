@@ -319,48 +319,19 @@ pub(crate) fn theme_chip<'a, M: Clone + 'static>(
     opacity: f32,
     cell: f32,
     paint: Option<ChipPaint>,
-    actions: Vec<(&'static str, M, bool)>
+    actions: Vec<(&'static str, M, bool)>,
+    horizontal: bool
 ) -> Element<'a, M> {
     let control = style::control_size(font_size);
-
-    let name = text(label)
-        .size(control)
-        .width(iced::Length::Fill)
-        .align_x(iced::Alignment::Center);
 
     let paint_colors = paint
         .as_ref()
         .map(|paint| (paint.background, paint.text, paint.accent));
 
-    let body: Element<'a, M> = match &paint {
-        Some(paint) => {
-            let mut column = Column::new()
-                .spacing(DOT_GAP_EM * control)
-                .push(name)
-                .push(palette_dots(paint.palette.clone(), control));
-
-            if let ThemeChip::Applying(spinner) = state {
-                column = column.push(busy_strip(spinner, control));
-            }
-
-            column.into()
-        }
-        None => name.into()
-    };
-
-    let mut pressable = iced::widget::mouse_area(container(body).width(Length::Fill));
-
-    if state.is_pressable() {
-        pressable = pressable.on_press(message);
-    }
-
-    let mut content = Column::new()
-        .push(pressable)
-        .spacing(DOT_GAP_EM * control)
-        .align_x(Alignment::Center);
-
-    if !actions.is_empty() {
-        let mut deeds = Row::new()
+    let deeds = if actions.is_empty() {
+        None
+    } else {
+        let mut row = Row::new()
             .spacing(DOT_GAP_EM * control)
             .align_y(Alignment::Center);
 
@@ -373,11 +344,88 @@ pub(crate) fn theme_chip<'a, M: Clone + 'static>(
                 deed_button = deed_button.on_press(deed);
             }
 
-            deeds = deeds.push(deed_button);
+            row = row.push(deed_button);
         }
 
-        content = content.push(deeds);
-    }
+        Some(row)
+    };
+
+    let content: Element<'a, M> = if horizontal {
+        let name = text(label).size(control);
+
+        let mut face = Row::new()
+            .spacing(DOT_GAP_EM * control)
+            .align_y(Alignment::Center)
+            .push(container(name).width(Length::Fill))
+            .width(Length::Fill);
+
+        if let Some(paint) = &paint {
+            face = face.push(
+                container(palette_dots::<M>(paint.palette.clone(), control)).width(Length::Fill)
+            );
+        }
+
+        let mut pressable = iced::widget::mouse_area(face);
+
+        if state.is_pressable() {
+            pressable = pressable.on_press(message);
+        }
+
+        let mut line = Row::new()
+            .align_y(Alignment::Center)
+            .spacing(DOT_GAP_EM * control)
+            .push(pressable);
+
+        if let Some(deeds) = deeds {
+            line = line.push(deeds);
+        }
+
+        let mut column = Column::new().push(line).spacing(DOT_GAP_EM * control);
+
+        if let ThemeChip::Applying(spinner) = state {
+            column = column.push(busy_strip(spinner, control));
+        }
+
+        column.into()
+    } else {
+        let name = text(label)
+            .size(control)
+            .width(iced::Length::Fill)
+            .align_x(iced::Alignment::Center);
+
+        let body: Element<'a, M> = match &paint {
+            Some(paint) => {
+                let mut column = Column::new()
+                    .spacing(DOT_GAP_EM * control)
+                    .push(name)
+                    .push(palette_dots(paint.palette.clone(), control));
+
+                if let ThemeChip::Applying(spinner) = state {
+                    column = column.push(busy_strip(spinner, control));
+                }
+
+                column.into()
+            }
+            None => name.into()
+        };
+
+        let mut pressable = iced::widget::mouse_area(container(body).width(Length::Fill));
+
+        if state.is_pressable() {
+            pressable = pressable.on_press(message);
+        }
+
+        let mut column = Column::new()
+            .push(pressable)
+            .spacing(DOT_GAP_EM * control)
+            .align_x(Alignment::Center);
+
+        if let Some(deeds) = deeds {
+            column = column.push(deeds);
+        }
+
+        column.into()
+    };
 
     let card = container(content).width(cell).padding([
         style::CHIP_PADDING_EM[0] * control,
