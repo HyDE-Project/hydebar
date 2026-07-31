@@ -265,6 +265,8 @@ mod data {
         pub memory_swap_total: u64,
         /// Processor temperature, absent on a machine that reports none.
         pub cpu_temperature:   Option<i32>,
+        /// Sensor the processor temperature is read from.
+        pub cpu_temperature_source: Option<String>,
         /// Graphics readings, absent when the machine exposes no graphics
         /// device.
         pub gpu:               Option<GpuReadings>,
@@ -511,9 +513,11 @@ mod data {
                 let mut data = self.sample();
                 let Readings {
                     cpu,
+                    cpu_source,
                     gpu
                 } = self.sensors.read();
                 data.cpu_temperature = cpu;
+                data.cpu_temperature_source = cpu_source;
                 data.gpu = gpu;
 
                 data
@@ -556,6 +560,7 @@ mod data {
 
             let Readings {
                 cpu: cpu_temperature,
+                cpu_source: cpu_temperature_source,
                 gpu
             } = self.sensors.read();
 
@@ -592,6 +597,7 @@ mod data {
                 memory_swap_used,
                 memory_swap_total,
                 cpu_temperature,
+                cpu_temperature_source,
                 gpu,
                 disks,
                 network,
@@ -3420,8 +3426,11 @@ pub mod sensors {
     #[derive(Debug, Default, Clone, PartialEq, Eq)]
     pub struct Readings {
         /// Processor temperature in whole degrees Celsius.
-        pub cpu: Option<i32>,
-        pub gpu: Option<GpuReadings>
+        pub cpu:        Option<i32>,
+        /// Chip and label the processor temperature is read from, so the
+        /// window can say what its number measures.
+        pub cpu_source: Option<String>,
+        pub gpu:        Option<GpuReadings>
     }
 
     /// What the panel can say about the graphics processor it watches.
@@ -3601,6 +3610,7 @@ pub mod sensors {
 
             Readings {
                 cpu,
+                cpu_source: self.cpu.as_ref().map(Input::describe),
                 gpu
             }
         }
@@ -4667,7 +4677,12 @@ mod window {
             }
 
             if let Some(temperature) = data.cpu_temperature {
-                processor.push(fact("Temperature", format!("{temperature}°C")));
+                let label = match data.cpu_temperature_source.as_ref() {
+                    Some(source) => format!("Temperature ({source})"),
+                    None => "Temperature".to_owned()
+                };
+
+                processor.push(fact(&label, format!("{temperature}°C")));
             }
 
             if let Some(microcode) = data.cpu_microcode.as_ref() {
