@@ -77,7 +77,7 @@ impl App {
     pub(crate) fn register_modules(&mut self) {
         let ctx = &self.module_context;
 
-        let layout = self.config.modules.clone();
+        let layout = &self.config.modules;
         let hosts = |name: ModuleName| layout.hosts(&name);
 
         gate(

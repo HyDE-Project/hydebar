@@ -196,7 +196,11 @@ impl App {
                 // reload that changed nothing. The blur restatement still
                 // goes out — the compositor may have wiped the rules
                 // regardless of what the file says.
-                if self.raw_config.as_ref() == Some(&config) {
+                let raw_unchanged = self.raw_config.as_ref().is_some_and(|raw| {
+                    std::sync::Arc::ptr_eq(raw, &config) || raw == &config
+                });
+
+                if raw_unchanged {
                     debug!("config reload carries no change");
                     hydebar_core::outputs::restate_blur();
 
