@@ -76,3 +76,28 @@ Reading the deltas:
   leaked defunct table, still dominated by the GPU stack.
 - The zombie column is the reaper doing its job, verified live: a fresh
   bar adopted 61 strays and the count reached zero within two sweeps.
+
+## Third round — after the motion work
+
+Measured after the entrance wave, the per-theme sweep signatures, the
+mid-screen greeting, the hover fades, the menu fade-out and the blur guard
+landed.
+
+| Metric | Second round | Third round |
+| --- | --- | --- |
+| Startup to mapped surface, release | 53 ms | 33 ms |
+| Idle CPU, release | 0.50 % | 0.50 % |
+| Resident memory, release | 127 MB | 149 MB |
+| Threads | 63 | 64 |
+| Open file descriptors | 113 | 114 |
+| Zombie children | 0 | 0 |
+
+- Startup dropped again because icon faces no longer resolve on the draw
+  path: the first frames used to wait on fontconfig and font-file reads,
+  and now they draw while a worker resolves.
+- Idle is unchanged: every animation gates the frame clock, so a settled
+  bar with all the new motion still wakes only for its pollers.
+- Memory rose ~22 MB and holds steady. The greeting paints the
+  screen-spanning menu surface at startup, so the renderer allocates that
+  surface's buffers at birth instead of on the first opened menu — the
+  cost moved earlier, it did not appear.
