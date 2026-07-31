@@ -52,7 +52,7 @@ where
 fn build_listener(client: &HyprlandClient, tx: &KeyboardSender) -> AsyncEventListener {
     let mut listener = AsyncEventListener::new();
 
-    listener.add_layer_closed_handler({
+    listener.add_layout_changed_handler({
         let tx = tx.clone();
         let client = client.clone();
         move |_| {
@@ -67,10 +67,10 @@ fn build_listener(client: &HyprlandClient, tx: &KeyboardSender) -> AsyncEventLis
         }
     });
 
-    listener.add_monitor_added_handler({
+    listener.add_config_reloaded_handler({
         let tx = tx.clone();
         let client = client.clone();
-        move |_| {
+        move || {
             let tx = tx.clone();
             let client = client.clone();
             Box::pin(async move {

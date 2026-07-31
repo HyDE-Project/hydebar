@@ -55,12 +55,16 @@ fn build_listener(tx: &WorkspaceSender) -> AsyncEventListener {
     );
     forward!(add_workspace_moved_handler, HyprlandWorkspaceEvent::Moved);
     forward!(
-        add_layer_opened_handler,
+        add_changed_special_handler,
         HyprlandWorkspaceEvent::SpecialChanged
     );
     forward!(
-        add_monitor_removed_handler,
+        add_special_removed_handler,
         HyprlandWorkspaceEvent::SpecialRemoved
+    );
+    forward!(
+        add_monitor_removed_handler,
+        HyprlandWorkspaceEvent::Changed
     );
     forward!(
         add_window_closed_handler,
