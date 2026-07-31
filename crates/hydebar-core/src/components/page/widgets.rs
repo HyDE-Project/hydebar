@@ -231,6 +231,18 @@ const DOT_GAP_EM: f32 = 0.35;
 /// draws.
 pub(crate) const DOT_ROW_EM: f32 = DOT_EM + DOT_GAP_EM;
 
+/// Share of the menu fade in force, read off the palette the widget is drawn
+/// with.
+///
+/// The menu wrapper animates a window by fading its whole palette, so a colour
+/// taken from the palette travels on its own. A colour taken from a theme's
+/// file does not — and the palette's text alpha, one whenever the window
+/// rests, is where the travelled share can be read back so those colours
+/// follow the same fade.
+fn fade_share(theme: &Theme) -> f32 {
+    theme.palette().text.a
+}
+
 /// Renders the palette of a theme as a row of coloured dots.
 fn palette_dots<'a, M: 'a>(palette: [iced::Color; 4], control: f32) -> Element<'a, M> {
     let dot = DOT_EM * control;
@@ -239,15 +251,13 @@ fn palette_dots<'a, M: 'a>(palette: [iced::Color; 4], control: f32) -> Element<'
         .align_y(iced::Alignment::Center);
 
     for colour in palette {
-        row = row.push(
-            container(Space::new().width(dot).height(dot)).style(move |_: &Theme| {
-                container::Style {
-                    background: Some(Background::Color(colour)),
-                    border: Border::default().rounded(dot / 2.0),
-                    ..container::Style::default()
-                }
-            })
-        );
+        row = row.push(container(Space::new().width(dot).height(dot)).style(
+            move |theme: &Theme| container::Style {
+                background: Some(Background::Color(colour.scale_alpha(fade_share(theme)))),
+                border: Border::default().rounded(dot / 2.0),
+                ..container::Style::default()
+            }
+        ));
     }
 
     container(row)
@@ -335,7 +345,15 @@ pub(crate) fn theme_chip<'a, M: Clone + 'a>(
         let palette = theme.extended_palette();
 
         let (base, text_colour, ring) = match paint {
-            Some(paint) => (paint.background, paint.text, paint.accent),
+            Some(paint) => {
+                let share = fade_share(theme);
+
+                (
+                    paint.background.scale_alpha(share),
+                    paint.text.scale_alpha(share),
+                    paint.accent.scale_alpha(share)
+                )
+            }
             None => (
                 palette.background.weak.color,
                 palette.background.base.text,

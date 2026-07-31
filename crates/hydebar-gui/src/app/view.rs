@@ -31,13 +31,32 @@ impl App {
         String::from("hydebar")
     }
 
-    pub fn theme(&self, id: Id) -> Theme {
-        let fade = self.outputs.menu_fade(id);
+    pub fn theme(&self, _id: Id) -> Theme {
+        self.theme_cache.clone()
+    }
 
-        if fade < 1.0 {
-            hydebar_core::style::faded_theme(&self.theme_cache, fade)
+    /// Applies the fade of a travelling menu to its whole subtree.
+    ///
+    /// This is the one place any menu window animates from: the subtree is
+    /// rethemed with every palette colour scaled to the travelled share, and
+    /// the default text colour is restated from that faded palette so text
+    /// without a colour of its own follows too. The views below are handed the
+    /// resting opacity and never animate themselves, which is what makes the
+    /// box, text, icons, buttons and swatches all move as one instead of the
+    /// background dying before its content.
+    fn faded_menu<'a>(&self, menu: Element<'a, Message>, progress: f32) -> Element<'a, Message> {
+        if progress < 1.0 {
+            iced::widget::themer(
+                Some(hydebar_core::style::faded_theme(
+                    &self.theme_cache,
+                    progress
+                )),
+                menu
+            )
+            .text_color(|theme: &Theme| theme.palette().text)
+            .into()
         } else {
-            self.theme_cache.clone()
+            menu
         }
     }
 
@@ -208,28 +227,28 @@ impl App {
                 self.dismisses_the_open_menu(bar.into())
             }
             Some(HasOutput::Menu(menu_info)) => {
-                let animated_opacity = self.outputs.get_menu_opacity(id);
+                let menu_opacity = self.config.appearance.menu.opacity;
                 let menu_progress = self.outputs.get_menu_progress(id);
-                match menu_info {
+                let menu: Element<'_, Message> = match menu_info {
                     Some((MenuType::Updates, button_ui_ref)) => menu_wrapper(
                         id,
                         self.updates
-                            .menu_view(id, animated_opacity, self.icons())
+                            .menu_view(id, menu_opacity, self.icons())
                             .map(Message::Updates),
                         MenuSize::Small,
                         *button_ui_ref,
-                        self.menu_layout(animated_opacity, menu_progress),
+                        self.menu_layout(menu_opacity, menu_progress),
                         Message::None,
                         Message::CloseMenu(id)
                     ),
                     Some((MenuType::Tray(name), button_ui_ref)) => menu_wrapper(
                         id,
                         self.tray
-                            .menu_view(name, animated_opacity, self.icons())
+                            .menu_view(name, menu_opacity, self.icons())
                             .map(Message::Tray),
                         MenuSize::Small,
                         *button_ui_ref,
-                        self.menu_layout(animated_opacity, menu_progress),
+                        self.menu_layout(menu_opacity, menu_progress),
                         Message::None,
                         Message::CloseMenu(id)
                     ),
@@ -239,14 +258,14 @@ impl App {
                             .menu_view(
                                 id,
                                 &self.config.control_center,
-                                animated_opacity,
+                                menu_opacity,
                                 self.config.position,
                                 self.icons()
                             )
                             .map(Message::ControlCenter),
                         MenuSize::Medium,
                         *button_ui_ref,
-                        self.menu_layout(animated_opacity, menu_progress),
+                        self.menu_layout(menu_opacity, menu_progress),
                         Message::None,
                         Message::CloseMenu(id)
                     ),
@@ -257,7 +276,7 @@ impl App {
                                 .audio_menu(
                                     id,
                                     &self.config.control_center,
-                                    animated_opacity,
+                                    menu_opacity,
                                     self.config.position,
                                     self.icons()
                                 )
@@ -275,7 +294,7 @@ impl App {
                         .into(),
                         MenuSize::Medium,
                         *button_ui_ref,
-                        self.menu_layout(animated_opacity, menu_progress),
+                        self.menu_layout(menu_opacity, menu_progress),
                         Message::None,
                         Message::CloseMenu(id)
                     ),
@@ -285,13 +304,13 @@ impl App {
                             .network_menu(
                                 id,
                                 &self.config.control_center,
-                                animated_opacity,
+                                menu_opacity,
                                 self.icons()
                             )
                             .map(Message::ControlCenter),
                         MenuSize::Medium,
                         *button_ui_ref,
-                        self.menu_layout(animated_opacity, menu_progress),
+                        self.menu_layout(menu_opacity, menu_progress),
                         Message::None,
                         Message::CloseMenu(id)
                     ),
@@ -301,13 +320,13 @@ impl App {
                             .bluetooth_menu(
                                 id,
                                 &self.config.control_center,
-                                animated_opacity,
+                                menu_opacity,
                                 self.icons()
                             )
                             .map(Message::ControlCenter),
                         MenuSize::Medium,
                         *button_ui_ref,
-                        self.menu_layout(animated_opacity, menu_progress),
+                        self.menu_layout(menu_opacity, menu_progress),
                         Message::None,
                         Message::CloseMenu(id)
                     ),
@@ -315,25 +334,25 @@ impl App {
                         id,
                         self.control_center
                             .power_profile_menu(
-                                animated_opacity,
+                                menu_opacity,
                                 &self.config.control_center,
                                 self.icons()
                             )
                             .map(Message::ControlCenter),
                         MenuSize::Small,
                         *button_ui_ref,
-                        self.menu_layout(animated_opacity, menu_progress),
+                        self.menu_layout(menu_opacity, menu_progress),
                         Message::None,
                         Message::CloseMenu(id)
                     ),
                     Some((MenuType::HydeMenu, button_ui_ref)) => menu_wrapper(
                         id,
                         self.hyde_menu
-                            .menu_view(id, animated_opacity)
+                            .menu_view(id, menu_opacity)
                             .map(Message::HydeMenu),
                         MenuSize::Small,
                         *button_ui_ref,
-                        self.menu_layout(animated_opacity, menu_progress),
+                        self.menu_layout(menu_opacity, menu_progress),
                         Message::None,
                         Message::CloseMenu(id)
                     ),
@@ -345,7 +364,7 @@ impl App {
                             self.settings
                                 .menu_view(
                                     &self.config,
-                                    animated_opacity,
+                                    menu_opacity,
                                     self.icons(),
                                     self.magnification,
                                     metrics.page_width
@@ -353,7 +372,7 @@ impl App {
                                 .map(Message::Settings),
                             MenuSize::Content(metrics.width),
                             *button_ui_ref,
-                            self.measured_menu_layout(animated_opacity, menu_progress, metrics.height),
+                            self.measured_menu_layout(menu_opacity, menu_progress, metrics.height),
                             Message::None,
                             Message::CloseMenu(id)
                         )
@@ -364,11 +383,11 @@ impl App {
                         menu_wrapper(
                             id,
                             self.themes
-                                .menu_view(&self.config, animated_opacity, metrics.page_width)
+                                .menu_view(&self.config, menu_opacity, metrics.page_width)
                                 .map(Message::Themes),
                             MenuSize::Content(metrics.width),
                             *button_ui_ref,
-                            self.measured_menu_layout(animated_opacity, menu_progress, metrics.height),
+                            self.measured_menu_layout(menu_opacity, menu_progress, metrics.height),
                             Message::None,
                             Message::CloseMenu(id)
                         )
@@ -376,11 +395,11 @@ impl App {
                     Some((MenuType::MediaPlayer, button_ui_ref)) => menu_wrapper(
                         id,
                         self.media_player
-                            .menu_view(&self.config.media_player, animated_opacity, self.icons())
+                            .menu_view(&self.config.media_player, menu_opacity, self.icons())
                             .map(Message::MediaPlayer),
                         MenuSize::Large,
                         *button_ui_ref,
-                        self.menu_layout(animated_opacity, menu_progress),
+                        self.menu_layout(menu_opacity, menu_progress),
                         Message::None,
                         Message::CloseMenu(id)
                     ),
@@ -391,29 +410,29 @@ impl App {
                             .map(Message::SystemInfo),
                         MenuSize::Medium,
                         *button_ui_ref,
-                        self.menu_layout(animated_opacity, menu_progress),
+                        self.menu_layout(menu_opacity, menu_progress),
                         Message::None,
                         Message::CloseMenu(id)
                     ),
                     Some((MenuType::Notifications, button_ui_ref)) => menu_wrapper(
                         id,
                         self.notifications
-                            .menu_view(animated_opacity, self.icons())
+                            .menu_view(menu_opacity, self.icons())
                             .map(Message::Notifications),
                         MenuSize::Medium,
                         *button_ui_ref,
-                        self.menu_layout(animated_opacity, menu_progress),
+                        self.menu_layout(menu_opacity, menu_progress),
                         Message::None,
                         Message::CloseMenu(id)
                     ),
                     Some((MenuType::Screenshot, button_ui_ref)) => menu_wrapper(
                         id,
                         self.screenshot
-                            .menu_view(animated_opacity, self.icons())
+                            .menu_view(menu_opacity, self.icons())
                             .map(Message::Screenshot),
                         MenuSize::Small,
                         *button_ui_ref,
-                        self.menu_layout(animated_opacity, menu_progress),
+                        self.menu_layout(menu_opacity, menu_progress),
                         Message::None,
                         Message::CloseMenu(id)
                     ),
@@ -427,7 +446,7 @@ impl App {
                         ),
                         *button_ui_ref,
                         self.measured_menu_layout(
-                            animated_opacity,
+                            menu_opacity,
                             menu_progress,
                             hydebar_core::modules::calendar::Calendar::content_height()
                         ),
@@ -446,12 +465,12 @@ impl App {
                                 custom_module::menu_view(
                                     definition,
                                     self.appearance(),
-                                    animated_opacity,
+                                    menu_opacity,
                                     move |entry| custom_menu_message(id, entry)
                                 ),
                                 MenuSize::Small,
                                 *button_ui_ref,
-                                self.menu_layout(animated_opacity, menu_progress),
+                                self.menu_layout(menu_opacity, menu_progress),
                                 Message::None,
                                 Message::CloseMenu(id)
                             ),
@@ -459,7 +478,9 @@ impl App {
                         }
                     }
                     None => Row::new().into()
-                }
+                };
+
+                self.faded_menu(menu, menu_progress)
             }
             Some(HasOutput::Notifications) => notifications_popup::view(
                 &self.notification_popups,

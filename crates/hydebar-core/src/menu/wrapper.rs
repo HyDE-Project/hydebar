@@ -115,7 +115,9 @@ pub fn menu_wrapper<Message: Clone + 'static>(
         })
         .width(Length::Fill)
         .height(Length::Fill)
-        .style(menu_backdrop_style(layout.menu_backdrop))
+        .style(menu_backdrop_style(
+            layout.menu_backdrop * layout.progress.clamp(0.0, 1.0)
+        ))
     )
     .on_release(close_menu_message)
     .into()
