@@ -54,10 +54,19 @@ impl IconFace {
 /// and readers must not queue behind each other in the draw path.
 static RESOLVED: LazyLock<RwLock<HashMap<char, IconFace>>> = LazyLock::new(RwLock::default);
 
+/// Glyphs whose face is being resolved on a worker right now.
+static PENDING: LazyLock<Mutex<std::collections::HashSet<char>>> = LazyLock::new(Mutex::default);
+
 /// Families already leaked for the renderer, which wants them immortal.
 static FAMILIES: LazyLock<Mutex<HashMap<String, &'static str>>> = LazyLock::new(Mutex::default);
 
 /// Face and size correction for `glyph`.
+///
+/// A glyph the cache has not met yet is answered plainly and resolved on a
+/// worker instead of on the caller: resolution runs fontconfig and reads a
+/// font file, and the caller is the draw path — the first frames of the bar's
+/// entrance stuttered visibly while it sat waiting on those lookups. A frame
+/// or two of a neutrally sized glyph is invisible; the stall was not.
 pub(super) fn resolved(glyph: &str) -> IconFace {
     let Some(first) = glyph.chars().next() else {
         return IconFace::PLAIN;
@@ -75,14 +84,26 @@ pub(super) fn resolved(glyph: &str) -> IconFace {
         return *face;
     }
 
-    let face = resolve(first);
+    if PENDING
+        .lock()
+        .expect("icon face queue poisoned")
+        .insert(first)
+    {
+        std::thread::spawn(move || {
+            let face = resolve(first);
 
-    RESOLVED
-        .write()
-        .expect("icon face cache poisoned")
-        .insert(first, face);
+            RESOLVED
+                .write()
+                .expect("icon face cache poisoned")
+                .insert(first, face);
+            PENDING
+                .lock()
+                .expect("icon face queue poisoned")
+                .remove(&first);
+        });
+    }
 
-    face
+    IconFace::PLAIN
 }
 
 /// Asks fontconfig for the face carrying `symbol` and measures its ink.

@@ -45,12 +45,13 @@ impl App {
                     .tick_menu_animations(&self.config.appearance.animations, elapsed);
                 let theme_animating = self.appearance_transition.advance(elapsed);
                 let hover_animating = self.hover.advance(elapsed);
+                let entering = self.entrance.advance(elapsed);
 
                 // rebuilt on the settling frame as well: the last advance
                 // lands exactly on the target after reporting it stopped
                 self.rebuild_theme();
 
-                if !menus_animating && !theme_animating && !hover_animating {
+                if !menus_animating && !theme_animating && !hover_animating && !entering {
                     self.last_frame = None;
                 }
 

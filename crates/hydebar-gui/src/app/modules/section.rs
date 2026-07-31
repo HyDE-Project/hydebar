@@ -30,12 +30,33 @@ impl App {
     }
 
     /// Wraps an island in the palette of its place under the travelling front.
+    ///
+    /// Two fronts share the wrap: the palette of a running theme change, and
+    /// the birth of the bar, where each island fades in as the entrance wave
+    /// reaches it. Both travel with the signature of the theme in force.
     fn swept_island<'a>(
         &self,
         island: Element<'a, Message>,
         position: f32
     ) -> Element<'a, Message> {
-        match self.sweep_theme(position) {
+        let swept = self.sweep_theme(position);
+
+        let arrival = hydebar_core::animation::sweep(
+            self.entrance.value().clamp(0.0, 1.0),
+            position,
+            self.sweep.spread
+        );
+
+        let themed = if arrival < 1.0 {
+            Some(hydebar_core::style::faded_theme(
+                swept.as_ref().unwrap_or(&self.theme_cache),
+                arrival
+            ))
+        } else {
+            swept
+        };
+
+        match themed {
             Some(theme) => iced::widget::themer(Some(theme), island)
                 .text_color(|theme: &iced::Theme| theme.palette().text)
                 .into(),

@@ -109,7 +109,9 @@ pub struct App {
     /// Fade of the hover highlight of every module the pointer touched.
     pub hover: HoverFades<ModuleName>,
     /// Signature the current or incoming theme crosses the bar with.
-    pub sweep: hydebar_core::style::SweepStyle
+    pub sweep: hydebar_core::style::SweepStyle,
+    /// Birth of the bar: the islands ride in on the theme's own wave once.
+    pub entrance: hydebar_core::animation::Spring
 }
 
 #[derive(Debug, Clone)]
@@ -434,6 +436,7 @@ impl App {
             attention: Attention::default(),
             hover: HoverFades::default(),
             sweep: hydebar_core::style::SweepStyle::default(),
+            entrance: hydebar_core::animation::Spring::new(0.0),
             weather: Weather::new(
                 config.weather.location.clone(),
                 config.weather.api_key.clone(),
@@ -444,6 +447,20 @@ impl App {
         };
 
         app.register_modules();
+
+        app.sweep = hydebar_core::style::SweepStyle::of(
+            app.themes.hyde().theme.as_deref(),
+            &app.config.appearance
+        );
+        app.entrance = hydebar_core::animation::Spring::new(0.0)
+            .with_response(app.sweep.response)
+            .with_damping_ratio(app.sweep.damping);
+
+        if app.config.appearance.animations.enabled {
+            app.entrance.set_target(1.0);
+        } else {
+            app.entrance.snap_to(1.0);
+        }
 
         if app.config.idle_inhibitor.start_activated {
             app.control_center.set_idle_inhibited(true);
