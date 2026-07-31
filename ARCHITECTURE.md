@@ -91,10 +91,13 @@ pub trait Module<Message> {
   module being attended.
 - `view` renders the bar entry and names the press action.
 
-Every module is one flat file in `modules/`; a large one is organised with
-inline `mod` blocks inside that file (for example `modules/media_player.rs`
-holds `state`, `messages`, `commands` and `view` as inline submodules), never
-with a folder.
+A module is one file in `modules/` while it fits in one; a mid-sized one is
+organised with inline `mod` blocks inside that file (for example
+`modules/media_player.rs` holds `state`, `messages`, `commands` and `view` as
+inline submodules). A module that outgrows a readable file becomes a
+directory named after it, one file per submodule, nested where a submodule
+outgrows its own file — `modules/system_info/` is the worked example, with
+`sensors/` and `window/` nested inside.
 
 ### Registration: one law
 
