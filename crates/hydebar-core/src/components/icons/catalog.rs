@@ -91,12 +91,14 @@ pub enum Icons {
     IdleInhibitorInactive,
     Settings,
     Themes,
-    Wallpaper
+    Wallpaper,
+    /// Marks work signed by the person at the keyboard.
+    Authored
 }
 
 impl Icons {
     /// Every icon that can be overridden from the configuration.
-    pub const ALL: [Icons; 89] = [
+    pub const ALL: [Icons; 90] = [
         Icons::None,
         Icons::AppLauncher,
         Icons::Clipboard,
@@ -185,7 +187,8 @@ impl Icons {
         Icons::IdleInhibitorInactive,
         Icons::Settings,
         Icons::Themes,
-        Icons::Wallpaper
+        Icons::Wallpaper,
+        Icons::Authored
     ];
 
     /// Key used to address the icon inside the `[icons]` configuration table.
@@ -280,7 +283,8 @@ impl Icons {
             Icons::IdleInhibitorInactive => "idle_inhibitor_inactive",
             Icons::Settings => "settings",
             Icons::Themes => "themes",
-            Icons::Wallpaper => "wallpaper"
+            Icons::Wallpaper => "wallpaper",
+            Icons::Authored => "authored"
         }
     }
 
@@ -382,7 +386,8 @@ impl Icons {
             Icons::IdleInhibitorInactive => "\u{f06ca}",
             Icons::Settings => "\u{f0493}",
             Icons::Themes => "\u{f00e1}",
-            Icons::Wallpaper => "\u{f0b7c}"
+            Icons::Wallpaper => "\u{f0b7c}",
+            Icons::Authored => "\u{f04ce}"
         }
     }
 }

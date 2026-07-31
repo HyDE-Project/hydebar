@@ -313,6 +313,7 @@ impl ThemeChip {
 /// longer mark it.
 pub(crate) fn theme_chip<'a, M: Clone + 'static>(
     label: String,
+    badge: Option<&'static str>,
     message: M,
     state: ThemeChip,
     font_size: f32,
@@ -351,12 +352,19 @@ pub(crate) fn theme_chip<'a, M: Clone + 'static>(
     };
 
     let content: Element<'a, M> = if horizontal {
-        let name = text(label).size(control);
+        let mut name_row = Row::new()
+            .spacing(DOT_GAP_EM * control * 0.5)
+            .align_y(Alignment::Center)
+            .push(text(label).size(control));
+
+        if let Some(glyph) = badge {
+            name_row = name_row.push(icon_raw_sized(glyph.to_owned(), Some(control * 0.8)));
+        }
 
         let mut face = Row::new()
             .spacing(DOT_GAP_EM * control)
             .align_y(Alignment::Center)
-            .push(container(name).width(Length::Fill))
+            .push(container(name_row).width(Length::Fill))
             .width(Length::Fill);
 
         if let Some(paint) = &paint {
@@ -395,10 +403,24 @@ pub(crate) fn theme_chip<'a, M: Clone + 'static>(
 
         column.into()
     } else {
-        let name = text(label)
-            .size(control)
+        let name: Element<'a, M> = if let Some(glyph) = badge {
+            container(
+                Row::new()
+                    .spacing(DOT_GAP_EM * control * 0.5)
+                    .align_y(Alignment::Center)
+                    .push(text(label).size(control))
+                    .push(icon_raw_sized(glyph.to_owned(), Some(control * 0.8)))
+            )
             .width(iced::Length::Fill)
-            .align_x(iced::Alignment::Center);
+            .align_x(iced::Alignment::Center)
+            .into()
+        } else {
+            text(label)
+                .size(control)
+                .width(iced::Length::Fill)
+                .align_x(iced::Alignment::Center)
+                .into()
+        };
 
         let body: Element<'a, M> = match &paint {
             Some(paint) => {

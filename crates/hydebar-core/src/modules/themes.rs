@@ -361,6 +361,30 @@ mod gallery {
         themes
     }
 
+    /// The name this machine signs its work with.
+    ///
+    /// Asked of git — the GitHub account name when one is configured, the
+    /// commit author name otherwise — so a gallery entry owned by the same
+    /// name can be marked as the user's own.
+    pub(super) async fn local_author() -> Option<String> {
+        for key in ["github.user", "user.name"] {
+            if let Ok(output) = tokio::process::Command::new("git")
+                .args(["config", "--get", key])
+                .output()
+                .await
+                && output.status.success()
+            {
+                let name = String::from_utf8_lossy(&output.stdout).trim().to_owned();
+
+                if !name.is_empty() {
+                    return Some(name);
+                }
+            }
+        }
+
+        None
+    }
+
     /// Whatever the cache still holds, fresh or not.
     async fn stale(cache: Option<&std::path::Path>) -> Vec<GalleryTheme> {
         match cache {
@@ -507,6 +531,7 @@ mod view {
         swatches: &HashMap<String, ThemeSwatch>,
         switching: Option<&str>,
         catalogue: &[super::gallery::GalleryTheme],
+        author: Option<&str>,
         installing: Option<&str>,
         condemned: Option<&str>,
         updating: Option<&Option<String>>,
@@ -541,6 +566,7 @@ mod view {
                 updating,
                 installing,
                 catalogue,
+                author,
                 spinner,
                 opacity,
                 font_size,
@@ -557,6 +583,7 @@ mod view {
                 offer(
                     state,
                     catalogue,
+                    author,
                     switching,
                     installing,
                     spinner,
@@ -661,6 +688,7 @@ mod view {
     fn offer<'a>(
         state: &HydeState,
         catalogue: &[super::gallery::GalleryTheme],
+        author: Option<&str>,
         switching: Option<&str>,
         installing: Option<&str>,
         spinner: Spinner,
@@ -691,6 +719,7 @@ mod view {
 
                 row = row.push(theme_chip(
                     name.clone(),
+                    authored_badge(entry, author),
                     Message::Install(name.clone()),
                     chip_state,
                     font_size,
@@ -710,6 +739,54 @@ mod view {
         }
 
         block.into()
+    }
+
+    /// The mark a card earns when its theme is the user's own work.
+    ///
+    /// Ownership comes from the gallery index, and "the user" is whoever the
+    /// git identity of this machine names — the one signal that is already
+    /// there and already theirs.
+    fn authored_badge(
+        entry: Option<&super::gallery::GalleryTheme>,
+        author: Option<&str>
+    ) -> Option<&'static str> {
+        let owner = entry.map(|entry| entry.owner.as_str())?;
+        let author = author?;
+
+        owner
+            .eq_ignore_ascii_case(author)
+            .then(|| Icons::Authored.default_glyph())
+    }
+
+    #[cfg(test)]
+    mod badge_tests {
+        use super::{super::gallery::GalleryTheme, authored_badge};
+
+        fn entry(owner: &str) -> GalleryTheme {
+            GalleryTheme {
+                name:        "One Dark".to_owned(),
+                link:        String::new(),
+                owner:       owner.to_owned(),
+                description: String::new(),
+                colors:      [iced::Color::BLACK, iced::Color::WHITE]
+            }
+        }
+
+        #[test]
+        fn a_theme_of_the_local_author_is_marked() {
+            let theme = entry("RAprogramm");
+
+            assert!(authored_badge(Some(&theme), Some("raprogramm")).is_some());
+        }
+
+        #[test]
+        fn foreign_and_unknown_work_stays_unmarked() {
+            let theme = entry("someone-else");
+
+            assert!(authored_badge(Some(&theme), Some("raprogramm")).is_none());
+            assert!(authored_badge(Some(&theme), None).is_none());
+            assert!(authored_badge(None, Some("raprogramm")).is_none());
+        }
     }
 
     /// Paint for a gallery chip, from the two colours the index announces.
@@ -755,6 +832,7 @@ mod view {
         updating: Option<&Option<String>>,
         installing: Option<&str>,
         catalogue: &[super::gallery::GalleryTheme],
+        author: Option<&str>,
         spinner: Spinner,
         opacity: f32,
         font_size: f32,
@@ -792,12 +870,12 @@ mod view {
                     )
                 };
 
-                let paint = swatches.get(name).map(chip_paint).or_else(|| {
-                    catalogue
-                        .iter()
-                        .find(|entry| same_theme(&entry.name, name))
-                        .map(offer_paint)
-                });
+                let entry = catalogue.iter().find(|entry| same_theme(&entry.name, name));
+
+                let paint = swatches
+                    .get(name)
+                    .map(chip_paint)
+                    .or_else(|| entry.map(offer_paint));
 
                 let trash = if doomed {
                     Message::Remove(name.clone())
@@ -807,6 +885,7 @@ mod view {
 
                 let chip = theme_chip(
                     name.clone(),
+                    authored_badge(entry, author),
                     press,
                     chip_state,
                     font_size,
@@ -1367,7 +1446,7 @@ pub enum Message {
     /// wallpaper, which is nothing the opening animation should wait on.
     SwatchesLoaded(HashMap<String, ThemeSwatch>),
     /// Deliver the upstream catalogue the gallery section draws.
-    CatalogueLoaded(Vec<gallery::GalleryTheme>),
+    CatalogueLoaded(Vec<gallery::GalleryTheme>, Option<String>),
     /// Install the named theme from the gallery, then switch to it.
     Install(String),
     /// Report that the install of the named theme has ended.
@@ -1464,6 +1543,8 @@ pub struct Themes {
     switching:   Option<String>,
     /// The upstream catalogue, once the menu has loaded it.
     catalogue:   Vec<gallery::GalleryTheme>,
+    /// Name the machine's git identity signs work with, once known.
+    author:      Option<String>,
     /// Theme an install is running for, while one is.
     installing:  Option<String>,
     /// Theme whose removal waits for its confirming press, if one does.
@@ -1489,6 +1570,7 @@ impl Themes {
             swatches:    HashMap::new(),
             switching:   None,
             catalogue:   Vec::new(),
+            author:      None,
             installing:  None,
             condemned:   None,
             updating:    None,
@@ -1580,6 +1662,7 @@ impl Themes {
             &self.swatches,
             self.switching(),
             &self.catalogue,
+            self.author.as_deref(),
             self.installing.as_deref(),
             self.condemned.as_deref(),
             self.updating.as_ref(),
@@ -1653,8 +1736,9 @@ impl Themes {
                 }
             }
             Message::SwatchesLoaded(swatches) => self.swatches = swatches,
-            Message::CatalogueLoaded(catalogue) => {
+            Message::CatalogueLoaded(catalogue, author) => {
                 self.catalogue = catalogue;
+                self.author = author;
                 return self.auto_update();
             }
             Message::Update(scope) => return self.fetch_updates(scope),
@@ -1866,7 +1950,10 @@ impl Themes {
 
     /// Starts the catalogue reader, for the gallery section of the menu.
     pub fn load_catalogue(&self) -> Task<Message> {
-        Task::perform(gallery::load(), Message::CatalogueLoaded)
+        Task::perform(
+            async { (gallery::load().await, gallery::local_author().await) },
+            |(catalogue, author)| Message::CatalogueLoaded(catalogue, author)
+        )
     }
 
     /// Hands a theme switch to the desktop, once it is worth handing over.
