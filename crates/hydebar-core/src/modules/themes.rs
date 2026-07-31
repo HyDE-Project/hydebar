@@ -200,6 +200,219 @@ mod progress {
         }
     }
 }
+
+/// The upstream theme catalogue, and the reader that fetches it.
+mod gallery {
+    use std::time::Duration;
+
+    use serde::Deserialize;
+
+    /// Where the catalogue lives.
+    const INDEX_URL: &str = "https://raw.githubusercontent.com/HyDE-Project/hyde-gallery/hyde-gallery/hyde-themes.json";
+
+    /// How long a fetched catalogue serves before it is fetched again.
+    const CACHE_LIFE: Duration = Duration::from_secs(24 * 60 * 60);
+
+    /// One theme the gallery offers.
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct GalleryTheme {
+        pub name:        String,
+        pub link:        String,
+        pub owner:       String,
+        pub description: String,
+        /// The two colours the index announces the theme with.
+        pub colors:      [iced::Color; 2]
+    }
+
+    /// One entry as the index spells it.
+    #[derive(Debug, Deserialize)]
+    struct Entry {
+        #[serde(rename = "THEME")]
+        theme:       String,
+        #[serde(rename = "LINK")]
+        link:        String,
+        #[serde(rename = "OWNER", default)]
+        owner:       String,
+        #[serde(rename = "DESCRIPTION", default)]
+        description: String,
+        #[serde(rename = "COLORSCHEME", default)]
+        colors:      Vec<String>
+    }
+
+    /// Parses the catalogue, which is several JSON arrays laid end to end.
+    ///
+    /// The published file is not one document — strict parsing rejects it —
+    /// so the arrays are decoded in sequence and joined, and entries whose
+    /// colours do not parse are dropped rather than failing the rest.
+    pub fn parse(raw: &str) -> Vec<GalleryTheme> {
+        let mut themes = Vec::new();
+
+        for chunk in serde_json::Deserializer::from_str(raw).into_iter::<Vec<Entry>>() {
+            let Ok(entries) = chunk else {
+                break;
+            };
+
+            for entry in entries {
+                let Some(colors) = announced_colors(&entry.colors) else {
+                    continue;
+                };
+
+                themes.push(GalleryTheme {
+                    name: entry.theme,
+                    link: entry.link,
+                    owner: entry.owner,
+                    description: entry.description,
+                    colors
+                });
+            }
+        }
+
+        themes
+    }
+
+    /// The two announced colours, when both spell valid hex.
+    fn announced_colors(colors: &[String]) -> Option<[iced::Color; 2]> {
+        let first = hex(colors.first()?)?;
+        let second = hex(colors.get(1)?)?;
+
+        Some([first, second])
+    }
+
+    /// A colour as the index spells it.
+    fn hex(value: &str) -> Option<iced::Color> {
+        let parsed = hex_color::HexColor::parse(value).ok()?;
+
+        Some(iced::Color::from_rgb8(parsed.r, parsed.g, parsed.b))
+    }
+
+    /// The command the install runs, quoted for the shell.
+    pub fn import_command(name: &str, link: &str) -> String {
+        format!(
+            "hydectl theme import --name '{}' --url '{}'",
+            name.replace('\'', "'\\''"),
+            link.replace('\'', "'\\''")
+        )
+    }
+
+    /// Where the fetched catalogue is kept between fetches.
+    fn cache_path() -> Option<std::path::PathBuf> {
+        Some(dirs::cache_dir()?.join("hydebar").join("hyde-gallery.json"))
+    }
+
+    /// Whether the installer the import runs through exists at all.
+    async fn importer_present() -> bool {
+        tokio::process::Command::new("hydectl")
+            .arg("--help")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .await
+            .map(|status| status.success())
+            .unwrap_or(false)
+    }
+
+    /// Reads the catalogue, from the cache while it is fresh.
+    ///
+    /// Every failure — no installer, no network, a bad response — answers
+    /// with an empty catalogue, and the window simply shows no gallery.
+    pub async fn load() -> Vec<GalleryTheme> {
+        if !importer_present().await {
+            return Vec::new();
+        }
+
+        let cache = cache_path();
+
+        if let Some(path) = &cache
+            && let Ok(metadata) = tokio::fs::metadata(path).await
+            && metadata
+                .modified()
+                .ok()
+                .and_then(|modified| modified.elapsed().ok())
+                .is_some_and(|age| age < CACHE_LIFE)
+            && let Ok(raw) = tokio::fs::read_to_string(path).await
+        {
+            let themes = parse(&raw);
+
+            if !themes.is_empty() {
+                return themes;
+            }
+        }
+
+        let Ok(response) = reqwest::get(INDEX_URL).await else {
+            return stale(cache.as_deref()).await;
+        };
+        let Ok(raw) = response.text().await else {
+            return stale(cache.as_deref()).await;
+        };
+
+        let themes = parse(&raw);
+
+        if themes.is_empty() {
+            return stale(cache.as_deref()).await;
+        }
+
+        if let Some(path) = &cache {
+            if let Some(dir) = path.parent() {
+                let _ = tokio::fs::create_dir_all(dir).await;
+            }
+            let _ = tokio::fs::write(path, &raw).await;
+        }
+
+        themes
+    }
+
+    /// Whatever the cache still holds, fresh or not.
+    async fn stale(cache: Option<&std::path::Path>) -> Vec<GalleryTheme> {
+        match cache {
+            Some(path) => match tokio::fs::read_to_string(path).await {
+                Ok(raw) => parse(&raw),
+                Err(_) => Vec::new()
+            },
+            None => Vec::new()
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn the_index_is_read_even_when_it_is_two_arrays_end_to_end() {
+            let raw = r##"[{"THEME":"A","LINK":"l","OWNER":"o","DESCRIPTION":"d",
+                "COLORSCHEME":["#111111","#222222"]}]
+                [{"THEME":"B","LINK":"m","OWNER":"p","DESCRIPTION":"e",
+                "COLORSCHEME":["#333333","#444444"]}]"##;
+
+            let themes = parse(raw);
+
+            assert_eq!(themes.len(), 2);
+            assert_eq!(themes[0].name, "A");
+            assert_eq!(themes[1].name, "B");
+        }
+
+        #[test]
+        fn an_entry_with_broken_colours_is_dropped_alone() {
+            let raw = r##"[{"THEME":"A","LINK":"l","OWNER":"o","DESCRIPTION":"d",
+                "COLORSCHEME":["nope","#222222"]},
+                {"THEME":"B","LINK":"m","OWNER":"p","DESCRIPTION":"e",
+                "COLORSCHEME":["#333333","#444444"]}]"##;
+
+            let themes = parse(raw);
+
+            assert_eq!(themes.len(), 1);
+            assert_eq!(themes[0].name, "B");
+        }
+
+        #[test]
+        fn the_import_command_survives_a_quoted_name() {
+            let command = import_command("O'Dark", "https://x/y");
+
+            assert!(command.starts_with("hydectl theme import --name "));
+            assert!(command.contains("https://x/y"));
+        }
+    }
+}
+
 mod view {
     //! Menu of the theme module: the desktop's look, and every way of changing
     //! it.
@@ -241,6 +454,9 @@ mod view {
     /// Title of the section listing the installed themes.
     const THEMES: &str = "Themes";
 
+    /// Title of the section listing the gallery the desktop can install from.
+    const GALLERY: &str = "Gallery";
+
     /// Label of the row naming what the desktop is on.
     const ACTIVE: &str = "Active";
 
@@ -272,6 +488,8 @@ mod view {
         state: &HydeState,
         swatches: &HashMap<String, ThemeSwatch>,
         switching: Option<&str>,
+        catalogue: &[super::gallery::GalleryTheme],
+        installing: Option<&str>,
         spinner: Spinner,
         opacity: f32,
         font_size: f32,
@@ -284,22 +502,128 @@ mod view {
             font_size
         ));
 
-        page(font_size)
-            .push(active)
-            .push(section(
-                THEMES,
-                themes(
+        let mut window = page(font_size).push(active).push(section(
+            THEMES,
+            themes(
+                state,
+                swatches,
+                switching,
+                spinner,
+                opacity,
+                font_size,
+                available_width
+            ),
+            font_size
+        ));
+
+        let offered = offered_names(state, catalogue);
+
+        if !offered.is_empty() {
+            window = window.push(section(
+                GALLERY,
+                offer(
                     state,
-                    swatches,
+                    catalogue,
                     switching,
+                    installing,
                     spinner,
                     opacity,
                     font_size,
                     available_width
                 ),
                 font_size
-            ))
-            .into()
+            ));
+        }
+
+        window.into()
+    }
+
+    /// Names the gallery offers that are not installed yet.
+    pub(super) fn offered_names(
+        state: &HydeState,
+        catalogue: &[super::gallery::GalleryTheme]
+    ) -> Vec<String> {
+        catalogue
+            .iter()
+            .filter(|entry| !state.themes.contains(&entry.name))
+            .map(|entry| entry.name.clone())
+            .collect()
+    }
+
+    /// Renders the gallery as a grid of chips painted in announced colours.
+    ///
+    /// One install at a time, and none beside a running switch: a chip being
+    /// installed carries the spinner, and every other chip waits unpressable
+    /// rather than starting a second writer over the same directories.
+    fn offer<'a>(
+        state: &HydeState,
+        catalogue: &[super::gallery::GalleryTheme],
+        switching: Option<&str>,
+        installing: Option<&str>,
+        spinner: Spinner,
+        opacity: f32,
+        font_size: f32,
+        available_width: f32
+    ) -> Element<'a, Message> {
+        let names = offered_names(state, catalogue);
+        let gap = style::group_gap(font_size);
+        let cell = chip_cell_width(&names, font_size);
+        let busy = switching.is_some() || installing.is_some();
+        let mut block = grid(font_size);
+
+        for indices in wrap_chips_into_rows(&names, available_width, font_size, gap) {
+            let mut row = group(font_size);
+
+            for index in indices {
+                let name = &names[index];
+                let entry = catalogue.iter().find(|entry| &entry.name == name);
+
+                let chip_state = if installing == Some(name.as_str()) {
+                    ThemeChip::Applying(spinner)
+                } else if busy {
+                    ThemeChip::Blocked
+                } else {
+                    ThemeChip::Idle
+                };
+
+                row = row.push(theme_chip(
+                    name.clone(),
+                    Message::Install(name.clone()),
+                    chip_state,
+                    font_size,
+                    opacity,
+                    cell,
+                    entry.map(offer_paint)
+                ));
+            }
+
+            block = block.push(row);
+        }
+
+        block.into()
+    }
+
+    /// Paint for a gallery chip, from the two colours the index announces.
+    ///
+    /// The index does not promise an order, so the darker of the two is taken
+    /// as the surface and the lighter as the ink — a chip the other way round
+    /// would be a swatch nobody can read.
+    fn offer_paint(entry: &super::gallery::GalleryTheme) -> ChipPaint {
+        let luma = |color: iced::Color| 0.2126 * color.r + 0.7152 * color.g + 0.0722 * color.b;
+
+        let [first, second] = entry.colors;
+        let (surface, ink) = if luma(first) <= luma(second) {
+            (first, second)
+        } else {
+            (second, first)
+        };
+
+        ChipPaint {
+            background: surface,
+            text:       ink,
+            accent:     ink,
+            palette:    [surface, ink, surface, ink]
+        }
     }
 
     /// Renders the installed themes as a grid of chips.
@@ -494,12 +818,29 @@ mod view {
     /// every grid row adds that height on top of the shared row pitch — an
     /// estimate without it would clip the last row of themes.
     #[must_use]
-    pub(super) fn desired_height(state: &HydeState, font_size: f32, available_width: f32) -> f32 {
-        let dots = theme_rows(state, font_size, available_width)
-            * widgets::DOT_ROW_EM
-            * style::control_size(font_size);
+    pub(super) fn desired_height(
+        state: &HydeState,
+        offered: &[String],
+        font_size: f32,
+        available_width: f32
+    ) -> f32 {
+        let gap = style::group_gap(font_size);
+        let offered_rows = if offered.is_empty() {
+            0.0
+        } else {
+            wrap_chips_into_rows(offered, available_width, font_size, gap).len() as f32
+        };
+        let offered_sections = if offered.is_empty() { 0.0 } else { 1.0 };
 
-        style::page_height(rows(state, font_size, available_width), font_size) + dots
+        let chip_rows = theme_rows(state, font_size, available_width) + offered_rows;
+        let dots = chip_rows * widgets::DOT_ROW_EM * style::control_size(font_size);
+
+        style::page_height(
+            rows(state, font_size, available_width)
+                + offered_rows
+                + offered_sections * style::SECTION_TITLE_ROWS,
+            font_size
+        ) + dots
     }
 
     #[cfg(test)]
@@ -647,7 +988,9 @@ mod view {
             );
             let width = desired_width(&few, None, 16.0);
 
-            assert!(desired_height(&many, 16.0, width) > desired_height(&few, 16.0, width));
+            assert!(
+                desired_height(&many, &[], 16.0, width) > desired_height(&few, &[], 16.0, width)
+            );
         }
 
         #[test]
@@ -705,8 +1048,8 @@ mod view {
 
             assert_eq!(resting, switching);
             assert_eq!(
-                desired_height(&themes, font_size, resting),
-                desired_height(&themes, font_size, switching)
+                desired_height(&themes, &[], font_size, resting),
+                desired_height(&themes, &[], font_size, switching)
             );
         }
 
@@ -730,7 +1073,7 @@ mod view {
             let themes = state(&["Nord", "Mocha"], Some("Nord"));
 
             assert_eq!(
-                desired_height(&themes, font_size, 400.0),
+                desired_height(&themes, &[], font_size, 400.0),
                 style::page_height(rows(&themes, font_size, 400.0), font_size)
                     + theme_rows(&themes, font_size, 400.0)
                         * widgets::DOT_ROW_EM
@@ -797,7 +1140,18 @@ pub enum Message {
     /// Raised by the reader the menu starts when it opens; the colours arrive
     /// a beat after the names because reading them hashes every theme's
     /// wallpaper, which is nothing the opening animation should wait on.
-    SwatchesLoaded(HashMap<String, ThemeSwatch>)
+    SwatchesLoaded(HashMap<String, ThemeSwatch>),
+    /// Deliver the upstream catalogue the gallery section draws.
+    CatalogueLoaded(Vec<gallery::GalleryTheme>),
+    /// Install the named theme from the gallery, then switch to it.
+    Install(String),
+    /// Report that the install of the named theme has ended.
+    Installed {
+        /// Theme the install was asked for.
+        theme:   String,
+        /// Why the install failed, when it did.
+        failure: Option<String>
+    }
 }
 
 /// What a press on a theme chip leads to.
@@ -854,21 +1208,25 @@ pub struct Themes {
     /// Kept here rather than read while rendering: the menu is redrawn on every
     /// frame of the open animation, and reading two files that often would put
     /// the filesystem in the draw path.
-    hyde:      HydeState,
+    hyde:       HydeState,
     /// The colours each theme announces itself with, by theme name.
     ///
     /// Loaded off the update path — see [`Themes::load_swatches`] — and kept
     /// so the menu can paint every chip in the colours of the theme it stands
     /// for. A theme without an entry is painted like any other control.
-    swatches:  HashMap<String, ThemeSwatch>,
+    swatches:   HashMap<String, ThemeSwatch>,
     /// Theme a switch is running for, while one is.
-    switching: Option<String>,
+    switching:  Option<String>,
+    /// The upstream catalogue, once the menu has loaded it.
+    catalogue:  Vec<gallery::GalleryTheme>,
+    /// Theme an install is running for, while one is.
+    installing: Option<String>,
     /// Frame the indicator of a running switch is on.
     ///
     /// Advanced on a tick rather than derived from a clock read while drawing,
     /// so what the bar shows is a function of the state it holds and can be
     /// checked without one.
-    spinner:   Spinner
+    spinner:    Spinner
 }
 
 impl Themes {
@@ -876,10 +1234,12 @@ impl Themes {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            hyde:      hyde_state::load(),
-            swatches:  HashMap::new(),
-            switching: None,
-            spinner:   Spinner::default()
+            hyde:       hyde_state::load(),
+            swatches:   HashMap::new(),
+            switching:  None,
+            catalogue:  Vec::new(),
+            installing: None,
+            spinner:    Spinner::default()
         }
     }
 
@@ -961,6 +1321,8 @@ impl Themes {
             &self.hyde,
             &self.swatches,
             self.switching(),
+            &self.catalogue,
+            self.installing.as_deref(),
             self.spinner,
             opacity,
             font_size,
@@ -978,7 +1340,12 @@ impl Themes {
         crate::menu::MenuMetrics {
             width,
             page_width,
-            height: view::desired_height(&self.hyde, font_size, page_width)
+            height: view::desired_height(
+                &self.hyde,
+                &view::offered_names(&self.hyde, &self.catalogue),
+                font_size,
+                page_width
+            )
         }
     }
 
@@ -1022,10 +1389,75 @@ impl Themes {
                     self.spinner.advance();
                 }
             }
-            Message::SwatchesLoaded(swatches) => self.swatches = swatches
+            Message::SwatchesLoaded(swatches) => self.swatches = swatches,
+            Message::CatalogueLoaded(catalogue) => self.catalogue = catalogue,
+            Message::Install(theme) => return self.install(theme, config),
+            Message::Installed {
+                theme,
+                failure
+            } => {
+                self.installing = None;
+
+                match failure {
+                    Some(failure) => {
+                        report(
+                            config,
+                            &format!("installing the HyDE theme `{theme}` failed: {failure}")
+                        );
+                    }
+                    None => {
+                        info!("the HyDE theme `{theme}` is installed, switching to it");
+                        self.refresh();
+
+                        return Task::batch([self.load_swatches(), self.switch(theme, config)]);
+                    }
+                }
+            }
         }
 
         Task::none()
+    }
+
+    /// Hands a gallery install to the desktop's own importer.
+    ///
+    /// One at a time, and never beside a running switch: both write the same
+    /// theme directories, and two writers racing over them is how a desktop
+    /// ends up half one theme and half another.
+    fn install(&mut self, theme: String, config: &Config) -> Task<Message> {
+        if let Some(pending) = self.switching.as_deref() {
+            info!("ignoring the install of `{theme}`: `{pending}` is still being applied");
+            return Task::none();
+        }
+
+        if let Some(pending) = self.installing.as_deref() {
+            info!("ignoring the install of `{theme}`: `{pending}` is still being installed");
+            return Task::none();
+        }
+
+        let Some(entry) = self.catalogue.iter().find(|entry| entry.name == theme) else {
+            report(
+                config,
+                &format!("the gallery lists no theme named `{theme}`")
+            );
+            return Task::none();
+        };
+
+        info!("installing the HyDE theme `{theme}` from `{}`", entry.link);
+        self.installing = Some(theme.clone());
+
+        let command = gallery::import_command(&entry.name, &entry.link);
+
+        Task::perform(hyde_shell::run(command), move |failure| {
+            Message::Installed {
+                theme: theme.clone(),
+                failure
+            }
+        })
+    }
+
+    /// Starts the catalogue reader, for the gallery section of the menu.
+    pub fn load_catalogue(&self) -> Task<Message> {
+        Task::perform(gallery::load(), Message::CatalogueLoaded)
     }
 
     /// Hands a theme switch to the desktop, once it is worth handing over.

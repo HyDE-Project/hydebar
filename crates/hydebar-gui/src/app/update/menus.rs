@@ -24,6 +24,7 @@ impl App {
         let focus = self.outputs.open_menu().map(MenuType::owner);
 
         self.attention.look_at(focus);
+        self.poll_attended_now();
     }
 
     /// Executes what the tooltip lifecycle asked for, if anything.
@@ -61,6 +62,7 @@ impl App {
                     entered,
                     self.outputs.menu_is_open()
                 );
+                self.poll_attended_now();
 
                 let animations = &self.config.appearance.animations;
                 self.hover.point(
@@ -101,6 +103,7 @@ impl App {
                     }
                     MenuType::Themes => {
                         cmd.push(self.themes.load_swatches().map(Message::Themes));
+                        cmd.push(self.themes.load_catalogue().map(Message::Themes));
                     }
                     MenuType::Audio => {
                         self.control_center.sub_menu = Some(SubMenu::Sinks);
