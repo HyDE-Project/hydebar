@@ -74,7 +74,12 @@ async fn default_route() -> Option<Route> {
         .await
         .ok()?;
 
-    serde_json::from_slice::<Vec<Route>>(&output.stdout)
+    first_route(&output.stdout)
+}
+
+/// The first default route in an `ip -j route` report.
+fn first_route(report: &[u8]) -> Option<Route> {
+    serde_json::from_slice::<Vec<Route>>(report)
         .ok()?
         .into_iter()
         .next()
@@ -88,7 +93,15 @@ async fn first_address(interface: &str) -> Option<(String, String)> {
         .await
         .ok()?;
 
-    serde_json::from_slice::<Vec<Interface>>(&output.stdout)
+    first_inet(&output.stdout)
+}
+
+/// The first IPv4 address in an `ip -j addr` report, with its netmask.
+///
+/// IPv4 on purpose: the report usually lists link-local IPv6 first, and the
+/// hover states the address the way the router hands it out.
+fn first_inet(report: &[u8]) -> Option<(String, String)> {
+    serde_json::from_slice::<Vec<Interface>>(report)
         .ok()?
         .into_iter()
         .flat_map(|interface| interface.addr_info)
@@ -181,5 +194,44 @@ mod tests {
     #[test]
     fn a_report_without_the_lines_yields_nothing() {
         assert_eq!(parse_wireless("Not connected."), (None, None));
+    }
+
+    #[test]
+    fn the_first_default_route_wins() {
+        let report = br#"[{"dst":"default","gateway":"192.168.2.253","dev":"wlan0"},
+                          {"dst":"default","gateway":"10.0.0.1","dev":"eth0"}]"#;
+
+        let route = first_route(report).expect("route");
+
+        assert_eq!(route.dev.as_deref(), Some("wlan0"));
+        assert_eq!(route.gateway.as_deref(), Some("192.168.2.253"));
+    }
+
+    #[test]
+    fn no_route_at_all_is_an_honest_none() {
+        assert!(first_route(b"[]").is_none());
+        assert!(first_route(b"not json").is_none());
+    }
+
+    #[test]
+    fn the_inet_address_is_picked_over_the_ipv6_one() {
+        let report = br#"[{"ifname":"wlan0","addr_info":[
+            {"family":"inet6","local":"fe80::1","prefixlen":64},
+            {"family":"inet","local":"192.168.2.19","prefixlen":24}
+        ]}]"#;
+
+        assert_eq!(
+            first_inet(report),
+            Some(("192.168.2.19/24".to_owned(), "255.255.255.0".to_owned()))
+        );
+    }
+
+    #[test]
+    fn an_interface_without_ipv4_yields_nothing() {
+        let report = br#"[{"ifname":"wlan0","addr_info":[
+            {"family":"inet6","local":"fe80::1","prefixlen":64}
+        ]}]"#;
+
+        assert!(first_inet(report).is_none());
     }
 }

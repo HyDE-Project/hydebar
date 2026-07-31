@@ -274,14 +274,14 @@ impl App {
     /// for exactly the greeting's lifetime; it breathes in with the bar's
     /// birth and lets itself out three seconds later. An empty row whenever
     /// the greeting is over, disabled, or animations are off.
-    fn screen_greeting<'a>(&self) -> Element<'a, Message> {
+    fn screen_greeting(&self) -> Element<'_, Message> {
         let presence = self.greeting.value().clamp(0.0, 1.0);
 
         if presence <= 0.004 {
             return Row::new().into();
         }
 
-        let line = iced::widget::text(hydebar_core::components::greeting::current())
+        let line = iced::widget::text(self.greeting_line.as_str())
             .size(self.appearance().font_size_px() * 2.4)
             .color(self.theme_cache.palette().text.scale_alpha(presence));
 

@@ -81,18 +81,20 @@ pub fn notify_args(
 /// Asks the compositor to show `message`, painted with the bar theme.
 ///
 /// Failures are logged rather than propagated: a notice that cannot be shown
-/// must not take the bar down with it.
+/// must not take the bar down with it. The whole exchange runs on its own
+/// thread — the callers sit on the update path, and a notice is not worth
+/// stalling a frame for a process round trip.
 pub fn notify(notice: Notice, duration: u32, color: &str, font_size: f32, message: &str) {
     let args = notify_args(notice, duration, color, font_size, message);
 
-    match Command::new("hyprctl").args(&args).output() {
+    std::thread::spawn(move || match Command::new("hyprctl").args(&args).output() {
         Ok(output) if output.status.success() => {}
         Ok(output) => warn!(
             "the compositor refused a notice: {}",
             String::from_utf8_lossy(&output.stderr).trim()
         ),
         Err(err) => warn!("the compositor could not be reached for a notice: {err}")
-    }
+    });
 }
 
 /// Puts `message` in front of the user as well as in the log.

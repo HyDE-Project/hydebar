@@ -41,17 +41,23 @@ impl NetworkService {
 
     /// Whether `event` moves the link enough to re-read its kernel facts.
     ///
-    /// Connection changes and admitted strength steps do — a roam changes the
-    /// frequency and the address may follow — while scans and password
-    /// prompts leave the link exactly where it was.
-    fn moves_the_link(event: &NetworkEvent) -> bool {
-        matches!(
-            event,
+    /// Connection changes always do — a roam changes the frequency and the
+    /// address may follow. Strength and connectivity ticks only refresh the
+    /// wireless numbers, arrive every few seconds on a live link, and each
+    /// read costs process spawns — so those go through `throttle` instead of
+    /// spawning on every tick. Scans and password prompts leave the link
+    /// exactly where it was.
+    fn moves_the_link(event: &NetworkEvent, throttle: &mut LinkThrottle) -> bool {
+        match event {
             NetworkEvent::ActiveConnections(_)
-                | NetworkEvent::WirelessDevice { .. }
-                | NetworkEvent::Strength(_)
-                | NetworkEvent::Connectivity(_)
-        )
+            | NetworkEvent::WirelessDevice {
+                ..
+            } => true,
+            NetworkEvent::Strength(_) | NetworkEvent::Connectivity(_) => {
+                throttle.admits(std::time::Instant::now())
+            }
+            _ => false
+        }
     }
 
     /// Publishes a fresh read of the link's kernel facts.
@@ -74,6 +80,8 @@ impl NetworkService {
         S: Stream<Item = AppResult<NetworkEvent>> + Unpin,
         P: ServiceEventPublisher<Self> + Send
     {
+        let mut throttle = LinkThrottle::default();
+
         while let Some(event) = events.next().await {
             let event = event?;
             let mut exit_loop = false;
@@ -85,7 +93,7 @@ impl NetworkService {
             }
 
             if gate.admits(&event) {
-                let refresh_link = Self::moves_the_link(&event);
+                let refresh_link = Self::moves_the_link(&event, &mut throttle);
                 let _ = publisher.send(ServiceEvent::Update(event)).await;
 
                 if refresh_link {
@@ -230,10 +238,13 @@ impl NetworkService {
                         };
                         match iwd.subscribe_events().await {
                             Ok(mut event_s) => {
+                                let mut throttle = LinkThrottle::default();
+
                                 while let Some(events) = event_s.next().await {
                                     for event in events {
                                         if gate.admits(&event) {
-                                            let refresh_link = Self::moves_the_link(&event);
+                                            let refresh_link =
+                                                Self::moves_the_link(&event, &mut throttle);
                                             let _ =
                                                 publisher.send(ServiceEvent::Update(event)).await;
 
@@ -290,6 +301,31 @@ impl NetworkService {
     }
 }
 
+/// Keeps the kernel link reads to one per window however often signals tick.
+#[derive(Debug, Default)]
+struct LinkThrottle {
+    last: Option<std::time::Instant>
+}
+
+impl LinkThrottle {
+    /// Shortest gap between two throttled link reads.
+    const WINDOW: Duration = Duration::from_secs(10);
+
+    /// Whether a read may go out at `now`, claiming the window when it may.
+    fn admits(&mut self, now: std::time::Instant) -> bool {
+        if self
+            .last
+            .is_some_and(|last| now.saturating_duration_since(last) < Self::WINDOW)
+        {
+            return false;
+        }
+
+        self.last = Some(now);
+
+        true
+    }
+}
+
 /// Shortest pause between two connection attempts.
 const RECONNECT_MIN_DELAY: Duration = Duration::from_secs(1);
 
@@ -317,32 +353,73 @@ mod link_refresh_tests {
 
     #[test]
     fn connection_changes_re_read_the_link() {
+        let mut throttle = LinkThrottle::default();
+
         assert!(NetworkService::moves_the_link(
-            &NetworkEvent::ActiveConnections(Vec::new())
+            &NetworkEvent::ActiveConnections(Vec::new()),
+            &mut throttle
         ));
         assert!(NetworkService::moves_the_link(
             &NetworkEvent::WirelessDevice {
                 wifi_present:           true,
                 wireless_access_points: Vec::new()
-            }
+            },
+            &mut throttle
         ));
-        assert!(NetworkService::moves_the_link(&NetworkEvent::Strength((
-            "home".to_owned(),
-            70
-        ))));
     }
 
     #[test]
     fn scans_and_prompts_leave_the_link_alone() {
+        let mut throttle = LinkThrottle::default();
+
         assert!(!NetworkService::moves_the_link(
-            &NetworkEvent::ScanningNearbyWifi
+            &NetworkEvent::ScanningNearbyWifi,
+            &mut throttle
         ));
         assert!(!NetworkService::moves_the_link(
-            &NetworkEvent::RequestPasswordForSSID("home".to_owned())
+            &NetworkEvent::RequestPasswordForSSID("home".to_owned()),
+            &mut throttle
         ));
-        assert!(!NetworkService::moves_the_link(&NetworkEvent::WiFiEnabled(
-            true
-        )));
+        assert!(!NetworkService::moves_the_link(
+            &NetworkEvent::WiFiEnabled(true),
+            &mut throttle
+        ));
+    }
+
+    #[test]
+    fn strength_ticks_are_throttled_to_one_read_per_window() {
+        let mut throttle = LinkThrottle::default();
+        let tick = NetworkEvent::Strength(("home".to_owned(), 70));
+
+        assert!(NetworkService::moves_the_link(&tick, &mut throttle));
+        assert!(
+            !NetworkService::moves_the_link(&tick, &mut throttle),
+            "a second tick inside the window spawns nothing"
+        );
+    }
+
+    #[test]
+    fn the_throttle_window_reopens_after_it_passes() {
+        let mut throttle = LinkThrottle::default();
+        let start = std::time::Instant::now();
+
+        assert!(throttle.admits(start));
+        assert!(!throttle.admits(start + Duration::from_secs(5)));
+        assert!(throttle.admits(start + LinkThrottle::WINDOW));
+    }
+
+    #[test]
+    fn connection_changes_ignore_the_throttle() {
+        let mut throttle = LinkThrottle::default();
+        let _ = throttle.admits(std::time::Instant::now());
+
+        assert!(
+            NetworkService::moves_the_link(
+                &NetworkEvent::ActiveConnections(Vec::new()),
+                &mut throttle
+            ),
+            "a roam or reconnect always re-reads, window or not"
+        );
     }
 }
 

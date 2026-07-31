@@ -122,7 +122,9 @@ pub struct App {
     /// The frame instant past which the greeting lets itself out.
     pub(super) greeting_deadline: Option<Instant>,
     /// The one tooltip lifecycle: dwell, warmth and the fade either way.
-    pub hints: hydebar_core::tooltip::Hints
+    pub hints: hydebar_core::tooltip::Hints,
+    /// The greeting line, composed once when the greeting is armed.
+    pub greeting_line: String
 }
 
 #[derive(Debug, Clone)]
@@ -450,6 +452,7 @@ impl App {
             greeting_raised: false,
             greeting_deadline: None,
             hints: hydebar_core::tooltip::Hints::default(),
+            greeting_line: String::new(),
             weather: Weather::new(
                 config.weather.location.clone(),
                 config.weather.api_key.clone(),
@@ -475,6 +478,7 @@ impl App {
             if app.config.appearance.greeting
                 && hydebar_core::components::greeting::claim_first_entry()
             {
+                app.greeting_line = hydebar_core::components::greeting::current();
                 app.greeting = hydebar_core::animation::Spring::new(0.0)
                     .with_response(hydebar_core::animation::STANDARD);
                 app.greeting.set_target(1.0);

@@ -73,21 +73,6 @@ impl Outputs {
             .collect()
     }
 
-    pub fn get_menu_opacity(&self, id: Id) -> f32 {
-        self.0
-            .iter()
-            .find_map(|(_, shell_info, _)| {
-                shell_info.as_ref().and_then(|shell_info| {
-                    if shell_info.menu.id == id {
-                        Some(shell_info.menu.get_opacity())
-                    } else {
-                        None
-                    }
-                })
-            })
-            .unwrap_or(0.0)
-    }
-
     /// Update menu animations. Returns whether any menu is still animating,
     /// together with the tasks finishing the closes that just completed.
     pub fn tick_menu_animations<Message: 'static>(

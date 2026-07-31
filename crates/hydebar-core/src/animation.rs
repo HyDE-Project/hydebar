@@ -300,6 +300,10 @@ where
             return;
         }
 
+        if !entered && !self.springs.contains_key(&key) {
+            return;
+        }
+
         let spring = self.springs.entry(key).or_insert_with(|| Spring::new(0.0));
         let target = if entered { 1.0 } else { 0.0 };
 
@@ -540,6 +544,26 @@ mod tests {
         assert!(fades.progress(&"clock") < 1.0);
         assert!(fades.progress(&"battery") > 0.0);
         assert!(fades.is_animating());
+    }
+
+    #[test]
+    fn leaving_an_item_never_entered_stores_nothing() {
+        let mut fades: HoverFades<&str> = HoverFades::default();
+
+        fades.point("clock", false, true, SNAPPY);
+
+        assert!(
+            fades.springs.is_empty(),
+            "a stray leave must not park a settled spring in the map"
+        );
+        assert!(!fades.is_animating());
+    }
+
+    #[test]
+    fn a_sweep_with_full_spread_stays_finite() {
+        assert!(sweep(0.5, 0.5, 1.0).is_finite());
+        assert!(sweep(0.5, 0.5, -1.0).is_finite());
+        assert_eq!(sweep(1.0, 1.0, 1.0), 1.0);
     }
 
     #[test]

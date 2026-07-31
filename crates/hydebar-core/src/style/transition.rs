@@ -138,14 +138,27 @@ impl AppearanceTransition {
     /// frame that arrives after settling must not pay for seven colour blends
     /// and two vectors nobody will see change.
     pub fn advance(&mut self, elapsed: Duration) -> bool {
+        self.advance_reporting(elapsed).0
+    }
+
+    /// [`AppearanceTransition::advance`], also reporting whether the
+    /// displayed appearance actually moved.
+    ///
+    /// The second flag is what a theme cache wants: frames driven by hovers,
+    /// menus or the greeting tick this transition too, and rebuilding the
+    /// theme on every one of them pays a full palette derivation for colours
+    /// that did not change. The settling frame reports movement, so the cache
+    /// still lands exactly on the target.
+    pub fn advance_reporting(&mut self, elapsed: Duration) -> (bool, bool) {
         let before = self.progress.value();
         let running = self.progress.advance(elapsed);
+        let moved = running || self.progress.value() != before;
 
-        if running || self.progress.value() != before {
+        if moved {
             self.refresh();
         }
 
-        running
+        (running, moved)
     }
 
     /// Recomputes the displayed appearance for the current progress.
@@ -404,6 +417,43 @@ mod tests {
         assert_eq!(
             transition.current().background_color,
             AppearanceColor::Simple(hex(200))
+        );
+    }
+
+    #[test]
+    fn a_sample_walks_the_blend_from_origin_to_target() {
+        let mut transition = AppearanceTransition::new(appearance_with_background(0));
+        transition.set_target(appearance_with_background(200), true);
+
+        assert_eq!(
+            transition.sample(0.0).background_color,
+            AppearanceColor::Simple(hex(0))
+        );
+        assert_eq!(
+            transition.sample(1.0).background_color,
+            AppearanceColor::Simple(hex(200))
+        );
+        assert_eq!(
+            transition.sample(0.5).background_color,
+            AppearanceColor::Simple(hex(100))
+        );
+        assert_eq!(
+            transition.sample(7.0).background_color,
+            AppearanceColor::Simple(hex(200)),
+            "the share is clamped"
+        );
+    }
+
+    #[test]
+    fn a_sample_ignores_how_far_the_spring_travelled() {
+        let mut transition = AppearanceTransition::new(appearance_with_background(0));
+        transition.set_target(appearance_with_background(200), true);
+        let _ = transition.advance(Duration::from_millis(60));
+
+        assert_eq!(
+            transition.sample(0.0).background_color,
+            AppearanceColor::Simple(hex(0)),
+            "an island the front has not reached keeps the old palette"
         );
     }
 

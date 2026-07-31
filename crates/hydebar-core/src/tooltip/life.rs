@@ -113,6 +113,12 @@ impl Hints {
         animated: bool
     ) -> Option<HintCommand> {
         match hint {
+            Some(_) if !entered => {
+                // the anchors never publish a hint on a leave; a machine that
+                // trusted that silently would show a hint for a module the
+                // pointer just left if they ever did
+                self.hide(surface, Some(module), now, animated)
+            }
             Some(info) => {
                 let warm = self.shown || self.warm_until.is_some_and(|until| now < until);
 
@@ -179,9 +185,13 @@ impl Hints {
     }
 
     /// Drops every hint at once, for the moment a menu takes the screen.
+    ///
+    /// The warmth goes too: opening a menu is a change of activity, and the
+    /// first hint after it must wait out the dwell like any first hint.
     pub fn dismiss(&mut self) {
         self.dwell = None;
         self.shown = false;
+        self.warm_until = None;
         self.closing = None;
         self.presence.snap_to(0.0);
     }
@@ -412,5 +422,40 @@ mod tests {
 
         assert_eq!(hints.presence(), 0.0);
         assert!(!hints.needs_frames());
+    }
+
+    #[test]
+    fn a_menu_takes_the_warmth_with_it() {
+        let mut hints = Hints::default();
+        let now = Instant::now();
+        let id = surface();
+
+        let _ = hints.observe(id, ModuleName::Clock, true, Some(info("a")), now, true);
+        let _ = hints.served(now + DWELL, true);
+        let _ = hints.observe(id, ModuleName::Clock, false, None, now + DWELL, true);
+
+        hints.dismiss();
+
+        let after = hints.observe(
+            id,
+            ModuleName::Battery,
+            true,
+            Some(info("b")),
+            now + DWELL + Duration::from_millis(50),
+            true
+        );
+
+        assert_eq!(after, None, "the first hint after a menu waits again");
+    }
+
+    #[test]
+    fn a_leave_carrying_a_hint_hides_instead_of_showing() {
+        let mut hints = Hints::default();
+        let now = Instant::now();
+        let id = surface();
+
+        let odd = hints.observe(id, ModuleName::Clock, false, Some(info("a")), now, false);
+
+        assert!(matches!(odd, Some(HintCommand::Hide { .. })));
     }
 }

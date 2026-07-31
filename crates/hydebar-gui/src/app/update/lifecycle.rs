@@ -103,15 +103,20 @@ impl App {
                 let (menus_animating, menu_tasks) = self
                     .outputs
                     .tick_menu_animations(&self.config.appearance.animations, elapsed);
-                let theme_animating = self.appearance_transition.advance(elapsed);
+                let (theme_animating, palette_moved) =
+                    self.appearance_transition.advance_reporting(elapsed);
                 let hover_animating = self.hover.advance(elapsed);
                 let entering = self.entrance.advance(elapsed);
                 let greeting_animating = self.greeting.advance(elapsed);
                 let greeting_tasks = self.greeting_surface_tasks();
 
-                // rebuilt on the settling frame as well: the last advance
-                // lands exactly on the target after reporting it stopped
-                self.rebuild_theme();
+                // rebuilt only when the palette moved, settling frame
+                // included: frames driven by hovers, menus or the greeting
+                // must not pay a palette derivation for colours that stood
+                // still
+                if palette_moved {
+                    self.rebuild_theme();
+                }
 
                 if !menus_animating
                     && !theme_animating
@@ -240,8 +245,8 @@ impl App {
                         &config.outputs,
                         config.position,
                         &config,
-                        self.scaled_appearance().scale_factor,
-                        self.scaled_appearance().height
+                        self.config.appearance.scale_factor,
+                        self.config.appearance.height
                     ));
                 }
 

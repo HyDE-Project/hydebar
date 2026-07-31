@@ -6,40 +6,28 @@ use iced::{Alignment, Element, Length, Subscription, SurfaceId as Id, widget::ro
 use crate::app::state::{App, Message};
 
 impl App {
-    /// Theme of the island standing at `position` while a theme change runs.
-    ///
-    /// `position` is zero at the corner the front starts from and one at the
-    /// far end; which corner leads, how wide the front is and how it moves all
-    /// come from the signature of the incoming theme. [`None`] whenever the
-    /// palette rests, which is almost always, so the sweep costs nothing
-    /// outside the frames it actually travels.
-    fn sweep_theme(&self, position: f32) -> Option<iced::Theme> {
-        if !self.appearance_transition.is_animating() {
-            return None;
-        }
-
-        let local = hydebar_core::animation::sweep(
-            self.appearance_transition.progress(),
-            position,
-            self.sweep.spread
-        );
-
-        Some(hydebar_core::style::hydebar_theme(
-            &self.appearance_transition.sample(local)
-        ))
-    }
-
     /// Wraps an island in the palette of its place under the travelling front.
     ///
     /// Two fronts share the wrap: the palette of a running theme change, and
     /// the birth of the bar, where each island fades in as the entrance wave
     /// reaches it. Both travel with the signature of the theme in force.
+    ///
+    /// `themes` memoises one section pass: with the fronts spread out, most
+    /// islands sit at exactly the resting or the arrived end of the travel and
+    /// share one derivation instead of each paying for a palette of its own.
     fn swept_island<'a>(
         &self,
         island: Element<'a, Message>,
-        position: f32
+        position: f32,
+        themes: &mut std::collections::HashMap<(u32, u32), iced::Theme>
     ) -> Element<'a, Message> {
-        let swept = self.sweep_theme(position);
+        let palette_local = self.appearance_transition.is_animating().then(|| {
+            hydebar_core::animation::sweep(
+                self.appearance_transition.progress(),
+                position,
+                self.sweep.spread
+            )
+        });
 
         let arrival = hydebar_core::animation::sweep(
             self.entrance.value().clamp(0.0, 1.0),
@@ -47,21 +35,35 @@ impl App {
             self.sweep.spread
         );
 
-        let themed = if arrival < 1.0 {
-            Some(hydebar_core::style::faded_theme(
-                swept.as_ref().unwrap_or(&self.theme_cache),
-                arrival
-            ))
-        } else {
-            swept
-        };
-
-        match themed {
-            Some(theme) => iced::widget::themer(Some(theme), island)
-                .text_color(|theme: &iced::Theme| theme.palette().text)
-                .into(),
-            None => island
+        if palette_local.is_none() && arrival >= 1.0 {
+            return island;
         }
+
+        let key = (
+            palette_local.unwrap_or(f32::NAN).to_bits(),
+            arrival.to_bits()
+        );
+        let theme = themes
+            .entry(key)
+            .or_insert_with(|| {
+                let base = match palette_local {
+                    Some(local) => hydebar_core::style::hydebar_theme(
+                        &self.appearance_transition.sample(local)
+                    ),
+                    None => self.theme_cache.clone()
+                };
+
+                if arrival < 1.0 {
+                    hydebar_core::style::faded_theme(&base, arrival)
+                } else {
+                    base
+                }
+            })
+            .clone();
+
+        iced::widget::themer(Some(theme), island)
+            .text_color(|theme: &iced::Theme| theme.palette().text)
+            .into()
     }
 
     pub fn get_module_at_index(
@@ -126,6 +128,7 @@ impl App {
             .spacing(self.appearance().island_gap());
 
         let total = self.island_count().max(1) as f32;
+        let mut themes = std::collections::HashMap::new();
 
         for (index, module_def) in modules_def.iter().enumerate() {
             let island = match module_def {
@@ -140,7 +143,8 @@ impl App {
                 1.0 - ordinal
             };
 
-            row = row.push_maybe(island.map(|island| self.swept_island(island, position)));
+            row = row
+                .push_maybe(island.map(|island| self.swept_island(island, position, &mut themes)));
         }
 
         row.into()

@@ -156,6 +156,42 @@ mod tests {
     }
 
     #[test]
+    fn a_light_palette_derives_a_quicker_entrance_than_a_dark_one() {
+        use hydebar_proto::config::AppearanceColor;
+
+        let dark = Appearance::default();
+        let light = Appearance {
+            background_color: AppearanceColor::Simple(hex_color::HexColor::rgb(240, 240, 240)),
+            ..Appearance::default()
+        };
+
+        let slow = SweepStyle::of(Some("Somebody's Theme"), &dark);
+        let quick = SweepStyle::of(Some("Somebody's Theme"), &light);
+
+        assert!(quick.response < slow.response);
+    }
+
+    #[test]
+    fn a_saturated_accent_derives_a_springier_entrance() {
+        use hydebar_proto::config::AppearanceColor;
+
+        let vivid = Appearance {
+            primary_color: AppearanceColor::Simple(hex_color::HexColor::rgb(255, 40, 160)),
+            ..Appearance::default()
+        };
+        let grey = Appearance {
+            primary_color: AppearanceColor::Simple(hex_color::HexColor::rgb(120, 120, 120)),
+            ..Appearance::default()
+        };
+
+        let muted = SweepStyle::of(Some("Somebody's Theme"), &grey);
+        let springy = SweepStyle::of(Some("Somebody's Theme"), &vivid);
+
+        assert!(springy.damping < muted.damping);
+        assert!((muted.damping - 1.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
     fn no_theme_at_all_still_yields_a_usable_signature() {
         let style = SweepStyle::of(None, &Appearance::default());
 
