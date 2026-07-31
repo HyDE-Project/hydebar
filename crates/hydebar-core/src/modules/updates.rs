@@ -179,16 +179,82 @@ mod commands {
     /// message would redraw the window hundreds of times for one update.
     const LOG_FLUSH: std::time::Duration = std::time::Duration::from_millis(150);
 
+    /// Wrapper that answers `sudo` through the desktop's polkit agent.
+    ///
+    /// The update runs without a terminal, so sudo has nowhere to ask for a
+    /// password. The desktop already has a window for exactly that — the
+    /// polkit agent — but sudo does not speak polkit. This wrapper, placed
+    /// first on the update's `PATH` under the name `sudo`, hands the command
+    /// to `pkexec` instead, and the agent asks on screen. Session flags like
+    /// `-v` succeed quietly: polkit has no session to warm up.
+    const SUDO_SHIM: &str = concat!(
+        "#!/usr/bin/env bash\n",
+        "user=''\n",
+        "while [ \"$#\" -gt 0 ]; do\n",
+        "  case \"$1\" in\n",
+        "    -v|-k|-K|--validate) exit 0 ;;\n",
+        "    -u|--user) user=\"$2\"; shift 2 ;;\n",
+        "    --) shift; break ;;\n",
+        "    -*) shift ;;\n",
+        "    *) break ;;\n",
+        "  esac\n",
+        "done\n",
+        "[ \"$#\" -gt 0 ] || exit 0\n",
+        "if [ -n \"$user\" ]; then exec pkexec --user \"$user\" \"$@\"; fi\n",
+        "exec pkexec \"$@\"\n"
+    );
+
+    /// Writes the sudo wrapper into `dir` and returns its path.
+    fn write_sudo_shim(dir: &std::path::Path) -> Option<std::path::PathBuf> {
+        use std::os::unix::fs::PermissionsExt;
+
+        std::fs::create_dir_all(dir).ok()?;
+
+        let shim = dir.join("sudo");
+        std::fs::write(&shim, SUDO_SHIM).ok()?;
+
+        let mut permissions = std::fs::metadata(&shim).ok()?.permissions();
+        permissions.set_mode(0o755);
+        std::fs::set_permissions(&shim, permissions).ok()?;
+
+        Some(shim)
+    }
+
+    /// A `PATH` whose `sudo` asks through the polkit agent, when it can.
+    ///
+    /// Without `pkexec` there is no polkit to hand the password question to,
+    /// and the update runs with the environment it inherited.
+    fn polkit_path() -> Option<std::ffi::OsString> {
+        let current = std::env::var_os("PATH")?;
+
+        if !std::env::split_paths(&current).any(|dir| dir.join("pkexec").exists()) {
+            return None;
+        }
+
+        let dir = dirs::runtime_dir()
+            .or_else(dirs::cache_dir)?
+            .join("hydebar")
+            .join("elevate");
+        let shim = write_sudo_shim(&dir)?;
+        let dir = shim.parent()?;
+
+        let mut joined = std::ffi::OsString::from(dir);
+        joined.push(":");
+        joined.push(current);
+
+        Some(joined)
+    }
+
     /// Brings the HyDE clone up to date the way upstream documents it,
     /// narrating into `publish`.
     ///
     /// No terminal opens: the output streams into the updates window instead,
-    /// as the tail of the last few lines. The script refuses to touch a clone
-    /// that stands off the chosen branch or carries uncommitted work, since
-    /// the documented path is a hard reset that would discard both — the
-    /// refusal arrives through the same tail. Anything the installer would
-    /// normally ask on a prompt is answered by a closed stdin, which reads as
-    /// "no".
+    /// as the tail of the last few lines, and anything that needs elevation
+    /// asks through the desktop's polkit agent. The script refuses to touch a
+    /// clone carrying uncommitted work — the documented path is a hard reset
+    /// that would discard it — and the refusal arrives through the same tail.
+    /// A clean clone standing on another branch is simply switched: the
+    /// branch it left keeps its commits.
     pub(super) async fn update_hyde<F>(
         clone: &str,
         branch: &str,
@@ -199,14 +265,20 @@ mod commands {
     {
         use tokio::io::{AsyncBufReadExt, BufReader};
 
-        let mut child = process::Command::new("bash")
+        let mut spawner = process::Command::new("bash");
+        spawner
             .arg("-c")
             .arg(hyde_update_script(clone, branch))
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
-            .kill_on_drop(true)
-            .spawn()?;
+            .kill_on_drop(true);
+
+        if let Some(path) = polkit_path() {
+            spawner.env("PATH", path);
+        }
+
+        let mut child = spawner.spawn()?;
 
         let stdout = child.stdout.take().ok_or_else(|| {
             CommandError::Io(std::io::Error::other("the update has no output pipe"))
@@ -255,19 +327,20 @@ mod commands {
             concat!(
                 "exec 2>&1\n",
                 "cd {clone} || exit 1\n",
-                "if [ -n \"$(git status --porcelain)\" ]",
-                " || [ \"$(git rev-parse --abbrev-ref HEAD)\" != {branch} ]; then\n",
-                "  echo \"The clone stands off {plain} or carries local work;",
-                " update it by hand.\"\n",
+                "if [ -n \"$(git status --porcelain)\" ]; then\n",
+                "  echo 'The clone carries uncommitted work; update it by hand.'\n",
                 "  exit 1\n",
                 "fi\n",
-                "git fetch --update-shallow origin {branch} \\\n",
-                "  && git reset --hard 'origin/'{branch} \\\n",
+                "git fetch --update-shallow origin {branch} || exit 1\n",
+                "if [ \"$(git rev-parse --abbrev-ref HEAD)\" != {branch} ]; then\n",
+                "  git checkout -q {branch} 2>/dev/null",
+                " || git checkout -q -B {branch} 'origin/'{branch} || exit 1\n",
+                "fi\n",
+                "git reset --hard 'origin/'{branch} \\\n",
                 "  && ./Scripts/install.sh -r\n"
             ),
             clone = quoted_clone,
-            branch = quoted_branch,
-            plain = branch
+            branch = quoted_branch
         )
     }
 
@@ -430,13 +503,14 @@ mod commands {
         }
 
         /// The documented update is a hard reset; the script must refuse to
-        /// run it against a clone holding work of its own.
+        /// run it against a clone holding uncommitted work, while a clean
+        /// clone on another branch is switched rather than refused.
         #[test]
         fn the_update_script_guards_local_work() {
             let script = hyde_update_script("/home/user/HyDE", "master");
 
             assert!(script.contains("git status --porcelain"));
-            assert!(script.contains("rev-parse --abbrev-ref HEAD"));
+            assert!(script.contains("git checkout -q 'master'"));
             assert!(script.contains("cd '/home/user/HyDE'"));
             assert!(script.contains("reset --hard 'origin/''master'"));
         }
@@ -447,6 +521,39 @@ mod commands {
 
             assert!(script.contains("fetch --update-shallow origin 'dev'"));
             assert!(script.contains("reset --hard 'origin/''dev'"));
+        }
+
+        /// Session flags must succeed quietly and commands must go to pkexec,
+        /// or the installer's `sudo -v` warm-up would kill the whole update.
+        #[test]
+        fn the_sudo_shim_speaks_polkit() {
+            assert!(SUDO_SHIM.contains("exec pkexec"));
+            assert!(SUDO_SHIM.contains("-v|-k|-K|--validate) exit 0"));
+        }
+
+        #[test]
+        fn the_shim_lands_executable() {
+            let dir = std::env::temp_dir().join(format!(
+                "hydebar-shim-{}-{:?}",
+                std::process::id(),
+                std::thread::current().id()
+            ));
+
+            let shim = write_sudo_shim(&dir).expect("the shim is written");
+
+            let mode = {
+                use std::os::unix::fs::PermissionsExt;
+
+                std::fs::metadata(&shim)
+                    .expect("the shim exists")
+                    .permissions()
+                    .mode()
+            };
+            let content = std::fs::read_to_string(&shim).expect("the shim reads back");
+            let _ = std::fs::remove_dir_all(&dir);
+
+            assert_eq!(mode & 0o111, 0o111);
+            assert!(content.contains("pkexec"));
         }
 
         #[test]
