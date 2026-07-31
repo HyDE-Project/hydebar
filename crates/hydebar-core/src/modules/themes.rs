@@ -338,7 +338,7 @@ mod gallery {
             }
         }
 
-        let Ok(response) = reqwest::get(INDEX_URL).await else {
+        let Ok(response) = crate::utils::http_client().get(INDEX_URL).send().await else {
             return stale(cache.as_deref()).await;
         };
         let Ok(raw) = response.text().await else {

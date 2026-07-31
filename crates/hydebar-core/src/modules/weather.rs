@@ -308,7 +308,7 @@ impl Weather {
             location, api_key
         );
 
-        let response = reqwest::get(&url).await.map_err(|e| {
+        let response = crate::utils::http_client().get(&url).send().await.map_err(|e| {
             if e.is_timeout() {
                 AppError::internal(format!("Weather API timeout for location '{}'", location))
             } else if e.is_connect() {

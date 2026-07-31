@@ -1,8 +1,35 @@
-use std::time::Duration;
+use std::{sync::LazyLock, time::Duration};
 
 pub mod hyde_shell;
 pub mod launcher;
 pub mod process_group;
+
+/// How long one HTTP request may take before it is abandoned.
+///
+/// Every fetch loop in the bar awaits its request before ticking again, so a
+/// request with no deadline hangs that loop for as long as the connection
+/// dangles — the weather simply stops updating.
+const HTTP_TIMEOUT: Duration = Duration::from_secs(15);
+
+/// The one HTTP client every module shares.
+///
+/// A bare convenience request builds a fresh client — TLS setup and a
+/// connection pool — per call and carries no timeout. Building it once gives
+/// every caller the deadline and lets requests to the same host reuse their
+/// connection.
+static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
+    reqwest::Client::builder()
+        .timeout(HTTP_TIMEOUT)
+        .connect_timeout(Duration::from_secs(5))
+        .build()
+        .unwrap_or_default()
+});
+
+/// The shared HTTP client.
+#[must_use]
+pub fn http_client() -> &'static reqwest::Client {
+    &HTTP_CLIENT
+}
 
 pub enum IndicatorState {
     Normal,
