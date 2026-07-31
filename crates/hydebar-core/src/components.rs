@@ -1,3 +1,4 @@
+pub mod crossfade;
 pub mod greeting;
 pub mod icons;
 pub(crate) mod page;

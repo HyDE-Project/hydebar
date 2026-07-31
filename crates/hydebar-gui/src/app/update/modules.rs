@@ -177,7 +177,11 @@ impl App {
                 close_tray
             }
             Message::Clock(message) => {
-                self.clock.update(message, &self.config.clock);
+                self.clock.update(
+                    message,
+                    &self.config.clock,
+                    self.config.appearance.animations.enabled
+                );
                 Task::none()
             }
             Message::Calendar(message) => {

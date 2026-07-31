@@ -108,7 +108,8 @@ pub struct Clock {
     tick_interval: Duration,
     sender:        Option<ModuleEventSender<ClockEvent>>,
     task:          Option<JoinHandle<()>>,
-    format:        FormatCycle
+    format:        FormatCycle,
+    shown:         crate::components::crossfade::Crossfade
 }
 
 impl Default for Clock {
@@ -118,7 +119,8 @@ impl Default for Clock {
             tick_interval: Duration::from_secs(5),
             sender:        None,
             task:          None,
-            format:        FormatCycle::new()
+            format:        FormatCycle::new(),
+            shown:         crate::components::crossfade::Crossfade::default()
         }
     }
 }
@@ -190,7 +192,10 @@ impl Clock {
     }
 
     /// Applies what the user or the tick loop asked.
-    pub fn update(&mut self, message: Message, config: &ClockModuleConfig) {
+    ///
+    /// `animated` decides whether the rendered time dissolves into its
+    /// replacement or swaps outright.
+    pub fn update(&mut self, message: Message, config: &ClockModuleConfig, animated: bool) {
         match message {
             Message::Update => {
                 self.data.update();
@@ -199,6 +204,19 @@ impl Clock {
                 self.format.advance(&config.format_alt);
             }
         }
+
+        self.shown
+            .set(self.data.format(self.active_format(config)), animated);
+    }
+
+    /// Advances the dissolve of the rendered time.
+    pub fn tick_fade(&mut self, elapsed: Duration) -> bool {
+        self.shown.advance(elapsed)
+    }
+
+    /// Whether the rendered time is still dissolving.
+    pub fn is_fading(&self) -> bool {
+        self.shown.is_animating()
     }
 
     /// Determine tick interval from every format the module can render.
@@ -258,7 +276,11 @@ where
         &self,
         config: Self::ViewData<'_>
     ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
-        let clock_text = text(self.data.format(self.active_format(config))).into();
+        let clock_text = if self.shown.current().is_empty() {
+            text(self.data.format(self.active_format(config))).into()
+        } else {
+            self.shown.element(crate::components::scale::base())
+        };
         let on_press = if config.has_alternatives() {
             OnModulePress::Action(Box::new(M::from(Message::NextFormat)))
         } else {
@@ -376,13 +398,13 @@ mod tests {
 
         assert_eq!(clock.active_format(&config), "%H:%M");
 
-        clock.update(Message::NextFormat, &config);
+        clock.update(Message::NextFormat, &config, false);
         assert_eq!(clock.active_format(&config), "%d.%m.%y");
 
-        clock.update(Message::NextFormat, &config);
+        clock.update(Message::NextFormat, &config, false);
         assert_eq!(clock.active_format(&config), "%A");
 
-        clock.update(Message::NextFormat, &config);
+        clock.update(Message::NextFormat, &config, false);
         assert_eq!(clock.active_format(&config), "%H:%M");
     }
 
@@ -391,7 +413,7 @@ mod tests {
         let config = config("%H:%M", &[]);
         let mut clock = Clock::new();
 
-        clock.update(Message::NextFormat, &config);
+        clock.update(Message::NextFormat, &config, false);
 
         assert_eq!(clock.active_format(&config), "%H:%M");
     }
@@ -402,7 +424,7 @@ mod tests {
         let mut clock = Clock::new();
 
         let hours = clock.data().format(clock.active_format(&config));
-        clock.update(Message::NextFormat, &config);
+        clock.update(Message::NextFormat, &config, false);
         let minutes = clock.data().format(clock.active_format(&config));
 
         assert_eq!(hours, clock.data().current_time.format("%H").to_string());

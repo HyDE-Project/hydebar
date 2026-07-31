@@ -111,6 +111,7 @@ impl App {
             || self.greeting.is_animating()
             || self.greeting.target() > 0.0
             || self.hints.needs_frames()
+            || self.clock.is_fading()
         {
             iced::time::every(std::time::Duration::from_millis(16))
                 .map(|_| Message::Frame(std::time::Instant::now()))
