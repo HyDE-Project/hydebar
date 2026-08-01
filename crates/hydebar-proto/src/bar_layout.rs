@@ -237,6 +237,9 @@ fn builtin_for(name: &str) -> Option<ModuleName> {
 fn builtin_for_custom(tail: &str) -> Option<ModuleName> {
     Some(match tail {
         "updates" => ModuleName::Updates,
+        "cpuinfo" => ModuleName::Cpu,
+        "gpuinfo" => ModuleName::GpuTemp,
+        "sensorsinfo" => ModuleName::CpuTemp,
         "cliphist" | "clipboard" => ModuleName::Clipboard,
         "power" | "powermenu" => ModuleName::Settings,
         "theme" | "themeswitch" => ModuleName::Themes,
