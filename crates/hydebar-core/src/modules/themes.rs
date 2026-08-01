@@ -719,12 +719,18 @@ impl Themes {
             return Task::none();
         }
 
+        let fetch = self.fetch_updates(None);
+
+        if self.updating.is_none() {
+            return Task::none();
+        }
+
         if let Some(dir) = stamp.parent() {
             let _ = std::fs::create_dir_all(dir);
         }
         let _ = std::fs::write(&stamp, b"");
 
-        self.fetch_updates(None)
+        fetch
     }
 
     /// Starts the catalogue reader, for the gallery section of the menu.

@@ -191,6 +191,16 @@ impl Config {
             "0 to 1"
         )?;
 
+        if let Some(max_workspaces) = self.workspaces.max_workspaces {
+            in_range(
+                "workspaces.max_workspaces",
+                f64::from(max_workspaces),
+                1.0,
+                64.0,
+                "1 to 64"
+            )?;
+        }
+
         Ok(())
     }
 }

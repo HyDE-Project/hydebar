@@ -60,6 +60,7 @@ impl Recipe for ConfigWatcher {
                     return;
                 };
 
+                let mut restarts: u32 = 0;
                 loop {
                     let inotify = match Inotify::init() {
                         Ok(inotify) => inotify,
@@ -117,6 +118,9 @@ impl Recipe for ConfigWatcher {
                             info!(
                                 "Config watch stream closed; attempting to restart the inotify watcher"
                             );
+                        
+                            restarts = restarts.saturating_add(1);
+                            tokio::time::sleep(crate::services::reconnect_delay(restarts)).await;
                         }
                         WatchLoopOutcome::HandlerClosed => {
                             info!("Config watch handler closed; stopping watcher loop");

@@ -169,7 +169,13 @@ fn measured_share(symbol: char, file: &str, index: u32) -> Option<f32> {
     let glyph = face.glyph_index(symbol)?;
     let bounds = face.glyph_bounding_box(glyph)?;
 
-    Some(f32::from(bounds.y_max - bounds.y_min) / f32::from(face.units_per_em()))
+    let units = face.units_per_em();
+
+    if units == 0 {
+        return None;
+    }
+
+    Some(f32::from(bounds.y_max - bounds.y_min) / f32::from(units))
 }
 
 /// The family name with the lifetime the renderer demands.

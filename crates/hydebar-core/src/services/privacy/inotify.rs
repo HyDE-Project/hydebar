@@ -62,6 +62,20 @@ impl WebcamWatcher {
         let stream = inotify
             .into_event_stream(buffer)
             .map_err(|err| PrivacyError::inotify_init(err.to_string()))?
+            .take_while(|event| {
+                let device_present = !matches!(
+                    event,
+                    Ok(event) if event
+                        .mask
+                        .intersects(EventMask::DELETE_SELF | EventMask::IGNORED)
+                );
+
+                if !device_present {
+                    log::warn!("webcam device vanished, the watch resubscribes");
+                }
+
+                std::future::ready(device_present)
+            })
             .filter_map(|event| async move {
                 match event {
                     Ok(event) => match event.mask {

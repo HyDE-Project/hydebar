@@ -123,7 +123,10 @@ fn map_snapshot_to_workspaces(
     }
 
     // Synthesize "missing" workspaces [1..=max_id] for filling UI.
-    let existing_ids = normal.iter().map(|w| w.id).collect::<Vec<_>>();
+    let existing_ids = normal
+        .iter()
+        .map(|w| w.id)
+        .collect::<std::collections::HashSet<_>>();
     let mut max_id = *existing_ids.iter().max().unwrap_or(&0);
     #[expect(
         clippy::cast_sign_loss,
