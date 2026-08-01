@@ -76,7 +76,7 @@ impl ControlCenter {
                 );
             }
             Message::Audio(msg) => match msg {
-                AudioMessage::Event(event) => match event {
+                AudioMessage::Event(event) => match *event {
                     ServiceEvent::Init(service) => {
                         self.audio = Some(service);
                     }
@@ -148,7 +148,7 @@ impl ControlCenter {
                 }
             },
             Message::UPower(msg) => match msg {
-                UPowerMessage::Event(event) => match event {
+                UPowerMessage::Event(event) => match *event {
                     ServiceEvent::Init(service) => {
                         self.upower = Some(service);
                     }
@@ -166,7 +166,7 @@ impl ControlCenter {
                 }
             },
             Message::Network(msg) => match msg {
-                NetworkMessage::Event(event) => match event {
+                NetworkMessage::Event(event) => match *event {
                     ServiceEvent::Init(service) => {
                         self.network = Some(service);
                     }
@@ -230,7 +230,7 @@ impl ControlCenter {
                 }
             },
             Message::Bluetooth(msg) => match msg {
-                BluetoothMessage::Event(event) => match event {
+                BluetoothMessage::Event(event) => match *event {
                     ServiceEvent::Init(service) => {
                         self.bluetooth = Some(service);
                     }
@@ -274,7 +274,7 @@ impl ControlCenter {
                 }
             },
             Message::Brightness(msg) => match msg {
-                BrightnessMessage::Event(event) => match event {
+                BrightnessMessage::Event(event) => match *event {
                     ServiceEvent::Init(service) => {
                         self.brightness = Some(service);
                     }

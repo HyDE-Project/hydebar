@@ -134,7 +134,7 @@ impl App {
                                 |event| {
                                     Message::ControlCenter(
                                         modules::control_center::Message::Brightness(
-                                            BrightnessMessage::Event(event)
+                                            BrightnessMessage::Event(Box::new(event))
                                         )
                                     )
                                 }

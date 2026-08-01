@@ -139,7 +139,7 @@ pub enum BatteryEvent {
 /// Message type for GUI communication
 #[derive(Debug, Clone)]
 pub enum Message {
-    Event(ServiceEvent<UPowerService>)
+    Event(Box<ServiceEvent<UPowerService>>)
 }
 
 /// Battery monitoring module
@@ -166,7 +166,7 @@ impl Battery {
     /// replacement or swaps outright.
     pub fn update(&mut self, message: Message, animated: bool) {
         match message {
-            Message::Event(event) => self.handle_service_event(event)
+            Message::Event(event) => self.handle_service_event(*event)
         }
 
         if let Some(data) = &self.data {

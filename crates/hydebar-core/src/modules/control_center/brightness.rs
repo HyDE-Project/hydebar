@@ -17,7 +17,7 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub enum BrightnessMessage {
-    Event(ServiceEvent<BrightnessService>),
+    Event(Box<ServiceEvent<BrightnessService>>),
     Change(u32)
 }
 

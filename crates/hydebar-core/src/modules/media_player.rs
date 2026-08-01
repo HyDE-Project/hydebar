@@ -41,7 +41,7 @@ impl MprisEventPublisher for MediaPlayerPublisher {
     ) -> Pin<Box<dyn Future<Output = Result<(), ModuleError>> + Send + '_>> {
         Box::pin(ready(
             self.sender
-                .try_send(Message::Event(event))
+                .try_send(Message::Event(Box::new(event)))
                 .map_err(ModuleError::from)
         ))
     }
@@ -87,7 +87,7 @@ mod commands {
                         Err(error) => ServiceEvent::Error(error)
                     };
 
-                    if let Err(err) = sender.try_send(Message::Event(event)) {
+                    if let Err(err) = sender.try_send(Message::Event(Box::new(event))) {
                         warn!("failed to publish media player command result: {err}");
                     }
                 });
@@ -113,7 +113,7 @@ mod messages {
         PlayPause(String),
         Next(String),
         SetVolume(String, f64),
-        Event(ServiceEvent<MprisPlayerService>)
+        Event(Box<ServiceEvent<MprisPlayerService>>)
     }
 }
 mod module {
@@ -249,7 +249,7 @@ mod state {
                 Message::PlayPause(s) => self.handle_command(s, PlayerCommand::PlayPause),
                 Message::Next(s) => self.handle_command(s, PlayerCommand::Next),
                 Message::SetVolume(s, v) => self.handle_command(s, PlayerCommand::Volume(v)),
-                Message::Event(event) => match event {
+                Message::Event(event) => match *event {
                     ServiceEvent::Init(s) => {
                         self.service = Some(s);
                     }

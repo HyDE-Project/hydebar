@@ -35,7 +35,7 @@ impl ControlCenterCommandExt for ControlCenter {
             command,
             runner: AudioService::run_command,
             message_ctor: Message::Audio,
-            event_ctor: AudioMessage::Event,
+            event_ctor: |event| AudioMessage::Event(Box::new(event)),
             service_name: "audio"
         })
     }
@@ -48,7 +48,7 @@ impl ControlCenterCommandExt for ControlCenter {
             command,
             runner: BrightnessService::run_command,
             message_ctor: Message::Brightness,
-            event_ctor: BrightnessMessage::Event,
+            event_ctor: |event| BrightnessMessage::Event(Box::new(event)),
             service_name: "brightness"
         })
     }
@@ -61,7 +61,7 @@ impl ControlCenterCommandExt for ControlCenter {
             command,
             runner: NetworkService::run_command,
             message_ctor: Message::Network,
-            event_ctor: NetworkMessage::Event,
+            event_ctor: |event| NetworkMessage::Event(Box::new(event)),
             service_name: "network"
         })
     }
@@ -74,7 +74,7 @@ impl ControlCenterCommandExt for ControlCenter {
             command,
             runner: BluetoothService::run_command,
             message_ctor: Message::Bluetooth,
-            event_ctor: BluetoothMessage::Event,
+            event_ctor: |event| BluetoothMessage::Event(Box::new(event)),
             service_name: "bluetooth"
         })
     }
@@ -87,7 +87,7 @@ impl ControlCenterCommandExt for ControlCenter {
             command,
             runner: UPowerService::run_command,
             message_ctor: Message::UPower,
-            event_ctor: UPowerMessage::Event,
+            event_ctor: |event| UPowerMessage::Event(Box::new(event)),
             service_name: "upower"
         })
     }

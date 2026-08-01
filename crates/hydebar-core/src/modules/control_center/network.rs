@@ -23,7 +23,7 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub enum NetworkMessage {
-    Event(ServiceEvent<NetworkService>),
+    Event(Box<ServiceEvent<NetworkService>>),
     ToggleWiFi,
     ScanNearByWiFi,
     WiFiMore(Id),

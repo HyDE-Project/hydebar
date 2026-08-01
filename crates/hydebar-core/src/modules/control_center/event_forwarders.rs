@@ -64,7 +64,7 @@ pub(super) fn audio_forwarder(
 ) -> EventForwarder<AudioService> {
     EventForwarder::new(
         sender,
-        |event| Message::Audio(AudioMessage::Event(event)),
+        |event| Message::Audio(AudioMessage::Event(Box::new(event))),
         "audio"
     )
 }
@@ -75,7 +75,7 @@ pub(super) fn brightness_forwarder(
 ) -> EventForwarder<BrightnessService> {
     EventForwarder::new(
         sender,
-        |event| Message::Brightness(BrightnessMessage::Event(event)),
+        |event| Message::Brightness(BrightnessMessage::Event(Box::new(event))),
         "brightness"
     )
 }
@@ -86,7 +86,7 @@ pub(super) fn network_forwarder(
 ) -> EventForwarder<NetworkService> {
     EventForwarder::new(
         sender,
-        |event| Message::Network(NetworkMessage::Event(event)),
+        |event| Message::Network(NetworkMessage::Event(Box::new(event))),
         "network"
     )
 }
@@ -97,7 +97,7 @@ pub(super) fn bluetooth_forwarder(
 ) -> EventForwarder<BluetoothService> {
     EventForwarder::new(
         sender,
-        |event| Message::Bluetooth(BluetoothMessage::Event(event)),
+        |event| Message::Bluetooth(BluetoothMessage::Event(Box::new(event))),
         "bluetooth"
     )
 }
@@ -108,7 +108,7 @@ pub(super) fn upower_forwarder(
 ) -> EventForwarder<UPowerService> {
     EventForwarder::new(
         sender,
-        |event| Message::UPower(UPowerMessage::Event(event)),
+        |event| Message::UPower(UPowerMessage::Event(Box::new(event))),
         "upower"
     )
 }
@@ -146,8 +146,8 @@ mod tests {
         let event = receiver.try_recv().expect("event queued");
         match event {
             Some(BusEvent::Module(ModuleEvent::ControlCenter(Message::Audio(
-                AudioMessage::Event(ServiceEvent::Error(()))
-            )))) => {}
+                AudioMessage::Event(event)
+            )))) if matches!(*event, ServiceEvent::Error(())) => {}
             other => panic!("unexpected event: {other:?}")
         }
 
@@ -165,8 +165,11 @@ mod tests {
         let event = receiver.try_recv().expect("event queued");
         match event {
             Some(BusEvent::Module(ModuleEvent::ControlCenter(Message::Network(
-                NetworkMessage::Event(ServiceEvent::Error(received))
+                NetworkMessage::Event(received)
             )))) => {
+                let ServiceEvent::Error(received) = *received else {
+                    panic!("expected an error event");
+                };
                 assert_eq!(received.message(), error.message());
             }
             other => panic!("unexpected event: {other:?}")

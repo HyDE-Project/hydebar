@@ -20,7 +20,7 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub enum AudioMessage {
-    Event(ServiceEvent<AudioService>),
+    Event(Box<ServiceEvent<AudioService>>),
     DefaultSinkChanged(String, String),
     DefaultSourceChanged(String, String),
     ToggleSinkMute,

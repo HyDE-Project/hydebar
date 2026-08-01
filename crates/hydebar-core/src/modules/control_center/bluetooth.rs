@@ -20,7 +20,7 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub enum BluetoothMessage {
-    Event(ServiceEvent<BluetoothService>),
+    Event(Box<ServiceEvent<BluetoothService>>),
     Toggle,
     ConnectDevice(zbus::zvariant::OwnedObjectPath),
     DisconnectDevice(zbus::zvariant::OwnedObjectPath),

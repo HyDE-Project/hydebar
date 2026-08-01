@@ -63,9 +63,9 @@ impl ControlCenter {
                     }
 
                     if let Err(err) = sender.try_send(Message::Network(
-                        NetworkMessage::Event(ServiceEvent::Update(
+                        NetworkMessage::Event(Box::new(ServiceEvent::Update(
                             NetworkEvent::WirelessAccessPoint(access_points)
-                        ))
+                        )))
                     )) {
                         warn!("failed to publish the nearby networks: {err}");
                     }

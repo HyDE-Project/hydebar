@@ -19,7 +19,7 @@ use crate::{
 
 #[derive(Clone, Debug)]
 pub enum UPowerMessage {
-    Event(ServiceEvent<UPowerService>),
+    Event(Box<ServiceEvent<UPowerService>>),
     TogglePowerProfile
 }
 
