@@ -19,7 +19,7 @@ use log::{debug, error, info, warn};
 
 use super::{
     interpret::{handle_theme_event, interpret_theme_event},
-    sources::{ThemeRoots, ThemeWatchTarget, watch_targets, watched_names}
+    sources::{ThemeRoots, ThemeWatchTarget, watched_names}
 };
 use crate::config::{
     ConfigEvent, ConfigManager,
@@ -204,20 +204,32 @@ pub fn theme_subscription(
     manager: Arc<ConfigManager>,
     follow_hyde: bool
 ) -> Subscription<ConfigEvent> {
-    let targets = watch_targets(follow_hyde);
+    /// The environment cannot change under a running process, and this
+    /// derivation runs after every update batch — so the walk over the
+    /// environment and the path joins happen exactly once. Only the roots
+    /// are pinned: the follow flag stays live, a reload may flip it.
+    static ROOTS: std::sync::OnceLock<Option<(ThemeRoots, Vec<ThemeWatchTarget>)>> =
+        std::sync::OnceLock::new();
+
+    if !follow_hyde {
+        return Subscription::none();
+    }
+
+    let Some((roots, targets)) = ROOTS
+        .get_or_init(|| ThemeRoots::from_env().map(|roots| (roots.clone(), roots.targets())))
+        .as_ref()
+    else {
+        return Subscription::none();
+    };
 
     if targets.is_empty() {
         return Subscription::none();
     }
 
-    let Some(roots) = ThemeRoots::from_env() else {
-        return Subscription::none();
-    };
-
     from_recipe(ThemeWatcher {
         config_path: config_path.to_path_buf(),
-        roots,
-        targets,
+        roots: roots.clone(),
+        targets: targets.clone(),
         manager
     })
 }
