@@ -243,6 +243,7 @@ fn builtin_for_custom(tail: &str) -> Option<ModuleName> {
         "gpuinfo" => ModuleName::GpuTemp,
         "sensorsinfo" => ModuleName::CpuTemp,
         "keybindhint" | "keybinds_hint" => ModuleName::KeybindHint,
+        "weather" => ModuleName::Weather,
         "hyprsunset" => ModuleName::NightLight,
         "gamemode" => ModuleName::GameMode,
         "cliphist" | "clipboard" => ModuleName::Clipboard,

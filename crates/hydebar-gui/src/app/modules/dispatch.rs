@@ -171,6 +171,7 @@ impl App {
             ModuleName::ControlCenter => self.control_center.view(self.icons()),
             ModuleName::Audio => self.control_center.audio_bar(self.icons()),
             ModuleName::Brightness => self.control_center.brightness_bar(self.icons()),
+            ModuleName::Weather => self.weather.bar_view(self.icons()),
             ModuleName::KeybindHint => Some(hyde_button::bar_view(
                 hyde_button::HydeButton::KeybindHint,
                 self.icons(),
@@ -253,6 +254,7 @@ impl App {
             | ModuleName::KeybindHint
             | ModuleName::NightLight
             | ModuleName::GameMode
+            | ModuleName::Weather
             | ModuleName::Settings => None,
             ModuleName::Privacy => self.privacy.subscription(),
             ModuleName::ControlCenter

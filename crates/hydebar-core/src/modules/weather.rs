@@ -177,6 +177,39 @@ impl Weather {
         &self.data
     }
 
+    /// The bar entry: the sky glyph and the reading.
+    ///
+    /// Drawn when the layout places weather as an entry of its own; the
+    /// clock keeps hosting its readout either way, off the same refresh
+    /// loop. Before the first answer arrives the temperature reads as a
+    /// placeholder rather than the entry jumping in later.
+    #[must_use]
+    pub fn bar_view<M: 'static>(
+        &self,
+        icons: &crate::components::icons::IconTheme
+    ) -> Option<(
+        iced::Element<'static, M>,
+        Option<crate::modules::OnModulePress<M>>
+    )> {
+        use iced::{Alignment, widget::Row};
+
+        use crate::components::{
+            icons::{Icons, icon},
+            scale,
+            text::text
+        };
+
+        Some((
+            Row::new()
+                .push(icon(icons, Icons::Weather))
+                .push(text(self.data.display_temp().to_owned()))
+                .spacing(scale::icon_gap())
+                .align_y(Alignment::Center)
+                .into(),
+            None
+        ))
+    }
+
     /// Exposes the clamped refresh period so tests can verify the clamping
     /// without reaching into private state.
     #[cfg(test)]

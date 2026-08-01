@@ -97,13 +97,14 @@ pub enum Icons {
     KeybindHint,
     NightLight,
     GameMode,
+    Weather,
     /// Marks work signed by the person at the keyboard.
     Authored
 }
 
 impl Icons {
     /// Every icon that can be overridden from the configuration.
-    pub const ALL: [Self; 95] = [
+    pub const ALL: [Self; 96] = [
         Self::None,
         Self::AppLauncher,
         Self::Clipboard,
@@ -198,6 +199,7 @@ impl Icons {
         Self::KeybindHint,
         Self::NightLight,
         Self::GameMode,
+        Self::Weather,
         Self::Authored
     ];
 
@@ -299,6 +301,7 @@ impl Icons {
             Self::KeybindHint => "keybind_hint",
             Self::NightLight => "night_light",
             Self::GameMode => "game_mode",
+            Self::Weather => "weather",
             Self::Authored => "authored"
         }
     }
@@ -411,6 +414,7 @@ impl Icons {
             Self::KeybindHint => "\u{f030c}",
             Self::NightLight => "\u{f0748}",
             Self::GameMode => "\u{f0eb5}",
+            Self::Weather => "\u{f0590}",
             Self::Authored => "\u{f04ce}"
         }
     }

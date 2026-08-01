@@ -60,6 +60,7 @@ pub enum ModuleName {
     KeybindHint,
     NightLight,
     GameMode,
+    Weather,
     Settings,
     Themes,
     Wallpaper,
@@ -75,7 +76,7 @@ pub enum ModuleName {
 
 impl ModuleName {
     /// Every module the bar ships, in the order the editor lists them.
-    pub const BUILT_IN: [Self; 34] = [
+    pub const BUILT_IN: [Self; 35] = [
         Self::AppLauncher,
         Self::Updates,
         Self::Clipboard,
@@ -101,6 +102,7 @@ impl ModuleName {
         Self::KeybindHint,
         Self::NightLight,
         Self::GameMode,
+        Self::Weather,
         Self::Settings,
         Self::Themes,
         Self::Wallpaper,
@@ -141,6 +143,7 @@ impl ModuleName {
             Self::KeybindHint => "KeybindHint",
             Self::NightLight => "NightLight",
             Self::GameMode => "GameMode",
+            Self::Weather => "Weather",
             Self::Settings => "Settings",
             Self::Themes => "Themes",
             Self::Wallpaper => "Wallpaper",
@@ -187,6 +190,7 @@ impl ModuleName {
             Self::KeybindHint => "Key bindings",
             Self::NightLight => "Night light",
             Self::GameMode => "Game mode",
+            Self::Weather => "Weather",
             Self::Settings => "Bar settings",
             Self::Themes => "Desktop themes",
             Self::Wallpaper => "Wallpaper",

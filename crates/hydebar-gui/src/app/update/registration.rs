@@ -130,7 +130,8 @@ impl App {
         );
         gate(
             "weather",
-            hosts(ModuleName::Clock) && self.config.clock.show_weather,
+            hosts(ModuleName::Weather)
+                || (hosts(ModuleName::Clock) && self.config.clock.show_weather),
             &mut self.weather,
             ctx,
             &self.config.weather
