@@ -44,12 +44,18 @@ impl App {
     /// resting opacity and never animate themselves, which is what makes the
     /// box, text, icons, buttons and swatches all move as one instead of the
     /// background dying before its content.
+    /// The palette follows the cube of the travelled share on purpose. The
+    /// box behind the content fades with an extra factor — the configured
+    /// menu opacity — so on a linear palette the sliders and lists outlived
+    /// their own window and hung in the air over the desktop as afterimages.
+    /// Cubed, everything inside the window has left the screen while the
+    /// window itself is still settling into the bar.
     fn faded_menu<'a>(&self, menu: Element<'a, Message>, progress: f32) -> Element<'a, Message> {
         if progress < 1.0 {
             iced::widget::themer(
                 Some(hydebar_core::style::faded_theme(
                     &self.theme_cache,
-                    progress
+                    progress * progress * progress
                 )),
                 menu
             )
