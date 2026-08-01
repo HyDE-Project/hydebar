@@ -17,10 +17,6 @@ const COALESCE_WINDOW: std::time::Duration = std::time::Duration::from_millis(8)
 
 #[derive(Debug, Clone)]
 #[non_exhaustive]
-#[expect(
-    clippy::large_enum_variant,
-    reason = "boxing the module payload would ripple through every publish path"
-)]
 pub enum BusEvent {
     Redraw,
     PopupToggle,
@@ -60,10 +56,6 @@ impl BusEvent {
 
 #[derive(Debug, Clone)]
 #[non_exhaustive]
-#[expect(
-    clippy::large_enum_variant,
-    reason = "boxing the module payload would ripple through every publish path"
-)]
 pub enum ModuleEvent {
     Updates(modules::updates::Message),
     Workspaces(modules::workspaces::Message),

@@ -144,7 +144,7 @@ impl PollingTask {
             };
 
             tokio::time::sleep(WARMUP).await;
-            let mut published: Option<SystemInfoData> = None;
+            let mut published: Option<std::sync::Arc<SystemInfoData>> = None;
 
             loop {
                 let Ok((returned, sample)) = tokio::task::spawn_blocking(move || {
@@ -162,7 +162,8 @@ impl PollingTask {
                     .as_ref()
                     .is_none_or(|previous| !previous.renders_same_as(&sample))
                 {
-                    published = Some(sample.clone());
+                    let sample = std::sync::Arc::new(sample);
+                    published = Some(std::sync::Arc::clone(&sample));
 
                     sender.send(Message::Sampled(sample));
                 }

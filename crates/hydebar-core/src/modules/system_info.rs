@@ -23,13 +23,9 @@ use crate::{
 
 /// Messages published by the system information module.
 #[derive(Debug, Clone)]
-#[expect(
-    clippy::large_enum_variant,
-    reason = "samples dominate the message traffic and are consumed at once; boxing each one would allocate on every tick"
-)]
 pub enum Message {
     /// Readouts that differ from the ones currently on screen.
-    Sampled(SystemInfoData),
+    Sampled(std::sync::Arc<SystemInfoData>),
     /// Switch to the next configured readout, wrapping after the last one.
     NextFormat
 }
@@ -37,7 +33,7 @@ pub enum Message {
 /// Module responsible for sampling and presenting local system metrics.
 #[derive(Debug)]
 pub struct SystemInfo {
-    data:    SystemInfoData,
+    data:    std::sync::Arc<SystemInfoData>,
     polling: runtime::PollingTask,
     format:  FormatCycle
 }
@@ -45,7 +41,7 @@ pub struct SystemInfo {
 impl Default for SystemInfo {
     fn default() -> Self {
         Self {
-            data:    SystemInfoSampler::new().sample_with_extras(),
+            data:    std::sync::Arc::new(SystemInfoSampler::new().sample_with_extras()),
             polling: runtime::PollingTask::new(),
             format:  FormatCycle::new()
         }
@@ -76,7 +72,7 @@ impl SystemInfo {
     /// Latest sample, for the thin bar entries and the hover hints that
     /// render from it.
     #[must_use]
-    pub const fn data(&self) -> &SystemInfoData {
+    pub fn data(&self) -> &SystemInfoData {
         &self.data
     }
 

@@ -162,10 +162,6 @@ impl std::fmt::Debug for App {
 }
 
 #[derive(Debug, Clone)]
-#[expect(
-    clippy::large_enum_variant,
-    reason = "messages are dispatched by value once and never stored; boxing would touch every construction site"
-)]
 pub enum Message {
     None,
     /// A compositor frame callback carrying the frame timestamp.
