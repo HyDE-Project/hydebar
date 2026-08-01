@@ -321,6 +321,24 @@ where
         }
     }
 
+    /// Sends every fade but `kept` toward out.
+    ///
+    /// One pointer rests on one module: an enter arriving while another
+    /// module still reads as hovered means that module's leave was lost to
+    /// a relayout under the pointer, and its highlight would stay glued on.
+    pub fn leave_others(&mut self, kept: &K, animated: bool, response: Duration) {
+        if animated {
+            for (key, spring) in &mut self.springs {
+                if key != kept {
+                    spring.set_response(response);
+                    spring.set_target(0.0);
+                }
+            }
+        } else {
+            self.springs.retain(|key, _| key == kept);
+        }
+    }
+
     /// How far the fade of `key` has travelled, zero out and one fully in.
     #[must_use]
     pub fn progress(&self, key: &K) -> f32 {

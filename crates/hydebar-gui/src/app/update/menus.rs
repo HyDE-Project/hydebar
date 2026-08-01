@@ -69,12 +69,15 @@ impl App {
                 self.poll_attended_now();
 
                 let animations = &self.config.appearance.animations;
-                self.hover.point(
-                    module.clone(),
-                    entered,
-                    animations.enabled,
-                    std::time::Duration::from_millis(animations.hover_duration_ms)
-                );
+                let response = std::time::Duration::from_millis(animations.hover_duration_ms);
+
+                if entered {
+                    self.hover
+                        .leave_others(&module, animations.enabled, response);
+                }
+
+                self.hover
+                    .point(module.clone(), entered, animations.enabled, response);
 
                 let command = self.hints.observe(
                     surface,
