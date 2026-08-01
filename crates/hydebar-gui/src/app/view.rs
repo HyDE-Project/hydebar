@@ -255,39 +255,47 @@ impl App {
                 MenuSize::Large,
                 None
             )),
-            MenuType::SystemInfo => Some((
-                self.system_info
-                    .menu_view(&self.config.system, self.icons())
-                    .map(Message::SystemInfo),
-                MenuSize::Content(
-                    hydebar_core::modules::system_info::SystemInfo::content_width(
-                        self.appearance().font_size_px()
-                    )
-                ),
-                Some(self.system_info.content_height(&self.config.system))
-            )),
-            MenuType::Cpu => Some((
-                self.system_info
-                    .cpu_menu_view(self.icons())
-                    .map(Message::SystemInfo),
-                MenuSize::Content(
-                    hydebar_core::modules::system_info::SystemInfo::content_width(
-                        self.appearance().font_size_px()
-                    )
-                ),
-                Some(self.system_info.cpu_content_height())
-            )),
-            MenuType::Memory => Some((
-                self.system_info
-                    .memory_menu_view(self.icons())
-                    .map(Message::SystemInfo),
-                MenuSize::Content(
-                    hydebar_core::modules::system_info::SystemInfo::content_width(
-                        self.appearance().font_size_px()
-                    )
-                ),
-                Some(self.system_info.memory_content_height())
-            )),
+            MenuType::SystemInfo => {
+                let (window, height) = self
+                    .system_info
+                    .monitor_window(&self.config.system, self.icons());
+
+                Some((
+                    window.map(Message::SystemInfo),
+                    MenuSize::Content(
+                        hydebar_core::modules::system_info::SystemInfo::content_width(
+                            self.appearance().font_size_px()
+                        )
+                    ),
+                    Some(height)
+                ))
+            }
+            MenuType::Cpu => {
+                let (window, height) = self.system_info.cpu_window(self.icons());
+
+                Some((
+                    window.map(Message::SystemInfo),
+                    MenuSize::Content(
+                        hydebar_core::modules::system_info::SystemInfo::content_width(
+                            self.appearance().font_size_px()
+                        )
+                    ),
+                    Some(height)
+                ))
+            }
+            MenuType::Memory => {
+                let (window, height) = self.system_info.memory_window(self.icons());
+
+                Some((
+                    window.map(Message::SystemInfo),
+                    MenuSize::Content(
+                        hydebar_core::modules::system_info::SystemInfo::content_width(
+                            self.appearance().font_size_px()
+                        )
+                    ),
+                    Some(height)
+                ))
+            }
             MenuType::Wallpaper => Some((
                 self.wallpaper
                     .menu_view(self.appearance().font_size_px())
@@ -295,28 +303,32 @@ impl App {
                 MenuSize::Medium,
                 None
             )),
-            MenuType::CpuTemp => Some((
-                self.system_info
-                    .cpu_temp_menu_view(self.icons())
-                    .map(Message::SystemInfo),
-                MenuSize::Content(
-                    hydebar_core::modules::system_info::SystemInfo::content_width(
-                        self.appearance().font_size_px()
-                    )
-                ),
-                Some(self.system_info.cpu_temp_content_height())
-            )),
-            MenuType::Gpu => Some((
-                self.system_info
-                    .gpu_menu_view(self.icons())
-                    .map(Message::SystemInfo),
-                MenuSize::Content(
-                    hydebar_core::modules::system_info::SystemInfo::content_width(
-                        self.appearance().font_size_px()
-                    )
-                ),
-                Some(self.system_info.gpu_content_height())
-            )),
+            MenuType::CpuTemp => {
+                let (window, height) = self.system_info.cpu_temp_window(self.icons());
+
+                Some((
+                    window.map(Message::SystemInfo),
+                    MenuSize::Content(
+                        hydebar_core::modules::system_info::SystemInfo::content_width(
+                            self.appearance().font_size_px()
+                        )
+                    ),
+                    Some(height)
+                ))
+            }
+            MenuType::Gpu => {
+                let (window, height) = self.system_info.gpu_window(self.icons());
+
+                Some((
+                    window.map(Message::SystemInfo),
+                    MenuSize::Content(
+                        hydebar_core::modules::system_info::SystemInfo::content_width(
+                            self.appearance().font_size_px()
+                        )
+                    ),
+                    Some(height)
+                ))
+            }
             MenuType::Notifications => Some((
                 self.notifications
                     .menu_view(opacity, self.icons())

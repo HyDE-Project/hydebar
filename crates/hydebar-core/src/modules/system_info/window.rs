@@ -13,7 +13,7 @@ pub(super) mod metrics;
 
 mod render;
 
-pub use metrics::{content_height, content_width, section_window_height};
+pub use metrics::{content_height_of, content_width, section_window_height};
 pub use render::{build_menu_view, build_section_window};
 
 #[cfg(test)]
@@ -251,8 +251,11 @@ mod tests {
     #[test]
     fn the_window_grows_with_what_it_shows() {
         let config = SystemModuleConfig::default();
-        let bare = metrics::content_height(&SystemInfoData::default(), &config);
-        let full = metrics::content_height(&machine(), &config);
+        let measure = |data: &SystemInfoData| {
+            metrics::content_height_of(&model::sections(data), &model::footnotes(data, &config))
+        };
+        let bare = measure(&SystemInfoData::default());
+        let full = measure(&machine());
 
         assert!(full > bare);
         assert!(bare > 0.0);

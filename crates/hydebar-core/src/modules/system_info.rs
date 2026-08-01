@@ -17,10 +17,7 @@ pub use window::build_menu_view;
 
 use super::{Module, ModuleError, OnModulePress};
 use crate::{
-    ModuleContext,
-    attention::PollSchedule,
-    components::icons::{IconTheme, Icons},
-    event_bus::ModuleEvent,
+    ModuleContext, attention::PollSchedule, components::icons::IconTheme, event_bus::ModuleEvent,
     format_cycle::FormatCycle
 };
 
@@ -92,72 +89,55 @@ impl SystemInfo {
         window::content_width(font_size)
     }
 
-    /// Height the window needs for the readouts this machine reports.
+    /// The monitor window and its height, built from one model.
+    ///
+    /// The model is stated once and both the drawing and the measurement
+    /// read it, so a frame costs one build instead of two.
     #[must_use]
-    pub fn content_height(&self, config: &SystemModuleConfig) -> f32 {
-        window::content_height(&self.data, config)
-    }
-
-    /// Render the menu entry exposing detailed system information.
-    #[must_use]
-    pub fn menu_view(
+    pub fn monitor_window(
         &self,
         config: &SystemModuleConfig,
         icons: &IconTheme
-    ) -> Element<'_, Message> {
-        window::build_menu_view(&self.data, config, icons)
+    ) -> (Element<'_, Message>, f32) {
+        let sections = window::model::sections(&self.data);
+        let footnotes = window::model::footnotes(&self.data, config);
+        let height = window::content_height_of(&sections, &footnotes);
+
+        (window::build_menu_view(sections, footnotes, icons), height)
     }
 
-    /// Render the window of the standalone processor entry.
+    /// The window of the standalone processor entry, with its height.
     #[must_use]
-    pub fn cpu_menu_view(&self, icons: &IconTheme) -> Element<'_, Message> {
-        window::build_section_window(window::model::processor_section(&self.data), icons)
+    pub fn cpu_window(&self, icons: &IconTheme) -> (Element<'_, Message>, f32) {
+        Self::section_window(window::model::processor_section(&self.data), icons)
     }
 
-    /// Render the window of the standalone memory entry.
+    /// The window of the standalone memory entry, with its height.
     #[must_use]
-    pub fn memory_menu_view(&self, icons: &IconTheme) -> Element<'_, Message> {
-        window::build_section_window(window::model::scoped_section(&self.data, Icons::Mem), icons)
+    pub fn memory_window(&self, icons: &IconTheme) -> (Element<'_, Message>, f32) {
+        Self::section_window(window::model::memory_section(&self.data).into(), icons)
     }
 
-    /// Height the standalone processor window needs.
+    /// The window of the standalone processor temperature entry.
     #[must_use]
-    pub fn cpu_content_height(&self) -> f32 {
-        window::section_window_height(window::model::processor_section(&self.data).as_ref())
+    pub fn cpu_temp_window(&self, icons: &IconTheme) -> (Element<'_, Message>, f32) {
+        Self::section_window(window::model::cpu_temperature_section(&self.data), icons)
     }
 
-    /// Height the standalone memory window needs.
+    /// The window of the standalone graphics entry, with its height.
     #[must_use]
-    pub fn memory_content_height(&self) -> f32 {
-        window::section_window_height(
-            window::model::scoped_section(&self.data, Icons::Mem).as_ref()
-        )
+    pub fn gpu_window(&self, icons: &IconTheme) -> (Element<'_, Message>, f32) {
+        Self::section_window(window::model::graphics_section(&self.data), icons)
     }
 
-    /// Render the window of the standalone processor temperature entry.
-    #[must_use]
-    pub fn cpu_temp_menu_view(&self, icons: &IconTheme) -> Element<'_, Message> {
-        window::build_section_window(window::model::cpu_temperature_section(&self.data), icons)
-    }
+    /// One section drawn and measured from a single build.
+    fn section_window<'a>(
+        section: Option<window::model::Section>,
+        icons: &IconTheme
+    ) -> (Element<'a, Message>, f32) {
+        let height = window::section_window_height(section.as_ref());
 
-    /// Height the standalone processor temperature window needs.
-    #[must_use]
-    pub fn cpu_temp_content_height(&self) -> f32 {
-        window::section_window_height(window::model::cpu_temperature_section(&self.data).as_ref())
-    }
-
-    /// Render the window of the standalone graphics entry.
-    #[must_use]
-    pub fn gpu_menu_view(&self, icons: &IconTheme) -> Element<'_, Message> {
-        window::build_section_window(window::model::scoped_section(&self.data, Icons::Gpu), icons)
-    }
-
-    /// Height the standalone graphics window needs.
-    #[must_use]
-    pub fn gpu_content_height(&self) -> f32 {
-        window::section_window_height(
-            window::model::scoped_section(&self.data, Icons::Gpu).as_ref()
-        )
+        (window::build_section_window(section, icons), height)
     }
 }
 

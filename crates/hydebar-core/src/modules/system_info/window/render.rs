@@ -7,32 +7,26 @@ use iced::{
 };
 
 use super::{
-    super::{Message, data::SystemInfoData},
+    super::Message,
     metrics::{
         self, FOOT_GAP, METER_GAP, METER_HEIGHT, NOTE_SIZE, OUTER_PADDING, ROW_GAP, ROW_SIZE,
         SECTION_GAP, SECTION_TITLE_SIZE, TITLE_SIZE
     },
     model::{self, MeterLevel, Row, Section}
 };
-use crate::{
-    components::{
-        icons::{IconTheme, icon},
-        scale,
-        text::text
-    },
-    config::SystemModuleConfig
+use crate::components::{
+    icons::{IconTheme, icon},
+    scale,
+    text::text
 };
 
-/// Render the module menu displaying detailed system metrics.
+/// Render the module menu from an already built model.
 #[must_use]
 pub fn build_menu_view<'a>(
-    data: &'a SystemInfoData,
-    config: &SystemModuleConfig,
+    sections: Vec<model::Section>,
+    footnotes: Vec<String>,
     icons: &IconTheme
 ) -> Element<'a, Message> {
-    let sections = model::sections(data);
-    let footnotes = model::footnotes(data, config);
-
     let mut content = Column::new()
         .push(text("System monitor").size(scale::scaled(TITLE_SIZE)))
         .push(rule::horizontal(1));

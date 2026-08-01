@@ -3,12 +3,7 @@
 //! The box is sized from these same constants the drawing uses, so a
 //! size changed here moves the drawing and the measurement together.
 
-use hydebar_proto::config::SystemModuleConfig;
-
-use super::{
-    super::data::SystemInfoData,
-    model::{self, Row, Section}
-};
+use super::model::{self, Row, Section};
 use crate::components::scale;
 
 /// Window title size, in pixels of the reference theme.
@@ -113,12 +108,8 @@ pub fn section_window_height(section: Option<&Section>) -> f32 {
     body + scale::scaled(2.0 * OUTER_PADDING)
 }
 
-/// Height the menu content needs for the readouts it currently
-/// shows.
-pub fn content_height(data: &SystemInfoData, config: &SystemModuleConfig) -> f32 {
-    let sections = model::sections(data);
-    let footnotes = model::footnotes(data, config);
-
+/// Height the menu content needs for an already built model.
+pub fn content_height_of(sections: &[model::Section], footnotes: &[String]) -> f32 {
     let title = line(TITLE_SIZE);
     let rule = 1.0;
     let body: f32 = sections.iter().map(section_height).sum();
@@ -126,5 +117,5 @@ pub fn content_height(data: &SystemInfoData, config: &SystemModuleConfig) -> f32
     let gaps = scale::scaled(SECTION_GAP) * (count(blocks) - 1.0);
     let padding = scale::scaled(2.0 * OUTER_PADDING);
 
-    title + rule + body + footnotes_height(&footnotes) + gaps + padding
+    title + rule + body + footnotes_height(footnotes) + gaps + padding
 }

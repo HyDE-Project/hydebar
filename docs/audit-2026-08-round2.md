@@ -85,11 +85,12 @@ inside each section; a checked box means the fix has landed on `main`.
   theme switch changes the key, so the cache refreshes itself — the theme
   answer itself is held for five seconds, and every decode or
   rasterisation runs on the blocking pool instead of the shared runtime.
-- [ ] **The system-info window model is built twice per frame** — once to
-  measure, once to render — and the standalone processor/memory/temperature
-  windows build the *entire* model four times to keep one section each
-  (`app/view.rs:246-307`, `system_info/window/model.rs:104`). Build once,
-  measure the built model, add per-section constructors.
+- [x] **The system-info window model is built twice per frame.** Each
+  window now comes back as one build carrying its own height: the monitor
+  states its model once and both the drawing and the measurement read it,
+  and every standalone entry builds only its own section through its own
+  constructor instead of building the whole machine and keeping one row
+  group.
 - [ ] **Themes menu re-normalises names quadratically, twice per frame.**
   Offered-name filtering canonicalises both sides of every comparison —
   thousands of small strings per frame with a large gallery

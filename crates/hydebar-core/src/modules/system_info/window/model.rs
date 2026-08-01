@@ -105,16 +105,21 @@ fn gigahertz(mhz: u32) -> String {
 /// The one section a scoped window shows, picked by its icon.
 ///
 /// The standalone entries open a window of their own subject alone;
-/// the icon is the section's stable identity, so the window and the
-/// full monitor can never disagree about the rows.
+/// each subject is built by its own constructor, so the window costs
+/// its own rows and nothing of its neighbours'.
 #[must_use]
 pub fn scoped_section(
     data: &SystemInfoData,
     icon: crate::components::icons::Icons
 ) -> Option<Section> {
-    sections(data)
-        .into_iter()
-        .find(|section| section.icon == icon)
+    match icon {
+        crate::components::icons::Icons::Cpu => Some(processor_section_full(data)),
+        crate::components::icons::Icons::Mem => Some(memory_section(data)),
+        crate::components::icons::Icons::Gpu => graphics_section(data),
+        crate::components::icons::Icons::Drive => storage_section(data),
+        crate::components::icons::Icons::Ethernet => network_section(data),
+        _ => None
+    }
 }
 
 /// The processor window of the standalone processor entry.
@@ -248,6 +253,103 @@ fn memory_rows(data: &SystemInfoData) -> Vec<Row> {
     memory
 }
 
+/// The processor section of the monitor.
+#[must_use]
+pub fn processor_section_full(data: &SystemInfoData) -> Section {
+    Section {
+        icon:  Icons::Cpu,
+        title: "Processor",
+        note:  data.cpu_model.clone(),
+        rows:  processor_rows(data)
+    }
+}
+
+/// The memory section of the monitor.
+#[must_use]
+pub fn memory_section(data: &SystemInfoData) -> Section {
+    Section {
+        icon:  Icons::Mem,
+        title: "Memory",
+        note:  None,
+        rows:  memory_rows(data)
+    }
+}
+
+/// The graphics section, absent on a machine reporting nothing of it.
+#[must_use]
+pub fn graphics_section(data: &SystemInfoData) -> Option<Section> {
+    let gpu = data.gpu.as_ref()?;
+    let mut rows = Vec::new();
+
+    if let Some(temperature) = gpu.temperature {
+        rows.push(fact("Temperature", format!("{temperature}°C")));
+    }
+
+    if let Some(usage) = gpu.utilisation {
+        rows.push(meter("Load", format!("{usage}%"), usage));
+    }
+
+    if let Some((used, total)) = gpu.memory_used.zip(gpu.memory_total)
+        && total > 0
+    {
+        let percent = share(used, total);
+        rows.push(meter("Memory", pool(used, total, percent), percent));
+    }
+
+    if rows.is_empty() {
+        return None;
+    }
+
+    Some(Section {
+        icon: Icons::Gpu,
+        title: "Graphics",
+        note: Some(gpu_title(gpu)),
+        rows
+    })
+}
+
+/// The storage section, absent when no disk is reported.
+#[must_use]
+pub fn storage_section(data: &SystemInfoData) -> Option<Section> {
+    if data.disks.is_empty() {
+        return None;
+    }
+
+    Some(Section {
+        icon:  Icons::Drive,
+        title: "Storage",
+        note:  None,
+        rows:  data
+            .disks
+            .iter()
+            .map(|disk| {
+                meter(
+                    &disk.mount,
+                    pool(disk.used, disk.total, disk.usage_percent),
+                    disk.usage_percent
+                )
+            })
+            .collect()
+    })
+}
+
+/// The network section, absent while no interface reports.
+#[must_use]
+pub fn network_section(data: &SystemInfoData) -> Option<Section> {
+    let network = data.network.as_ref()?;
+
+    Some(Section {
+        icon:  Icons::Ethernet,
+        title: "Network",
+        note:  None,
+        rows:  vec![
+            fact("Address", network.ip.clone()),
+            fact("Download", format_speed(network.download_speed)),
+            fact("Upload", format_speed(network.upload_speed)),
+        ]
+    })
+}
+
 /// Everything the window says about the machine, in drawing order.
 ///
 /// A section the machine cannot fill is left out whole rather than
@@ -255,80 +357,11 @@ fn memory_rows(data: &SystemInfoData) -> Vec<Row> {
 /// [`footnotes`] instead.
 #[must_use]
 pub fn sections(data: &SystemInfoData) -> Vec<Section> {
-    let mut sections = vec![
-        Section {
-            icon:  Icons::Cpu,
-            title: "Processor",
-            note:  data.cpu_model.clone(),
-            rows:  processor_rows(data)
-        },
-        Section {
-            icon:  Icons::Mem,
-            title: "Memory",
-            note:  None,
-            rows:  memory_rows(data)
-        },
-    ];
+    let mut sections = vec![processor_section_full(data), memory_section(data)];
 
-    if let Some(gpu) = data.gpu.as_ref() {
-        let mut rows = Vec::new();
-
-        if let Some(temperature) = gpu.temperature {
-            rows.push(fact("Temperature", format!("{temperature}°C")));
-        }
-
-        if let Some(usage) = gpu.utilisation {
-            rows.push(meter("Load", format!("{usage}%"), usage));
-        }
-
-        if let Some((used, total)) = gpu.memory_used.zip(gpu.memory_total)
-            && total > 0
-        {
-            let percent = share(used, total);
-            rows.push(meter("Memory", pool(used, total, percent), percent));
-        }
-
-        if !rows.is_empty() {
-            sections.push(Section {
-                icon: Icons::Gpu,
-                title: "Graphics",
-                note: Some(gpu_title(gpu)),
-                rows
-            });
-        }
-    }
-
-    if !data.disks.is_empty() {
-        sections.push(Section {
-            icon:  Icons::Drive,
-            title: "Storage",
-            note:  None,
-            rows:  data
-                .disks
-                .iter()
-                .map(|disk| {
-                    meter(
-                        &disk.mount,
-                        pool(disk.used, disk.total, disk.usage_percent),
-                        disk.usage_percent
-                    )
-                })
-                .collect()
-        });
-    }
-
-    if let Some(network) = data.network.as_ref() {
-        sections.push(Section {
-            icon:  Icons::Ethernet,
-            title: "Network",
-            note:  None,
-            rows:  vec![
-                fact("Address", network.ip.clone()),
-                fact("Download", format_speed(network.download_speed)),
-                fact("Upload", format_speed(network.upload_speed)),
-            ]
-        });
-    }
+    sections.extend(graphics_section(data));
+    sections.extend(storage_section(data));
+    sections.extend(network_section(data));
 
     sections
 }
