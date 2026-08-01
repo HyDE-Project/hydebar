@@ -174,6 +174,10 @@ pub(crate) fn request() {
         return;
     }
 
+    if hydebar_proto::compositor_look::CompositorLook::read().blur == Some(false) {
+        return;
+    }
+
     for rule in rules(MAIN_NAMESPACE) {
         state(&rule);
     }

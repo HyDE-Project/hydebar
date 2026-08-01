@@ -35,7 +35,9 @@ pub struct CompositorLook {
     /// Gap kept between windows, in pixels.
     pub gaps_in:    Option<f32>,
     /// Whether the session animates at all.
-    pub animations: Option<bool>
+    pub animations: Option<bool>,
+    /// Whether the compositor blurs at all.
+    pub blur:       Option<bool>
 }
 
 impl CompositorLook {
@@ -77,7 +79,8 @@ impl CompositorLook {
             rounding:   query("decoration:rounding").and_then(|answer| parse_number(&answer)),
             gaps_out:   query("general:gaps_out").and_then(|answer| parse_gap(&answer)),
             gaps_in:    query("general:gaps_in").and_then(|answer| parse_gap(&answer)),
-            animations: query("animations:enabled").and_then(|answer| parse_flag(&answer))
+            animations: query("animations:enabled").and_then(|answer| parse_flag(&answer)),
+            blur:       query("decoration:blur:enabled").and_then(|answer| parse_flag(&answer))
         }
     }
 }

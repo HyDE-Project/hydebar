@@ -70,7 +70,8 @@ mod tests {
             rounding:   Some(3.0),
             gaps_out:   Some(8.0),
             gaps_in:    Some(3.0),
-            animations: Some(true)
+            animations: Some(true),
+            blur:       Some(true)
         }
     }
 
