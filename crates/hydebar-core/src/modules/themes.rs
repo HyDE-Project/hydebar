@@ -57,6 +57,15 @@ const INDICATOR_GAP: f32 = 4.0;
 /// Choice made in the theme module.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Message {
+    /// Ask HyDE for the next theme in its own order.
+    NextTheme,
+    /// Ask HyDE for the previous theme in its own order.
+    PreviousTheme,
+    /// Report that a stepped switch has ended.
+    Stepped {
+        /// Why the desktop refused, if it did.
+        failure: Option<String>
+    },
     /// Ask HyDE to switch the desktop to the named theme.
     Switch(String),
     /// Report that the switch to the named theme has ended.
@@ -374,6 +383,34 @@ impl Themes {
     /// it has, so a switch that never happened is never drawn as if it had.
     pub fn update(&mut self, message: Message, config: &Config) -> Task<Message> {
         match message {
+            Message::NextTheme => {
+                return Task::perform(
+                    hyde_shell::run("hydectl theme next".to_owned()),
+                    |failure| Message::Stepped {
+                        failure
+                    }
+                );
+            }
+            Message::PreviousTheme => {
+                return Task::perform(
+                    hyde_shell::run("hydectl theme prev".to_owned()),
+                    |failure| Message::Stepped {
+                        failure
+                    }
+                );
+            }
+            Message::Stepped {
+                failure
+            } => {
+                if let Some(reason) = failure {
+                    error!("the theme step failed: {reason}");
+                    report(config, "the desktop refused to step the theme");
+                }
+
+                self.refresh();
+
+                return self.load_swatches();
+            }
             Message::Switch(theme) => {
                 info!("theme chip pressed: `{theme}`");
 

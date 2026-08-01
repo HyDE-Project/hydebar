@@ -34,6 +34,16 @@ impl App {
                     }
                 }
             }
+            ModuleName::Themes => ModuleActions {
+                left: Some(OnModulePress::Action(Box::new(Message::Themes(
+                    hydebar_core::modules::themes::Message::NextTheme
+                )))),
+                right: Some(OnModulePress::Action(Box::new(Message::Themes(
+                    hydebar_core::modules::themes::Message::PreviousTheme
+                )))),
+                middle: Some(OnModulePress::ToggleMenu(MenuType::Themes)),
+                ..ModuleActions::default()
+            },
             ModuleName::Wallpaper => ModuleActions {
                 left: Some(OnModulePress::Action(Box::new(Message::Wallpaper(
                     hydebar_core::modules::wallpaper::Message::Next
