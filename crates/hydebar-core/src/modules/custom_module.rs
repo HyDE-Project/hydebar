@@ -32,7 +32,7 @@ where
     M: 'static + Clone
 {
     type ViewData<'a> = (&'a CustomModuleDef, &'a Appearance, &'a IconTheme);
-    type RegistrationData<'a> = Option<&'a CustomModuleDef>;
+    type RegistrationData<'a> = &'a CustomModuleDef;
 
     fn register(
         &mut self,
@@ -41,6 +41,10 @@ where
     ) -> Result<(), ModuleError> {
         self.start_listener(ctx, config);
         Ok(())
+    }
+
+    fn deregister(&mut self) {
+        self.stop_listener();
     }
 
     fn view(
@@ -200,7 +204,7 @@ invalid
             ..CustomModuleDef::default()
         };
 
-        <Custom as Module<Message>>::register(&mut custom, &context, Some(&first))
+        <Custom as Module<Message>>::register(&mut custom, &context, &first)
             .expect("first register");
 
         timeout(Duration::from_secs(2), async {
@@ -237,7 +241,7 @@ invalid
             ..CustomModuleDef::default()
         };
 
-        <Custom as Module<Message>>::register(&mut custom, &context, Some(&second))
+        <Custom as Module<Message>>::register(&mut custom, &context, &second)
             .expect("second register");
 
         let observed = timeout(Duration::from_secs(2), async {
@@ -456,7 +460,7 @@ invalid
             ..CustomModuleDef::default()
         };
 
-        <Custom as Module<Message>>::register(&mut custom, &context, Some(&definition))
+        <Custom as Module<Message>>::register(&mut custom, &context, &definition)
             .expect("register");
 
         let alts = timeout(
@@ -489,7 +493,7 @@ invalid
             ..CustomModuleDef::default()
         };
 
-        <Custom as Module<Message>>::register(&mut custom, &context, Some(&streaming))
+        <Custom as Module<Message>>::register(&mut custom, &context, &streaming)
             .expect("streaming register");
 
         let streamed = timeout(
@@ -508,7 +512,7 @@ invalid
             ..CustomModuleDef::default()
         };
 
-        <Custom as Module<Message>>::register(&mut custom, &context, Some(&scheduled))
+        <Custom as Module<Message>>::register(&mut custom, &context, &scheduled)
             .expect("scheduled register");
 
         while receiver.try_recv().is_some() {}
@@ -633,7 +637,7 @@ invalid
         };
 
         let mut custom = Custom::default();
-        <Custom as Module<Message>>::register(&mut custom, &context, Some(&definition))
+        <Custom as Module<Message>>::register(&mut custom, &context, &definition)
             .expect("register");
 
         let helper = timeout(Duration::from_secs(5), recorded_helper(&pid_file))
@@ -663,7 +667,7 @@ invalid
         };
 
         let mut custom = Custom::default();
-        <Custom as Module<Message>>::register(&mut custom, &context, Some(&first))
+        <Custom as Module<Message>>::register(&mut custom, &context, &first)
             .expect("first register");
 
         let helper = timeout(Duration::from_secs(5), recorded_helper(&pid_file))
@@ -677,7 +681,7 @@ invalid
             ..CustomModuleDef::default()
         };
 
-        <Custom as Module<Message>>::register(&mut custom, &context, Some(&second))
+        <Custom as Module<Message>>::register(&mut custom, &context, &second)
             .expect("second register");
 
         timeout(Duration::from_secs(5), awaits_death(helper))

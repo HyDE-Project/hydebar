@@ -101,6 +101,14 @@ impl Custom {
         }
     }
 
+    /// Tears down the feeding task and forgets the registration.
+    pub(super) fn stop_listener(&mut self) {
+        self.abort_listener();
+        self.sender = None;
+        self.last_error = None;
+        self.registration = None;
+    }
+
     /// Restarts the task feeding the module from the given configuration.
     ///
     /// A definition without a schedule keeps the streaming listener, while
@@ -108,19 +116,11 @@ impl Custom {
     /// the whole task is torn down first, a configuration reload
     /// that only changes the interval or the signal number restarts
     /// the module on the new schedule.
-    pub(super) fn start_listener(
-        &mut self,
-        ctx: &ModuleContext,
-        config: Option<&CustomModuleDef>
-    ) {
-        self.abort_listener();
-        self.sender = None;
-        self.last_error = None;
-        self.registration = config.and_then(|definition| {
-            definition.source().map(|source| CustomRegistration {
-                name:   Arc::from(definition.name.as_str()),
-                source: RegistrationSource::from_config(source)
-            })
+    pub(super) fn start_listener(&mut self, ctx: &ModuleContext, config: &CustomModuleDef) {
+        self.stop_listener();
+        self.registration = config.source().map(|source| CustomRegistration {
+            name:   Arc::from(config.name.as_str()),
+            source: RegistrationSource::from_config(source)
         });
 
         let Some(registration) = self.registration.clone() else {

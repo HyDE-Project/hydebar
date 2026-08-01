@@ -21,7 +21,7 @@ use super::super::state::{App, Message};
 /// of it: a failure is logged under the module's label, and an unhosted module
 /// always gives its background work back.
 fn gate<M>(
-    label: &'static str,
+    label: &str,
     hosted: bool,
     module: &mut M,
     ctx: &ModuleContext,
@@ -214,16 +214,7 @@ impl App {
             let placed = layout.hosts(&ModuleName::Custom(definition.name.clone()));
 
             match self.custom.get_mut(&definition.name) {
-                Some(module) => {
-                    let data = placed.then_some(definition);
-
-                    if let Err(err) = modules::Module::<Message>::register(module, ctx, data) {
-                        error!(
-                            "failed to register custom module '{}': {err}",
-                            definition.name
-                        );
-                    }
-                }
+                Some(module) => gate(&definition.name, placed, module, ctx, definition),
                 None => error!(
                     "custom module '{}' missing runtime state entry during registration",
                     definition.name
@@ -237,9 +228,8 @@ impl App {
                 .custom_modules
                 .iter()
                 .any(|definition| definition.name == *name)
-                && let Err(err) = modules::Module::<Message>::register(module, ctx, None)
             {
-                error!("failed to clear registration for custom module '{name}': {err}");
+                modules::Module::<Message>::deregister(module);
             }
         }
 
