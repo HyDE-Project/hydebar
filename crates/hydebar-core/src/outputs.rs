@@ -4,7 +4,7 @@ mod blur;
 mod config;
 pub mod scaling;
 mod state;
-mod wayland;
+pub(crate) mod wayland;
 
 pub use scaling::{AutoMetrics, metrics as auto_metrics};
 pub use state::{HasOutput, Outputs};

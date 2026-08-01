@@ -3,11 +3,15 @@
 use std::time::Duration;
 
 use iced::{
-    KeyboardInteractivity, Layer, SurfaceId as Id, Task, set_keyboard_interactivity, set_layer
+    KeyboardInteractivity, Layer, OutputId, SurfaceId as Id, Task, destroy_layer_surface,
+    new_layer_surface, set_keyboard_interactivity, set_layer
 };
 
 use super::kind::MenuType;
-use crate::{animation::Spring, config::AnimationConfig, position_button::ButtonUIRef};
+use crate::{
+    animation::Spring, config::AnimationConfig, outputs::wayland::menu_settings,
+    position_button::ButtonUIRef
+};
 
 /// Opacity distance below which the fade counts as arrived.
 ///
@@ -23,40 +27,32 @@ const SETTLE_PRECISION: f32 = 0.02;
 pub struct Menu {
     pub id:        Id,
     pub menu_info: Option<(MenuType, ButtonUIRef)>,
+    /// Output the menu surface stands on, for building its replacement.
+    output:        Option<OutputId>,
     opacity:       Spring,
     /// Opacity the menu opens up to, kept so the travelled share can be told
-    /// while fading either way.
+    /// while fading in.
     full_opacity:  f32,
-    /// Whether the menu is playing its way out.
-    ///
-    /// A closing menu keeps its content and its overlay layer so the fade is
-    /// actually visible; only once the spring settles at zero is the surface
-    /// emptied and dropped behind everything. For every question except
-    /// drawing, a closing menu already counts as closed.
-    closing:       bool,
     /// Whether the press in flight has to take this menu down once it
     /// completes.
     dismiss_armed: bool
 }
 
 impl Menu {
-    pub fn new(id: Id) -> Self {
+    pub fn new(id: Id, output: Option<OutputId>) -> Self {
         Self {
             id,
             menu_info: None,
+            output,
             opacity: Spring::new(0.0).with_precision(SETTLE_PRECISION),
             full_opacity: 0.0,
-            closing: false,
             dismiss_armed: false
         }
     }
 
     /// Returns whether the menu is open as far as the user is concerned.
-    ///
-    /// A menu playing its way out still draws, but it is already closed: it
-    /// holds no attention, blocks no toggle and needs no dismissal.
     pub fn is_open(&self) -> bool {
-        self.menu_info.is_some() && !self.closing
+        self.menu_info.is_some()
     }
 
     /// Arms the open menu for dismissal by the press currently in flight.
@@ -92,7 +88,7 @@ impl Menu {
     ) -> Task<Message> {
         self.menu_info.replace((menu_type, button_ui_ref));
         self.dismiss_armed = false;
-        self.closing = false;
+
         self.full_opacity = config.appearance.menu.opacity;
 
         self.aim_opacity(
@@ -112,40 +108,29 @@ impl Menu {
         Task::batch(tasks)
     }
 
-    /// Starts playing the menu out, or takes it straight down when animations
-    /// are off.
+    /// Takes the menu down by destroying its surface whole.
     ///
-    /// The content and the overlay layer stay while the fade travels — the
-    /// window has to be seen settling back into the bar — and the surface is
-    /// only emptied and dropped behind everything once the spring reaches
-    /// zero, in [`Menu::tick_animation`]. The keyboard is released right away:
-    /// a departing window must not keep eating keys.
-    pub fn close<Message: 'static>(&mut self, config: &crate::config::Config) -> Task<Message> {
+    /// The window is not faded element by element: the compositor is handed
+    /// the surface's last composited frame and plays its own layer animation
+    /// over it, so the box, the content and the backdrop leave the screen as
+    /// one layer — the way every other popup on the desktop leaves. A fresh
+    /// empty surface is raised in the same breath to host the next open.
+    pub fn close<Message: 'static>(&mut self, _config: &crate::config::Config) -> Task<Message> {
         self.dismiss_armed = false;
 
         if !self.is_open() {
             return Task::none();
         }
 
-        self.aim_opacity(0.0, &config.appearance.animations);
+        self.menu_info.take();
+        self.opacity.snap_to(0.0);
+        self.full_opacity = 0.0;
 
-        let mut tasks = Vec::new();
+        let departed = self.id;
+        let (successor, raise) = new_layer_surface(menu_settings(self.output));
+        self.id = successor;
 
-        if config.menu_keyboard_focus {
-            tasks.push(set_keyboard_interactivity(
-                self.id,
-                KeyboardInteractivity::None
-            ));
-        }
-
-        if config.appearance.animations.enabled {
-            self.closing = true;
-        } else {
-            self.menu_info.take();
-            tasks.push(set_layer(self.id, Layer::Background));
-        }
-
-        Task::batch(tasks)
+        Task::batch(vec![destroy_layer_surface(departed), raise])
     }
 
     pub fn toggle<Message: 'static>(
@@ -155,10 +140,6 @@ impl Menu {
         config: &crate::config::Config
     ) -> Task<Message> {
         self.dismiss_armed = false;
-
-        if self.closing {
-            return self.open(menu_type, button_ui_ref, config);
-        }
 
         match self.menu_info.as_mut() {
             None => self.open(menu_type, button_ui_ref, config),
@@ -232,10 +213,7 @@ impl Menu {
     }
 
     /// Advances the opacity spring by `elapsed` and reports whether the menu
-    /// still needs frames, together with the task finishing a completed close.
-    ///
-    /// A closing menu whose fade just settled is emptied here and its surface
-    /// dropped behind everything — the deferred half of [`Menu::close`].
+    /// still needs frames.
     pub fn tick_animation<Message: 'static>(
         &mut self,
         animation_config: &AnimationConfig,
@@ -248,24 +226,12 @@ impl Menu {
             false
         };
 
-        if self.closing && !running {
-            self.closing = false;
-            self.menu_info.take();
-
-            return (false, set_layer(self.id, Layer::Background));
-        }
-
         (running, Task::none())
     }
 
     /// Returns whether the menu has an unfinished opacity animation.
     pub fn is_animating(&self) -> bool {
         self.opacity.is_animating()
-    }
-
-    /// Returns whether the menu is playing its way out.
-    pub fn is_closing(&self) -> bool {
-        self.closing
     }
 
     /// Get the current animated opacity for rendering

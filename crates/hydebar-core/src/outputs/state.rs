@@ -131,7 +131,7 @@ impl Outputs {
                 None,
                 Some(ShellInfo {
                     id: main_id,
-                    menu: Menu::new(menu_id),
+                    menu: Menu::new(menu_id, None),
                     position,
                     style,
                     scale_factor: config.appearance.scale_factor,
