@@ -124,14 +124,24 @@ fn cache_path() -> Option<std::path::PathBuf> {
 
 /// Whether the installer the import runs through exists at all.
 async fn importer_present() -> bool {
-    tokio::process::Command::new("hydectl")
+    if let Some(present) = PRESENT.get() {
+        return *present;
+    }
+
+    let probe = tokio::process::Command::new("hydectl")
         .arg("--help")
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
-        .status()
-        .await
-        .is_ok_and(|status| status.success())
+        .status();
+
+    let probed = (tokio::time::timeout(std::time::Duration::from_secs(10), probe).await)
+        .is_ok_and(|outcome| outcome.is_ok_and(|status| status.success()));
+
+    PRESENT.get_or_init(|| probed).to_owned()
 }
+
+/// The one answer of the importer probe, asked once per process.
+static PRESENT: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
 
 /// Reads the catalogue, from the cache while it is fresh.
 ///

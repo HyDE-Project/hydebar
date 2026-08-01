@@ -1,6 +1,6 @@
 use std::{future::Future, pin::Pin, time::Duration};
 
-use iced::futures::{Stream, StreamExt, stream::SelectAll};
+use iced::futures::{FutureExt, Stream, StreamExt, stream::SelectAll};
 use log::{debug, error, info, warn};
 use masterror::AppError;
 
@@ -206,6 +206,27 @@ fn item_event_streams(
     }
 }
 
+/// Seats one item's streams under a lease its unregistration revokes.
+///
+/// The property and menu streams of a vanished application never end on
+/// their own — they pend on the live connection forever. Ending them on
+/// the lease is what keeps the merged set from hoarding the dead: an app
+/// restarting every hour must not grow the bar by three streams an hour.
+async fn enrol(
+    item_streams: &mut SelectAll<TrayEventStream>,
+    leases: &mut std::collections::HashMap<String, iced::futures::channel::oneshot::Sender<()>>,
+    item: &StatusNotifierItem
+) {
+    let (lease, revoked) = iced::futures::channel::oneshot::channel::<()>();
+    let revoked = revoked.shared();
+
+    leases.insert(item.name.clone(), lease);
+
+    for stream in item_event_streams(item).await {
+        item_streams.push(stream.take_until(revoked.clone()).boxed());
+    }
+}
+
 /// Serves tray events from one bus connection until the bus lets go.
 ///
 /// The registration signals are subscribed exactly once and per-item
@@ -250,10 +271,13 @@ where
     };
 
     let mut item_streams: SelectAll<TrayEventStream> = SelectAll::new();
+    let mut leases: std::collections::HashMap<
+        String,
+        iced::futures::channel::oneshot::Sender<()>
+    > = std::collections::HashMap::new();
+
     for item in data.iter() {
-        for stream in item_event_streams(item).await {
-            item_streams.push(stream);
-        }
+        enrol(&mut item_streams, &mut leases, item).await;
     }
 
     info!("Tray service initialized");
@@ -283,9 +307,7 @@ where
                     continue;
                 };
 
-                for stream in item_event_streams(&item).await {
-                    item_streams.push(stream);
-                }
+                enrol(&mut item_streams, &mut leases, &item).await;
 
                 publisher(ServiceEvent::Update(TrayEvent::Registered(item))).await;
             }
@@ -299,10 +321,11 @@ where
                 debug!("unregistered {signal:?}");
 
                 if let Ok(args) = signal.args() {
-                    publisher(ServiceEvent::Update(TrayEvent::Unregistered(
-                        args.service.to_string()
-                    )))
-                    .await;
+                    let service = args.service.to_string();
+
+                    leases.remove(&service);
+
+                    publisher(ServiceEvent::Update(TrayEvent::Unregistered(service))).await;
                 }
             }
             Some(event) = item_streams.next(), if !item_streams.is_empty() => {
@@ -318,30 +341,47 @@ where
     F: FnMut(ServiceEvent<TrayService>) -> Fut + Send,
     Fut: Future<Output = ()> + Send
 {
-    let mut failures: u32 = 0;
-    let server = loop {
-        match StatusNotifierWatcher::start_server().await {
-            Ok((conn, watch)) => {
-                break WatcherServer {
-                    conn,
-                    watch
-                };
-            }
-            Err(err) => {
-                error!("{}", TrayWatcherError::Connection(err));
-                failures = failures.saturating_add(1);
-                tokio::time::sleep(crate::services::reconnect_delay(failures)).await;
-            }
-        }
-    };
+    /// A serve that lasted this long counts as a healthy watch, so an
+    /// isolated stumble days later starts the backoff from the bottom.
+    const STABLE_WATCH: std::time::Duration = std::time::Duration::from_mins(1);
 
-    let mut failures: u32 = 0;
+    /// Consecutive quick failures after which the connection itself is
+    /// presumed dead and rebuilt from scratch.
+    const REBUILD_AFTER: u32 = 3;
+
     loop {
-        let err = serve(&server.conn, &mut publisher).await;
-        error!("{err}");
+        let mut failures: u32 = 0;
+        let server = loop {
+            match StatusNotifierWatcher::start_server().await {
+                Ok((conn, watch)) => {
+                    break WatcherServer {
+                        conn,
+                        watch
+                    };
+                }
+                Err(err) => {
+                    error!("{}", TrayWatcherError::Connection(err));
+                    failures = failures.saturating_add(1);
+                    tokio::time::sleep(crate::services::reconnect_delay(failures)).await;
+                }
+            }
+        };
 
-        failures = failures.saturating_add(1);
-        tokio::time::sleep(crate::services::reconnect_delay(failures)).await;
+        let mut failures: u32 = 0;
+        while failures < REBUILD_AFTER {
+            let started = std::time::Instant::now();
+            let err = serve(&server.conn, &mut publisher).await;
+            error!("{err}");
+
+            if started.elapsed() >= STABLE_WATCH {
+                failures = 0;
+            }
+
+            failures = failures.saturating_add(1);
+            tokio::time::sleep(crate::services::reconnect_delay(failures)).await;
+        }
+
+        error!("the tray connection keeps failing, rebuilding it");
     }
 }
 

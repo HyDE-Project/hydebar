@@ -64,10 +64,11 @@ pub struct BarLayout {
 
 /// Reads the roster and the record of the layout in force.
 fn list_layouts() -> Vec<LayoutEntry> {
-    let Ok(output) = std::process::Command::new("hyde-shell")
-        .args(["waybar", "--json"])
-        .output()
-    else {
+    let listing = std::process::Command::new("timeout")
+        .args(["10", "hyde-shell", "waybar", "--json"])
+        .output();
+
+    let Ok(output) = listing else {
         return Vec::new();
     };
 

@@ -66,10 +66,11 @@ pub struct WallpaperEntry {
 fn list_wallpapers(
     known: &std::collections::HashMap<String, iced::widget::image::Handle>
 ) -> Vec<WallpaperEntry> {
-    let Ok(output) = std::process::Command::new("hydectl")
-        .args(["wallpaper", "list"])
-        .output()
-    else {
+    let listing = std::process::Command::new("timeout")
+        .args(["10", "hydectl", "wallpaper", "list"])
+        .output();
+
+    let Ok(output) = listing else {
         return Vec::new();
     };
 
