@@ -137,11 +137,15 @@ fn item_event_streams(
                     move |icon| {
                         let name = name.clone();
                         async move {
-                            icon.get()
-                                .await
-                                .ok()
-                                .and_then(icon::icon_from_pixmaps)
-                                .map(|icon| TrayEvent::IconChanged(name.clone(), icon))
+                            let pixmaps = icon.get().await.ok()?;
+                            let icon = tokio::task::spawn_blocking(move || {
+                                icon::icon_from_pixmaps(pixmaps)
+                            })
+                            .await
+                            .ok()
+                            .flatten()?;
+
+                            Some(TrayEvent::IconChanged(name.clone(), icon))
                         }
                     }
                 })
@@ -156,13 +160,15 @@ fn item_event_streams(
                     move |icon_name| {
                         let name = name.clone();
                         async move {
-                            icon_name
-                                .get()
-                                .await
-                                .ok()
-                                .as_deref()
-                                .and_then(icon::icon_from_name)
-                                .map(|icon| TrayEvent::IconChanged(name.clone(), icon))
+                            let icon_name = icon_name.get().await.ok()?;
+                            let icon = tokio::task::spawn_blocking(move || {
+                                icon::icon_from_name(&icon_name)
+                            })
+                            .await
+                            .ok()
+                            .flatten()?;
+
+                            Some(TrayEvent::IconChanged(name.clone(), icon))
                         }
                     }
                 })

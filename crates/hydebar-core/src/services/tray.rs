@@ -87,14 +87,20 @@ impl StatusNotifierItem {
         let icon = match icon_pixmap {
             Ok(icons) => {
                 debug!("icon_pixmap {icons:?}");
-                icon::icon_from_pixmaps(icons)
+                tokio::task::spawn_blocking(move || icon::icon_from_pixmaps(icons))
+                    .await
+                    .ok()
+                    .flatten()
             }
-            Err(_) => item_proxy
-                .icon_name()
-                .await
-                .ok()
-                .as_deref()
-                .and_then(icon::icon_from_name)
+            Err(_) => match item_proxy.icon_name().await.ok() {
+                Some(icon_name) => {
+                    tokio::task::spawn_blocking(move || icon::icon_from_name(&icon_name))
+                        .await
+                        .ok()
+                        .flatten()
+                }
+                None => None
+            }
         };
 
         let menu_path = item_proxy

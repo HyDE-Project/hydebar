@@ -1,9 +1,53 @@
+use std::{
+    collections::HashMap,
+    sync::{LazyLock, Mutex, PoisonError},
+    time::{Duration, Instant}
+};
+
 use freedesktop_icons::lookup;
 use iced::widget::{image, svg};
 use linicon_theme::get_icon_theme;
 use log::{debug, trace};
 
 use super::{TrayIcon, dbus::Icon};
+
+/// How long one answer about the current icon theme stays fresh.
+///
+/// Asking means reading desktop settings files; a chatty tray application
+/// must not turn that into a file walk per signal. Five seconds keeps a
+/// theme switch visible on the next icon change without the walk.
+const THEME_FRESHNESS: Duration = Duration::from_secs(5);
+
+/// One answer about the icon theme: when it was read and what it said.
+type ThemeAnswer = (Instant, Option<String>);
+
+/// A resolved icon under its theme-and-name key.
+type ResolvedIcons = HashMap<(String, String), Option<TrayIcon>>;
+
+/// The icon theme last read from the desktop settings, with its read time.
+static THEME_CACHE: LazyLock<Mutex<Option<ThemeAnswer>>> = LazyLock::new(Mutex::default);
+
+/// Icons already resolved, keyed by the theme and the icon name.
+///
+/// A theme switch changes the key, so stale entries are simply never asked
+/// for again; the map stays small — a tray holds a handful of names.
+static ICON_CACHE: LazyLock<Mutex<ResolvedIcons>> = LazyLock::new(Mutex::default);
+
+/// The current icon theme, read from the settings at most once per window.
+fn cached_icon_theme() -> Option<String> {
+    let mut cache = THEME_CACHE.lock().unwrap_or_else(PoisonError::into_inner);
+
+    if let Some((asked, theme)) = cache.as_ref()
+        && asked.elapsed() < THEME_FRESHNESS
+    {
+        return theme.clone();
+    }
+
+    let theme = get_icon_theme();
+    *cache = Some((Instant::now(), theme.clone()));
+
+    theme
+}
 
 #[expect(
     clippy::cast_sign_loss,
@@ -74,14 +118,32 @@ fn trim_transparent(width: u32, height: u32, bytes: Vec<u8>) -> (u32, u32, Vec<u
 }
 
 pub fn icon_from_name(icon_name: &str) -> Option<TrayIcon> {
-    debug!("resolving icon from name {icon_name}");
+    let theme = cached_icon_theme();
+    let key = (theme.clone().unwrap_or_default(), icon_name.to_owned());
 
-    let theme = get_icon_theme();
-    if let Some(theme_name) = &theme {
-        debug!("icon theme found {theme_name}");
+    if let Some(hit) = ICON_CACHE
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .get(&key)
+    {
+        return hit.clone();
     }
 
-    let icon_path = theme.as_deref().map_or_else(
+    let resolved = resolve_icon(theme.as_deref(), icon_name);
+
+    ICON_CACHE
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .insert(key, resolved.clone());
+
+    resolved
+}
+
+/// Walks the theme directories and decodes the named icon.
+fn resolve_icon(theme: Option<&str>, icon_name: &str) -> Option<TrayIcon> {
+    debug!("resolving icon from name {icon_name}");
+
+    let icon_path = theme.map_or_else(
         || lookup(icon_name).with_cache().find(),
         |theme_name| {
             lookup(icon_name)

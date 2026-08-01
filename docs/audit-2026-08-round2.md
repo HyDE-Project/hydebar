@@ -80,11 +80,11 @@ inside each section; a checked box means the fix has landed on `main`.
 
 ## Performance
 
-- [ ] **Tray icons decode and rasterize on the shared runtime with no
-  cache.** Theme lookup reads GTK settings per call; SVGs re-render and
-  rasters re-decode on every change signal from chatty applications
-  (`services/tray/icon.rs`, `watcher.rs:150`). Spawn-blocking plus a
-  name-keyed memo.
+- [x] **Tray icons decode and rasterize on the shared runtime with no
+  cache.** Named icons are memoised under a theme-and-name key — a HyDE
+  theme switch changes the key, so the cache refreshes itself — the theme
+  answer itself is held for five seconds, and every decode or
+  rasterisation runs on the blocking pool instead of the shared runtime.
 - [ ] **The system-info window model is built twice per frame** — once to
   measure, once to render — and the standalone processor/memory/temperature
   windows build the *entire* model four times to keep one section each
