@@ -20,10 +20,24 @@ use std::{collections::BTreeSet, fs, path::PathBuf};
 use serde_json::Value;
 
 use crate::{
-    config::{ModuleDef, ModuleName, Modules},
+    config::{CustomModuleDef, ModuleDef, ModuleName, Modules},
     hyde_dirs::HydeDirs,
     shell_vars
 };
+
+/// A layout restated in the bar's modules, with the entries it had to invent.
+///
+/// The decorative layouts carry static text entries defined inline in the
+/// layout file — a label and possibly a click command, nothing else. They map
+/// to no built-in, so the restatement synthesises a custom module for each:
+/// the label becomes the glyph, the click command stays the click command.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RestatedLayout {
+    /// The three position arrays in the bar's own modules.
+    pub modules:     Modules,
+    /// Custom modules invented for inline text entries, ready to adopt.
+    pub synthesized: Vec<CustomModuleDef>
+}
 
 /// Key under which `staterc` records the layout file in force.
 const LAYOUT_PATH_KEY: &str = "WAYBAR_LAYOUT_PATH";
@@ -40,7 +54,7 @@ const SECTIONS: [&str; 3] = ["modules-left", "modules-center", "modules-right"];
 /// layout entry naming one of them is placed as that module, so a user's own
 /// wrapper wins over the built-in the name would otherwise map to.
 #[must_use]
-pub fn load(custom_names: &[String]) -> Option<Modules> {
+pub fn load(custom_names: &[String]) -> Option<RestatedLayout> {
     HydeDirs::from_env().and_then(|dirs| load_from(&dirs, custom_names))
 }
 
@@ -50,7 +64,7 @@ pub fn load(custom_names: &[String]) -> Option<Modules> {
 /// no readable layout, or a layout none of whose entries the bar can place —
 /// and the caller keeps the layout it already has.
 #[must_use]
-pub fn load_from(dirs: &HydeDirs, custom_names: &[String]) -> Option<Modules> {
+pub fn load_from(dirs: &HydeDirs, custom_names: &[String]) -> Option<RestatedLayout> {
     let staterc = fs::read_to_string(dirs.staterc()).ok()?;
     let source = fs::read_to_string(layout_file(dirs, &staterc)?).ok()?;
 
@@ -83,14 +97,15 @@ fn layout_file(dirs: &HydeDirs, staterc: &str) -> Option<PathBuf> {
 /// all: an empty bar helps nobody, and the default layout is the better
 /// answer to a layout the bar cannot restate.
 #[must_use]
-pub fn parse(source: &str, custom_names: &[String]) -> Option<Modules> {
+pub fn parse(source: &str, custom_names: &[String]) -> Option<RestatedLayout> {
     let root: Value = serde_json::from_str(&plain_json(source)).ok()?;
     let custom: BTreeSet<&str> = custom_names.iter().map(String::as_str).collect();
     let mut placed = BTreeSet::new();
+    let mut synthesized = Vec::new();
 
-    let mut sections = SECTIONS
-        .iter()
-        .map(|section| section_defs(&root, section, &custom, &mut placed));
+    let mut sections = SECTIONS.iter().map(|section| {
+        section_defs(&root, section, &custom, &mut placed, &mut synthesized)
+    });
 
     let modules = Modules {
         left:   sections.next()?,
@@ -98,7 +113,10 @@ pub fn parse(source: &str, custom_names: &[String]) -> Option<Modules> {
         right:  sections.next()?
     };
 
-    (modules.placed().count() > 0).then_some(modules)
+    (modules.placed().count() > 0).then_some(RestatedLayout {
+        modules,
+        synthesized
+    })
 }
 
 /// Restates one position array of the layout.
@@ -106,7 +124,8 @@ fn section_defs(
     root: &Value,
     section: &str,
     custom: &BTreeSet<&str>,
-    placed: &mut BTreeSet<ModuleName>
+    placed: &mut BTreeSet<ModuleName>,
+    synthesized: &mut Vec<CustomModuleDef>
 ) -> Vec<ModuleDef> {
     let Some(entries) = root.get(section).and_then(Value::as_array) else {
         return Vec::new();
@@ -115,7 +134,7 @@ fn section_defs(
     entries
         .iter()
         .filter_map(Value::as_str)
-        .filter_map(|entry| entry_def(root, entry, custom, placed))
+        .filter_map(|entry| entry_def(root, entry, custom, placed, synthesized))
         .collect()
 }
 
@@ -127,7 +146,8 @@ fn entry_def(
     root: &Value,
     entry: &str,
     custom: &BTreeSet<&str>,
-    placed: &mut BTreeSet<ModuleName>
+    placed: &mut BTreeSet<ModuleName>,
+    synthesized: &mut Vec<CustomModuleDef>
 ) -> Option<ModuleDef> {
     if entry.starts_with("group/") {
         let members: Vec<ModuleName> = root
@@ -136,7 +156,7 @@ fn entry_def(
             .and_then(Value::as_array)?
             .iter()
             .filter_map(Value::as_str)
-            .filter_map(|member| place(member, custom, placed))
+            .filter_map(|member| place(root, member, custom, placed, synthesized))
             .collect();
 
         return match members.len() {
@@ -146,7 +166,7 @@ fn entry_def(
         };
     }
 
-    place(entry, custom, placed).map(ModuleDef::Single)
+    place(root, entry, custom, placed, synthesized).map(ModuleDef::Single)
 }
 
 /// Maps one layout entry onto a module of ours, at most once per layout.
@@ -155,17 +175,68 @@ fn entry_def(
 /// microphone are one audio module here — and placing it twice would draw it
 /// twice. The first entry wins the spot; later ones fall away.
 fn place(
+    root: &Value,
     name: &str,
     custom: &BTreeSet<&str>,
-    placed: &mut BTreeSet<ModuleName>
+    placed: &mut BTreeSet<ModuleName>,
+    synthesized: &mut Vec<CustomModuleDef>
 ) -> Option<ModuleName> {
-    let Some(module) = module_for(name, custom) else {
+    let Some(module) = module_for(name, custom).or_else(|| {
+        synthesize_text_entry(root, name, custom).map(|definition| {
+            let module = ModuleName::Custom(definition.name.clone());
+            synthesized.push(definition);
+            module
+        })
+    }) else {
         log::warn!("bar layout entry `{name}` has no counterpart here and is skipped");
 
         return None;
     };
 
     placed.insert(module.clone()).then_some(module)
+}
+
+/// Invents a custom module for an inline text entry, when it is one.
+///
+/// Only a `custom/` entry the layout file defines beside the arrays
+/// qualifies, and only when that definition states a literal `format` — a
+/// definition with an `exec` is a live module the bar cannot restate from a
+/// label. The `#variant` stays in the name so two text entries stay two
+/// modules. A name the configuration already defines is never invented over.
+fn synthesize_text_entry(
+    root: &Value,
+    name: &str,
+    custom: &BTreeSet<&str>
+) -> Option<CustomModuleDef> {
+    let tail = name.strip_prefix("custom/")?;
+
+    if custom.contains(tail) {
+        return None;
+    }
+
+    let definition = root.get(name)?;
+
+    if definition.get("exec").is_some() {
+        return None;
+    }
+
+    let label = definition.get("format")?.as_str()?.trim();
+
+    if label.is_empty() {
+        return None;
+    }
+
+    let command = definition
+        .get("on-click")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+
+    Some(CustomModuleDef {
+        name: tail.to_owned(),
+        command: command.to_owned(),
+        icon: Some(label.to_owned()),
+        ..CustomModuleDef::default()
+    })
 }
 
 /// Maps one layout entry onto the module answering for it.
@@ -231,6 +302,7 @@ fn builtin_for(name: &str) -> Option<ModuleName> {
         "privacy" => ModuleName::Privacy,
         "mpris" => ModuleName::MediaPlayer,
         "gamemode" => ModuleName::GameMode,
+        "image" => ModuleName::Wallpaper,
         _ => return None
     })
 }
@@ -426,7 +498,7 @@ mod tests {
     #[test]
     fn a_hyde_layout_restates_as_islands() {
         let custom = vec!["keybindhint".to_owned()];
-        let modules = parse(LAYOUT, &custom).expect("layout");
+        let modules = parse(LAYOUT, &custom).expect("layout").modules;
 
         assert_eq!(
             modules.left,
@@ -457,7 +529,7 @@ mod tests {
     /// entries stay two separate modules.
     #[test]
     fn entries_sharing_a_bar_module_are_placed_once() {
-        let modules = parse(LAYOUT, &[]).expect("layout");
+        let modules = parse(LAYOUT, &[]).expect("layout").modules;
         let processor = modules
             .placed()
             .filter(|name| **name == ModuleName::Cpu)
@@ -484,7 +556,7 @@ mod tests {
         let custom = vec!["my_widget".to_owned()];
         let source = r#"{ "modules-left": ["custom/my_widget", "custom/updates"] }"#;
 
-        let modules = parse(source, &custom).expect("layout");
+        let modules = parse(source, &custom).expect("layout").modules;
 
         assert_eq!(
             modules.left,
@@ -503,7 +575,7 @@ mod tests {
         let custom = vec!["wallchange".to_owned(), "wbar".to_owned()];
         let source = r#"{ "modules-left": ["custom/wallchange", "custom/wbar"] }"#;
 
-        let modules = parse(source, &custom).expect("layout");
+        let modules = parse(source, &custom).expect("layout").modules;
 
         assert_eq!(
             modules.left,
@@ -523,7 +595,7 @@ mod tests {
         let custom = vec!["theme".to_owned()];
         let source = r#"{ "modules-left": ["custom/theme"] }"#;
 
-        let modules = parse(source, &custom).expect("layout");
+        let modules = parse(source, &custom).expect("layout").modules;
 
         assert_eq!(modules.left, vec![ModuleDef::Single(ModuleName::Themes)]);
     }
@@ -535,7 +607,7 @@ mod tests {
             "modules-right": ["clock"]
         }"#;
 
-        let modules = parse(source, &[]).expect("layout");
+        let modules = parse(source, &[]).expect("layout").modules;
 
         assert_eq!(
             modules.left,
@@ -558,9 +630,34 @@ mod tests {
             "group/pill#b": { "modules": ["no/counterpart", "clock"] }
         }"#;
 
-        let modules = parse(source, &[]).expect("layout");
+        let modules = parse(source, &[]).expect("layout").modules;
 
         assert_eq!(modules.left, vec![ModuleDef::Single(ModuleName::Clock)]);
+    }
+
+    /// An inline text entry becomes a custom module carrying its label and
+    /// its click command; an entry running a live command stays skipped.
+    #[test]
+    fn an_inline_text_entry_is_invented_as_a_custom_module() {
+        let source = r#"{
+            "modules-left": ["custom/text#two", "custom/help#macos", "image#wallpaper"],
+            "custom/text#two": { "format": "File", "on-click": "dolphin" },
+            "custom/help#macos": { "format": "Help", "exec": "some-live-feed" }
+        }"#;
+
+        let restated = parse(source, &[]).expect("layout");
+
+        assert_eq!(
+            restated.modules.left,
+            vec![
+                ModuleDef::Single(ModuleName::Custom("text#two".into())),
+                ModuleDef::Single(ModuleName::Wallpaper),
+            ]
+        );
+        assert_eq!(restated.synthesized.len(), 1);
+        assert_eq!(restated.synthesized[0].name, "text#two");
+        assert_eq!(restated.synthesized[0].icon.as_deref(), Some("File"));
+        assert_eq!(restated.synthesized[0].command, "dolphin");
     }
 
     /// A layout mapping to nothing at all is refused so the caller keeps a
@@ -585,7 +682,7 @@ mod tests {
     fn variant_suffixes_pick_the_same_module() {
         let source = r#"{ "modules-left": ["clock#date", "network#bandwidthUpBytes"] }"#;
 
-        let modules = parse(source, &[]).expect("layout");
+        let modules = parse(source, &[]).expect("layout").modules;
 
         assert_eq!(
             modules.left,
@@ -600,7 +697,7 @@ mod tests {
     fn comments_and_trailing_commas_are_tolerated() {
         let source = "{\n /* block */ \"modules-left\": [\"clock\",], // line\n}";
 
-        let modules = parse(source, &[]).expect("layout");
+        let modules = parse(source, &[]).expect("layout").modules;
 
         assert_eq!(modules.left, vec![ModuleDef::Single(ModuleName::Clock)]);
     }
@@ -651,7 +748,7 @@ mod tests {
             )
             .expect("staterc");
 
-            let modules = load_from(&dirs, &[]).expect("layout");
+            let modules = load_from(&dirs, &[]).expect("layout").modules;
 
             assert_eq!(modules.left, vec![ModuleDef::Single(ModuleName::Clock)]);
         }
@@ -663,7 +760,7 @@ mod tests {
                 Some(("hyprdots/01.jsonc", r#"{ "modules-left": ["clock"] }"#))
             );
 
-            let modules = load_from(&dirs, &[]).expect("layout");
+            let modules = load_from(&dirs, &[]).expect("layout").modules;
 
             assert_eq!(modules.left, vec![ModuleDef::Single(ModuleName::Clock)]);
         }

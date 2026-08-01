@@ -237,7 +237,7 @@ pub(crate) fn read_config_with<F, G>(
 ) -> Result<Config, ConfigReadError>
 where
     F: FnOnce() -> HydeTheme,
-    G: FnOnce(&[String]) -> Option<Modules>
+    G: FnOnce(&[String]) -> Option<bar_layout::RestatedLayout>
 {
     let mut content = String::new();
     File::open(path)
@@ -287,7 +287,7 @@ fn declares_modules(table: &toml::Table) -> bool {
 fn follow_hyde<F, G>(mut config: Config, manual_layout: bool, theme: F, layout: G) -> Config
 where
     F: FnOnce() -> HydeTheme,
-    G: FnOnce(&[String]) -> Option<Modules>
+    G: FnOnce(&[String]) -> Option<bar_layout::RestatedLayout>
 {
     if !config.appearance.follow_hyde {
         return config;
@@ -302,8 +302,18 @@ where
             .map(|definition| definition.name.clone())
             .collect();
 
-        if let Some(modules) = layout(&custom_names) {
-            config.modules = modules;
+        if let Some(restated) = layout(&custom_names) {
+            config.modules = restated.modules;
+
+            for definition in restated.synthesized {
+                if !config
+                    .custom_modules
+                    .iter()
+                    .any(|existing| existing.name == definition.name)
+                {
+                    config.custom_modules.push(definition);
+                }
+            }
         }
     }
 
@@ -376,11 +386,14 @@ mod tests {
         clippy::unnecessary_wraps,
         reason = "the helper matches the layout callback signature"
     )]
-    fn hyde_layout(_custom_names: &[String]) -> Option<Modules> {
-        Some(Modules {
-            left:   vec![ModuleDef::Single(ModuleName::Clock)],
-            center: Vec::new(),
-            right:  Vec::new()
+    fn hyde_layout(_custom_names: &[String]) -> Option<bar_layout::RestatedLayout> {
+        Some(bar_layout::RestatedLayout {
+            modules:     Modules {
+                left:   vec![ModuleDef::Single(ModuleName::Clock)],
+                center: Vec::new(),
+                right:  Vec::new()
+            },
+            synthesized: Vec::new()
         })
     }
 

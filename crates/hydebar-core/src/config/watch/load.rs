@@ -40,7 +40,7 @@ pub fn load_candidate_with<F, G>(
 ) -> Result<ConfigApplied, ConfigUpdateError>
 where
     F: FnOnce() -> HydeTheme,
-    G: FnOnce(&[String]) -> Option<hydebar_proto::config::Modules>
+    G: FnOnce(&[String]) -> Option<hydebar_proto::bar_layout::RestatedLayout>
 {
     let config = read_config_with(path, theme, layout).map_err(convert_read_error)?;
 
