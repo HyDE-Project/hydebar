@@ -275,7 +275,7 @@ mod tests {
     fn a_layout_name_is_passed_as_one_quoted_argument() {
         assert_eq!(
             hyde_shell::set_bar_layout("hyprdots/01"),
-            "hyde-shell waybar --set 'hyprdots/01'"
+            "hyde-shell waybar --set 'hyprdots/01' && hyde-shell waybar --kill"
         );
     }
 }
