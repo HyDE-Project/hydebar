@@ -303,6 +303,13 @@ impl App {
                 MenuSize::Medium,
                 None
             )),
+            MenuType::BarLayout => Some((
+                self.bar_layout
+                    .menu_view(self.appearance().font_size_px())
+                    .map(Message::BarLayout),
+                MenuSize::Small,
+                None
+            )),
             MenuType::CpuTemp => {
                 let (window, height) = self.system_info.cpu_temp_window(self.icons());
 

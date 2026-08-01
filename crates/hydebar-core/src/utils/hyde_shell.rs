@@ -63,6 +63,24 @@ pub fn previous_wallpaper() -> String {
     "hyde-shell wallpaper --previous".to_owned()
 }
 
+/// Command stepping the desktop to the next bar layout.
+#[must_use]
+pub fn next_bar_layout() -> String {
+    "hyde-shell waybar --next".to_owned()
+}
+
+/// Command stepping the desktop to the previous bar layout.
+#[must_use]
+pub fn previous_bar_layout() -> String {
+    "hyde-shell waybar --prev".to_owned()
+}
+
+/// Command arranging the bar by the named layout.
+#[must_use]
+pub fn set_bar_layout(name: &str) -> String {
+    format!("hyde-shell waybar --set {}", quote(name))
+}
+
 /// Wraps `value` so a shell passes it on as a single, literal argument.
 ///
 /// Single quotes are used because they suppress every expansion; the only

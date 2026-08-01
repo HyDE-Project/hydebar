@@ -29,7 +29,9 @@ enum Clock {
     /// Serves the one module the user is looking at.
     Attended,
     /// Serves the wallpaper entry's loading indicator.
-    WallpaperSpinner
+    WallpaperSpinner,
+    /// Serves the layout entry's loading indicator.
+    BarLayoutSpinner
 }
 
 impl App {
@@ -82,6 +84,16 @@ impl App {
         if self.wallpaper.is_loading() {
             Self::clock(Clock::WallpaperSpinner, themes::FRAME_INTERVAL)
                 .map(|_| Message::Wallpaper(hydebar_core::modules::wallpaper::Message::Tick))
+        } else {
+            Subscription::none()
+        }
+    }
+
+    /// Tick of the layout entry's loading indicator.
+    fn bar_layout_loading_subscription(&self) -> Subscription<Message> {
+        if self.bar_layout.is_loading() {
+            Self::clock(Clock::BarLayoutSpinner, themes::FRAME_INTERVAL)
+                .map(|_| Message::BarLayout(hydebar_core::modules::bar_layout::Message::Tick))
         } else {
             Subscription::none()
         }
@@ -149,6 +161,7 @@ impl App {
             shutdown::subscription().map(Message::Shutdown),
             self.frame_subscription(),
             self.wallpaper_loading_subscription(),
+            self.bar_layout_loading_subscription(),
             self.rest_clock(),
             self.attended_clock(),
             self.switch_subscription(),

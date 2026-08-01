@@ -116,6 +116,18 @@ impl App {
                             }
                         }
                     }
+                    MenuType::BarLayout => {
+                        if self.outputs.open_menu() != Some(&MenuType::BarLayout) {
+                            cmd.push(self.bar_layout.load_entries().map(Message::BarLayout));
+
+                            if self.bar_layout.is_empty() {
+                                self.bar_layout_pending = Some((id, button_ui_ref));
+                                self.attend_the_open_menu();
+
+                                return Task::batch(cmd);
+                            }
+                        }
+                    }
                     MenuType::Themes => {
                         if self.outputs.open_menu() != Some(&MenuType::Themes) {
                             cmd.push(self.themes.load_swatches().map(Message::Themes));

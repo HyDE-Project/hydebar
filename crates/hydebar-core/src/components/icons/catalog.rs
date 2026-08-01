@@ -93,13 +93,14 @@ pub enum Icons {
     Settings,
     Themes,
     Wallpaper,
+    BarLayout,
     /// Marks work signed by the person at the keyboard.
     Authored
 }
 
 impl Icons {
     /// Every icon that can be overridden from the configuration.
-    pub const ALL: [Self; 91] = [
+    pub const ALL: [Self; 92] = [
         Self::None,
         Self::AppLauncher,
         Self::Clipboard,
@@ -190,6 +191,7 @@ impl Icons {
         Self::Settings,
         Self::Themes,
         Self::Wallpaper,
+        Self::BarLayout,
         Self::Authored
     ];
 
@@ -287,6 +289,7 @@ impl Icons {
             Self::Settings => "settings",
             Self::Themes => "themes",
             Self::Wallpaper => "wallpaper",
+            Self::BarLayout => "bar_layout",
             Self::Authored => "authored"
         }
     }
@@ -395,6 +398,7 @@ impl Icons {
             Self::Settings => "\u{f0493}",
             Self::Themes => "\u{f00e1}",
             Self::Wallpaper => "\u{f0b7c}",
+            Self::BarLayout => "\u{f1985}",
             Self::Authored => "\u{f04ce}"
         }
     }

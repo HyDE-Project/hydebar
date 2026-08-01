@@ -68,6 +68,10 @@ impl App {
         }
     }
 
+    #[expect(
+        clippy::too_many_lines,
+        reason = "one view arm per module name, read as a single dispatch table"
+    )]
     pub(super) fn get_module_view(
         &self,
         module_name: &ModuleName,
@@ -168,6 +172,7 @@ impl App {
             ModuleName::Settings => self.settings.view(self.icons()),
             ModuleName::Themes => self.themes.view(self.icons()),
             ModuleName::Wallpaper => self.wallpaper.view(self.icons()),
+            ModuleName::BarLayout => self.bar_layout.view(self.icons()),
             ModuleName::MediaPlayer => self
                 .media_player
                 .view((&self.config.media_player, self.icons())),
@@ -221,6 +226,7 @@ impl App {
             | ModuleName::HydeMenu
             | ModuleName::Themes
             | ModuleName::Wallpaper
+            | ModuleName::BarLayout
             | ModuleName::Battery
             | ModuleName::Settings => None,
             ModuleName::Privacy => self.privacy.subscription(),

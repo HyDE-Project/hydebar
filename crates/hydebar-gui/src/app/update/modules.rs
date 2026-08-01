@@ -241,6 +241,31 @@ impl App {
 
                 self.themes.update(msg, &config).map(Message::Themes)
             }
+            Message::BarLayout(msg) => {
+                let listed = matches!(msg, modules::bar_layout::Message::Listed(_));
+
+                let task = self.bar_layout.update(msg).map(Message::BarLayout);
+
+                if listed && let Some((id, button_ui_ref)) = self.bar_layout_pending.take() {
+                    if self.bar_layout.is_empty() {
+                        log::warn!("the desktop lists no bar layouts, the picker stays closed");
+
+                        return task;
+                    }
+
+                    let open = self.outputs.toggle_menu(
+                        id,
+                        hydebar_core::menu::MenuType::BarLayout,
+                        button_ui_ref,
+                        &self.config
+                    );
+                    self.attend_the_open_menu();
+
+                    return Task::batch([task, open]);
+                }
+
+                task
+            }
             Message::Wallpaper(msg) => {
                 let config = Arc::clone(&self.config);
                 let listed = matches!(msg, modules::wallpaper::Message::Listed(_));

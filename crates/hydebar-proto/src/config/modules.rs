@@ -59,6 +59,8 @@ pub enum ModuleName {
     Settings,
     Themes,
     Wallpaper,
+    /// Steps and picks the `HyDE` bar layout in force.
+    BarLayout,
     HydeMenu,
     MediaPlayer,
     Notifications,
@@ -69,7 +71,7 @@ pub enum ModuleName {
 
 impl ModuleName {
     /// Every module the bar ships, in the order the editor lists them.
-    pub const BUILT_IN: [Self; 29] = [
+    pub const BUILT_IN: [Self; 30] = [
         Self::AppLauncher,
         Self::Updates,
         Self::Clipboard,
@@ -94,6 +96,7 @@ impl ModuleName {
         Self::Settings,
         Self::Themes,
         Self::Wallpaper,
+        Self::BarLayout,
         Self::HydeMenu,
         Self::MediaPlayer,
         Self::Notifications,
@@ -129,6 +132,7 @@ impl ModuleName {
             Self::Settings => "Settings",
             Self::Themes => "Themes",
             Self::Wallpaper => "Wallpaper",
+            Self::BarLayout => "BarLayout",
             Self::HydeMenu => "HydeMenu",
             Self::MediaPlayer => "MediaPlayer",
             Self::Notifications => "Notifications",
@@ -170,6 +174,7 @@ impl ModuleName {
             Self::Settings => "Bar settings",
             Self::Themes => "Desktop themes",
             Self::Wallpaper => "Wallpaper",
+            Self::BarLayout => "Bar layout",
             Self::HydeMenu => "HyDE menu",
             Self::MediaPlayer => "Media player",
             Self::Notifications => "Notifications",

@@ -115,6 +115,7 @@ pub struct App {
     /// switch.
     pub themes: Themes,
     pub wallpaper: Wallpaper,
+    pub bar_layout: hydebar_core::modules::bar_layout::BarLayout,
     pub weather: Weather,
     /// Notifications currently shown as popups.
     pub notification_popups: Vec<notifications_popup::Popup>,
@@ -144,6 +145,8 @@ pub struct App {
     pub(super) raw_config: Option<Arc<Config>>,
     /// The wallpaper press waiting for its pictures before its window opens.
     pub(super) wallpaper_pending: Option<(Id, ButtonUIRef)>,
+    /// The layout press waiting for its roster before its window opens.
+    pub(super) bar_layout_pending: Option<(Id, ButtonUIRef)>,
     /// Faded and swept themes derived this frame, by quantised key.
     ///
     /// One palette blend serves every island and menu that lands on the
@@ -248,6 +251,7 @@ pub enum Message {
     Settings(modules::settings::Message),
     Themes(modules::themes::Message),
     Wallpaper(modules::wallpaper::Message),
+    BarLayout(modules::bar_layout::Message),
     MediaPlayer(modules::media_player::Message),
     Notifications(modules::notifications::NotificationsMessage),
     Screenshot(modules::screenshot::ScreenshotMessage),
@@ -513,6 +517,7 @@ impl App {
             settings: Settings::new(config_path),
             themes: Themes::new(),
             wallpaper: Wallpaper::new(),
+            bar_layout: hydebar_core::modules::bar_layout::BarLayout::new(),
             notification_popups: Vec::new(),
             attention: Attention::default(),
             hover: HoverFades::default(),
@@ -525,6 +530,7 @@ impl App {
             greeting_line: String::new(),
             raw_config: None,
             wallpaper_pending: None,
+            bar_layout_pending: None,
             derived_themes: std::cell::RefCell::new(std::collections::HashMap::new()),
             stated_layer_metrics: None,
             weather: Weather::new(

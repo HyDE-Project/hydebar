@@ -28,6 +28,8 @@ pub enum MenuType {
     Memory,
     /// Picker of the theme's wallpapers.
     Wallpaper,
+    /// Picker of the desktop's bar layouts.
+    BarLayout,
     /// Window of the standalone processor temperature entry.
     CpuTemp,
     /// Window of the standalone graphics temperature entry.
@@ -64,6 +66,7 @@ impl MenuType {
             Self::Cpu => ModuleName::Cpu,
             Self::Memory => ModuleName::Memory,
             Self::Wallpaper => ModuleName::Wallpaper,
+            Self::BarLayout => ModuleName::BarLayout,
             Self::CpuTemp => ModuleName::CpuTemp,
             Self::Gpu => ModuleName::GpuTemp,
             Self::Notifications => ModuleName::Notifications,

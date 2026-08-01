@@ -52,6 +52,15 @@ impl App {
                 )))),
                 middle: Some(OnModulePress::ToggleMenu(MenuType::Wallpaper))
             },
+            ModuleName::BarLayout => ModuleActions {
+                left:   Some(OnModulePress::Action(Box::new(Message::BarLayout(
+                    hydebar_core::modules::bar_layout::Message::Next
+                )))),
+                right:  Some(OnModulePress::Action(Box::new(Message::BarLayout(
+                    hydebar_core::modules::bar_layout::Message::Previous
+                )))),
+                middle: Some(OnModulePress::ToggleMenu(MenuType::BarLayout))
+            },
             _ => ModuleActions {
                 left,
                 right: self.displaced_menu(module_name),
