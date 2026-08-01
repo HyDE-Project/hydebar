@@ -91,11 +91,10 @@ inside each section; a checked box means the fix has landed on `main`.
   and every standalone entry builds only its own section through its own
   constructor instead of building the whole machine and keeping one row
   group.
-- [ ] **Themes menu re-normalises names quadratically, twice per frame.**
-  Offered-name filtering canonicalises both sides of every comparison —
-  thousands of small strings per frame with a large gallery
-  (`themes/view.rs:163-237`). Precompute canonical keys when the catalogue
-  or installed set changes.
+- [x] **Themes menu re-normalises names quadratically, twice per frame.**
+  The offered list and a canonical catalogue index are restated only when
+  the installed set or the catalogue moves; a frame now costs one small
+  lookup per chip instead of thousands of normalised comparisons.
 - [ ] **The frame clock is a fixed 16 ms timer.** It beats against any
   refresh rate that is not 62.5 Hz; every animation rides it
   (`app/update/subscriptions.rs:120`). Drive it from the compositor's

@@ -87,6 +87,8 @@ pub(super) fn view<'a>(
     screenshots: &HashMap<String, std::path::PathBuf>,
     switching: Option<&str>,
     catalogue: &[super::gallery::GalleryTheme],
+    offered: &[String],
+    catalogue_index: &HashMap<String, usize>,
     author: Option<&str>,
     installing: Option<&str>,
     condemned: Option<&str>,
@@ -109,8 +111,7 @@ pub(super) fn view<'a>(
         font_size
     ));
 
-    let offered = offered_names(state, catalogue);
-    let cell = shared_cell(state, &offered, list_layout, font_size, available_width);
+    let cell = shared_cell(state, offered, list_layout, font_size, available_width);
 
     let mut window = page(font_size).push(active).push(section(
         THEMES,
@@ -123,6 +124,7 @@ pub(super) fn view<'a>(
             updating,
             installing,
             catalogue,
+            catalogue_index,
             author,
             spinner,
             opacity,
@@ -138,8 +140,9 @@ pub(super) fn view<'a>(
         window = window.push(section(
             GALLERY,
             offer(
-                state,
+                offered,
                 catalogue,
+                catalogue_index,
                 screenshots,
                 author,
                 switching,
@@ -156,28 +159,6 @@ pub(super) fn view<'a>(
     }
 
     window.into()
-}
-
-/// Names the gallery offers that are not installed yet.
-///
-/// Matched through [`same_theme`], not equality: the catalogue spells
-/// names with dashes where installed directories carry spaces, and a
-/// literal comparison left every installed theme in the gallery, one
-/// press away from downloading itself again.
-pub(super) fn offered_names(
-    state: &HydeState,
-    catalogue: &[super::gallery::GalleryTheme]
-) -> Vec<String> {
-    catalogue
-        .iter()
-        .filter(|entry| {
-            !state
-                .themes
-                .iter()
-                .any(|installed| same_theme(installed, &entry.name))
-        })
-        .map(|entry| entry.name.clone())
-        .collect()
 }
 
 /// One card width for both sections, whatever the layout.
@@ -225,6 +206,7 @@ fn card_rows(
 ///
 /// Dashes and underscores stand in for spaces across the gallery, its
 /// branches and the installed directories, and case drifts between them.
+#[cfg(test)]
 pub(super) fn same_theme(a: &str, b: &str) -> bool {
     canonical(a) == canonical(b)
 }
@@ -249,8 +231,9 @@ pub(super) fn canonical(name: &str) -> String {
     reason = "view helper mirrors the fields of the state it renders"
 )]
 fn offer<'a>(
-    state: &HydeState,
+    names: &[String],
     catalogue: &[super::gallery::GalleryTheme],
+    catalogue_index: &HashMap<String, usize>,
     screenshots: &HashMap<String, std::path::PathBuf>,
     author: Option<&str>,
     switching: Option<&str>,
@@ -262,16 +245,17 @@ fn offer<'a>(
     cell: f32,
     list_layout: bool
 ) -> Element<'a, Message> {
-    let names = offered_names(state, catalogue);
     let busy = switching.is_some() || installing.is_some();
     let mut block = grid(font_size);
 
-    for indices in card_rows(&names, list_layout, font_size, available_width) {
+    for indices in card_rows(names, list_layout, font_size, available_width) {
         let mut row = group(font_size);
 
         for index in indices {
             let name = &names[index];
-            let entry = catalogue.iter().find(|entry| &entry.name == name);
+            let entry = catalogue_index
+                .get(&canonical(name))
+                .map(|&index| &catalogue[index]);
 
             let chip_state = if installing == Some(name.as_str()) {
                 ThemeChip::Applying(spinner)
@@ -404,6 +388,7 @@ fn themes<'a>(
     updating: Option<&Option<String>>,
     installing: Option<&str>,
     catalogue: &[super::gallery::GalleryTheme],
+    catalogue_index: &HashMap<String, usize>,
     author: Option<&str>,
     spinner: Spinner,
     opacity: f32,
@@ -441,7 +426,9 @@ fn themes<'a>(
                 )
             };
 
-            let entry = catalogue.iter().find(|entry| same_theme(&entry.name, name));
+            let entry = catalogue_index
+                .get(&canonical(name))
+                .map(|&index| &catalogue[index]);
 
             let paint = swatches
                 .get(name)

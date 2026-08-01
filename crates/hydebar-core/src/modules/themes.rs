@@ -182,65 +182,77 @@ pub struct Themes {
     /// Kept here rather than read while rendering: the menu is redrawn on every
     /// frame of the open animation, and reading two files that often would put
     /// the filesystem in the draw path.
-    hyde:        HydeState,
+    hyde:            HydeState,
     /// The colours each theme announces itself with, by theme name.
     ///
     /// Loaded off the update path — see [`Themes::load_swatches`] — and kept
     /// so the menu can paint every chip in the colours of the theme it stands
     /// for. A theme without an entry is painted like any other control.
-    swatches:    HashMap<String, ThemeSwatch>,
+    swatches:        HashMap<String, ThemeSwatch>,
     /// Screenshots of the desktop wearing each theme, from the local gallery
     /// database, by canonical name.
-    screenshots: HashMap<String, std::path::PathBuf>,
+    screenshots:     HashMap<String, std::path::PathBuf>,
     /// Theme a switch is running for, while one is.
-    switching:   Option<String>,
+    switching:       Option<String>,
     /// Theme asked for while another switch was still running.
     ///
     /// A press mid-switch used to vanish without a word; now it waits its
     /// turn and runs the moment the desktop settles.
-    pending:     Option<String>,
+    pending:         Option<String>,
     /// The upstream catalogue, once the menu has loaded it.
-    catalogue:   Vec<gallery::GalleryTheme>,
+    catalogue:       Vec<gallery::GalleryTheme>,
     /// Name the machine's git identity signs work with, once known.
-    author:      Option<String>,
+    author:          Option<String>,
     /// Theme an install is running for, while one is.
-    installing:  Option<String>,
+    installing:      Option<String>,
     /// Theme whose removal waits for its confirming press, if one does.
-    condemned:   Option<String>,
+    condemned:       Option<String>,
     /// Theme an update is fetching, while one is; `None` name means all.
     #[expect(
         clippy::option_option,
         reason = "the outer layer marks a running fetch, the inner one tells one theme from all"
     )]
-    updating:    Option<Option<String>>,
+    updating:        Option<Option<String>>,
     /// Whether the window lays cards out as one column instead of a grid.
-    list_layout: bool,
+    list_layout:     bool,
     /// Frame the indicator of a running switch is on.
     ///
     /// Advanced on a tick rather than derived from a clock read while drawing,
     /// so what the bar shows is a function of the state it holds and can be
     /// checked without one.
-    spinner:     Spinner
+    spinner:         Spinner,
+    /// Gallery names not installed, refreshed when either side changes.
+    ///
+    /// The comparison normalises every spelling; done per frame it was
+    /// thousands of small strings, done here it is none.
+    offered:         Vec<String>,
+    /// Catalogue positions by canonical name, refreshed with the catalogue.
+    catalogue_index: HashMap<String, usize>
 }
 
 impl Themes {
     /// Creates the module against the desktop state on disk.
     #[must_use]
     pub fn new() -> Self {
-        Self {
-            hyde:        hyde_state::load(),
-            swatches:    HashMap::new(),
-            screenshots: HashMap::new(),
-            switching:   None,
-            pending:     None,
-            catalogue:   Vec::new(),
-            author:      None,
-            installing:  None,
-            condemned:   None,
-            updating:    None,
-            list_layout: false,
-            spinner:     Spinner::default()
-        }
+        let mut themes = Self {
+            hyde:            hyde_state::load(),
+            swatches:        HashMap::new(),
+            screenshots:     HashMap::new(),
+            switching:       None,
+            pending:         None,
+            catalogue:       Vec::new(),
+            author:          None,
+            installing:      None,
+            condemned:       None,
+            updating:        None,
+            list_layout:     false,
+            spinner:         Spinner::default(),
+            offered:         Vec::new(),
+            catalogue_index: HashMap::new()
+        };
+        themes.reindex();
+
+        themes
     }
 
     /// Starts reading the swatch of every installed theme, off this thread.
@@ -309,6 +321,34 @@ impl Themes {
     /// again.
     pub fn refresh(&mut self) {
         self.hyde = hyde_state::load();
+        self.reindex();
+    }
+
+    /// Restates the offered names and the catalogue index.
+    ///
+    /// Called when the installed set or the catalogue moves — the only two
+    /// inputs the derivations read.
+    fn reindex(&mut self) {
+        let installed: std::collections::HashSet<String> = self
+            .hyde
+            .themes
+            .iter()
+            .map(|name| view::canonical(name))
+            .collect();
+
+        self.offered = self
+            .catalogue
+            .iter()
+            .filter(|entry| !installed.contains(&view::canonical(&entry.name)))
+            .map(|entry| entry.name.clone())
+            .collect();
+
+        self.catalogue_index = self
+            .catalogue
+            .iter()
+            .enumerate()
+            .map(|(index, entry)| (view::canonical(&entry.name), index))
+            .collect();
     }
 
     /// Renders the menu the module opens.
@@ -330,6 +370,8 @@ impl Themes {
             &self.screenshots,
             self.switching(),
             &self.catalogue,
+            &self.offered,
+            &self.catalogue_index,
             self.author.as_deref(),
             self.installing.as_deref(),
             self.condemned.as_deref(),
@@ -354,7 +396,7 @@ impl Themes {
             page_width,
             height: view::desired_height(
                 &self.hyde,
-                &view::offered_names(&self.hyde, &self.catalogue),
+                &self.offered,
                 self.list_layout,
                 font_size,
                 page_width
@@ -433,6 +475,7 @@ impl Themes {
             }
             Message::CatalogueLoaded(catalogue, author) => {
                 self.catalogue = catalogue;
+                self.reindex();
                 self.author = author;
                 return self.auto_update();
             }
