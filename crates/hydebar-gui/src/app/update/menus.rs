@@ -106,11 +106,15 @@ impl App {
                         }
                     }
                     MenuType::Wallpaper => {
-                        cmd.push(self.wallpaper.load_entries().map(Message::Wallpaper));
+                        if self.outputs.open_menu() != Some(&MenuType::Wallpaper) {
+                            cmd.push(self.wallpaper.load_entries().map(Message::Wallpaper));
+                        }
                     }
                     MenuType::Themes => {
-                        cmd.push(self.themes.load_swatches().map(Message::Themes));
-                        cmd.push(self.themes.load_catalogue().map(Message::Themes));
+                        if self.outputs.open_menu() != Some(&MenuType::Themes) {
+                            cmd.push(self.themes.load_swatches().map(Message::Themes));
+                            cmd.push(self.themes.load_catalogue().map(Message::Themes));
+                        }
                     }
                     MenuType::Audio => {
                         self.control_center.sub_menu = Some(SubMenu::Sinks);

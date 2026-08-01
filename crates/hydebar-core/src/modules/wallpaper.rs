@@ -63,7 +63,9 @@ pub struct WallpaperEntry {
 ///
 /// A failure answers with an empty list and the picker says so; the desktop
 /// not being `HyDE` is not an error the bar can fix.
-fn list_wallpapers() -> Vec<WallpaperEntry> {
+fn list_wallpapers(
+    known: &std::collections::HashMap<String, iced::widget::image::Handle>
+) -> Vec<WallpaperEntry> {
     let Ok(output) = std::process::Command::new("hydectl")
         .args(["wallpaper", "list"])
         .output()
@@ -80,6 +82,13 @@ fn list_wallpapers() -> Vec<WallpaperEntry> {
     listed
         .into_iter()
         .filter_map(|entry| {
+            if let Some(thumbnail) = known.get(&entry.path) {
+                return Some(WallpaperEntry {
+                    path:      entry.path,
+                    thumbnail: thumbnail.clone()
+                });
+            }
+
             let decoded = std::fs::read(&entry.sqre)
                 .ok()
                 .and_then(|bytes| ::image::load_from_memory(&bytes).ok())
@@ -140,11 +149,21 @@ impl Wallpaper {
     }
 
     /// Starts reading the theme's wallpapers, off this thread.
+    ///
+    /// Thumbnails already decoded ride along and are reused by path, so a
+    /// reopened picker decodes nothing and a theme switch decodes only the
+    /// pictures it brought.
     #[must_use]
     pub fn load_entries(&self) -> Task<Message> {
+        let known: std::collections::HashMap<String, iced::widget::image::Handle> = self
+            .entries
+            .iter()
+            .map(|entry| (entry.path.clone(), entry.thumbnail.clone()))
+            .collect();
+
         Task::perform(
-            async {
-                tokio::task::spawn_blocking(list_wallpapers)
+            async move {
+                tokio::task::spawn_blocking(move || list_wallpapers(&known))
                     .await
                     .unwrap_or_default()
             },
