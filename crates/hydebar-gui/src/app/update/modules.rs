@@ -134,7 +134,7 @@ impl App {
                 self.outputs.close_menu(id, &self.config)
             }
             Message::CustomUpdate(name, message) => {
-                match self.custom.get_mut(&name) {
+                match self.custom.get_mut(name.as_ref()) {
                     Some(c) => c.update(message),
                     None => error!("Custom module '{name}' not found")
                 }

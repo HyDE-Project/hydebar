@@ -12,8 +12,7 @@ use crate::{
         push_maybe::PushMaybe
     },
     config::{
-        Appearance, AppearanceStyle, BarLayer, Config, DEFAULT_FONT_SIZE, HydeBranch,
-        NotificationSource, Position
+        Appearance, AppearanceStyle, BarLayer, Config, HydeBranch, NotificationSource, Position
     },
     modules::settings::{Message, Settings}
 };
@@ -101,7 +100,7 @@ pub(super) fn view(config: &Config, opacity: f32, magnification: f32) -> Element
     } else {
         1.0
     };
-    let font_size = config.appearance.font_size.unwrap_or(DEFAULT_FONT_SIZE);
+    let font_size = config.appearance.font_size_px();
 
     page(font_size)
         .push(section(

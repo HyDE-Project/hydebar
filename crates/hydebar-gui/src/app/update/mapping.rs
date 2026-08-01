@@ -6,36 +6,38 @@ use super::super::state::{App, Message};
 
 impl App {
     /// Maps a bus event onto the message that handles it.
-    pub(super) fn message_from_bus_event(event: BusEvent) -> Option<Message> {
+    ///
+    /// Total on purpose: the enums are workspace-local and every new
+    /// variant must be named here, so an event can never be dropped
+    /// silently at the door.
+    pub(super) fn message_from_bus_event(event: BusEvent) -> Message {
         match event {
-            BusEvent::Redraw => Some(Message::None),
-            BusEvent::PopupToggle => Some(Message::CloseAllMenus),
-            BusEvent::Module(module) => Self::message_from_module_event(module),
-            _ => None
+            BusEvent::Redraw => Message::None,
+            BusEvent::PopupToggle => Message::CloseAllMenus,
+            BusEvent::Module(module) => Self::message_from_module_event(module)
         }
     }
 
-    pub(super) fn message_from_module_event(event: ModuleEvent) -> Option<Message> {
+    pub(super) fn message_from_module_event(event: ModuleEvent) -> Message {
         match event {
-            ModuleEvent::Updates(message) => Some(Message::Updates(message)),
-            ModuleEvent::Workspaces(message) => Some(Message::Workspaces(message)),
-            ModuleEvent::WindowTitle(message) => Some(Message::WindowTitle(message)),
-            ModuleEvent::SystemInfo(message) => Some(Message::SystemInfo(message)),
-            ModuleEvent::KeyboardLayout(message) => Some(Message::KeyboardLayout(message)),
-            ModuleEvent::KeyboardSubmap(message) => Some(Message::KeyboardSubmap(message)),
-            ModuleEvent::Tray(message) => Some(Message::Tray(message)),
-            ModuleEvent::Clock(message) => Some(Message::Clock(message)),
-            ModuleEvent::Weather(message) => Some(Message::Weather(message)),
-            ModuleEvent::Battery(message) => Some(Message::Battery(message)),
-            ModuleEvent::Privacy(message) => Some(Message::Privacy(message)),
-            ModuleEvent::ControlCenter(message) => Some(Message::ControlCenter(message)),
-            ModuleEvent::MediaPlayer(message) => Some(Message::MediaPlayer(message)),
-            ModuleEvent::Notifications(message) => Some(Message::Notifications(message)),
+            ModuleEvent::Updates(message) => Message::Updates(message),
+            ModuleEvent::Workspaces(message) => Message::Workspaces(message),
+            ModuleEvent::WindowTitle(message) => Message::WindowTitle(message),
+            ModuleEvent::SystemInfo(message) => Message::SystemInfo(message),
+            ModuleEvent::KeyboardLayout(message) => Message::KeyboardLayout(message),
+            ModuleEvent::KeyboardSubmap(message) => Message::KeyboardSubmap(message),
+            ModuleEvent::Tray(message) => Message::Tray(message),
+            ModuleEvent::Clock(message) => Message::Clock(message),
+            ModuleEvent::Weather(message) => Message::Weather(message),
+            ModuleEvent::Battery(message) => Message::Battery(message),
+            ModuleEvent::Privacy(message) => Message::Privacy(message),
+            ModuleEvent::ControlCenter(message) => Message::ControlCenter(message),
+            ModuleEvent::MediaPlayer(message) => Message::MediaPlayer(message),
+            ModuleEvent::Notifications(message) => Message::Notifications(message),
             ModuleEvent::Custom {
                 name,
                 message
-            } => Some(Message::CustomUpdate(name.as_ref().to_owned(), message)),
-            _ => None
+            } => Message::CustomUpdate(name, message)
         }
     }
 }

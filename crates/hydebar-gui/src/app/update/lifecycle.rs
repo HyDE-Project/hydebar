@@ -164,7 +164,7 @@ impl App {
                     let tasks: Vec<_> = outcome
                         .into_events()
                         .into_iter()
-                        .filter_map(Self::message_from_bus_event)
+                        .map(Self::message_from_bus_event)
                         .map(|msg| self.update(msg))
                         .collect();
 

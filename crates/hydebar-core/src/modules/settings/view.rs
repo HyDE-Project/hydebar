@@ -19,7 +19,7 @@ use crate::{
         page::{metrics, style, widgets::choice_button},
         text::text
     },
-    config::{Config, DEFAULT_FONT_SIZE}
+    config::Config
 };
 
 /// Title drawn beside the icon at the top of the window.
@@ -47,7 +47,7 @@ impl Settings {
         icons: &IconTheme,
         magnification: f32
     ) -> (Element<'a, Message>, crate::menu::MenuMetrics) {
-        let font_size = config.appearance.font_size.unwrap_or(DEFAULT_FONT_SIZE);
+        let font_size = config.appearance.font_size_px();
         let active = self.tab();
         let entries = match active {
             Tab::Modules => Some(self.section().entries(&config.modules)),
@@ -219,7 +219,7 @@ mod tests {
     fn the_window_reserves_a_row_for_its_header_and_for_its_tabs() {
         let config = Config::default();
         let settings = Settings::default();
-        let font_size = config.appearance.font_size.unwrap_or(DEFAULT_FONT_SIZE);
+        let font_size = config.appearance.font_size_px();
 
         assert!(
             settings.height_of(&config, font_size, None)
@@ -237,7 +237,7 @@ mod tests {
         let config = Config::default();
         let settings = Settings::default();
 
-        let font_size = config.appearance.font_size.unwrap_or(DEFAULT_FONT_SIZE);
+        let font_size = config.appearance.font_size_px();
         let width = settings.width_of(&config, font_size, None);
         assert!(metrics::ROW_SLACK_EM.mul_add(-font_size, width) < width);
     }
@@ -263,7 +263,7 @@ mod tests {
                 ..Settings::default()
             };
 
-            let font_size = config.appearance.font_size.unwrap_or(DEFAULT_FONT_SIZE);
+            let font_size = config.appearance.font_size_px();
             let entries = Section::Left.entries(&config.modules);
             assert!(settings.width_of(&config, font_size, Some(&entries)) > 0.0);
             assert!(settings.height_of(&config, font_size, Some(&entries)) > 0.0);

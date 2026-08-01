@@ -16,7 +16,6 @@ use crate::modules;
 const COALESCE_WINDOW: std::time::Duration = std::time::Duration::from_millis(8);
 
 #[derive(Debug, Clone)]
-#[non_exhaustive]
 pub enum BusEvent {
     Redraw,
     PopupToggle,
@@ -55,7 +54,6 @@ impl BusEvent {
 }
 
 #[derive(Debug, Clone)]
-#[non_exhaustive]
 pub enum ModuleEvent {
     Updates(modules::updates::Message),
     Workspaces(modules::workspaces::Message),
