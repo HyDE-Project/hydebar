@@ -71,17 +71,21 @@ fn sort_key(directory: &Path) -> i64 {
         .unwrap_or(DEFAULT_SORT)
 }
 
-/// Puts theme entries into alphabetical order.
+/// Puts theme entries into the order HyDE itself walks them.
 ///
-/// The list is for a person scanning it: the alphabet is the one order a
-/// reader can predict, so a theme is found where its name says it is. HyDE's
-/// own `.sort` numbers still exist for its scripts, but the bar's list does
-/// not follow them.
+/// The `.sort` number leads and the alphabet breaks its ties, exactly the
+/// order `hydectl theme next` and `prev` traverse. A list sorted any other
+/// way had the keybinding jump to a theme other than the next chip in the
+/// bar's own grid.
 #[must_use]
 fn order(entries: Vec<Entry>) -> Vec<String> {
     let mut entries = entries;
 
-    entries.sort_by(|left, right| compare_names(&left.name, &right.name));
+    entries.sort_by(|left, right| {
+        left.sort
+            .cmp(&right.sort)
+            .then_with(|| compare_names(&left.name, &right.name))
+    });
     entries.dedup();
     entries.into_iter().map(|entry| entry.name).collect()
 }
@@ -112,10 +116,10 @@ mod tests {
             .collect()
     }
 
-    /// The alphabet, not HyDE's `.sort` numbers: a reader finds a theme where
-    /// its name says it is.
+    /// HyDE's `.sort` numbers lead, so the bar's grid and the desktop's
+    /// next/prev keybinding walk the very same order.
     #[test]
-    fn themes_are_listed_alphabetically_whatever_hyde_numbered_them() {
+    fn themes_follow_the_sort_numbers_hyde_walks() {
         assert_eq!(
             order(entries(&[
                 (4, "Tokyo Night"),
@@ -124,8 +128,8 @@ mod tests {
                 (2, "Catppuccin Latte")
             ])),
             vec![
-                "Catppuccin Latte".to_owned(),
                 "Catppuccin Mocha".to_owned(),
+                "Catppuccin Latte".to_owned(),
                 "Rosé Pine".to_owned(),
                 "Tokyo Night".to_owned(),
             ]
