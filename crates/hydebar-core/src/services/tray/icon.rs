@@ -91,8 +91,26 @@ pub(crate) fn icon_from_name(icon_name: &str) -> Option<TrayIcon> {
     if icon_path.extension().is_some_and(|ext| ext == "svg") {
         Some(TrayIcon::Svg(svg::Handle::from_path(icon_path)))
     } else {
-        Some(TrayIcon::Image(image::Handle::from_path(icon_path)))
+        Some(trimmed_raster(&icon_path))
     }
+}
+
+/// A raster icon file, trimmed to its ink like a pixmap would be.
+///
+/// Theme files pad their icons exactly the way pixmaps do, so an untrimmed
+/// file next to a trimmed pixmap would put the size mismatch right back on
+/// the bar. A file that cannot be decoded is handed to the renderer whole —
+/// it decodes more formats than the trimmer reads.
+fn trimmed_raster(path: &std::path::Path) -> TrayIcon {
+    let Ok(decoded) = ::image::open(path) else {
+        return TrayIcon::Image(image::Handle::from_path(path));
+    };
+
+    let rgba = decoded.into_rgba8();
+    let (width, height) = rgba.dimensions();
+    let (width, height, bytes) = trim_transparent(width, height, rgba.into_raw());
+
+    TrayIcon::Image(image::Handle::from_rgba(width, height, bytes))
 }
 
 #[cfg(test)]
