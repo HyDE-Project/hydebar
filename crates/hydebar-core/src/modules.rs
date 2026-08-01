@@ -15,6 +15,7 @@ pub mod cpu;
 pub mod cpu_temp;
 pub mod custom_module;
 pub mod gpu_temp;
+pub mod hyde_button;
 pub mod hyde_menu;
 pub mod idle_inhibitor;
 pub mod keyboard_layout;

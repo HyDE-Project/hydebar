@@ -94,13 +94,16 @@ pub enum Icons {
     Themes,
     Wallpaper,
     BarLayout,
+    KeybindHint,
+    NightLight,
+    GameMode,
     /// Marks work signed by the person at the keyboard.
     Authored
 }
 
 impl Icons {
     /// Every icon that can be overridden from the configuration.
-    pub const ALL: [Self; 92] = [
+    pub const ALL: [Self; 95] = [
         Self::None,
         Self::AppLauncher,
         Self::Clipboard,
@@ -192,6 +195,9 @@ impl Icons {
         Self::Themes,
         Self::Wallpaper,
         Self::BarLayout,
+        Self::KeybindHint,
+        Self::NightLight,
+        Self::GameMode,
         Self::Authored
     ];
 
@@ -290,6 +296,9 @@ impl Icons {
             Self::Themes => "themes",
             Self::Wallpaper => "wallpaper",
             Self::BarLayout => "bar_layout",
+            Self::KeybindHint => "keybind_hint",
+            Self::NightLight => "night_light",
+            Self::GameMode => "game_mode",
             Self::Authored => "authored"
         }
     }
@@ -399,6 +408,9 @@ impl Icons {
             Self::Themes => "\u{f00e1}",
             Self::Wallpaper => "\u{f0b7c}",
             Self::BarLayout => "\u{f1985}",
+            Self::KeybindHint => "\u{f030c}",
+            Self::NightLight => "\u{f0748}",
+            Self::GameMode => "\u{f0eb5}",
             Self::Authored => "\u{f04ce}"
         }
     }

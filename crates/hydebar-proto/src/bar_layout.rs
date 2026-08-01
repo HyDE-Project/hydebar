@@ -229,6 +229,7 @@ fn builtin_for(name: &str) -> Option<ModuleName> {
         "tray" => ModuleName::Tray,
         "privacy" => ModuleName::Privacy,
         "mpris" => ModuleName::MediaPlayer,
+        "gamemode" => ModuleName::GameMode,
         _ => return None
     })
 }
@@ -241,6 +242,9 @@ fn builtin_for_custom(tail: &str) -> Option<ModuleName> {
         "cpuinfo" => ModuleName::Cpu,
         "gpuinfo" => ModuleName::GpuTemp,
         "sensorsinfo" => ModuleName::CpuTemp,
+        "keybindhint" | "keybinds_hint" => ModuleName::KeybindHint,
+        "hyprsunset" => ModuleName::NightLight,
+        "gamemode" => ModuleName::GameMode,
         "cliphist" | "clipboard" => ModuleName::Clipboard,
         "power" | "powermenu" => ModuleName::Settings,
         "theme" | "themeswitch" => ModuleName::Themes,
@@ -548,8 +552,8 @@ mod tests {
     fn unknown_names_fall_away_and_an_emptied_group_disappears() {
         let source = r#"{
             "modules-left": ["group/pill#a", "group/pill#b"],
-            "group/pill#a": { "modules": ["backlight", "wlr/taskbar"] },
-            "group/pill#b": { "modules": ["backlight", "clock"] }
+            "group/pill#a": { "modules": ["no/counterpart", "custom/no-counterpart"] },
+            "group/pill#b": { "modules": ["no/counterpart", "clock"] }
         }"#;
 
         let modules = parse(source, &[]).expect("layout");
@@ -561,7 +565,7 @@ mod tests {
     /// layout that draws something.
     #[test]
     fn a_layout_the_bar_cannot_restate_is_refused() {
-        assert_eq!(parse(r#"{ "modules-left": ["backlight"] }"#, &[]), None);
+        assert_eq!(parse(r#"{ "modules-left": ["no/counterpart"] }"#, &[]), None);
         assert_eq!(parse("not json at all", &[]), None);
     }
 

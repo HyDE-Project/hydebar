@@ -1,6 +1,10 @@
 //! Per module dispatch of the view and subscription of a bar module.
 
-use hydebar_core::{attention::PollSchedule, config::ModuleName, modules::OnModulePress};
+use hydebar_core::{
+    attention::PollSchedule,
+    config::ModuleName,
+    modules::{OnModulePress, hyde_button}
+};
 use iced::{Element, Subscription, SurfaceId as Id};
 use log::error;
 
@@ -167,6 +171,21 @@ impl App {
             ModuleName::ControlCenter => self.control_center.view(self.icons()),
             ModuleName::Audio => self.control_center.audio_bar(self.icons()),
             ModuleName::Brightness => self.control_center.brightness_bar(self.icons()),
+            ModuleName::KeybindHint => Some(hyde_button::bar_view(
+                hyde_button::HydeButton::KeybindHint,
+                self.icons(),
+                Message::LaunchCommand
+            )),
+            ModuleName::NightLight => Some(hyde_button::bar_view(
+                hyde_button::HydeButton::NightLight,
+                self.icons(),
+                Message::LaunchCommand
+            )),
+            ModuleName::GameMode => Some(hyde_button::bar_view(
+                hyde_button::HydeButton::GameMode,
+                self.icons(),
+                Message::LaunchCommand
+            )),
             ModuleName::Network => self.control_center.network_bar(self.icons()),
             ModuleName::Bluetooth => self.control_center.bluetooth_bar(self.icons()),
             ModuleName::PowerProfile => self.control_center.power_profile_bar(self.icons()),
@@ -231,6 +250,9 @@ impl App {
             | ModuleName::BarLayout
             | ModuleName::Battery
             | ModuleName::IdleInhibitor
+            | ModuleName::KeybindHint
+            | ModuleName::NightLight
+            | ModuleName::GameMode
             | ModuleName::Settings => None,
             ModuleName::Privacy => self.privacy.subscription(),
             ModuleName::ControlCenter

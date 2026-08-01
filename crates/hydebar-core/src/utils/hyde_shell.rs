@@ -51,6 +51,24 @@ fn switch_theme_with(script: &Path, theme: &str) -> String {
     format!("{} -- {}", quote(&script.to_string_lossy()), quote(theme))
 }
 
+/// Command showing the desktop's keybinding cheatsheet.
+#[must_use]
+pub fn keybinds_hint() -> String {
+    "hyde-shell keybinds_hint".to_owned()
+}
+
+/// Command toggling the desktop's night light.
+#[must_use]
+pub fn toggle_night_light() -> String {
+    "hyde-shell hyprsunset -t".to_owned()
+}
+
+/// Command toggling the desktop's game mode.
+#[must_use]
+pub fn toggle_game_mode() -> String {
+    "hyde-shell gamemode".to_owned()
+}
+
 /// Command moving the desktop to the next wallpaper of the active theme.
 #[must_use]
 pub fn next_wallpaper() -> String {

@@ -57,6 +57,9 @@ pub enum ModuleName {
     Bluetooth,
     PowerProfile,
     Brightness,
+    KeybindHint,
+    NightLight,
+    GameMode,
     Settings,
     Themes,
     Wallpaper,
@@ -72,7 +75,7 @@ pub enum ModuleName {
 
 impl ModuleName {
     /// Every module the bar ships, in the order the editor lists them.
-    pub const BUILT_IN: [Self; 31] = [
+    pub const BUILT_IN: [Self; 34] = [
         Self::AppLauncher,
         Self::Updates,
         Self::Clipboard,
@@ -95,6 +98,9 @@ impl ModuleName {
         Self::Bluetooth,
         Self::PowerProfile,
         Self::Brightness,
+        Self::KeybindHint,
+        Self::NightLight,
+        Self::GameMode,
         Self::Settings,
         Self::Themes,
         Self::Wallpaper,
@@ -132,6 +138,9 @@ impl ModuleName {
             Self::Bluetooth => "Bluetooth",
             Self::PowerProfile => "PowerProfile",
             Self::Brightness => "Brightness",
+            Self::KeybindHint => "KeybindHint",
+            Self::NightLight => "NightLight",
+            Self::GameMode => "GameMode",
             Self::Settings => "Settings",
             Self::Themes => "Themes",
             Self::Wallpaper => "Wallpaper",
@@ -175,6 +184,9 @@ impl ModuleName {
             Self::Bluetooth => "Bluetooth",
             Self::PowerProfile => "Power profile",
             Self::Brightness => "Brightness",
+            Self::KeybindHint => "Key bindings",
+            Self::NightLight => "Night light",
+            Self::GameMode => "Game mode",
             Self::Settings => "Bar settings",
             Self::Themes => "Desktop themes",
             Self::Wallpaper => "Wallpaper",
