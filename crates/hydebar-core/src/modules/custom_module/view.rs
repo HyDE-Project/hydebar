@@ -179,3 +179,86 @@ impl Custom {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        super::{data::CustomListenData, error::CustomCommandError},
+        *
+    };
+
+    fn module_in_state(alt: &str) -> Custom {
+        let mut module = Custom::default();
+        module.data = CustomListenData {
+            alt: alt.to_owned(),
+            ..CustomListenData::default()
+        };
+        module
+    }
+
+    fn config_with_colors() -> CustomModuleDef {
+        toml::from_str(
+            r##"
+            name = "battery"
+            command = ""
+
+            [colors]
+            "^charging$" = "#ff8800"
+            "##
+        )
+        .expect("custom module definition")
+    }
+
+    #[test]
+    fn a_module_without_a_color_map_keeps_the_default_paint() {
+        let module = module_in_state("charging");
+
+        assert!(state_color(&module, &CustomModuleDef::default()).is_none());
+    }
+
+    #[test]
+    fn the_matching_state_picks_its_configured_color() {
+        let module = module_in_state("charging");
+
+        assert_eq!(
+            state_color(&module, &config_with_colors()),
+            Some(Color::from_rgb8(0xff, 0x88, 0x00))
+        );
+    }
+
+    #[test]
+    fn an_unmatched_state_keeps_the_default_paint() {
+        let module = module_in_state("full");
+
+        assert!(state_color(&module, &config_with_colors()).is_none());
+    }
+
+    #[test]
+    fn a_tooltip_shows_only_while_the_listener_is_healthy() {
+        let mut module = Custom::default();
+        module.data = CustomListenData {
+            tooltip: Some("Battery at 42%".to_owned()),
+            ..CustomListenData::default()
+        };
+
+        assert_eq!(module.tooltip(), Some("Battery at 42%"));
+
+        module.last_error = Some(CustomCommandError::ChannelClosed);
+
+        assert!(module.tooltip().is_none());
+    }
+
+    #[test]
+    fn an_empty_hint_is_no_tooltip() {
+        let mut module = Custom::default();
+
+        assert!(module.tooltip().is_none());
+
+        module.data = CustomListenData {
+            tooltip: Some(String::new()),
+            ..CustomListenData::default()
+        };
+
+        assert!(module.tooltip().is_none());
+    }
+}

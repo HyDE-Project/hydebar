@@ -123,3 +123,155 @@ impl std::error::Error for CustomListenerError {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::{error::Error, sync::Arc};
+
+    use super::*;
+
+    fn io_error() -> Arc<std::io::Error> {
+        Arc::new(std::io::Error::other("boom"))
+    }
+
+    fn json_error() -> Arc<serde_json::Error> {
+        Arc::new(
+            serde_json::from_str::<serde_json::Value>("not json").expect_err("json must not parse")
+        )
+    }
+
+    #[test]
+    fn a_parse_failure_shows_the_offending_line() {
+        let error = CustomCommandError::Parse("not json".to_owned(), json_error());
+
+        assert_eq!(error.to_display_message(), "Invalid output: not json");
+    }
+
+    #[test]
+    fn an_exit_status_is_named_and_a_signal_death_is_called_one() {
+        let with_status = CustomCommandError::NonZeroExit {
+            status: Some(3)
+        };
+        let by_signal = CustomCommandError::NonZeroExit {
+            status: None
+        };
+
+        assert_eq!(
+            with_status.to_display_message(),
+            "Listener exited with status 3"
+        );
+        assert_eq!(
+            by_signal.to_display_message(),
+            "Listener exited due to signal"
+        );
+    }
+
+    #[test]
+    fn every_io_failure_shares_one_terse_message() {
+        for error in [
+            CustomCommandError::Spawn(io_error()),
+            CustomCommandError::Read(io_error()),
+            CustomCommandError::Wait(io_error())
+        ] {
+            assert_eq!(error.to_display_message(), "Listener IO failure");
+        }
+    }
+
+    #[test]
+    fn signal_troubles_name_their_offset() {
+        let unwatchable = CustomCommandError::Signal(20, io_error());
+        let out_of_range = CustomCommandError::UnsupportedSignal(64);
+
+        assert_eq!(unwatchable.to_display_message(), "Cannot watch SIGRTMIN+20");
+        assert_eq!(
+            out_of_range.to_display_message(),
+            "Signal SIGRTMIN+64 out of range"
+        );
+    }
+
+    #[test]
+    fn the_long_display_names_the_failing_stage() {
+        let spawn = CustomCommandError::Spawn(io_error());
+        let parse = CustomCommandError::Parse("not json".to_owned(), json_error());
+
+        assert_eq!(
+            spawn.to_string(),
+            "failed to spawn custom module listener process: boom"
+        );
+        assert!(
+            parse
+                .to_string()
+                .starts_with("failed to parse custom module output: not json (")
+        );
+    }
+
+    #[test]
+    fn io_and_parse_errors_expose_their_source() {
+        for error in [
+            CustomCommandError::Spawn(io_error()),
+            CustomCommandError::Read(io_error()),
+            CustomCommandError::Wait(io_error()),
+            CustomCommandError::Signal(20, io_error()),
+            CustomCommandError::Parse("not json".to_owned(), json_error())
+        ] {
+            assert!(error.source().is_some());
+        }
+    }
+
+    #[test]
+    fn errors_without_a_cause_report_none() {
+        for error in [
+            CustomCommandError::MissingStdout,
+            CustomCommandError::NonZeroExit {
+                status: Some(1)
+            },
+            CustomCommandError::UnsupportedSignal(64),
+            CustomCommandError::ChannelClosed
+        ] {
+            assert!(error.source().is_none());
+        }
+    }
+
+    #[test]
+    fn a_short_line_survives_truncation_untouched() {
+        let exactly_at_the_limit = "a".repeat(120);
+
+        assert_eq!(truncate_snippet("ok"), "ok");
+        assert_eq!(truncate_snippet(&exactly_at_the_limit), exactly_at_the_limit);
+    }
+
+    #[test]
+    fn a_long_line_is_cut_and_marked_with_an_ellipsis() {
+        let truncated = truncate_snippet(&"a".repeat(200));
+
+        assert_eq!(truncated.chars().count(), 121);
+        assert!(truncated.ends_with('…'));
+        assert!(truncated.starts_with(&"a".repeat(120)));
+    }
+
+    #[test]
+    fn truncation_never_splits_a_multibyte_character() {
+        let truncated = truncate_snippet(&"é".repeat(100));
+
+        assert!(truncated.ends_with('…'));
+        assert!(truncated.chars().rev().skip(1).all(|ch| ch == 'é'));
+    }
+
+    #[test]
+    fn a_character_straddling_the_limit_is_kept_whole() {
+        let line = format!("{}€", "a".repeat(119));
+
+        assert_eq!(truncate_snippet(&line), line);
+    }
+
+    #[test]
+    fn a_listener_error_wears_its_command_error() {
+        let listener = CustomListenerError::Command(CustomCommandError::ChannelClosed);
+
+        assert_eq!(
+            listener.to_string(),
+            CustomCommandError::ChannelClosed.to_string()
+        );
+        assert!(listener.source().is_some());
+    }
+}

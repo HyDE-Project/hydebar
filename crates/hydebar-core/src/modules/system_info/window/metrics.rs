@@ -119,3 +119,110 @@ pub fn content_height_of(sections: &[model::Section], footnotes: &[String]) -> f
 
     title + rule + body + footnotes_height(footnotes) + gaps + padding
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::components::icons::Icons;
+
+    const TOLERANCE: f32 = 0.01;
+
+    fn fact() -> Row {
+        Row::Fact {
+            label: "Kernel".to_owned(),
+            value: "7.1.5".to_owned()
+        }
+    }
+
+    fn meter() -> Row {
+        Row::Meter {
+            label:   "Load".to_owned(),
+            value:   "34%".to_owned(),
+            percent: 34
+        }
+    }
+
+    fn section(rows: Vec<Row>, note: Option<String>) -> Section {
+        Section {
+            icon: Icons::Cpu,
+            title: "Processor",
+            note,
+            rows
+        }
+    }
+
+    #[test]
+    fn a_meter_row_stands_taller_than_a_fact_row() {
+        let extra = row_height(&meter()) - row_height(&fact());
+
+        assert!((extra - scale::scaled(METER_GAP + METER_HEIGHT)).abs() < TOLERANCE);
+    }
+
+    #[test]
+    fn each_row_adds_its_height_and_one_gap() {
+        let one = section_height(&section(vec![fact()], None));
+        let two = section_height(&section(vec![fact(), fact()], None));
+
+        let expected = row_height(&fact()) + scale::scaled(ROW_GAP);
+
+        assert!((two - one - expected).abs() < TOLERANCE);
+    }
+
+    #[test]
+    fn a_note_costs_a_line_and_a_gap() {
+        let bare = section_height(&section(vec![fact()], None));
+        let noted = section_height(&section(vec![fact()], Some("k10temp".to_owned())));
+
+        let expected = line(NOTE_SIZE) + scale::scaled(ROW_GAP);
+
+        assert!((noted - bare - expected).abs() < TOLERANCE);
+    }
+
+    #[test]
+    fn an_absent_section_costs_only_the_padding() {
+        let empty = section_window_height(None);
+        let filled = section_window_height(Some(&section(vec![fact()], None)));
+
+        assert!((empty - scale::scaled(2.0 * OUTER_PADDING)).abs() < TOLERANCE);
+        assert!(filled > empty);
+    }
+
+    #[test]
+    fn no_footnotes_take_no_room() {
+        assert!(footnotes_height(&[]).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn each_footnote_adds_a_line_and_a_gap() {
+        let one = footnotes_height(&["GPU — no device".to_owned()]);
+        let two = footnotes_height(&[
+            "GPU — no device".to_owned(),
+            "Swap usage — no swap".to_owned()
+        ]);
+
+        let expected = line(NOTE_SIZE) + scale::scaled(FOOT_GAP);
+
+        assert!(one > 0.0);
+        assert!((two - one - expected).abs() < TOLERANCE);
+    }
+
+    #[test]
+    fn the_content_grows_with_sections_and_footnotes() {
+        let one_section = [section(vec![fact()], None)];
+        let two_sections = [section(vec![fact()], None), section(vec![meter()], None)];
+        let footnote = ["Swap usage — no swap".to_owned()];
+
+        assert!(
+            content_height_of(&two_sections, &[]) > content_height_of(&one_section, &[])
+        );
+        assert!(
+            content_height_of(&one_section, &footnote) > content_height_of(&one_section, &[])
+        );
+    }
+
+    #[test]
+    fn the_menu_box_is_wider_than_its_content_column() {
+        assert!(content_width(10.0) > column_width());
+        assert!(content_width(20.0) > content_width(10.0));
+    }
+}
