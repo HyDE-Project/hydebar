@@ -171,6 +171,13 @@ pub enum Message {
     /// A compositor frame callback carrying the frame timestamp.
     Frame(Instant),
     BusFlushed(BusFlushOutcome),
+    /// The compositor answered a screen geometry question asked off-thread.
+    ScreenMeasured {
+        /// Screen the question was about.
+        name:     String,
+        /// The answer, absent when the screen is gone or unnamed.
+        geometry: Option<hydebar_core::outputs::scaling::ScreenGeometry>
+    },
     ConfigChanged(ConfigApplied),
     ConfigDegraded(ConfigDegradation),
     /// The process was asked to quit, by a takeover or by the session.

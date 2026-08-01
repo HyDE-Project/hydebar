@@ -59,10 +59,10 @@ inside each section; a checked box means the fix has landed on `main`.
 - [ ] **No timeout on tray D-Bus calls.** One frozen tray application parks
   the whole tray forever (`services/tray.rs:81`, `watcher.rs:64`). Wrap item
   builds in a timeout and skip on expiry.
-- [ ] **`hyprctl` runs synchronously on the drawing thread.** The geometry
-  query blocks the UI for as long as the compositor takes, which is also
-  what lets the event bus fill (`outputs/scaling.rs:145-172`); the cache
-  lock also panics on poisoning. Move off the UI path; recover the lock.
+- [x] **`hyprctl` runs synchronously on the drawing thread.** The geometry
+  question is asked from the blocking pool and comes back as its own
+  message; the drawing thread only adopts the answer. The cache lock now
+  recovers from poisoning instead of panicking the bar.
 - [ ] **Multiplexer singleton can initialise without a supervisor.** The
   `OnceLock` publishes before the runtime check; on failure subscribers hang
   forever with no log (`adapters/hyprland_client/listeners/multiplex.rs:41`).

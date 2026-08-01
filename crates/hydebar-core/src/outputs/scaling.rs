@@ -137,20 +137,17 @@ static GEOMETRY_CACHE: std::sync::LazyLock<
 /// pixels and millimetres, or a scaled screen would be shrunk twice and a
 /// television never magnified.
 ///
-/// A fresh answer is served from the cache: the question is asked from the
-/// drawing thread, and a burst of output events must not stack up process
-/// spawns there.
-///
-/// # Panics
-///
-/// Panics when the geometry cache lock was poisoned by a panicking thread.
+/// A fresh answer is served from the cache, and a stale one costs a process
+/// spawn — ask from the blocking pool, never from the thread that draws.
+/// The cache lock recovers from poisoning: it guards plain data that every
+/// operation leaves whole.
 #[must_use]
 pub fn screen_geometry(name: &str) -> Option<ScreenGeometry> {
     let now = std::time::Instant::now();
 
     if let Some((asked, answer)) = GEOMETRY_CACHE
         .lock()
-        .expect("geometry cache poisoned")
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
         .get(name)
         && now.duration_since(*asked) < GEOMETRY_FRESHNESS
     {
@@ -161,7 +158,7 @@ pub fn screen_geometry(name: &str) -> Option<ScreenGeometry> {
 
     GEOMETRY_CACHE
         .lock()
-        .expect("geometry cache poisoned")
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
         .insert(name.to_owned(), (now, answer));
 
     answer
