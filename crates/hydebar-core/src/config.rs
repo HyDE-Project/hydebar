@@ -4,7 +4,20 @@ use std::{
     path::{Path, PathBuf}
 };
 
-pub use hydebar_proto::config::*;
+/// The configuration types core's own surface speaks in, re-exported by
+/// name from the domain crate — one deliberate list instead of a glob, so
+/// a new domain type never gains a second import path unreviewed.
+pub use hydebar_proto::config::{
+    AnimationConfig, Appearance, AppearanceColor, AppearanceStyle, BarLayer, BatteryModuleConfig,
+    ClockModuleConfig, Config, ControlCenterModuleConfig, CustomMenuEntry, CustomModuleDef,
+    DEFAULT_CONFIG_FILE_PATH, DEFAULT_RADIUS, HydeBranch, KeyboardLayoutModuleConfig,
+    MODULE_VERTICAL_PADDING_EM, MediaPlayerModuleConfig, MemoryFormat, MenuAppearance, ModuleDef,
+    ModuleName, Modules, NotificationSource, Outputs, Position, SystemIndicator,
+    SystemModuleConfig, UpdatesModuleConfig, WORKSPACE_ACTIVE_MARGIN_EM,
+    WORKSPACE_ACTIVE_PADDING_EM, WORKSPACE_GAP_EM, WORKSPACE_GLYPH_ADVANCE_EM,
+    WORKSPACE_MIN_HEIGHT_EM, WORKSPACE_MIN_WIDTH_EM, WORKSPACE_PADDING_EM, WindowTitleConfig,
+    WindowTitleMode, WorkspaceVisibilityMode, WorkspacesModuleConfig
+};
 use hydebar_proto::{
     bar_layout,
     theme_source::{self, HydeTheme}
