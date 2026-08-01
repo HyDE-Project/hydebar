@@ -4,9 +4,9 @@
 //! it: the protocol has no such request. Hyprland blurs a surface only when a
 //! layer rule in its configuration names the namespace the surface was created
 //! with, so a bar that ships no rule of its own is at the mercy of whatever the
-//! desktop happens to have written down. The `HyDE` Project blurs the namespaces
-//! of the programs it ships and nothing else, and its rules moved from
-//! `windowrules.conf` to a Lua configuration during the Hyprland 0.55
+//! desktop happens to have written down. The `HyDE` Project blurs the
+//! namespaces of the programs it ships and nothing else, and its rules moved
+//! from `windowrules.conf` to a Lua configuration during the Hyprland 0.55
 //! migration, which drops any rule a user had added beside them.
 //!
 //! So the bar states the rule itself, once, before the first surface is
@@ -145,6 +145,10 @@ fn state(rule: &Rule) -> bool {
         }
 
         if try_spelling(command, argument) {
+            #[expect(
+                clippy::cast_possible_truncation,
+                reason = "the spelling table holds far fewer than 256 entries"
+            )]
             ACCEPTED_SPELLING.store(index as u8, Ordering::Relaxed);
             return true;
         }
@@ -243,6 +247,10 @@ mod tests {
     }
 
     #[test]
+    #[expect(
+        clippy::assertions_on_constants,
+        reason = "the test pins the constant below the themed background alpha"
+    )]
     fn the_whole_strip_is_blurred_not_only_the_islands() {
         // the HyDE theme states the bar background at 0.01: a threshold above
         // it would leave the space between the islands sharp

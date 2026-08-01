@@ -22,6 +22,13 @@ pub struct StatusNotifierWatcher {
 }
 
 impl StatusNotifierWatcher {
+    /// Registers the watcher on the session bus and claims its well known
+    /// name.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the session bus cannot be reached, the watcher
+    /// object cannot be registered, or the bus name request fails.
     pub async fn start_server() -> AppResult<Connection> {
         let connection = zbus::connection::Connection::session()
             .await
@@ -68,11 +75,8 @@ impl StatusNotifierWatcher {
             let mut have_bus_name = false;
             let unique_name = internal_connection.unique_name().map(|x| x.as_ref());
             while let Some(evt) = name_owner_changed_stream.next().await {
-                let args = match evt.args() {
-                    Ok(args) => args,
-                    Err(_) => {
-                        continue;
-                    }
+                let Ok(args) = evt.args() else {
+                    continue;
                 };
                 if args.name.as_ref() == NAME {
                     if args.new_owner.as_ref() == unique_name.as_ref() {
@@ -95,6 +99,7 @@ impl StatusNotifierWatcher {
                             continue;
                         };
                         let service = interface.items.remove(idx).1;
+                        drop(interface);
 
                         if let Err(err) = Self::status_notifier_item_unregistered(
                             &emitter, &service
@@ -144,7 +149,14 @@ impl StatusNotifierWatcher {
         self.items.push((sender.to_owned(), service));
     }
 
-    const fn register_status_notifier_host(&mut self, _service: &str) {}
+    #[expect(
+        clippy::unused_self,
+        clippy::needless_pass_by_ref_mut,
+        reason = "the zbus interface macro dispatches D-Bus calls through a method receiver"
+    )]
+    const fn register_status_notifier_host(&mut self, service: &str) {
+        let _ = service;
+    }
 
     #[zbus(property)]
     fn registered_status_notifier_items(&self) -> Vec<String> {
@@ -152,11 +164,19 @@ impl StatusNotifierWatcher {
     }
 
     #[zbus(property)]
+    #[expect(
+        clippy::unused_self,
+        reason = "the zbus interface macro dispatches D-Bus calls through a method receiver"
+    )]
     const fn is_status_notifier_host_registered(&self) -> bool {
         true
     }
 
     #[zbus(property)]
+    #[expect(
+        clippy::unused_self,
+        reason = "the zbus interface macro dispatches D-Bus calls through a method receiver"
+    )]
     const fn protocol_version(&self) -> i32 {
         0
     }

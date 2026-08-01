@@ -7,8 +7,7 @@
 //! hardware the test runs on.
 
 use super::catalog::{
-    self, GpuPlacement, GpuVendor, cpu_chip_rank, cpu_input_rank, gpu_input_rank,
-    gpu_vendor
+    self, GpuPlacement, GpuVendor, cpu_chip_rank, cpu_input_rank, gpu_input_rank, gpu_vendor
 };
 
 /// Inputs of a chip that are not temperatures but tell one part from
@@ -203,12 +202,7 @@ pub fn select_gpu(chips: &[ChipView<'_>], preferred: Option<&str>) -> Option<Gpu
 
 /// Reports whether a configured preference names this device.
 #[must_use]
-pub fn matches(
-    preferred: &str,
-    chip: &str,
-    vendor: GpuVendor,
-    placement: GpuPlacement
-) -> bool {
+pub fn matches(preferred: &str, chip: &str, vendor: GpuVendor, placement: GpuPlacement) -> bool {
     if preferred.is_empty() {
         return false;
     }
@@ -228,15 +222,18 @@ pub fn matches(
 mod tests {
     use super::*;
 
+    /// One chip: its name, its inputs with their readings, and its facts.
+    type ChipEntry = (String, Vec<(String, f32)>, ChipFacts);
+
     /// Chip set of a machine, written down the way `sensors` prints it.
     struct Sensors {
-        chips: Vec<(String, Vec<(String, f32)>, ChipFacts)>
+        chips: Vec<ChipEntry>
     }
 
     impl Sensors {
         /// Builds a machine out of `("<chip> <input>", value)` pairs.
         fn from_labels(readings: &[(&str, f32)]) -> Self {
-            let mut chips: Vec<(String, Vec<(String, f32)>, ChipFacts)> = Vec::new();
+            let mut chips: Vec<ChipEntry> = Vec::new();
 
             for (label, value) in readings {
                 let (chip, input) = match label.split_once(' ') {
@@ -275,16 +272,13 @@ mod tests {
         /// Gives a chip an address on the bus.
         fn at(mut self, chip: &str, address: &'static str) -> Self {
             self.mark(chip, move |facts| {
-                facts.on_root_complex =
-                    ChipFacts::from_address(Some(address)).on_root_complex;
+                facts.on_root_complex = ChipFacts::from_address(Some(address)).on_root_complex;
             });
             self
         }
 
         fn mark(&mut self, chip: &str, apply: impl Fn(&mut ChipFacts)) {
-            if let Some((_, _, facts)) =
-                self.chips.iter_mut().find(|(name, _, _)| name == chip)
-            {
+            if let Some((_, _, facts)) = self.chips.iter_mut().find(|(name, _, _)| name == chip) {
                 apply(facts);
             }
         }
@@ -293,9 +287,7 @@ mod tests {
             let inputs = self
                 .chips
                 .iter()
-                .map(|(_, inputs, _)| {
-                    inputs.iter().map(|(label, _)| label.as_str()).collect()
-                })
+                .map(|(_, inputs, _)| inputs.iter().map(|(label, _)| label.as_str()).collect())
                 .collect();
             let facts = self.chips.iter().map(|(_, _, facts)| *facts).collect();
 
@@ -391,8 +383,7 @@ mod tests {
 
     #[test]
     fn a_core_stands_in_when_the_chip_names_no_package() {
-        let sensors =
-            Sensors::from_labels(&[("acpitz temp1", 80.0), ("k10temp Tccd1", 61.0)]);
+        let sensors = Sensors::from_labels(&[("acpitz temp1", 80.0), ("k10temp Tccd1", 61.0)]);
 
         assert_eq!(sensors.cpu(), Some(("k10temp Tccd1".to_owned(), 61.0)));
     }
@@ -512,9 +503,8 @@ mod tests {
 
     #[test]
     fn two_cards_pick_the_one_the_configuration_names() {
-        let sensors =
-            Sensors::from_labels(&[("amdgpu junction", 55.0), ("nvidia temp1", 66.0)])
-                .with_fan("amdgpu");
+        let sensors = Sensors::from_labels(&[("amdgpu junction", 55.0), ("nvidia temp1", 66.0)])
+            .with_fan("amdgpu");
 
         assert_eq!(
             sensors.gpu(Some("amd")).map(|(label, _, _)| label),

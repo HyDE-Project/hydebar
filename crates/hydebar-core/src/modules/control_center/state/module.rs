@@ -47,8 +47,7 @@ impl ControlCenter {
             return;
         }
 
-        let (Some(service), Some(sender)) = (self.network.as_ref(), self.sender.clone())
-        else {
+        let (Some(service), Some(sender)) = (self.network.as_ref(), self.sender.clone()) else {
             return;
         };
 
@@ -62,11 +61,11 @@ impl ControlCenter {
                         return;
                     }
 
-                    if let Err(err) = sender.try_send(Message::Network(
-                        NetworkMessage::Event(Box::new(ServiceEvent::Update(
-                            NetworkEvent::WirelessAccessPoint(access_points)
-                        )))
-                    )) {
+                    if let Err(err) =
+                        sender.try_send(Message::Network(NetworkMessage::Event(Box::new(
+                            ServiceEvent::Update(NetworkEvent::WirelessAccessPoint(access_points))
+                        ))))
+                    {
                         warn!("failed to publish the nearby networks: {err}");
                     }
                 }

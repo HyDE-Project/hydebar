@@ -62,9 +62,8 @@ impl From<PowerProfile> for Icons {
     fn from(profile: PowerProfile) -> Self {
         match profile {
             PowerProfile::Performance => Self::Performance,
-            PowerProfile::Balanced => Self::Balanced,
-            PowerProfile::PowerSaver => Self::PowerSaver,
-            PowerProfile::Unknown => Self::Balanced
+            PowerProfile::Balanced | PowerProfile::Unknown => Self::Balanced,
+            PowerProfile::PowerSaver => Self::PowerSaver
         }
     }
 }
@@ -239,7 +238,7 @@ impl Battery {
         upower_data: UPowerBatteryData,
         power_profile: PowerProfile
     ) {
-        let capacity = upower_data.capacity.clamp(0, 100) as u8;
+        let capacity = u8::try_from(upower_data.capacity.clamp(0, 100)).unwrap_or(100);
         let charging = matches!(
             upower_data.status,
             crate::services::upower::BatteryStatus::Charging(_)

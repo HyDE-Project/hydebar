@@ -39,7 +39,8 @@ where
         ctx: &ModuleContext,
         config: Self::RegistrationData<'_>
     ) -> Result<(), ModuleError> {
-        self.start_listener(ctx, config)
+        self.start_listener(ctx, config);
+        Ok(())
     }
 
     fn view(
@@ -143,7 +144,7 @@ invalid
                         assert_eq!(data.alt, "value");
                         assert_eq!(data.text.as_deref(), Some("ok"));
                     }
-                    other => panic!("unexpected message: {other:?}")
+                    other @ Message::Event(_) => panic!("unexpected message: {other:?}")
                 }
             }
             other => panic!("unexpected event: {other:?}")
@@ -163,7 +164,7 @@ invalid
                     Message::Event(ServiceEvent::Error(error)) => {
                         assert!(matches!(error, CustomCommandError::Parse(_, _)));
                     }
-                    other => panic!("unexpected message: {other:?}")
+                    other @ Message::Event(_) => panic!("unexpected message: {other:?}")
                 }
             }
             other => panic!("unexpected event: {other:?}")
@@ -197,18 +198,15 @@ invalid
 
         timeout(Duration::from_secs(2), async {
             loop {
-                if let Some(event) = receiver.try_recv().expect("receive") {
-                    if let BusEvent::Module(ModuleEvent::Custom {
+                if let Some(event) = receiver.try_recv().expect("receive")
+                    && let BusEvent::Module(ModuleEvent::Custom {
                         name,
                         message
                     }) = event
-                    {
-                        if name.as_ref() == "first" {
-                            if matches!(message, Message::Event(ServiceEvent::Update(_))) {
-                                break;
-                            }
-                        }
-                    }
+                    && name.as_ref() == "first"
+                    && matches!(message, Message::Event(ServiceEvent::Update(_)))
+                {
+                    break;
                 }
                 sleep(Duration::from_millis(50)).await;
             }
@@ -216,7 +214,7 @@ invalid
         .await
         .expect("first update");
 
-        while let Some(Some(_)) = receiver.try_recv().ok() {}
+        while let Ok(Some(_)) = receiver.try_recv() {}
 
         let second = CustomModuleDef {
             name: String::from("second"),
@@ -238,19 +236,17 @@ invalid
         let observed = timeout(Duration::from_secs(2), async {
             let mut alts = Vec::new();
             loop {
-                if let Some(event) = receiver.try_recv().expect("receive") {
-                    if let BusEvent::Module(ModuleEvent::Custom {
+                // the listener suppresses repeats, so the replacement
+                // publishes its payload once and then stays quiet
+                if let Some(event) = receiver.try_recv().expect("receive")
+                    && let BusEvent::Module(ModuleEvent::Custom {
                         name,
                         message
                     }) = event
-                    {
-                        // the listener suppresses repeats, so the replacement
-                        // publishes its payload once and then stays quiet
-                        if let Message::Event(ServiceEvent::Update(data)) = message {
-                            alts.push((name, data.alt));
-                            break alts;
-                        }
-                    }
+                    && let Message::Event(ServiceEvent::Update(data)) = message
+                {
+                    alts.push((name, data.alt));
+                    break alts;
                 }
                 sleep(Duration::from_millis(50)).await;
             }
@@ -281,6 +277,11 @@ invalid
         ))
         .expect("color");
 
+        #[expect(
+            clippy::mutable_key_type,
+            reason = "RegexCfg hashes and compares by its pattern text; the regex \
+                      interior mutability never feeds the map key"
+        )]
         let mut colors = HashMap::new();
         colors.insert(pattern, color);
 
@@ -540,6 +541,10 @@ invalid
     }
 
     /// Reports whether the process still exists.
+    #[expect(
+        clippy::cast_possible_wrap,
+        reason = "process identifiers fit in i32 on Linux"
+    )]
     fn is_alive(pid: u32) -> bool {
         unsafe { libc::kill(pid as i32, 0) == 0 }
     }

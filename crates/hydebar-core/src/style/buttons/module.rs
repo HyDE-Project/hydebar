@@ -95,6 +95,8 @@ fn blend_background(rest: Option<Color>, lit: Color, t: f32) -> Option<Color> {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::float_cmp)]
+
     use super::*;
     use crate::config::{Appearance, DEFAULT_RADIUS};
 
@@ -102,10 +104,26 @@ mod tests {
     fn the_configured_radius_reaches_the_border() {
         let theme = Theme::Dark;
 
-        let styled = module_button_style(AppearanceStyle::Islands, 1.0, 9.0, false, false, 0.0, crate::style::IslandFinish::bare());
+        let styled = module_button_style(
+            AppearanceStyle::Islands,
+            1.0,
+            9.0,
+            false,
+            false,
+            0.0,
+            crate::style::IslandFinish::bare()
+        );
         assert_eq!(styled(&theme, Status::Active).border.radius, 9.0.into());
 
-        let focused = module_button_style(AppearanceStyle::Islands, 1.0, 9.0, false, true, 0.0, crate::style::IslandFinish::bare());
+        let focused = module_button_style(
+            AppearanceStyle::Islands,
+            1.0,
+            9.0,
+            false,
+            true,
+            0.0,
+            crate::style::IslandFinish::bare()
+        );
         assert_eq!(focused(&theme, Status::Active).border.radius, 9.0.into());
     }
 
@@ -133,16 +151,15 @@ mod tests {
     fn the_hover_fade_carries_the_background_between_rest_and_lit() {
         let theme = Theme::Dark;
         let at = |hover: f32| {
-            let styled =
-                module_button_style(
-                    AppearanceStyle::Islands,
-                    1.0,
-                    4.0,
-                    false,
-                    false,
-                    hover,
-                    crate::style::IslandFinish::bare()
-                );
+            let styled = module_button_style(
+                AppearanceStyle::Islands,
+                1.0,
+                4.0,
+                false,
+                false,
+                hover,
+                crate::style::IslandFinish::bare()
+            );
             match styled(&theme, Status::Active).background {
                 Some(iced::Background::Color(color)) => color,
                 other => panic!("expected a colour background, got {other:?}")
@@ -164,10 +181,26 @@ mod tests {
     fn a_transparent_pill_at_rest_paints_nothing() {
         let theme = Theme::Dark;
 
-        let resting = module_button_style(AppearanceStyle::Islands, 1.0, 4.0, true, false, 0.0, crate::style::IslandFinish::bare());
+        let resting = module_button_style(
+            AppearanceStyle::Islands,
+            1.0,
+            4.0,
+            true,
+            false,
+            0.0,
+            crate::style::IslandFinish::bare()
+        );
         assert!(resting(&theme, Status::Active).background.is_none());
 
-        let lit = module_button_style(AppearanceStyle::Islands, 1.0, 4.0, true, false, 1.0, crate::style::IslandFinish::bare());
+        let lit = module_button_style(
+            AppearanceStyle::Islands,
+            1.0,
+            4.0,
+            true,
+            false,
+            1.0,
+            crate::style::IslandFinish::bare()
+        );
         assert!(lit(&theme, Status::Active).background.is_some());
     }
 }

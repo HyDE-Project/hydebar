@@ -140,7 +140,7 @@ fn run(runtime_handle: Handle) -> Result<(), MainError> {
     let (raw_config, config_path) = get_config(args.config_path)?;
 
     let instance_lock = instance::acquire()?;
-    debug!("instance lock held at {:?}", instance_lock.path());
+    debug!("instance lock held at {}", instance_lock.path().display());
 
     reap_and_guard_children();
 
@@ -169,10 +169,13 @@ fn run(runtime_handle: Handle) -> Result<(), MainError> {
 
     logger.set_new_spec(get_log_spec(&config.log_level));
 
-    let font = match config.appearance.font_name {
-        Some(ref font_name) => Font::with_name(Box::leak(font_name.clone().into_boxed_str())),
-        None => Font::DEFAULT
-    };
+    let font = config
+        .appearance
+        .font_name
+        .as_ref()
+        .map_or(Font::DEFAULT, |font_name| {
+            Font::with_name(Box::leak(font_name.clone().into_boxed_str()))
+        });
 
     let hyprland: Arc<dyn HyprlandPort> = Arc::new(HyprlandClient::new());
 

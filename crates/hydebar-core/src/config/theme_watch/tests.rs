@@ -1,4 +1,6 @@
-//! Unit tests for the HyDE theme watcher.
+//! Unit tests for the `HyDE` theme watcher.
+
+#![allow(clippy::float_cmp)]
 
 use std::{
     ffi::{OsStr, OsString},
@@ -53,7 +55,7 @@ impl WatchedEvent for FakeEvent {
     }
 }
 
-/// A HyDE layout rooted in one temporary directory.
+/// A `HyDE` layout rooted in one temporary directory.
 ///
 /// Built explicitly rather than from the environment so a test never reads the
 /// theme of the machine it runs on.
@@ -82,8 +84,8 @@ const LIGHT_THEME_CSS: &str = "\
 @define-color wb-act-fg rgb(255,255,255);
 ";
 
-/// Writes a stylesheet as HyDE does, by replacing the file rather than editing
-/// it in place.
+/// Writes a stylesheet as `HyDE` does, by replacing the file rather than
+/// editing it in place.
 fn write_theme_css(config_dir: &Path, source: &str) {
     let waybar = config_dir.join("waybar");
     fs::create_dir_all(&waybar).expect("create waybar directory");
@@ -91,7 +93,7 @@ fn write_theme_css(config_dir: &Path, source: &str) {
     write_replacing(&waybar.join("theme.css"), source);
 }
 
-/// Writes a file the way HyDE does, by moving a staged copy over the old one.
+/// Writes a file the way `HyDE` does, by moving a staged copy over the old one.
 ///
 /// Worth mimicking because that is precisely why the watcher follows
 /// directories rather than files.
@@ -103,7 +105,7 @@ fn write_replacing(path: &Path, contents: &str) {
     fs::rename(&staging, path).expect("move file into place");
 }
 
-/// Lays out a HyDE cache the bar can colour itself from.
+/// Lays out a `HyDE` cache the bar can colour itself from.
 ///
 /// `primary` becomes the dominant colour the islands take, so a test can switch
 /// palettes by naming a different one.

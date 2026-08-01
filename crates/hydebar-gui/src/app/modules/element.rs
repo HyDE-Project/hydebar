@@ -128,8 +128,7 @@ impl App {
                     AppearanceStyle::Solid | AppearanceStyle::Gradient => container.into(),
                     AppearanceStyle::Islands => container
                         .style(|theme| {
-                            let finish =
-                                hydebar_core::style::IslandFinish::of(self.appearance());
+                            let finish = hydebar_core::style::IslandFinish::of(self.appearance());
 
                             container::Style {
                                 background: Some(
@@ -162,13 +161,17 @@ impl App {
     /// already say everything on the bar itself: workspaces and the window
     /// title are their own text, the tray draws icons the bar does not own,
     /// and the system readouts stand beside their values.
+    #[expect(
+        clippy::option_option,
+        reason = "the outer option marks modules that never hint, the inner a hint absent in the current state"
+    )]
     fn module_tooltip(&self, module_name: &ModuleName) -> Option<Option<String>> {
         match module_name {
             ModuleName::Custom(name) => self.custom.get(name).map(|custom| {
-                Some(
-                    custom
-                        .tooltip().map_or_else(|| hydebar_proto::bar_layout::display_label(name), str::to_owned)
-                )
+                Some(custom.tooltip().map_or_else(
+                    || hydebar_proto::bar_layout::display_label(name),
+                    str::to_owned
+                ))
             }),
             ModuleName::IdleInhibitor => Some(
                 self.config
@@ -232,7 +235,7 @@ impl App {
             module:  module_name.clone(),
             entered: anchor.is_some(),
             tooltip: anchor
-                .zip(anchor.and(self.module_tooltip(module_name).flatten()))
+                .zip(anchor.and_then(|_| self.module_tooltip(module_name).flatten()))
                 .map(|(anchor, text)| TooltipInfo {
                     text,
                     anchor
@@ -281,8 +284,7 @@ impl App {
                         .height(Length::Fill)
                         .align_y(Alignment::Center)
                         .style(|theme| {
-                            let finish =
-                                hydebar_core::style::IslandFinish::of(self.appearance());
+                            let finish = hydebar_core::style::IslandFinish::of(self.appearance());
 
                             container::Style {
                                 background: Some(

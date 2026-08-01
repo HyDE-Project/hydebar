@@ -77,10 +77,14 @@ pub enum CheckState {
     Unavailable
 }
 
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "the open lists and the run outcomes are independent switches, not one state machine"
+)]
 #[derive(Default)]
 pub struct Updates {
     state:                    CheckState,
-    updates:                  Vec<Update>,
+    pending:                  Vec<Update>,
     pub is_updates_list_open: bool,
     is_hyde_list_open:        bool,
     hyde:                     Option<HydeSnapshot>,
@@ -108,7 +112,7 @@ impl Updates {
     pub fn tooltip(&self) -> Option<String> {
         let line = match self.state {
             CheckState::Checking => "Updates: checking".to_owned(),
-            CheckState::Ready => match self.updates.len() {
+            CheckState::Ready => match self.pending.len() {
                 0 => "Updates: none pending".to_owned(),
                 pending => format!("Updates: {pending} pending")
             },
@@ -154,7 +158,7 @@ impl std::fmt::Debug for Updates {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Updates")
             .field("state", &self.state)
-            .field("updates", &self.updates)
+            .field("pending", &self.pending)
             .field("is_updates_list_open", &self.is_updates_list_open)
             .field("is_hyde_list_open", &self.is_hyde_list_open)
             .field("hyde", &self.hyde)
@@ -170,6 +174,7 @@ impl std::fmt::Debug for Updates {
             .field("sender", &self.sender)
             .field("runtime", &self.runtime)
             .field("schedule", &self.schedule)
+            .field("shown_count", &self.shown_count)
             .finish()
     }
 }
@@ -178,7 +183,7 @@ impl Clone for Updates {
     fn clone(&self) -> Self {
         Self {
             state:                self.state.clone(),
-            updates:              self.updates.clone(),
+            pending:              self.pending.clone(),
             is_updates_list_open: self.is_updates_list_open,
             is_hyde_list_open:    self.is_hyde_list_open,
             hyde:                 self.hyde.clone(),
@@ -214,47 +219,7 @@ impl Updates {
                 }
                 None => warn!("the updates module has no schedule; skipping the manual check")
             },
-            Message::Update => {
-                if self.applying {
-                    debug!("a package update is already running");
-                } else if let (Some(runtime), Some(sender), Some(update_command)) = (
-                    self.runtime.clone(),
-                    self.sender.clone(),
-                    self.update_command.clone()
-                ) {
-                    self.applying = true;
-                    self.apply_failed = false;
-                    self.apply_log.clear();
-
-                    let log_sender = sender.clone();
-
-                    runtime.spawn(async move {
-                        let publish = move |lines| {
-                            let _ = log_sender.try_send(Message::UpdateLog(lines));
-                        };
-
-                        let failed =
-                            match commands::apply_updates(update_command.as_ref(), publish)
-                                .await
-                            {
-                                Ok(()) => false,
-                                Err(err) => {
-                                    err.or_log("the package update failed");
-
-                                    true
-                                }
-                            };
-
-                        if let Err(err) = sender.try_send(Message::UpdateFinished {
-                            failed
-                        }) {
-                            error!("failed to publish update completion: {err}");
-                        }
-                    });
-                } else {
-                    warn!("updates module is not fully initialised; skipping update command");
-                }
-            }
+            Message::Update => self.start_package_update(),
             Message::UpdateFinished {
                 failed
             } => {
@@ -277,62 +242,101 @@ impl Updates {
                     None => self.state = CheckState::Ready
                 }
             }
-            Message::UpdateHyde => {
-                if self.hyde_updating {
-                    debug!("a hyde update is already running");
-                } else if let (Some(runtime), Some(sender), Some(clone), Some(branch)) = (
-                    self.runtime.clone(),
-                    self.sender.clone(),
-                    self.hyde_clone.clone(),
-                    self.hyde_branch.clone()
-                ) {
-                    self.hyde_updating = true;
-                    self.hyde_failed = false;
-                    self.hyde_log.clear();
-
-                    let log_sender = sender.clone();
-
-                    runtime.spawn(async move {
-                        let publish = move |lines| {
-                            let _ = log_sender.try_send(Message::HydeUpdateLog(lines));
-                        };
-
-                        let failed = match commands::update_hyde(
-                            clone.as_ref(),
-                            branch.as_ref(),
-                            publish
-                        )
-                        .await
-                        {
-                            Ok(()) => false,
-                            Err(err) => {
-                                err.or_log("the hyde update failed");
-
-                                true
-                            }
-                        };
-
-                        if let Err(err) = sender.try_send(Message::HydeUpdateFinished {
-                            failed
-                        }) {
-                            error!("failed to publish the hyde update outcome: {err}");
-                        }
-
-                        if let Err(err) = sender.try_send(Message::CheckNow) {
-                            error!("failed to ask for a check after the hyde update: {err}");
-                        }
-                    });
-                } else {
-                    warn!("no hyde clone is known; skipping the hyde update");
-                }
-            }
+            Message::UpdateHyde => self.start_hyde_update(),
             observed => self.observe(observed)
         }
 
         self.shown_count.set(
-            self.updates.len().to_string(),
+            self.pending.len().to_string(),
             main_config.appearance.animations.enabled
         );
+    }
+
+    /// Applies the configured update command, narrating into the window.
+    fn start_package_update(&mut self) {
+        if self.applying {
+            debug!("a package update is already running");
+        } else if let (Some(runtime), Some(sender), Some(update_command)) = (
+            self.runtime.clone(),
+            self.sender.clone(),
+            self.update_command.clone()
+        ) {
+            self.applying = true;
+            self.apply_failed = false;
+            self.apply_log.clear();
+
+            let log_sender = sender.clone();
+
+            runtime.spawn(async move {
+                let publish = move |lines| {
+                    let _ = log_sender.try_send(Message::UpdateLog(lines));
+                };
+
+                let failed = match commands::apply_updates(update_command.as_ref(), publish).await
+                {
+                    Ok(()) => false,
+                    Err(err) => {
+                        err.or_log("the package update failed");
+
+                        true
+                    }
+                };
+
+                if let Err(err) = sender.try_send(Message::UpdateFinished {
+                    failed
+                }) {
+                    error!("failed to publish update completion: {err}");
+                }
+            });
+        } else {
+            warn!("updates module is not fully initialised; skipping update command");
+        }
+    }
+
+    /// Brings the `HyDE` clone up to date, narrating into the window.
+    fn start_hyde_update(&mut self) {
+        if self.hyde_updating {
+            debug!("a hyde update is already running");
+        } else if let (Some(runtime), Some(sender), Some(clone), Some(branch)) = (
+            self.runtime.clone(),
+            self.sender.clone(),
+            self.hyde_clone.clone(),
+            self.hyde_branch.clone()
+        ) {
+            self.hyde_updating = true;
+            self.hyde_failed = false;
+            self.hyde_log.clear();
+
+            let log_sender = sender.clone();
+
+            runtime.spawn(async move {
+                let publish = move |lines| {
+                    let _ = log_sender.try_send(Message::HydeUpdateLog(lines));
+                };
+
+                let failed =
+                    match commands::update_hyde(clone.as_ref(), branch.as_ref(), publish).await {
+                        Ok(()) => false,
+                        Err(err) => {
+                            err.or_log("the hyde update failed");
+
+                            true
+                        }
+                    };
+
+                if let Err(err) = sender.try_send(Message::HydeUpdateFinished {
+                    failed
+                }) {
+                    error!("failed to publish the hyde update outcome: {err}");
+                }
+
+                if let Err(err) = sender.try_send(Message::CheckNow) {
+                    error!("failed to ask for a check after the hyde update: {err}");
+                }
+            });
+        } else {
+            warn!("no hyde clone is known; skipping the hyde update");
+        }
     }
 
     /// Advances the dissolve of the count on the bar.
@@ -354,7 +358,7 @@ impl Updates {
     fn observe(&mut self, message: Message) {
         match message {
             Message::UpdatesCheckCompleted(updates) => {
-                self.updates = updates;
+                self.pending = updates;
                 self.state = CheckState::Ready;
 
                 if !self.applying && !self.apply_failed {
@@ -363,7 +367,7 @@ impl Updates {
             }
             Message::CheckFailed => self.state = CheckState::Ready,
             Message::UpdatesUnavailable => {
-                self.updates.clear();
+                self.pending.clear();
                 self.state = CheckState::Unavailable;
             }
             Message::ToggleUpdatesList => {
@@ -418,7 +422,7 @@ impl Updates {
     }
 
     pub(crate) fn updates(&self) -> &[Update] {
-        &self.updates
+        &self.pending
     }
 
     pub(crate) const fn is_updates_list_open(&self) -> bool {
@@ -500,8 +504,7 @@ where
         let interval = check_interval(definition);
 
         self.update_command = Some(Arc::from(definition.update_cmd.as_str()));
-        self.hyde_clone =
-            find_hyde_clone().map(|path| Arc::from(path.to_string_lossy().as_ref()));
+        self.hyde_clone = find_hyde_clone().map(|path| Arc::from(path.to_string_lossy().as_ref()));
 
         let branch: Arc<str> = Arc::from(definition.hyde_branch.git_name());
         self.hyde_branch = Some(Arc::clone(&branch));
@@ -554,7 +557,7 @@ where
         Some((
             view::icon(
                 &self.state,
-                self.updates.len(),
+                self.pending.len(),
                 self.hyde_pending(),
                 self.shown_count.element(crate::components::scale::base()),
                 icons
@@ -577,10 +580,10 @@ mod tests {
     use tokio::runtime::Runtime;
 
     use super::{
-        *,
         failures::{FAILURE_REPEAT, FailureLog},
         hyde_clone::clone_path_from,
-        schedule::MIN_INTERVAL
+        schedule::MIN_INTERVAL,
+        *
     };
     use crate::event_bus::EventBus;
 
@@ -596,7 +599,7 @@ mod tests {
             check_cmd:      check.to_owned(),
             update_cmd:     ":".to_owned(),
             check_interval: interval,
-            hyde_branch:    Default::default()
+            hyde_branch:    hydebar_proto::config::HydeBranch::default()
         }
     }
 
@@ -901,7 +904,7 @@ mod tests {
         assert_eq!(check_interval(&config("true", 1)), MIN_INTERVAL);
         assert_eq!(
             check_interval(&config("true", 7200)),
-            Duration::from_secs(7200)
+            Duration::from_hours(2)
         );
     }
 
@@ -938,8 +941,10 @@ mod tests {
 
     #[test]
     fn an_unavailable_check_takes_the_indicator_off_the_bar() {
-        let mut updates = Updates::default();
-        updates.state = CheckState::Unavailable;
+        let updates = Updates {
+            state: CheckState::Unavailable,
+            ..Updates::default()
+        };
         let icons = IconTheme::default();
         let config = Some(config("true", 3600));
 
@@ -948,17 +953,19 @@ mod tests {
 
     #[test]
     fn a_failed_check_keeps_what_the_bar_already_knows() {
-        let mut updates = Updates::default();
-        updates.updates = vec![Update {
-            package: "pkg".to_owned(),
-            from:    "1".to_owned(),
-            to:      "2".to_owned()
-        }];
-        updates.state = CheckState::Checking;
+        let mut updates = Updates {
+            pending: vec![Update {
+                package: "pkg".to_owned(),
+                from:    "1".to_owned(),
+                to:      "2".to_owned()
+            }],
+            state: CheckState::Checking,
+            ..Updates::default()
+        };
 
         updates.observe(Message::CheckFailed);
 
-        assert_eq!(updates.updates.len(), 1);
+        assert_eq!(updates.pending.len(), 1);
         assert_eq!(updates.state, CheckState::Ready);
     }
 
@@ -976,8 +983,10 @@ mod tests {
 
     #[test]
     fn collapsing_folds_both_lists_shut() {
-        let mut updates = Updates::default();
-        updates.is_updates_list_open = true;
+        let mut updates = Updates {
+            is_updates_list_open: true,
+            ..Updates::default()
+        };
         updates.observe(Message::ToggleHydeList);
 
         updates.collapse();
@@ -988,8 +997,10 @@ mod tests {
 
     #[test]
     fn the_tooltip_names_a_hyde_clone_that_fell_behind() {
-        let mut updates = Updates::default();
-        updates.state = CheckState::Ready;
+        let mut updates = Updates {
+            state: CheckState::Ready,
+            ..Updates::default()
+        };
         updates.observe(Message::HydeChecked(HydeSnapshot {
             version: "v25.10.1".to_owned(),
             commits: vec!["fix: one".to_owned(), "feat: two".to_owned()]
@@ -1015,16 +1026,18 @@ mod tests {
 
     #[test]
     fn an_unavailable_check_clears_what_the_bar_knew() {
-        let mut updates = Updates::default();
-        updates.updates = vec![Update {
-            package: "pkg".to_owned(),
-            from:    "1".to_owned(),
-            to:      "2".to_owned()
-        }];
+        let mut updates = Updates {
+            pending: vec![Update {
+                package: "pkg".to_owned(),
+                from:    "1".to_owned(),
+                to:      "2".to_owned()
+            }],
+            ..Updates::default()
+        };
 
         updates.observe(Message::UpdatesUnavailable);
 
-        assert!(updates.updates.is_empty());
+        assert!(updates.pending.is_empty());
         assert_eq!(updates.state, CheckState::Unavailable);
     }
 }

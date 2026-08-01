@@ -118,9 +118,7 @@ pub fn unavailable(indicator: &SystemIndicator, data: &SystemInfoData) -> Option
             .then_some(Unavailable::NoSuchDisk),
         SystemIndicator::IpAddress
         | SystemIndicator::DownloadSpeed
-        | SystemIndicator::UploadSpeed => {
-            data.network.is_none().then_some(Unavailable::NoNetwork)
-        }
+        | SystemIndicator::UploadSpeed => data.network.is_none().then_some(Unavailable::NoNetwork)
     }
 }
 

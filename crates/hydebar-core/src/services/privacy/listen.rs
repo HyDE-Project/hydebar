@@ -36,6 +36,10 @@ impl PrivacyService {
         Self::start_listening_with_sources(state, publisher, &pipewire, &webcam).await
     }
 
+    #[expect(
+        clippy::future_not_send,
+        reason = "the test doubles driving this are not Send; the production caller awaits it on one task"
+    )]
     pub(super) async fn start_listening_with_sources<P, Pipewire, Webcam>(
         state: State,
         publisher: &mut P,

@@ -100,6 +100,10 @@ impl MprisPlayerService {
         Self::start_listening_internal(state, publisher).await
     }
 
+    #[expect(
+        clippy::too_many_lines,
+        reason = "one state machine with an arm per listener phase; splitting the arms would separate them from the retry flow"
+    )]
     async fn start_listening_internal<P>(
         state: ListenerState,
         publisher: &mut P

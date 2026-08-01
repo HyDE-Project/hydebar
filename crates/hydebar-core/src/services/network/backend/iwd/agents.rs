@@ -20,23 +20,25 @@ impl SignalAgent {
 }
 
 pub(super) struct PWAgent {
-    // Channel for receiving passwords
+    /// Channel the requested passwords arrive on.
     pub(super) password_rx: tokio::sync::mpsc::UnboundedReceiver<String>
 }
 
 #[interface(name = "net.connman.iwd.Agent")]
 impl PWAgent {
     #[zbus(name = "RequestPassphrase")]
+    #[expect(
+        clippy::unused_async,
+        reason = "the zbus interface macro exposes this handler as an async D-Bus method"
+    )]
     pub(super) async fn request_passphrase(
         &mut self,
-        _network_path: OwnedObjectPath
+        network_path: OwnedObjectPath
     ) -> zbus::fdo::Result<String> {
-        // Try to receive a password from the channel
-        if let Ok(pass) = self.password_rx.try_recv() {
-            Ok(pass)
-        } else {
+        let _ = network_path;
+        self.password_rx.try_recv().map_err(|_| {
             warn!("No password available");
-            Err(zbus::fdo::Error::Failed("No password set".into()))
-        }
+            zbus::fdo::Error::Failed("No password set".into())
+        })
     }
 }

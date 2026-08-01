@@ -59,7 +59,7 @@ pub enum ClockEvent {
 }
 
 /// What the clock reacts to.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum Message {
     Update,
     /// Switch to the next configured format, wrapping after the last one.
@@ -312,7 +312,7 @@ mod tests {
     fn config(format: &str, alternatives: &[&str]) -> ClockModuleConfig {
         ClockModuleConfig {
             format:       format.to_string(),
-            format_alt:   alternatives.iter().map(|alt| alt.to_string()).collect(),
+            format_alt:   alternatives.iter().map(ToString::to_string).collect(),
             show_weather: false
         }
     }
@@ -326,7 +326,7 @@ mod tests {
     #[test]
     fn determine_interval_without_seconds() {
         let interval = Clock::determine_interval(&config("%H:%M", &[]));
-        assert_eq!(interval, Duration::from_secs(60));
+        assert_eq!(interval, Duration::from_mins(1));
     }
 
     fn at(hour: u32, minute: u32, second: u32, nanos: u32) -> DateTime<Local> {
@@ -341,7 +341,7 @@ mod tests {
 
     #[test]
     fn a_minute_clock_sleeps_only_to_the_next_minute_boundary() {
-        let delay = duration_until_next_tick(at(12, 34, 30, 0), Duration::from_secs(60));
+        let delay = duration_until_next_tick(at(12, 34, 30, 0), Duration::from_mins(1));
 
         assert_eq!(delay, Duration::from_secs(30));
     }
@@ -355,17 +355,17 @@ mod tests {
 
     #[test]
     fn landing_on_a_boundary_waits_a_whole_period_instead_of_spinning() {
-        let delay = duration_until_next_tick(at(12, 34, 0, 0), Duration::from_secs(60));
+        let delay = duration_until_next_tick(at(12, 34, 0, 0), Duration::from_mins(1));
 
-        assert_eq!(delay, Duration::from_secs(60));
+        assert_eq!(delay, Duration::from_mins(1));
     }
 
     #[test]
     fn a_minute_clock_never_sleeps_longer_than_a_minute() {
         for second in 0..60 {
-            let delay = duration_until_next_tick(at(12, 34, second, 0), Duration::from_secs(60));
+            let delay = duration_until_next_tick(at(12, 34, second, 0), Duration::from_mins(1));
 
-            assert!(delay <= Duration::from_secs(60));
+            assert!(delay <= Duration::from_mins(1));
             assert!(delay > Duration::ZERO);
         }
     }

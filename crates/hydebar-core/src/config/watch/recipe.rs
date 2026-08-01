@@ -69,7 +69,7 @@ impl Recipe for ConfigWatcher {
                         }
                     };
 
-                    debug!("Watching config file at {path:?}");
+                    debug!("Watching config file at {}", path.display());
 
                     let watch_result = inotify.watches().add(
                         &folder,
@@ -80,7 +80,7 @@ impl Recipe for ConfigWatcher {
                     );
 
                     if let Err(e) = watch_result {
-                        error!("Failed to add watch for {folder:?}: {e}");
+                        error!("Failed to add watch for {}: {e}", folder.display());
                         break;
                     }
 
@@ -117,7 +117,6 @@ impl Recipe for ConfigWatcher {
                             info!(
                                 "Config watch stream closed; attempting to restart the inotify watcher"
                             );
-                            continue;
                         }
                         WatchLoopOutcome::HandlerClosed => {
                             info!("Config watch handler closed; stopping watcher loop");

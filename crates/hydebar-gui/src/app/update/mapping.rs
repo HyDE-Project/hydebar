@@ -5,11 +5,7 @@ use hydebar_core::event_bus::{BusEvent, ModuleEvent};
 use super::super::state::{App, Message};
 
 impl App {
-    /// Frame clock feeding the animators.
-    ///
-    /// The subscription exists only while something is animating, so an idle
-    /// panel stops asking the compositor for frame callbacks entirely instead
-
+    /// Maps a bus event onto the message that handles it.
     pub(super) fn message_from_bus_event(event: BusEvent) -> Option<Message> {
         match event {
             BusEvent::Redraw => Some(Message::None),

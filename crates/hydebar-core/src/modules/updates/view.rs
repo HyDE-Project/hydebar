@@ -64,16 +64,12 @@ pub(super) fn menu_view<'a>(
 /// The tail of what a running update printed, as quiet small lines.
 fn log_block(lines: &[String]) -> Element<'_, Message> {
     container(
-        Column::with_children(
-            lines
-                .iter()
-                .map(|line| {
-                    text(truncated(line, 60).into_owned())
-                        .size(scale::scaled(10.0))
-                        .width(Length::Fill)
-                        .into()
-                })
-        )
+        Column::with_children(lines.iter().map(|line| {
+            text(truncated(line, 60).into_owned())
+                .size(scale::scaled(10.0))
+                .width(Length::Fill)
+                .into()
+        }))
         .spacing(scale::scaled(2.0))
     )
     .padding([scale::scaled(4.0), scale::scaled(8.0)])
@@ -139,17 +135,12 @@ fn hyde_section<'a>(
         if updates.is_hyde_list_open() {
             section = section.push(
                 container(scrollable(
-                    Column::with_children(
-                        snapshot
-                            .commits
-                            .iter()
-                            .map(|subject| {
-                                text(truncated(subject, 48).into_owned())
-                                    .size(scale::scaled(10.0))
-                                    .width(Length::Fill)
-                                    .into()
-                            })
-                    )
+                    Column::with_children(snapshot.commits.iter().map(|subject| {
+                        text(truncated(subject, 48).into_owned())
+                            .size(scale::scaled(10.0))
+                            .width(Length::Fill)
+                            .into()
+                    }))
                     .padding(Padding::ZERO.right(16))
                     .spacing(scale::scaled(4.0))
                 ))
@@ -182,9 +173,7 @@ pub(super) fn icon(
     let icon = match state {
         CheckState::Checking => Icons::Refresh,
         CheckState::Unavailable => Icons::NoUpdatesAvailable,
-        CheckState::Ready if update_count == 0 && hyde_pending == 0 => {
-            Icons::NoUpdatesAvailable
-        }
+        CheckState::Ready if update_count == 0 && hyde_pending == 0 => Icons::NoUpdatesAvailable,
         CheckState::Ready => Icons::UpdatesAvailable
     };
 

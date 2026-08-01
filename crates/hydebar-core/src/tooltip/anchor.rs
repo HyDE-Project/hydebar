@@ -38,6 +38,15 @@ where
     on_hover: Box<dyn Fn(Option<ButtonUIRef>) -> Message + 'a>
 }
 
+impl<Message, Theme, Renderer> std::fmt::Debug for TooltipAnchor<'_, Message, Theme, Renderer>
+where
+    Renderer: iced_core::Renderer
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TooltipAnchor").finish_non_exhaustive()
+    }
+}
+
 /// Wraps `content` so hovering it publishes the message `on_hover` builds.
 ///
 /// The handler receives the on-screen placement of the wrapped element while
@@ -262,11 +271,9 @@ mod tests {
             )
         };
 
-        let mut tree = Tree::new(&iced_core::Element::<
-            Option<ButtonUIRef>,
-            Theme,
-            TestRenderer
-        >::new(build()));
+        let mut tree = Tree::new(
+            iced_core::Element::<Option<ButtonUIRef>, Theme, TestRenderer>::new(build())
+        );
         let mut anchor = build();
         let node = anchor.layout(
             &mut tree,

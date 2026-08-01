@@ -208,6 +208,10 @@ pub struct Themes {
     /// Theme whose removal waits for its confirming press, if one does.
     condemned:   Option<String>,
     /// Theme an update is fetching, while one is; `None` name means all.
+    #[expect(
+        clippy::option_option,
+        reason = "the outer layer marks a running fetch, the inner one tells one theme from all"
+    )]
     updating:    Option<Option<String>>,
     /// Whether the window lays cards out as one column instead of a grid.
     list_layout: bool,
@@ -299,9 +303,10 @@ impl Themes {
 
     /// Re-reads the desktop state `HyDE` publishes.
     ///
-    /// Called whenever the bar reloads because a `HyDE` file changed, so a switch
-    /// made from a keybinding — or one made here and finished since — reaches
-    /// the module without its menu having to be closed and opened again.
+    /// Called whenever the bar reloads because a `HyDE` file changed, so a
+    /// switch made from a keybinding — or one made here and finished since
+    /// — reaches the module without its menu having to be closed and opened
+    /// again.
     pub fn refresh(&mut self) {
         self.hyde = hyde_state::load();
     }
@@ -366,7 +371,10 @@ impl Themes {
     pub fn content_width(&self, config: &Config) -> f32 {
         let font_size = config.appearance.font_size_px();
 
-        page::metrics::ROW_SLACK_EM.mul_add(font_size, view::desired_width(&self.hyde, self.switching(), font_size))
+        page::metrics::ROW_SLACK_EM.mul_add(
+            font_size,
+            view::desired_width(&self.hyde, self.switching(), font_size)
+        )
     }
 
     /// Height the menu needs.
@@ -382,22 +390,8 @@ impl Themes {
     /// it has, so a switch that never happened is never drawn as if it had.
     pub fn update(&mut self, message: Message, config: &Config) -> Task<Message> {
         match message {
-            Message::NextTheme => {
-                return Task::perform(
-                    hyde_shell::run("hydectl theme next".to_owned()),
-                    |failure| Message::Stepped {
-                        failure
-                    }
-                );
-            }
-            Message::PreviousTheme => {
-                return Task::perform(
-                    hyde_shell::run("hydectl theme prev".to_owned()),
-                    |failure| Message::Stepped {
-                        failure
-                    }
-                );
-            }
+            Message::NextTheme => return Self::step("hydectl theme next"),
+            Message::PreviousTheme => return Self::step("hydectl theme prev"),
             Message::Stepped {
                 failure
             } => {
@@ -474,40 +468,63 @@ impl Themes {
             Message::Removed {
                 theme,
                 failure
-            } => {
-                match failure {
-                    Some(failure) => report(
-                        config,
-                        &format!("removing the HyDE theme `{theme}` failed: {failure}")
-                    ),
-                    None => report(config, &format!("the HyDE theme `{theme}` is removed"))
-                }
-
-                self.refresh();
-
-                return self.load_swatches();
-            }
+            } => return self.removed(&theme, failure.as_deref(), config),
             Message::Installed {
                 theme,
                 failure
-            } => {
-                self.installing = None;
-
-                if let Some(failure) = failure {
-                    report(
-                        config,
-                        &format!("installing the HyDE theme `{theme}` failed: {failure}")
-                    );
-                } else {
-                    info!("the HyDE theme `{theme}` is installed, switching to it");
-                    self.refresh();
-
-                    return Task::batch([self.load_swatches(), self.switch(theme, config)]);
-                }
-            }
+            } => return self.installed(theme, failure, config)
         }
 
         Task::none()
+    }
+
+    /// Asks the desktop to step to a neighbouring theme in its own order.
+    fn step(command: &str) -> Task<Message> {
+        Task::perform(hyde_shell::run(command.to_owned()), |failure| {
+            Message::Stepped {
+                failure
+            }
+        })
+    }
+
+    /// Records what the desktop made of the removal that just ended.
+    fn removed(&mut self, theme: &str, failure: Option<&str>, config: &Config) -> Task<Message> {
+        match failure {
+            Some(failure) => report(
+                config,
+                &format!("removing the HyDE theme `{theme}` failed: {failure}")
+            ),
+            None => report(config, &format!("the HyDE theme `{theme}` is removed"))
+        }
+
+        self.refresh();
+
+        self.load_swatches()
+    }
+
+    /// Records what the desktop made of the install that just ended, and
+    /// switches to the theme once it has landed.
+    fn installed(
+        &mut self,
+        theme: String,
+        failure: Option<String>,
+        config: &Config
+    ) -> Task<Message> {
+        self.installing = None;
+
+        if let Some(failure) = failure {
+            report(
+                config,
+                &format!("installing the HyDE theme `{theme}` failed: {failure}")
+            );
+
+            return Task::none();
+        }
+
+        info!("the HyDE theme `{theme}` is installed, switching to it");
+        self.refresh();
+
+        Task::batch([self.load_swatches(), self.switch(theme, config)])
     }
 
     /// Hands a gallery install to the desktop's own importer.
@@ -573,7 +590,10 @@ impl Themes {
             return Task::none();
         };
 
-        info!("removing the HyDE theme `{theme}` at {directory:?}");
+        info!(
+            "removing the HyDE theme `{theme}` at {}",
+            directory.display()
+        );
 
         Task::perform(
             async move {
@@ -598,13 +618,15 @@ impl Themes {
             return Task::none();
         }
 
-        let command = match &scope {
-            Some(theme) => format!(
-                "hyde-shell theme.import --fetch '{}'",
-                theme.replace('\'', "'\\''")
-            ),
-            None => "hyde-shell theme.import --fetch all".to_owned()
-        };
+        let command = scope.as_ref().map_or_else(
+            || "hyde-shell theme.import --fetch all".to_owned(),
+            |theme| {
+                format!(
+                    "hyde-shell theme.import --fetch '{}'",
+                    theme.replace('\'', "'\\''")
+                )
+            }
+        );
 
         info!("fetching HyDE theme updates: {command}");
         self.updating = Some(scope);
@@ -761,11 +783,11 @@ where
     /// Renders the bar entry, with the indicator of a running switch beside it.
     ///
     /// The indicator belongs on the bar and not only in the menu because the
-    /// menu is not where the user is looking: a `HyDE` switch repaints the whole
-    /// desktop, a menu open over it is dismissed or redrawn along with it, and
-    /// the bar is the one surface that is certainly still on screen. The module
-    /// icon stays where it was so the entry is still recognisable as the one
-    /// that was pressed.
+    /// menu is not where the user is looking: a `HyDE` switch repaints the
+    /// whole desktop, a menu open over it is dismissed or redrawn along
+    /// with it, and the bar is the one surface that is certainly still on
+    /// screen. The module icon stays where it was so the entry is still
+    /// recognisable as the one that was pressed.
     fn view(
         &self,
         icons: Self::ViewData<'_>

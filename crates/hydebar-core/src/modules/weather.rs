@@ -67,7 +67,7 @@ impl WeatherData {
     /// temperature `OpenWeatherMap` returns by default into the unit the
     /// configuration asked for.
     #[must_use]
-    pub fn from_response(response: WeatherResponse, location: String, use_celsius: bool) -> Self {
+    pub fn from_response(response: &WeatherResponse, location: String, use_celsius: bool) -> Self {
         let temp_kelvin = response.main.temp;
         let temperature = if use_celsius {
             format!("{:.0}°C", temp_kelvin - 273.15)
@@ -77,7 +77,8 @@ impl WeatherData {
 
         let description = response
             .weather
-            .first().map_or_else(|| String::from("Unknown"), |w| w.description.clone());
+            .first()
+            .map_or_else(|| String::from("Unknown"), |w| w.description.clone());
 
         Self {
             temperature,
@@ -156,7 +157,7 @@ impl Weather {
     /// Exposes the clamped refresh period so tests can verify the clamping
     /// without reaching into private state.
     #[cfg(test)]
-    fn update_interval(&self) -> Duration {
+    const fn update_interval(&self) -> Duration {
         self.update_interval
     }
 
@@ -226,10 +227,10 @@ impl Weather {
                 loop {
                     ticker.tick().await;
 
-                    match Self::fetch_weather(&location, &api_key).await {
+                    match Self::fetch_weather(&location, api_key.as_ref()).await {
                         Ok(response) => {
                             let data = WeatherData::from_response(
-                                response,
+                                &response,
                                 location.clone(),
                                 use_celsius
                             );
@@ -281,10 +282,10 @@ impl Weather {
                     let update_sender = sender.clone();
 
                     runtime.spawn(async move {
-                        match Self::fetch_weather(&location, &api_key).await {
+                        match Self::fetch_weather(&location, api_key.as_ref()).await {
                             Ok(response) => {
                                 let data =
-                                    WeatherData::from_response(response, location, use_celsius);
+                                    WeatherData::from_response(&response, location, use_celsius);
                                 let _ = update_sender.try_send(WeatherEvent::Updated(data));
                             }
                             Err(err) => {
@@ -301,25 +302,28 @@ impl Weather {
     /// Fetch weather data from `OpenWeatherMap` API
     async fn fetch_weather(
         location: &str,
-        api_key: &Option<String>
+        api_key: Option<&String>
     ) -> AppResult<WeatherResponse> {
         let api_key = api_key
-            .as_ref()
             .ok_or_else(|| AppError::internal("Weather API key not configured in config.toml"))?;
 
         let url = format!(
             "https://api.openweathermap.org/data/2.5/weather?q={location}&appid={api_key}"
         );
 
-        let response = crate::utils::http_client().get(&url).send().await.map_err(|e| {
-            if e.is_timeout() {
-                AppError::internal(format!("Weather API timeout for location '{location}'"))
-            } else if e.is_connect() {
-                AppError::internal("No internet connection - cannot fetch weather")
-            } else {
-                AppError::internal(format!("Network error fetching weather: {e}"))
-            }
-        })?;
+        let response = crate::utils::http_client()
+            .get(&url)
+            .send()
+            .await
+            .map_err(|e| {
+                if e.is_timeout() {
+                    AppError::internal(format!("Weather API timeout for location '{location}'"))
+                } else if e.is_connect() {
+                    AppError::internal("No internet connection - cannot fetch weather")
+                } else {
+                    AppError::internal(format!("Network error fetching weather: {e}"))
+                }
+            })?;
 
         let status = response.status();
         if !status.is_success() {
@@ -328,9 +332,7 @@ impl Weather {
                 404 => format!("Location '{location}' not found in weather database"),
                 429 => "Weather API rate limit exceeded - try again later".to_string(),
                 500..=599 => format!("Weather API server error ({status})"),
-                _ => format!(
-                    "Weather API returned error {status} for location '{location}'"
-                )
+                _ => format!("Weather API returned error {status} for location '{location}'")
             }));
         }
 
@@ -416,13 +418,13 @@ mod tests {
     #[test]
     fn a_zero_interval_is_clamped_up_to_one_minute() {
         let weather = Weather::new(String::from("London"), None, true, 0);
-        assert_eq!(weather.update_interval(), Duration::from_secs(60));
+        assert_eq!(weather.update_interval(), Duration::from_mins(1));
     }
 
     #[test]
     fn a_huge_interval_does_not_panic_and_caps_at_twenty_four_hours() {
         let weather = Weather::new(String::from("London"), None, true, u64::MAX);
-        assert_eq!(weather.update_interval(), Duration::from_secs(24 * 60 * 60));
+        assert_eq!(weather.update_interval(), Duration::from_hours(24));
     }
 
     #[test]
@@ -430,7 +432,7 @@ mod tests {
         let mut weather =
             Weather::new(String::from("London"), Some(String::from("key")), true, 10);
         weather.update(Message::Update(WeatherData::from_response(
-            freezing_point_response(),
+            &freezing_point_response(),
             String::from("London"),
             true
         )));
@@ -439,7 +441,7 @@ mod tests {
 
         assert_eq!(weather.data().temperature, "0°C");
         assert_eq!(weather.data().description, "clear sky");
-        assert_eq!(weather.update_interval(), Duration::from_secs(30 * 60));
+        assert_eq!(weather.update_interval(), Duration::from_mins(30));
     }
 
     #[test]
@@ -447,7 +449,7 @@ mod tests {
         let mut weather =
             Weather::new(String::from("London"), Some(String::from("key")), true, 10);
         weather.update(Message::Update(WeatherData::from_response(
-            freezing_point_response(),
+            &freezing_point_response(),
             String::from("London"),
             true
         )));
@@ -462,7 +464,7 @@ mod tests {
     #[test]
     fn from_response_converts_the_freezing_point_to_zero_celsius() {
         let data =
-            WeatherData::from_response(freezing_point_response(), String::from("London"), true);
+            WeatherData::from_response(&freezing_point_response(), String::from("London"), true);
         assert_eq!(data.temperature, "0°C");
         assert_eq!(data.humidity, "50%");
         assert_eq!(data.wind_speed, "1.5 m/s");
@@ -471,7 +473,7 @@ mod tests {
     #[test]
     fn from_response_converts_the_freezing_point_to_thirty_two_fahrenheit() {
         let data =
-            WeatherData::from_response(freezing_point_response(), String::from("London"), false);
+            WeatherData::from_response(&freezing_point_response(), String::from("London"), false);
         assert_eq!(data.temperature, "32°F");
         assert!(!data.use_celsius);
     }

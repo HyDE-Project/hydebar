@@ -12,9 +12,9 @@ fn storage_max_capacity() {
     for i in 0..MAX_NOTIFICATIONS + 10 {
         let notif = Notification {
             id:        0,
-            app_name:  format!("app{}", i),
+            app_name:  format!("app{i}"),
             icon:      String::new(),
-            summary:   format!("Summary {}", i),
+            summary:   format!("Summary {i}"),
             body:      String::new(),
             urgency:   Urgency::Normal,
             timestamp: SystemTime::now(),
@@ -64,9 +64,9 @@ fn clear_all_notifications() {
     for i in 0..5 {
         let notif = Notification {
             id:        0,
-            app_name:  format!("app{}", i),
+            app_name:  format!("app{i}"),
             icon:      String::new(),
-            summary:   format!("Summary {}", i),
+            summary:   format!("Summary {i}"),
             body:      String::new(),
             urgency:   Urgency::Normal,
             timestamp: SystemTime::now(),

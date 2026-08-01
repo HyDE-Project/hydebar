@@ -30,6 +30,7 @@ impl std::fmt::Debug for KeyboardLayout {
             .field("active", &self.active)
             .field("sender", &self.sender)
             .field("task", &self.task.as_ref().map(|_| "<JoinHandle>"))
+            .field("shown", &self.shown)
             .finish()
     }
 }
@@ -60,11 +61,13 @@ impl KeyboardLayout {
             active_layout,
             has_multiple_layouts,
             ..
-        } = hyprland.keyboard_state().unwrap_or(HyprlandKeyboardState {
-            active_layout:        "unknown".to_string(),
-            has_multiple_layouts: false,
-            active_submap:        None
-        });
+        } = hyprland
+            .keyboard_state()
+            .unwrap_or_else(|_| HyprlandKeyboardState {
+                active_layout:        "unknown".to_string(),
+                has_multiple_layouts: false,
+                active_submap:        None
+            });
 
         Self {
             hyprland,
@@ -121,7 +124,7 @@ impl KeyboardLayout {
     }
 
     #[cfg(test)]
-    pub(crate) fn has_multiple_layouts(&self) -> bool {
+    pub(crate) const fn has_multiple_layouts(&self) -> bool {
         self.multiple_layout
     }
 }
@@ -202,10 +205,10 @@ where
     ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
         if self.multiple_layout {
             let label = if self.shown.current().is_empty() {
-                let active = match config.labels.get(&self.active) {
-                    Some(value) => value.clone(),
-                    None => self.active.clone()
-                };
+                let active = config
+                    .labels
+                    .get(&self.active)
+                    .map_or_else(|| self.active.clone(), Clone::clone);
 
                 text(active).into()
             } else {
@@ -229,7 +232,7 @@ mod tests {
     #[test]
     fn initializes_from_keyboard_state() {
         let port = Arc::new(MockHyprlandPort::default());
-        let port_trait: Arc<dyn HyprlandPort> = port.clone();
+        let port_trait: Arc<dyn HyprlandPort> = port;
 
         let module = KeyboardLayout::new(port_trait);
 

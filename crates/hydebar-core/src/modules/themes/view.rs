@@ -25,8 +25,8 @@ use crate::components::{
         },
         style, widgets,
         widgets::{
-            ChipPaint, ThemeChip, grid, group, note, page, rows as row_stack, section,
-            status_row, theme_chip
+            ChipPaint, ThemeChip, grid, group, note, page, rows as row_stack, section, status_row,
+            theme_chip
         }
     }
 };
@@ -77,6 +77,10 @@ const SECTION_COUNT: f32 = 1.0;
 /// `available_width` is how wide the menu may draw, so the chips wrap
 /// inside it instead of running past its edge.
 #[must_use]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the menu renders every piece of module state the bar holds"
+)]
 pub(super) fn view<'a>(
     state: &HydeState,
     swatches: &HashMap<String, ThemeSwatch>,
@@ -240,6 +244,10 @@ pub(super) fn canonical(name: &str) -> String {
 /// One install at a time, and none beside a running switch: a chip being
 /// installed carries the spinner, and every other chip waits unpressable
 /// rather than starting a second writer over the same directories.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "view helper mirrors the fields of the state it renders"
+)]
 fn offer<'a>(
     state: &HydeState,
     catalogue: &[super::gallery::GalleryTheme],
@@ -352,7 +360,9 @@ mod badge_tests {
 /// as the surface and the lighter as the ink — a chip the other way round
 /// would be a swatch nobody can read.
 fn offer_paint(entry: &super::gallery::GalleryTheme) -> ChipPaint {
-    let luma = |color: iced::Color| 0.0722f32.mul_add(color.b, 0.7152f32.mul_add(color.g, 0.2126 * color.r));
+    let luma = |color: iced::Color| {
+        0.0722f32.mul_add(color.b, 0.7152f32.mul_add(color.g, 0.2126 * color.r))
+    };
 
     let [first, second] = entry.colors;
     let (surface, ink) = if luma(first) <= luma(second) {
@@ -381,6 +391,10 @@ fn offer_paint(entry: &super::gallery::GalleryTheme) -> ChipPaint {
 /// every generated stylesheet, and the module refuses one anyway — a
 /// grid that still looked pressable would only be hiding that refusal
 /// until after the click.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "view helper mirrors the fields of the state it renders"
+)]
 fn themes<'a>(
     state: &HydeState,
     swatches: &HashMap<String, ThemeSwatch>,
@@ -404,8 +418,7 @@ fn themes<'a>(
 
     let locked = switching.is_some() || installing.is_some();
     let busy = locked || updating.is_some();
-    let mut block =
-        grid(font_size).push(update_all_row(busy, list_layout, font_size, opacity));
+    let mut block = grid(font_size).push(update_all_row(busy, list_layout, font_size, opacity));
 
     for indices in card_rows(&state.themes, list_layout, font_size, available_width) {
         let mut row = group(font_size);
@@ -582,6 +595,10 @@ fn theme_rows(state: &HydeState, font_size: f32, available_width: f32) -> f32 {
 }
 
 /// Rows the installed grid fills in the layout in force.
+#[expect(
+    clippy::cast_precision_loss,
+    reason = "row and theme counts are small, fit f32 exactly"
+)]
 fn theme_rows_in(
     state: &HydeState,
     list_layout: bool,
@@ -643,11 +660,7 @@ fn widest_active_row(state: &HydeState, switching: Option<&str>, font_size: f32)
 /// reserved whether a switch is running or not, so starting one moves
 /// nothing — see [`widest_active_row`].
 #[must_use]
-pub(super) fn desired_width(
-    state: &HydeState,
-    switching: Option<&str>,
-    font_size: f32
-) -> f32 {
+pub(super) fn desired_width(state: &HydeState, switching: Option<&str>, font_size: f32) -> f32 {
     let active = widest_active_row(state, switching, font_size) + indicator_width(font_size);
 
     let control = style::control_size(font_size);
@@ -681,6 +694,10 @@ pub(super) fn desired_height(
     font_size: f32,
     available_width: f32
 ) -> f32 {
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "row counts are small, fit f32 exactly"
+    )]
     let offered_rows = if offered.is_empty() {
         0.0
     } else {
@@ -688,8 +705,7 @@ pub(super) fn desired_height(
     };
     let offered_sections = if offered.is_empty() { 0.0 } else { 1.0 };
 
-    let chip_rows =
-        theme_rows_in(state, list_layout, font_size, available_width) + offered_rows;
+    let chip_rows = theme_rows_in(state, list_layout, font_size, available_width) + offered_rows;
     let control = style::control_size(font_size);
     let actions = UPDATE_ALL_ROW_EM.mul_add(control, chip_rows * ACTIONS_ROW_EM * control);
     let dots = (chip_rows * widgets::DOT_ROW_EM).mul_add(control, actions);
@@ -704,6 +720,8 @@ pub(super) fn desired_height(
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::float_cmp, clippy::suboptimal_flops)]
+
     use super::*;
 
     fn state(themes: &[&str], active: Option<&str>) -> HydeState {
@@ -732,7 +750,7 @@ mod tests {
         assert!(label.ends_with("Mocha"), "{label}");
     }
 
-    /// HyDE writes the new name into its state file long before the switch
+    /// `HyDE` writes the new name into its state file long before the switch
     /// is over, so the menu has to stop drawing an arrow that
     /// points at the theme it already reports.
     #[test]
@@ -788,7 +806,7 @@ mod tests {
         }
     }
 
-    /// The one case the state file cannot settle: HyDE records the new
+    /// The one case the state file cannot settle: `HyDE` records the new
     /// theme within a moment of the press and the switch runs for
     /// seconds afterwards, so a grid that trusted the file would go
     /// still exactly when the user is waiting hardest.

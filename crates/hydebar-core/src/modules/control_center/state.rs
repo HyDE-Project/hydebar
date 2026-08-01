@@ -29,6 +29,23 @@ pub struct ControlCenter {
     pub(super) network_poll:    Option<JoinHandle<()>>
 }
 
+impl std::fmt::Debug for ControlCenter {
+    /// Written by hand because the network service and the idle inhibitor
+    /// expose no `Debug` of their own.
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ControlCenter")
+            .field("audio", &self.audio)
+            .field("brightness", &self.brightness)
+            .field("network", &self.network.is_some())
+            .field("bluetooth", &self.bluetooth)
+            .field("idle_inhibitor", &self.idle_inhibitor.is_some())
+            .field("sub_menu", &self.sub_menu)
+            .field("upower", &self.upower)
+            .field("password_dialog", &self.password_dialog)
+            .finish_non_exhaustive()
+    }
+}
+
 impl ControlCenter {
     /// Whether the shared idle inhibitor currently keeps the session awake.
     ///

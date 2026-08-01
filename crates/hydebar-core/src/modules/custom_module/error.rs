@@ -29,10 +29,7 @@ impl std::fmt::Display for CustomCommandError {
                 write!(f, "failed to read line from custom module output: {err}")
             }
             Self::Parse(snippet, err) => {
-                write!(
-                    f,
-                    "failed to parse custom module output: {snippet} ({err})"
-                )
+                write!(f, "failed to parse custom module output: {snippet} ({err})")
             }
             Self::Wait(err) => write!(f, "failed to wait for custom module process: {err}"),
             Self::NonZeroExit {
@@ -57,11 +54,10 @@ impl std::fmt::Display for CustomCommandError {
 impl std::error::Error for CustomCommandError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            Self::Spawn(err) => Some(err.as_ref()),
-            Self::Read(err) => Some(err.as_ref()),
+            Self::Spawn(err) | Self::Read(err) | Self::Wait(err) | Self::Signal(_, err) => {
+                Some(err.as_ref())
+            }
             Self::Parse(_, err) => Some(err.as_ref()),
-            Self::Wait(err) => Some(err.as_ref()),
-            Self::Signal(_, err) => Some(err.as_ref()),
             _ => None
         }
     }
@@ -74,19 +70,17 @@ impl CustomCommandError {
             Self::Parse(snippet, ..) => format!("Invalid output: {snippet}"),
             Self::NonZeroExit {
                 status
-            } => match status {
-                Some(code) => format!("Listener exited with status {code}"),
-                None => String::from("Listener exited due to signal")
-            },
+            } => status.map_or_else(
+                || String::from("Listener exited due to signal"),
+                |code| format!("Listener exited with status {code}")
+            ),
             Self::Signal(offset, _) => format!("Cannot watch SIGRTMIN+{offset}"),
             Self::UnsupportedSignal(offset) => {
                 format!("Signal SIGRTMIN+{offset} out of range")
             }
             Self::ChannelClosed => String::from("Listener updates queue closed"),
             Self::MissingStdout => String::from("Listener stdout unavailable"),
-            Self::Spawn(_) | Self::Read(_) | Self::Wait(_) => {
-                String::from("Listener IO failure")
-            }
+            Self::Spawn(_) | Self::Read(_) | Self::Wait(_) => String::from("Listener IO failure")
         }
     }
 }

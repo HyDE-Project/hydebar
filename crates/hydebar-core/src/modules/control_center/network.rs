@@ -13,8 +13,8 @@ use crate::{
     services::{
         ServiceEvent,
         network::{
-            AccessPoint, ActiveConnectionInfo, ConnectivityState, KnownConnection,
-            NetworkData, NetworkService, Vpn
+            AccessPoint, ActiveConnectionInfo, ConnectivityState, KnownConnection, NetworkData,
+            NetworkService, Vpn
         }
     },
     style::{ghost_button_style, settings_button_style},
@@ -58,6 +58,11 @@ impl ActiveConnectionInfo {
     /// The strength is clamped first: a backend can report a value past one
     /// hundred — a wrapped negative RSSI does exactly that — and an index
     /// computed from it unclamped walked off the end of the icon tables.
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        reason = "the rounded value stays within 0..=4 after clamping, so the cast is exact"
+    )]
     fn signal_bucket(signal: u8) -> usize {
         f32::round(f32::from(signal.min(100)) / 100. * 4.) as usize
     }
@@ -127,10 +132,10 @@ impl NetworkData {
                     ..
                 } => {
                     lines.push(format!("Network: {name}"));
-                    lines.push(match self.link.signal_dbm {
-                        Some(dbm) => format!("Signal strength: {dbm}dBm ({strength}%)"),
-                        None => format!("Signal strength: {strength}%")
-                    });
+                    lines.push(self.link.signal_dbm.map_or_else(
+                        || format!("Signal strength: {strength}%"),
+                        |dbm| format!("Signal strength: {dbm}dBm ({strength}%)")
+                    ));
 
                     if let Some(mhz) = self.link.frequency_mhz {
                         lines.push(format!("Frequency: {mhz}MHz"));
@@ -273,8 +278,7 @@ impl NetworkData {
                     icons,
                     active_connection.map_or_else(|| Icons::Wifi0, |(_, _, icon)| icon),
                     "Wi-Fi".to_string(),
-                    active_connection
-                        .map(|(name, strength, _)| format!("{name} ({strength}%)")),
+                    active_connection.map(|(name, strength, _)| format!("{name} ({strength}%)")),
                     self.wifi_enabled,
                     Message::Network(NetworkMessage::ToggleWiFi),
                     self.wifi_enabled.then(|| {
@@ -291,8 +295,7 @@ impl NetworkData {
                     .map(|_| {
                         self.wifi_menu(
                             id,
-                            active_connection
-                                .map(|(name, strengh, _)| (name.as_str(), *strengh)),
+                            active_connection.map(|(name, strengh, _)| (name.as_str(), *strengh)),
                             show_more_button,
                             opacity,
                             icons
@@ -463,28 +466,28 @@ impl NetworkData {
         opacity: f32
     ) -> Element<'_, NetworkMessage> {
         let main = Column::with_children(
-        self.known_connections
-            .iter()
-            .filter_map(|c| match c {
-                KnownConnection::Vpn(vpn) => Some(vpn),
-                _ => None,
-            })
-            .map(|vpn| {
-                let is_active = self.active_connections.iter().any(
+            self.known_connections
+                .iter()
+                .filter_map(|c| match c {
+                    KnownConnection::Vpn(vpn) => Some(vpn),
+                    KnownConnection::AccessPoint(_) => None
+                })
+                .map(|vpn| {
+                    let is_active = self.active_connections.iter().any(
                     |c| matches!(c, ActiveConnectionInfo::Vpn { name, .. } if name == &vpn.name),
                 );
 
-                row!(
-                    text(vpn.name.clone()).width(Length::Fill),
-                    toggler(is_active)
-                        .on_toggle(|_| { NetworkMessage::ToggleVpn(vpn.clone()) })
-                        .width(Length::Shrink),
-                )
-                .into()
-            }),
-    )
-    .width(Length::Fill)
-    .spacing(scale::scaled(8.0));
+                    row!(
+                        text(vpn.name.clone()).width(Length::Fill),
+                        toggler(is_active)
+                            .on_toggle(|_| { NetworkMessage::ToggleVpn(vpn.clone()) })
+                            .width(Length::Shrink),
+                    )
+                    .into()
+                })
+        )
+        .width(Length::Fill)
+        .spacing(scale::scaled(8.0));
 
         if show_more_button {
             column!(

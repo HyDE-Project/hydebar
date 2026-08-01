@@ -103,6 +103,7 @@ pub(super) fn terminate_marked(prefix: &[u8], wanted: impl Fn(&str) -> bool) -> 
 
     for _ in 0..2 {
         for pid in marked_processes(prefix, &wanted) {
+            #[expect(clippy::cast_possible_wrap, reason = "Linux PIDs fit in i32")]
             if unsafe { libc::kill(pid as i32, libc::SIGKILL) } == 0 {
                 ended += 1;
             }

@@ -45,7 +45,10 @@ const DESKTOP: &str = "Desktop";
 /// something that is overwritten the moment it is written.
 const SCALED_ROWS: f32 = 3.0;
 
-const SECTIONS: [(&str, &[(&str, &[&str])]); 3] = [
+/// Rows of one section, each as its label and the controls beside it.
+type SectionRows = &'static [(&'static str, &'static [&'static str])];
+
+const SECTIONS: [(&str, SectionRows); 3] = [
     (
         PLACEMENT,
         &[
@@ -92,23 +95,36 @@ const HYDE_BRANCH: &str = "HyDE branch";
 /// following the window gaps of the compositor: stepping from
 /// the gap actually drawn is what makes the first press nudge
 /// the bar instead of jumping it.
-pub(super) fn view(
-    config: &Config,
-    opacity: f32,
-    magnification: f32
-) -> Element<'_, Message> {
-    let appearance: &Appearance = &config.appearance;
+pub(super) fn view(config: &Config, opacity: f32, magnification: f32) -> Element<'_, Message> {
     let magnification = if magnification > 0.0 {
         magnification
     } else {
         1.0
     };
-    let font_size = appearance.font_size.unwrap_or(DEFAULT_FONT_SIZE);
-    let written_font_size = font_size / magnification;
-    let height = appearance.height.unwrap_or(FALLBACK_HEIGHT) / magnification;
-    let side_padding = appearance.bar_padding()[1] / magnification;
+    let font_size = config.appearance.font_size.unwrap_or(DEFAULT_FONT_SIZE);
 
-    let placement = row_stack(font_size)
+    page(font_size)
+        .push(section(
+            PLACEMENT,
+            placement_rows(config, font_size, opacity),
+            font_size
+        ))
+        .push(section(
+            SIZE,
+            size_rows(config, magnification, font_size, opacity),
+            font_size
+        ))
+        .push(section(
+            DESKTOP,
+            desktop_rows(config, font_size, opacity),
+            font_size
+        ))
+        .into()
+}
+
+/// Rows of the placement section, against the running `config`.
+fn placement_rows(config: &Config, font_size: f32, opacity: f32) -> Element<'_, Message> {
+    row_stack(font_size)
         .push(choice_row(
             "Position",
             vec![
@@ -137,9 +153,23 @@ pub(super) fn view(
             Message::SetLayer,
             font_size,
             opacity
-        ));
+        ))
+        .into()
+}
 
-    let size = row_stack(font_size)
+/// Rows of the size section, with the sizes as the file spells them.
+fn size_rows(
+    config: &Config,
+    magnification: f32,
+    font_size: f32,
+    opacity: f32
+) -> Element<'_, Message> {
+    let appearance: &Appearance = &config.appearance;
+    let written_font_size = font_size / magnification;
+    let height = appearance.height.unwrap_or(FALLBACK_HEIGHT) / magnification;
+    let side_padding = appearance.bar_padding()[1] / magnification;
+
+    row_stack(font_size)
         .push(choice_row(
             "Style",
             vec![
@@ -200,9 +230,13 @@ pub(super) fn view(
             Message::SetOpacity(Settings::opacity_above(appearance.opacity)),
             font_size,
             opacity
-        ));
+        ))
+        .into()
+}
 
-    let desktop = row_stack(font_size)
+/// Rows of the desktop section, against the running `config`.
+fn desktop_rows(config: &Config, font_size: f32, opacity: f32) -> Element<'_, Message> {
+    row_stack(font_size)
         .push(choice_row(
             NOTIFICATIONS,
             NotificationSource::ALL
@@ -230,12 +264,7 @@ pub(super) fn view(
                 font_size,
                 opacity
             )
-        }));
-
-    page(font_size)
-        .push(section(PLACEMENT, placement.into(), font_size))
-        .push(section(SIZE, size.into(), font_size))
-        .push(section(DESKTOP, desktop.into(), font_size))
+        }))
         .into()
 }
 
@@ -245,6 +274,10 @@ pub(super) fn view(
 /// [`SECTIONS`], so it is added here rather than baked into a
 /// literal that could drift.
 #[must_use]
+#[expect(
+    clippy::cast_precision_loss,
+    reason = "section and row counts are small, fit f32 exactly"
+)]
 pub(super) fn rows(auto_scale: bool, hyde_branch: bool) -> f32 {
     let settings: usize = SECTIONS.iter().map(|(_, rows)| rows.len()).sum();
     let scaled = if auto_scale { SCALED_ROWS } else { 0.0 };
@@ -288,6 +321,8 @@ pub(super) fn desired_height(font_size: f32, auto_scale: bool, hyde_branch: bool
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::float_cmp, clippy::cast_precision_loss)]
+
     use super::{super::metrics::text_width, *};
 
     /// Every label this page draws in the shared label column.

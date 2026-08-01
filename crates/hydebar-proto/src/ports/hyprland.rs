@@ -341,27 +341,62 @@ pub enum HyprlandKeyboardEvent {
 /// ```
 pub trait HyprlandPort: Send + Sync {
     /// Subscribe to window related events.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`HyprlandError`] when the backend cannot open the event
+    /// stream or does not support window events.
     fn window_events(&self) -> Result<HyprlandEventStream<HyprlandWindowEvent>, HyprlandError>;
 
     /// Subscribe to workspace related events.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`HyprlandError`] when the backend cannot open the event
+    /// stream or does not support workspace events.
     fn workspace_events(
         &self
     ) -> Result<HyprlandEventStream<HyprlandWorkspaceEvent>, HyprlandError>;
 
     /// Subscribe to keyboard related events.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`HyprlandError`] when the backend cannot open the event
+    /// stream or does not support keyboard events.
     fn keyboard_events(&self)
     -> Result<HyprlandEventStream<HyprlandKeyboardEvent>, HyprlandError>;
 
     /// Retrieve the currently active window, if any.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`HyprlandError`] when the compositor cannot be queried or
+    /// the backend does not support the operation.
     fn active_window(&self) -> Result<Option<HyprlandWindowInfo>, HyprlandError>;
 
     /// Obtain the latest snapshot of monitors and workspaces.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`HyprlandError`] when the compositor cannot be queried or
+    /// the backend does not support the operation.
     fn workspace_snapshot(&self) -> Result<HyprlandWorkspaceSnapshot, HyprlandError>;
 
     /// Request Hyprland to focus the provided workspace.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`HyprlandError`] when the compositor rejects the request,
+    /// the dispatch times out, or the backend does not support it.
     fn change_workspace(&self, workspace: HyprlandWorkspaceSelector) -> Result<(), HyprlandError>;
 
     /// Focus the provided monitor and toggle a special workspace by name.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`HyprlandError`] when the compositor rejects the request,
+    /// the dispatch times out, or the backend does not support it.
     fn focus_and_toggle_special_workspace(
         &self,
         monitor: HyprlandMonitorSelector,
@@ -369,9 +404,19 @@ pub trait HyprlandPort: Send + Sync {
     ) -> Result<(), HyprlandError>;
 
     /// Retrieve the current keyboard state, including layout metadata.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`HyprlandError`] when the compositor cannot be queried or
+    /// the backend does not support the operation.
     fn keyboard_state(&self) -> Result<HyprlandKeyboardState, HyprlandError>;
 
     /// Request Hyprland to switch to the next keyboard layout.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`HyprlandError`] when the compositor rejects the request or
+    /// the backend does not support it.
     fn switch_keyboard_layout(&self) -> Result<(), HyprlandError>;
 }
 

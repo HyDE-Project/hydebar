@@ -233,6 +233,10 @@ impl Outputs {
     /// ```ignore
     /// outputs.close_menu_if(surface_id, MenuType::Updates, &config);
     /// ```
+    #[expect(
+        clippy::needless_pass_by_value,
+        reason = "the owned menu type keeps the public signature stable for callers"
+    )]
     pub fn close_menu_if<Message: 'static>(
         &mut self,
         id: Id,
@@ -243,7 +247,7 @@ impl Outputs {
             shell_info.as_ref().map(|shell_info| shell_info.id) == Some(id)
                 || shell_info.as_ref().map(|shell_info| shell_info.menu.id) == Some(id)
         }) {
-            Some((_, Some(shell_info), _)) => shell_info.menu.close_if(menu_type, config),
+            Some((_, Some(shell_info), _)) => shell_info.menu.close_if(&menu_type, config),
             _ => Task::none()
         }
     }
@@ -255,6 +259,10 @@ impl Outputs {
     /// ```ignore
     /// outputs.close_all_menu_if(MenuType::Tray("network".into()), &config);
     /// ```
+    #[expect(
+        clippy::needless_pass_by_value,
+        reason = "the owned menu type keeps the public signature stable for callers"
+    )]
     pub fn close_all_menu_if<Message: 'static>(
         &mut self,
         menu_type: MenuType,
@@ -265,7 +273,7 @@ impl Outputs {
                 .iter_mut()
                 .map(|(_, shell_info, _)| {
                     if let Some(shell_info) = shell_info {
-                        shell_info.menu.close_if(menu_type.clone(), config)
+                        shell_info.menu.close_if(&menu_type, config)
                     } else {
                         Task::none()
                     }

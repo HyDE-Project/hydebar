@@ -13,6 +13,11 @@ use super::super::{
 use crate::services::network::ActiveConnectionInfo;
 
 impl NetworkDbus<'_> {
+    /// Lists the object paths of the currently active connections.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the daemon refuses the active connections query.
     pub async fn active_connections(&self) -> AppResult<Vec<OwnedObjectPath>> {
         self.0
             .active_connections()
@@ -20,6 +25,13 @@ impl NetworkDbus<'_> {
             .map_err(|e| AppError::internal(format!("Failed to get active connections: {e}")))
     }
 
+    /// Describes every active connection with its device details.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the active connections cannot be listed, a proxy
+    /// for a connection or device cannot be built, or a connection refuses to
+    /// report its details.
     pub async fn active_connections_info(&self) -> AppResult<Vec<ActiveConnectionInfo>> {
         let conn = self.0.inner().connection();
         let mut info = Vec::<ActiveConnectionInfo>::new();

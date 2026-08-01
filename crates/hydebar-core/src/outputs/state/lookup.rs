@@ -23,7 +23,7 @@ impl Outputs {
     #[must_use]
     pub fn has(&self, id: Id) -> Option<HasOutput<'_>> {
         self.0.iter().find_map(|(_, info, _)| {
-            if let Some(info) = info {
+            info.as_ref().and_then(|info| {
                 if info.id == id {
                     Some(HasOutput::Main)
                 } else if info.menu.id == id {
@@ -35,9 +35,7 @@ impl Outputs {
                 } else {
                     None
                 }
-            } else {
-                None
-            }
+            })
         })
     }
 
@@ -59,11 +57,8 @@ impl Outputs {
     #[must_use]
     pub fn get_monitor_name(&self, id: Id) -> Option<&str> {
         self.0.iter().find_map(|(name, info, _)| {
-            if let Some(info) = info {
-                if info.id == id { name.as_deref() } else { None }
-            } else {
-                None
-            }
+            info.as_ref()
+                .and_then(|info| if info.id == id { name.as_deref() } else { None })
         })
     }
 

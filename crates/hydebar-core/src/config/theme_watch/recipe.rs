@@ -35,8 +35,8 @@ const BATCH_SIZE: usize = 16;
 
 /// How long the watcher lets the desktop settle before it reads the theme.
 ///
-/// A `HyDE` switch is not one write but a chain of them spread over seconds: the
-/// state file, the palette symlink, then every template the desktop renders
+/// A `HyDE` switch is not one write but a chain of them spread over seconds:
+/// the state file, the palette symlink, then every template the desktop renders
 /// from the new colours. Reading on the first of them would repaint the bar
 /// from a desktop that is half-way through changing, and reading on each of
 /// them would repaint it a dozen times over. Waiting first turns the chain into
@@ -140,7 +140,6 @@ impl Recipe for ThemeWatcher {
                             info!(
                                 "HyDE theme watch stream closed; attempting to restart the inotify watcher"
                             );
-                            continue;
                         }
                         WatchLoopOutcome::HandlerClosed => {
                             info!("HyDE theme watch handler closed; stopping watcher loop");
@@ -157,9 +156,9 @@ impl Recipe for ThemeWatcher {
 
 /// Places a watch on every theme directory, reporting whether any took.
 ///
-/// A missing directory is not fatal: a session may have no `HyDE` cache yet while
-/// its state file exists, and the theme is still worth following through the
-/// directories that do exist.
+/// A missing directory is not fatal: a session may have no `HyDE` cache yet
+/// while its state file exists, and the theme is still worth following through
+/// the directories that do exist.
 fn add_watches(inotify: &Inotify, targets: &[ThemeWatchTarget]) -> bool {
     let mask = WatchMask::CREATE
         | WatchMask::DELETE
@@ -172,13 +171,16 @@ fn add_watches(inotify: &Inotify, targets: &[ThemeWatchTarget]) -> bool {
     for target in targets {
         match inotify.watches().add(&target.directory, mask) {
             Ok(_) => {
-                debug!("Watching HyDE theme directory {:?}", target.directory);
+                debug!(
+                    "Watching HyDE theme directory {}",
+                    target.directory.display()
+                );
                 watched = true;
             }
             Err(e) => {
                 warn!(
-                    "Failed to watch the HyDE theme directory {:?}: {e}",
-                    target.directory
+                    "Failed to watch the HyDE theme directory {}: {e}",
+                    target.directory.display()
                 );
             }
         }

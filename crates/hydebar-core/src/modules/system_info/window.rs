@@ -33,16 +33,16 @@ mod tests {
 
     fn machine() -> SystemInfoData {
         SystemInfoData {
-            cpu_usage:         34,
-            cpu_count:         32,
-            memory_usage:      15,
-            memory_used:       9 * GIB,
-            memory_total:      62 * GIB,
+            cpu_usage: 34,
+            cpu_count: 32,
+            memory_usage: 15,
+            memory_used: 9 * GIB,
+            memory_total: 62 * GIB,
             memory_swap_usage: 6,
-            memory_swap_used:  GIB / 2,
+            memory_swap_used: GIB / 2,
             memory_swap_total: 8 * GIB,
-            cpu_temperature:   Some(56),
-            gpu:               Some(GpuReadings {
+            cpu_temperature: Some(56),
+            gpu: Some(GpuReadings {
                 name:         "amdgpu".to_owned(),
                 source:       Some("amdgpu junction".to_owned()),
                 vendor:       GpuVendor::Amd,
@@ -52,13 +52,13 @@ mod tests {
                 memory_used:  Some(GIB),
                 memory_total: Some(8 * GIB)
             }),
-            disks:             vec![DiskData {
+            disks: vec![DiskData {
                 mount:         "/".to_owned(),
                 used:          213 * GIB,
                 total:         476 * GIB,
                 usage_percent: 44
             }],
-            network:           Some(crate::modules::system_info::NetworkData::new(
+            network: Some(crate::modules::system_info::NetworkData::new(
                 "192.168.1.5".to_owned(),
                 1500,
                 120,

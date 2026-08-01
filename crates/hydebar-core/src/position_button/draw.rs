@@ -10,6 +10,10 @@ use super::{
 };
 
 /// Paints the background of the button and then its content.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "mirrors the upstream widget draw signature"
+)]
 pub(super) fn draw<Message, Theme, Renderer>(
     button: &PositionButton<'_, Message, Theme, Renderer>,
     tree: &Tree,
@@ -140,7 +144,7 @@ mod tests {
 
         let content = || iced::widget::Space::new().width(16.0).height(16.0);
 
-        let mut tree = Tree::new(&iced_core::Element::<(), Theme, QuadRecorder>::new(
+        let mut tree = Tree::new(iced_core::Element::<(), Theme, QuadRecorder>::new(
             position_button(content()).padding(padding).style(style())
         ));
 

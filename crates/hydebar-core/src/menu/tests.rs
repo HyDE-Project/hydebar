@@ -1,5 +1,7 @@
 //! Regression tests of the menu fade and its geometry.
 
+#![allow(clippy::float_cmp)]
+
 use std::time::Duration;
 
 use iced::{Point, SurfaceId as Id, Task};

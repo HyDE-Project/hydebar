@@ -58,11 +58,16 @@ const ALERT_DOT_EM: f32 = 0.5;
 /// reading, so a temperature readout can shade itself from cold to
 /// critical the way the equivalent Waybar stylesheet does.
 pub(super) fn state_color(module: &Custom, config: &CustomModuleDef) -> Option<Color> {
+    #[expect(
+        clippy::mutable_key_type,
+        reason = "RegexCfg hashes and compares by its pattern text; the regex \
+                  interior mutability never feeds the map key"
+    )]
     let colors = config.colors.as_ref()?;
 
-    colors.iter().find_map(|(pattern, color)| {
-        pattern.is_match(&module.data.alt).then(|| color.get_base())
-    })
+    colors
+        .iter()
+        .find_map(|(pattern, color)| pattern.is_match(&module.data.alt).then(|| color.get_base()))
 }
 
 /// Builds the bar content for a custom module.
@@ -100,16 +105,11 @@ where
 
     let padded_icon_container = container(icon_element);
 
-    let mut show_alert = false;
-    if let Some(re) = &config.alert
-        && re.is_match(&module.data.alt)
-    {
-        show_alert = true;
-    }
-
-    if module.last_error.is_some() {
-        show_alert = true;
-    }
+    let show_alert = config
+        .alert
+        .as_ref()
+        .is_some_and(|re| re.is_match(&module.data.alt))
+        || module.last_error.is_some();
 
     let icon_with_alert: Element<'static, M> = if show_alert {
         let dot = appearance.spacing(ALERT_DOT_EM);
@@ -133,19 +133,20 @@ where
         padded_icon_container.into()
     };
 
-    let maybe_text_element = if let Some(error) = &module.last_error {
-        Some(text(error.to_display_message()))
-    } else {
-        module.data.text.as_ref().and_then(|text_content| {
-            let trimmed = text_content.trim();
+    let maybe_text_element = module.last_error.as_ref().map_or_else(
+        || {
+            module.data.text.as_ref().and_then(|text_content| {
+                let trimmed = text_content.trim();
 
-            if trimmed.is_empty() {
-                None
-            } else {
-                Some(text(trimmed.to_owned()))
-            }
-        })
-    };
+                if trimmed.is_empty() {
+                    None
+                } else {
+                    Some(text(trimmed.to_owned()))
+                }
+            })
+        },
+        |error| Some(text(error.to_display_message()))
+    );
 
     let maybe_text_element = maybe_text_element.map(|text_element| match state_color {
         Some(color) => text_element.color(color),

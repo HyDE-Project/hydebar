@@ -207,6 +207,10 @@ pub fn is_unnamed_input(input: &str) -> bool {
 
 /// Rank of a chip as a stand-in for the processor, lower being better.
 #[must_use]
+#[expect(
+    clippy::cast_possible_truncation,
+    reason = "the tier table holds far fewer than 256 entries"
+)]
 pub fn cpu_chip_rank(chip: &str) -> Option<u8> {
     let folded = normalise_chip(chip);
 
@@ -238,6 +242,10 @@ pub fn gpu_vendor_from_pci(id: &str) -> Option<GpuVendor> {
     }
 }
 
+#[expect(
+    clippy::cast_possible_truncation,
+    reason = "the rank tables hold far fewer than 256 entries"
+)]
 fn table_rank(table: &[&str], input: &str) -> Option<u8> {
     let folded = normalise(input);
 

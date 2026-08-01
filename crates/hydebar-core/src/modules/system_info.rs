@@ -26,6 +26,10 @@ use crate::{
 
 /// Messages published by the system information module.
 #[derive(Debug, Clone)]
+#[expect(
+    clippy::large_enum_variant,
+    reason = "samples dominate the message traffic and are consumed at once; boxing each one would allocate on every tick"
+)]
 pub enum Message {
     /// Readouts that differ from the ones currently on screen.
     Sampled(SystemInfoData),
@@ -34,6 +38,7 @@ pub enum Message {
 }
 
 /// Module responsible for sampling and presenting local system metrics.
+#[derive(Debug)]
 pub struct SystemInfo {
     data:    SystemInfoData,
     polling: runtime::PollingTask,
@@ -112,10 +117,7 @@ impl SystemInfo {
     /// Render the window of the standalone memory entry.
     #[must_use]
     pub fn memory_menu_view(&self, icons: &IconTheme) -> Element<'_, Message> {
-        window::build_section_window(
-            window::model::scoped_section(&self.data, Icons::Mem),
-            icons
-        )
+        window::build_section_window(window::model::scoped_section(&self.data, Icons::Mem), icons)
     }
 
     /// Height the standalone processor window needs.
@@ -141,18 +143,13 @@ impl SystemInfo {
     /// Height the standalone processor temperature window needs.
     #[must_use]
     pub fn cpu_temp_content_height(&self) -> f32 {
-        window::section_window_height(
-            window::model::cpu_temperature_section(&self.data).as_ref()
-        )
+        window::section_window_height(window::model::cpu_temperature_section(&self.data).as_ref())
     }
 
     /// Render the window of the standalone graphics entry.
     #[must_use]
     pub fn gpu_menu_view(&self, icons: &IconTheme) -> Element<'_, Message> {
-        window::build_section_window(
-            window::model::scoped_section(&self.data, Icons::Gpu),
-            icons
-        )
+        window::build_section_window(window::model::scoped_section(&self.data, Icons::Gpu), icons)
     }
 
     /// Height the standalone graphics window needs.

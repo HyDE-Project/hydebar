@@ -48,13 +48,17 @@ mod tests {
 
     #[test]
     fn default_creates_instance() {
-        let clipboard = Clipboard::default();
+        let clipboard = Clipboard;
         assert!(matches!(clipboard, Clipboard));
     }
 
     #[test]
     fn clone_creates_copy() {
-        let clipboard = Clipboard::default();
+        let clipboard = Clipboard;
+        #[expect(
+            clippy::redundant_clone,
+            reason = "the test exercises the Clone derive"
+        )]
         let cloned = clipboard.clone();
         assert!(matches!(cloned, Clipboard));
     }
@@ -64,7 +68,7 @@ mod tests {
         let runtime = tokio::runtime::Runtime::new().expect("runtime");
         let bus = EventBus::new(NonZeroUsize::new(4).expect("capacity"));
         let ctx = ModuleContext::new(bus.sender(), runtime.handle().clone());
-        let mut clipboard = Clipboard::default();
+        let mut clipboard = Clipboard;
 
         let result = <Clipboard as Module<()>>::register(&mut clipboard, &ctx, ());
         assert!(result.is_ok());
@@ -72,7 +76,7 @@ mod tests {
 
     #[test]
     fn view_returns_some_when_config_present() {
-        let clipboard = Clipboard::default();
+        let clipboard = Clipboard;
         let config = Some("cliphist".to_string());
 
         let result = <Clipboard as Module<()>>::view(&clipboard, (&config, &IconTheme::default()));
@@ -85,7 +89,7 @@ mod tests {
 
     #[test]
     fn view_returns_none_when_config_absent() {
-        let clipboard = Clipboard::default();
+        let clipboard = Clipboard;
         let config = None;
 
         let result = <Clipboard as Module<()>>::view(&clipboard, (&config, &IconTheme::default()));

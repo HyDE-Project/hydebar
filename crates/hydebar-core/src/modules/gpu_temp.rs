@@ -45,10 +45,10 @@ pub fn hint(data: &SystemInfoData) -> String {
 
     let source = gpu.source.as_deref().unwrap_or(gpu.name.as_str());
 
-    match gpu.temperature {
-        Some(temperature) => format!("GPU temperature: {temperature}°C ({source})"),
-        None => format!("GPU temperature ({source})")
-    }
+    gpu.temperature.map_or_else(
+        || format!("GPU temperature ({source})"),
+        |temperature| format!("GPU temperature: {temperature}°C ({source})")
+    )
 }
 
 #[cfg(test)]

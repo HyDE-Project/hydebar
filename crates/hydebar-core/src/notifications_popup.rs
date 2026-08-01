@@ -113,6 +113,12 @@ pub fn prune(popups: &mut Vec<Popup>, now: Instant) {
 /// they are gone: a surface left standing at full height would swallow every
 /// click aimed at the windows behind it.
 #[must_use]
+#[expect(
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    reason = "pixel math on a handful of cards, ceiled and clamped to at least one"
+)]
 pub fn surface_height(popups: &[Popup], appearance: &Appearance) -> u32 {
     if popups.is_empty() {
         return 1;
@@ -321,8 +327,9 @@ mod tests {
     #[test]
     fn only_the_newest_popups_are_kept() {
         let now = Instant::now();
-        let mut popups = (0..MAX_SHOWN as u32 + 2)
-            .map(|id| popup(id, Duration::from_secs(60), now))
+        let shown = u32::try_from(MAX_SHOWN).expect("small constant");
+        let mut popups = (0..shown + 2)
+            .map(|id| popup(id, Duration::from_mins(1), now))
             .collect::<Vec<_>>();
 
         prune(&mut popups, now);

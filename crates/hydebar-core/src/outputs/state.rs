@@ -147,7 +147,7 @@ impl Outputs {
         )
     }
 
-    #[cfg(test)]
+    #[cfg(all(test, feature = "enable-broken-tests"))]
     fn iter_internal(
         &self
     ) -> impl Iterator<Item = &(Option<String>, Option<ShellInfo>, Option<OutputId>)> {

@@ -23,7 +23,7 @@ pub fn calculate_retry_delay(base_backoff: Duration, attempt: u8) -> Duration {
 }
 
 #[cfg(test)]
-pub(crate) mod tests {
+mod tests {
     use std::time::Duration;
 
     use super::calculate_retry_delay;

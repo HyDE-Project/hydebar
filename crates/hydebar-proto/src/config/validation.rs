@@ -89,7 +89,7 @@ impl Config {
                         }
                     }
                 }
-                _ => {}
+                ModuleDef::Single(_) => {}
             }
         }
 

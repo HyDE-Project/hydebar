@@ -14,6 +14,10 @@ use super::{
 };
 
 /// Top-level appearance configuration.
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "each flag is an independent configuration switch"
+)]
 #[derive(Deserialize, Clone, Debug, PartialEq)]
 pub struct Appearance {
     #[serde(default)]
@@ -215,6 +219,7 @@ pub(super) const fn default_opacity() -> f32 {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::float_cmp)]
     use serde::de::value::{Error as DeError, F32Deserializer, F64Deserializer};
 
     use super::*;

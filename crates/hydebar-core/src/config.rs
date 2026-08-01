@@ -146,10 +146,18 @@ impl std::error::Error for ConfigReadError {
     }
 }
 
+/// Loads the configuration from `path`, or from the default location when no
+/// path is given.
+///
+/// # Errors
+///
+/// Returns a [`ConfigLoadError`] when the path cannot be expanded, the given
+/// file does not exist, or the default configuration directory cannot be
+/// resolved or created.
 pub fn get_config(path: Option<PathBuf>) -> Result<(Config, PathBuf), ConfigLoadError> {
     if let Some(path) = path {
-        info!("Config path provided {path:?}");
-        let expanded = expand_path(path)?;
+        info!("Config path provided {}", path.display());
+        let expanded = expand_path(&path)?;
 
         if !expanded.exists() {
             return Err(ConfigLoadError::Missing {
@@ -161,7 +169,7 @@ pub fn get_config(path: Option<PathBuf>) -> Result<(Config, PathBuf), ConfigLoad
 
         Ok((config, expanded))
     } else {
-        let expanded = expand_path(PathBuf::from(DEFAULT_CONFIG_FILE_PATH))?;
+        let expanded = expand_path(Path::new(DEFAULT_CONFIG_FILE_PATH))?;
         ensure_parent_exists(&expanded)?;
 
         let config = load_config_or_default(&expanded);
@@ -170,7 +178,7 @@ pub fn get_config(path: Option<PathBuf>) -> Result<(Config, PathBuf), ConfigLoad
     }
 }
 
-fn expand_path(path: PathBuf) -> Result<PathBuf, ConfigLoadError> {
+fn expand_path(path: &Path) -> Result<PathBuf, ConfigLoadError> {
     let input = path.to_string_lossy().into_owned();
     match full(&input) {
         Ok(expanded) => Ok(PathBuf::from(expanded.to_string())),
@@ -251,7 +259,8 @@ fn declares_modules(table: &toml::Table) -> bool {
     table.contains_key("modules")
 }
 
-/// Overlays the `HyDE` theme and bar layout onto a freshly parsed configuration.
+/// Overlays the `HyDE` theme and bar layout onto a freshly parsed
+/// configuration.
 ///
 /// The overlay runs *after* the file has been parsed and only fills what the
 /// user left unset, which is what fixes the precedence for good: what is
@@ -289,7 +298,7 @@ where
 }
 
 fn load_config_or_default(path: &Path) -> Config {
-    info!("Decoding config file {path:?}");
+    info!("Decoding config file {}", path.display());
 
     match read_config(path) {
         Ok(config) => match config.validate() {
@@ -350,6 +359,10 @@ mod tests {
         }
     }
 
+    #[expect(
+        clippy::unnecessary_wraps,
+        reason = "the helper matches the layout callback signature"
+    )]
     fn hyde_layout(_custom_names: &[String]) -> Option<Modules> {
         Some(Modules {
             left:   vec![ModuleDef::Single(ModuleName::Clock)],
@@ -358,8 +371,8 @@ mod tests {
         })
     }
 
-    /// A configuration that writes no module layout takes the one HyDE has on
-    /// file, exactly as the bar HyDE started with would.
+    /// A configuration that writes no module layout takes the one `HyDE` has
+    /// on file, exactly as the bar `HyDE` started with would.
     #[test]
     fn an_undeclared_layout_follows_the_desktop() {
         let temp_dir = TempDir::new().expect("failed to create temp dir");
@@ -393,7 +406,7 @@ mod tests {
         );
     }
 
-    /// Opting out of following HyDE opts out of its layout with it.
+    /// Opting out of following `HyDE` opts out of its layout with it.
     #[test]
     fn opting_out_of_hyde_keeps_the_default_layout() {
         let temp_dir = TempDir::new().expect("failed to create temp dir");

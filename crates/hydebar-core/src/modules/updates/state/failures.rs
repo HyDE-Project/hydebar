@@ -12,8 +12,8 @@ pub(super) const FAILURE_REPEAT: u32 = 12;
 
 /// Writes a failure to the journal unless it is the same one all over
 /// again.
-pub(super) fn report(failures: &mut FailureLog, reason: String) {
-    match failures.record(&reason) {
+pub(super) fn report(failures: &mut FailureLog, reason: &str) {
+    match failures.record(reason) {
         Some(1) => warn!("updates check failed: {reason}"),
         Some(count) => warn!("updates check has failed {count} times in a row: {reason}"),
         None => debug!("updates check failed again: {reason}")

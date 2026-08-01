@@ -29,7 +29,7 @@ where
         .height(centerbox.height)
         .shrink(centerbox.padding);
 
-    let total_spacing = centerbox.spacing * 3_i32.saturating_sub(1) as f32;
+    let total_spacing = centerbox.spacing * f32::from(3_u8.saturating_sub(1));
     let max_cross = limits.max().height;
 
     let mut cross = match centerbox.height {

@@ -96,6 +96,11 @@ pub fn layer_height(
 }
 
 /// Settings of the surface the bar itself is drawn on.
+#[expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    reason = "the layer height is a small positive pixel count"
+)]
 pub fn main_settings(
     style: AppearanceStyle,
     output: Option<OutputId>,
@@ -166,10 +171,7 @@ pub fn tooltip_settings(output: Option<OutputId>) -> LayerShellSettings {
 /// surface that sat on the overlay from the start would end up below a menu
 /// raised there later. Rising only when there is something to show is what
 /// keeps the popups above whatever the bar raised before them.
-pub fn notifications_settings(
-    output: Option<OutputId>,
-    position: Position
-) -> LayerShellSettings {
+pub fn notifications_settings(output: Option<OutputId>, position: Position) -> LayerShellSettings {
     LayerShellSettings {
         namespace: NOTIFICATIONS_NAMESPACE.to_string(),
         size: Some((NOTIFICATIONS_WIDTH, 1)),
@@ -246,9 +248,16 @@ pub fn destroy_layer_surfaces<Message: 'static>(
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::float_cmp)]
+
     use super::*;
 
     #[test]
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        reason = "the built-in height is a small positive pixel count"
+    )]
     fn the_bar_surface_reserves_its_strip() {
         let settings = main_settings(
             AppearanceStyle::Islands,

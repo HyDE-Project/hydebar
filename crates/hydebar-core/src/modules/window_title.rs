@@ -42,7 +42,7 @@ async fn publish_active_window(
 
 fn get_window(port: &dyn HyprlandPort, config: &WindowTitleConfig) -> Option<String> {
     match port.active_window() {
-        Ok(window) => shown_field(window, config),
+        Ok(window) => window.map(|window| shown_field(window, config)),
         Err(err) => {
             error!("failed to retrieve active window: {err}");
             None
@@ -51,11 +51,11 @@ fn get_window(port: &dyn HyprlandPort, config: &WindowTitleConfig) -> Option<Str
 }
 
 /// Field of the focused window the configured mode shows.
-fn shown_field(window: Option<HyprlandWindowInfo>, config: &WindowTitleConfig) -> Option<String> {
-    window.map(|window| match config.mode {
+fn shown_field(window: HyprlandWindowInfo, config: &WindowTitleConfig) -> String {
+    match config.mode {
         WindowTitleMode::Title => window.title,
         WindowTitleMode::Class => window.class
-    })
+    }
 }
 
 /// The title as the bar draws it.
@@ -83,6 +83,17 @@ pub struct WindowTitle {
     task:     Option<JoinHandle<()>>
 }
 
+impl std::fmt::Debug for WindowTitle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("WindowTitle")
+            .field("hyprland", &"<HyprlandPort>")
+            .field("value", &self.value)
+            .field("sender", &self.sender)
+            .field("task", &self.task)
+            .finish()
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Message {
     TitleChanged(Option<HyprlandWindowInfo>)
@@ -101,100 +112,11 @@ impl WindowTitle {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use hydebar_proto::config::{WindowTitleConfig, WindowTitleMode};
-
-    use super::*;
-    use crate::test_utils::MockHyprlandPort;
-
-    #[test]
-    fn initializes_title_from_port() {
-        let port = Arc::new(MockHyprlandPort::with_active_window("Demo", "Class"));
-        let port_trait: Arc<dyn HyprlandPort> = port.clone();
-        let config = WindowTitleConfig {
-            mode: WindowTitleMode::Title,
-            ..Default::default()
-        };
-
-        let module = WindowTitle::new(port_trait, &config);
-
-        assert_eq!(module.current_value(), Some("Demo"));
-    }
-
-    #[test]
-    fn update_handles_absent_window() {
-        let port = Arc::new(MockHyprlandPort::default());
-        *port
-            .active_window
-            .lock()
-            .expect("active window lock poisoned") = None;
-        let port_trait: Arc<dyn HyprlandPort> = port.clone();
-        let config = WindowTitleConfig::default();
-
-        let mut module = WindowTitle::new(port_trait, &config);
-        module.update(Message::TitleChanged(None), &config);
-
-        assert_eq!(module.current_value(), None);
-    }
-
-    #[test]
-    fn a_long_title_is_shortened_until_the_module_is_attended() {
-        let config = WindowTitleConfig {
-            truncate_title_after_length: 10,
-            ..Default::default()
-        };
-        let title = "a window with a very long title indeed";
-
-        assert_ne!(shown_title(title, &config, false), title);
-        assert_eq!(shown_title(title, &config, true), title);
-    }
-
-    #[test]
-    fn a_short_title_reads_the_same_either_way() {
-        let config = WindowTitleConfig {
-            truncate_title_after_length: 150,
-            ..Default::default()
-        };
-
-        assert_eq!(shown_title("short", &config, false), "short");
-        assert_eq!(shown_title("short", &config, true), "short");
-    }
-
-    #[test]
-    fn the_whole_title_survives_the_update() {
-        let port = Arc::new(MockHyprlandPort::with_active_window(
-            "a window with a very long title indeed",
-            "Class"
-        ));
-        let port_trait: Arc<dyn HyprlandPort> = port;
-        let config = WindowTitleConfig {
-            truncate_title_after_length: 10,
-            ..Default::default()
-        };
-
-        let mut module = WindowTitle::new(port_trait, &config);
-        module.update(
-            Message::TitleChanged(Some(HyprlandWindowInfo {
-                title: "a window with a very long title indeed".to_owned(),
-                class: "Class".to_owned()
-            })),
-            &config
-        );
-
-        assert_eq!(
-            module.current_value(),
-            Some("a window with a very long title indeed"),
-            "a title shortened on the way in could never be shown in full"
-        );
-    }
-}
-
 impl WindowTitle {
     pub fn update(&mut self, message: Message, config: &WindowTitleConfig) {
         match message {
             Message::TitleChanged(window) => {
-                self.value = shown_field(window, config);
+                self.value = window.map(|window| shown_field(window, config));
             }
         }
     }
@@ -294,4 +216,93 @@ where
 
     // No iced subscription required; updates are dispatched via the module event
     // sender.
+}
+
+#[cfg(test)]
+mod tests {
+    use hydebar_proto::config::{WindowTitleConfig, WindowTitleMode};
+
+    use super::*;
+    use crate::test_utils::MockHyprlandPort;
+
+    #[test]
+    fn initializes_title_from_port() {
+        let port = Arc::new(MockHyprlandPort::with_active_window("Demo", "Class"));
+        let port_trait: Arc<dyn HyprlandPort> = port;
+        let config = WindowTitleConfig {
+            mode: WindowTitleMode::Title,
+            ..Default::default()
+        };
+
+        let module = WindowTitle::new(port_trait, &config);
+
+        assert_eq!(module.current_value(), Some("Demo"));
+    }
+
+    #[test]
+    fn update_handles_absent_window() {
+        let port = Arc::new(MockHyprlandPort::default());
+        *port
+            .active_window
+            .lock()
+            .expect("active window lock poisoned") = None;
+        let port_trait: Arc<dyn HyprlandPort> = port;
+        let config = WindowTitleConfig::default();
+
+        let mut module = WindowTitle::new(port_trait, &config);
+        module.update(Message::TitleChanged(None), &config);
+
+        assert_eq!(module.current_value(), None);
+    }
+
+    #[test]
+    fn a_long_title_is_shortened_until_the_module_is_attended() {
+        let config = WindowTitleConfig {
+            truncate_title_after_length: 10,
+            ..Default::default()
+        };
+        let title = "a window with a very long title indeed";
+
+        assert_ne!(shown_title(title, &config, false), title);
+        assert_eq!(shown_title(title, &config, true), title);
+    }
+
+    #[test]
+    fn a_short_title_reads_the_same_either_way() {
+        let config = WindowTitleConfig {
+            truncate_title_after_length: 150,
+            ..Default::default()
+        };
+
+        assert_eq!(shown_title("short", &config, false), "short");
+        assert_eq!(shown_title("short", &config, true), "short");
+    }
+
+    #[test]
+    fn the_whole_title_survives_the_update() {
+        let port = Arc::new(MockHyprlandPort::with_active_window(
+            "a window with a very long title indeed",
+            "Class"
+        ));
+        let port_trait: Arc<dyn HyprlandPort> = port;
+        let config = WindowTitleConfig {
+            truncate_title_after_length: 10,
+            ..Default::default()
+        };
+
+        let mut module = WindowTitle::new(port_trait, &config);
+        module.update(
+            Message::TitleChanged(Some(HyprlandWindowInfo {
+                title: "a window with a very long title indeed".to_owned(),
+                class: "Class".to_owned()
+            })),
+            &config
+        );
+
+        assert_eq!(
+            module.current_value(),
+            Some("a window with a very long title indeed"),
+            "a title shortened on the way in could never be shown in full"
+        );
+    }
 }

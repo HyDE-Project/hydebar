@@ -93,10 +93,9 @@ pub fn load_from(dirs: &HydeDirs, look: &CompositorLook) -> HydeTheme {
 /// which case the bar keeps its own configuration and defaults throughout.
 #[must_use]
 pub fn load() -> HydeTheme {
-    match HydeDirs::from_env() {
-        Some(dirs) => load_from(&dirs, &CompositorLook::read()),
-        None => HydeTheme::default()
-    }
+    HydeDirs::from_env().map_or_else(HydeTheme::default, |dirs| {
+        load_from(&dirs, &CompositorLook::read())
+    })
 }
 
 /// Fills the snapshot from the `HyDE` directories.

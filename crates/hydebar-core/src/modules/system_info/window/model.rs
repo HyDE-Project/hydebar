@@ -39,6 +39,12 @@ pub const fn meter_level(percent: u32) -> MeterLevel {
 
 /// Share of `total` behind `used`, in percent.
 #[must_use]
+#[expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    reason = "the ratio times 100 is bounded to 0..=100 and fits u32; f64 blurs only fractions below the whole percent shown"
+)]
 pub fn share(used: u64, total: u64) -> u32 {
     if total == 0 {
         return 0;
@@ -106,7 +112,9 @@ pub fn scoped_section(
     data: &SystemInfoData,
     icon: crate::components::icons::Icons
 ) -> Option<Section> {
-    sections(data).into_iter().find(|section| section.icon == icon)
+    sections(data)
+        .into_iter()
+        .find(|section| section.icon == icon)
 }
 
 /// The processor window of the standalone processor entry.
@@ -118,9 +126,9 @@ pub fn scoped_section(
 pub fn processor_section(data: &SystemInfoData) -> Option<Section> {
     let mut section = scoped_section(data, crate::components::icons::Icons::Cpu)?;
 
-    section.rows.retain(|row| {
-        !matches!(row, Row::Fact { label, .. } if label.starts_with("Temperature"))
-    });
+    section
+        .rows
+        .retain(|row| !matches!(row, Row::Fact { label, .. } if label.starts_with("Temperature")));
 
     Some(section)
 }
@@ -138,15 +146,8 @@ pub fn cpu_temperature_section(data: &SystemInfoData) -> Option<Section> {
     })
 }
 
-/// Everything the window says about the machine, in drawing order.
-///
-/// A section the machine cannot fill is left out whole rather than
-/// drawn empty; what is missing and why is stated by
-/// [`footnotes`] instead.
-#[must_use]
-pub fn sections(data: &SystemInfoData) -> Vec<Section> {
-    let mut sections = Vec::new();
-
+/// Rows of the processor section, in drawing order.
+fn processor_rows(data: &SystemInfoData) -> Vec<Row> {
     let mut processor = vec![meter(
         "Load",
         format!("{}%", data.cpu_usage),
@@ -184,10 +185,10 @@ pub fn sections(data: &SystemInfoData) -> Vec<Section> {
     }
 
     if let Some(temperature) = data.cpu_temperature {
-        let label = match data.cpu_temperature_source.as_ref() {
-            Some(source) => format!("Temperature ({source})"),
-            None => "Temperature".to_owned()
-        };
+        let label = data.cpu_temperature_source.as_ref().map_or_else(
+            || "Temperature".to_owned(),
+            |source| format!("Temperature ({source})")
+        );
 
         processor.push(fact(&label, format!("{temperature}°C")));
     }
@@ -200,13 +201,11 @@ pub fn sections(data: &SystemInfoData) -> Vec<Section> {
         processor.push(fact("Kernel", kernel.clone()));
     }
 
-    sections.push(Section {
-        icon:  Icons::Cpu,
-        title: "Processor",
-        note:  data.cpu_model.clone(),
-        rows:  processor
-    });
+    processor
+}
 
+/// Rows of the memory section, in drawing order.
+fn memory_rows(data: &SystemInfoData) -> Vec<Row> {
     let mut memory = vec![meter(
         "In use",
         pool(data.memory_used, data.memory_total, data.memory_usage),
@@ -218,9 +217,7 @@ pub fn sections(data: &SystemInfoData) -> Vec<Section> {
             "Available",
             format!(
                 "{} GiB",
-                super::super::view::gigabytes(
-                    data.memory_total.saturating_sub(data.memory_used)
-                )
+                super::super::view::gigabytes(data.memory_total.saturating_sub(data.memory_used))
             )
         ));
     }
@@ -228,10 +225,7 @@ pub fn sections(data: &SystemInfoData) -> Vec<Section> {
     if data.memory_cached > 0 {
         memory.push(fact(
             "Cached",
-            format!(
-                "{} GiB",
-                super::super::view::gigabytes(data.memory_cached)
-            )
+            format!("{} GiB", super::super::view::gigabytes(data.memory_cached))
         ));
     }
 
@@ -251,12 +245,30 @@ pub fn sections(data: &SystemInfoData) -> Vec<Section> {
         }
     }
 
-    sections.push(Section {
-        icon:  Icons::Mem,
-        title: "Memory",
-        note:  None,
-        rows:  memory
-    });
+    memory
+}
+
+/// Everything the window says about the machine, in drawing order.
+///
+/// A section the machine cannot fill is left out whole rather than
+/// drawn empty; what is missing and why is stated by
+/// [`footnotes`] instead.
+#[must_use]
+pub fn sections(data: &SystemInfoData) -> Vec<Section> {
+    let mut sections = vec![
+        Section {
+            icon:  Icons::Cpu,
+            title: "Processor",
+            note:  data.cpu_model.clone(),
+            rows:  processor_rows(data)
+        },
+        Section {
+            icon:  Icons::Mem,
+            title: "Memory",
+            note:  None,
+            rows:  memory_rows(data)
+        },
+    ];
 
     if let Some(gpu) = data.gpu.as_ref() {
         let mut rows = Vec::new();

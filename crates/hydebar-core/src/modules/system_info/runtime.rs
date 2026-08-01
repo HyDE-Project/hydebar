@@ -43,7 +43,7 @@ impl MetricSource for SystemInfoSampler {
 
 /// Manages the background polling task responsible for refreshing system
 /// metrics.
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct PollingTask {
     handle: Option<JoinHandle<()>>,
     poke:   Option<Arc<Notify>>
@@ -133,12 +133,11 @@ impl PollingTask {
             ticker.set_missed_tick_behavior(MissedTickBehavior::Delay);
             let _ = ticker.tick().await;
 
-            let Ok(mut source) =
-                tokio::task::spawn_blocking(move || {
-                    let _ = source.sample();
-                    source
-                })
-                .await
+            let Ok(mut source) = tokio::task::spawn_blocking(move || {
+                let _ = source.sample();
+                source
+            })
+            .await
             else {
                 error!("system info priming sample panicked; sampling stops");
                 return;
@@ -255,9 +254,7 @@ mod tests {
     /// Sampling runs on a real thread of the blocking pool, so the event
     /// lands a moment after the paused clock says it is due; spinning on
     /// yields, with a real nap now and then, lets that thread finish.
-    async fn next_event(
-        receiver: &mut crate::event_bus::EventReceiver
-    ) -> Option<BusEvent> {
+    async fn next_event(receiver: &mut crate::event_bus::EventReceiver) -> Option<BusEvent> {
         for spin in 0..10_000u32 {
             if let Some(event) = receiver.try_recv().expect("bus read") {
                 return Some(event);

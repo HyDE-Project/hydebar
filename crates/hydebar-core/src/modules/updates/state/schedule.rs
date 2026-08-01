@@ -6,9 +6,9 @@ use log::error;
 use tokio::{runtime::Handle, sync::Notify, task::JoinHandle, time::sleep};
 
 use super::{
+    super::commands::{self, CheckFailure},
     HydeSnapshot, Message,
-    failures::{FailureLog, report},
-    super::commands::{self, CheckFailure}
+    failures::{FailureLog, report}
 };
 use crate::{ModuleEventSender, config::UpdatesModuleConfig};
 
@@ -37,13 +37,13 @@ const CHECK_TIMEOUT: Duration = Duration::from_mins(5);
 /// behind.
 pub(super) struct Schedule {
     /// Check command this schedule was started for.
-    command:  Arc<str>,
+    command:           Arc<str>,
     /// Time between the end of one check and the start of the next.
-    interval: Duration,
+    interval:          Duration,
     /// `HyDE` branch the schedule compares the clone against.
-    branch:   Arc<str>,
+    branch:            Arc<str>,
     /// Wake-up the manual button rings.
-    wake:     Arc<Notify>,
+    wake:              Arc<Notify>,
     /// The running task, aborted when this schedule is dropped.
     pub(super) handle: JoinHandle<()>
 }
@@ -53,6 +53,9 @@ impl std::fmt::Debug for Schedule {
         f.debug_struct("Schedule")
             .field("command", &self.command)
             .field("interval", &self.interval)
+            .field("branch", &self.branch)
+            .field("wake", &self.wake)
+            .field("handle", &self.handle)
             .finish()
     }
 }
@@ -169,14 +172,14 @@ async fn check_hyde_once(
             })
         }
         Ok(Err(err)) => {
-            report(failures, format!("the hyde check failed: {err}"));
+            report(failures, &format!("the hyde check failed: {err}"));
 
             None
         }
         Err(_) => {
             report(
                 failures,
-                format!("the hyde check did not finish within {CHECK_TIMEOUT:?}")
+                &format!("the hyde check did not finish within {CHECK_TIMEOUT:?}")
             );
 
             None
@@ -196,19 +199,19 @@ async fn check_once(command: &str, failures: &mut FailureLog) -> Message {
             Message::UpdatesCheckCompleted(updates)
         }
         Ok(Err(CheckFailure::Unavailable(err))) => {
-            report(failures, format!("the check command cannot be run: {err}"));
+            report(failures, &format!("the check command cannot be run: {err}"));
 
             Message::UpdatesUnavailable
         }
         Ok(Err(CheckFailure::Transient(err))) => {
-            report(failures, format!("the check command failed: {err}"));
+            report(failures, &format!("the check command failed: {err}"));
 
             Message::CheckFailed
         }
         Err(_) => {
             report(
                 failures,
-                format!("the check command did not finish within {CHECK_TIMEOUT:?}")
+                &format!("the check command did not finish within {CHECK_TIMEOUT:?}")
             );
 
             Message::CheckFailed

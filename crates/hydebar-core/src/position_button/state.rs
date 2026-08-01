@@ -2,6 +2,10 @@ use iced::{core::mouse, widget::button::Status};
 
 /// Interaction state the widget tree keeps for a button.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "independent interaction flags of one widget frame"
+)]
 pub(super) struct State {
     pub(super) is_hovered:        bool,
     pub(super) is_pressed:        bool,
@@ -18,12 +22,12 @@ pub(super) struct State {
 
 impl State {
     /// Reports whether any mouse button is held down over the button.
-    pub(super) const fn is_pressed(&self) -> bool {
+    pub(super) const fn is_pressed(self) -> bool {
         self.is_pressed || self.is_right_pressed || self.is_middle_pressed
     }
 
     /// Borrows the flag tracking whether `button` is held down.
-    pub(super) const fn hold_mut(&mut self, button: &mouse::Button) -> &mut bool {
+    pub(super) const fn hold_mut(&mut self, button: mouse::Button) -> &mut bool {
         match button {
             mouse::Button::Right => &mut self.is_right_pressed,
             mouse::Button::Middle => &mut self.is_middle_pressed,
@@ -40,7 +44,11 @@ impl State {
 }
 
 /// Resolves the status a button paints itself with for the given cursor.
-pub(super) const fn resolve_status(is_pressable: bool, is_mouse_over: bool, is_pressed: bool) -> Status {
+pub(super) const fn resolve_status(
+    is_pressable: bool,
+    is_mouse_over: bool,
+    is_pressed: bool
+) -> Status {
     if !is_pressable {
         Status::Disabled
     } else if is_mouse_over {

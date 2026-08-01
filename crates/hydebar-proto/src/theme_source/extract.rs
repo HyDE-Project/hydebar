@@ -34,10 +34,9 @@ fn define_colors(source: &str) -> Vec<(String, String)> {
 
     while let Some(start) = rest.find("@define-color") {
         let tail = &rest[start + "@define-color".len()..];
-        let (declaration, remainder) = match tail.find(';') {
-            Some(end) => (&tail[..end], &tail[end + 1..]),
-            None => (tail, "")
-        };
+        let (declaration, remainder) = tail
+            .find(';')
+            .map_or((tail, ""), |end| (&tail[..end], &tail[end + 1..]));
         rest = remainder;
 
         let declaration = declaration.trim();

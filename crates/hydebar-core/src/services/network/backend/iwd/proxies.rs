@@ -47,6 +47,11 @@ use super::{
 
 impl IwdDbus<'_> {
     /// Connect to the system bus and the IWD service
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the `ObjectManager` proxy destination or path
+    /// cannot be set, or when the proxy cannot be built on the connection.
     pub async fn new(conn: &zbus::Connection) -> AppResult<Self> {
         let manager = ObjectManagerProxy::builder(conn)
             .destination("net.connman.iwd")
@@ -66,27 +71,51 @@ impl IwdDbus<'_> {
             })?;
 
         Ok(Self {
-            _inner: manager
+            inner: manager
         })
     }
 
     // adapter <- device (station mode) <- station
 
+    /// Lists a proxy for every iwd station object.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the managed objects cannot be listed or a station
+    /// proxy cannot be built.
     pub async fn stations(&self) -> AppResult<Vec<StationProxy>> {
-        list_proxies!(&self._inner, "net.connman.iwd.Station", StationProxy).await
+        list_proxies!(&self.inner, "net.connman.iwd.Station", StationProxy).await
     }
 
+    /// Lists a proxy for every iwd adapter object.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the managed objects cannot be listed or an
+    /// adapter proxy cannot be built.
     pub async fn adapters(&self) -> AppResult<Vec<AdapterProxy>> {
-        list_proxies!(&self._inner, "net.connman.iwd.Adapter", AdapterProxy).await
+        list_proxies!(&self.inner, "net.connman.iwd.Adapter", AdapterProxy).await
     }
 
+    /// Lists a proxy for every iwd device object.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the managed objects cannot be listed or a device
+    /// proxy cannot be built.
     pub async fn devices(&self) -> AppResult<Vec<DeviceProxy>> {
-        list_proxies!(&self._inner, "net.connman.iwd.Device", DeviceProxy).await
+        list_proxies!(&self.inner, "net.connman.iwd.Device", DeviceProxy).await
     }
 
+    /// Returns the proxy for the iwd agent manager object.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the managed objects cannot be listed, a proxy
+    /// cannot be built, or no agent manager object is present on the bus.
     pub async fn agent_manager(&self) -> AppResult<AgentManagerProxy> {
         list_proxies!(
-            &self._inner,
+            &self.inner,
             "net.connman.iwd.AgentManager",
             AgentManagerProxy
         )
@@ -96,32 +125,57 @@ impl IwdDbus<'_> {
         .ok_or_else(|| AppError::internal("No AgentManagerProxy found"))
     }
 
+    /// Lists a proxy for every network iwd already knows.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the managed objects cannot be listed or a known
+    /// network proxy cannot be built.
     pub async fn known_networks_proxies(&self) -> AppResult<Vec<KnownNetworkProxy>> {
         list_proxies!(
-            &self._inner,
+            &self.inner,
             "net.connman.iwd.KnownNetwork",
             KnownNetworkProxy
         )
         .await
     }
 
+    /// Lists a proxy for every network object currently exposed.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the managed objects cannot be listed or a network
+    /// proxy cannot be built.
     pub async fn networks_proxies(&self) -> AppResult<Vec<NetworkProxy>> {
-        list_proxies!(&self._inner, "net.connman.iwd.Network", NetworkProxy).await
+        list_proxies!(&self.inner, "net.connman.iwd.Network", NetworkProxy).await
     }
 
+    /// Lists a proxy for every access point object currently exposed.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the managed objects cannot be listed or an access
+    /// point proxy cannot be built.
     pub async fn access_points_proxies(&self) -> AppResult<Vec<AccessPointProxy>> {
         // Note: AccessPoint interface might not be directly on the root object manager.
         // It might be associated with a Device or Station. This function assumes they
         // might appear. If this doesn't work as expected, the logic might need
         // refinement based on IWD's structure.
         list_proxies!(
-            &self._inner,
+            &self.inner,
             "net.connman.iwd.AccessPoint",
             AccessPointProxy
         )
         .await
     }
 
+    /// Lists every network visible from a station together with its signal
+    /// strength.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the stations cannot be listed, a station refuses
+    /// the ordered networks query, or a network proxy cannot be built.
     pub async fn reachable_networks(&self) -> AppResult<Vec<(NetworkProxy, i16)>> {
         let stations = self.stations().await?;
         let mut networks = Vec::new();

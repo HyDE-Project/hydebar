@@ -19,6 +19,10 @@ struct IndicatorColors {
 }
 
 /// Resolves the colour pairs for the configured monitor colour, if any.
+#[expect(
+    clippy::option_option,
+    reason = "distinguishes unconfigured, default-coloured and custom-coloured indicators"
+)]
 fn indicator_colors(theme: &Theme, colors: Option<Option<AppearanceColor>>) -> IndicatorColors {
     let extended = theme.extended_palette();
 
@@ -35,7 +39,7 @@ fn indicator_colors(theme: &Theme, colors: Option<Option<AppearanceColor>>) -> I
             let generated = palette::Primary::generate(
                 color.get_base(),
                 theme.palette().background,
-                color.get_text().unwrap_or(theme.palette().text)
+                color.get_text().unwrap_or_else(|| theme.palette().text)
             );
 
             IndicatorColors {
@@ -104,17 +108,17 @@ pub fn workspace_button_style(
         };
 
         if matches!(status, Status::Hovered) {
-            let (strong_bg, strong_fg) = indicator.strong;
+            let (strong_background, strong_text) = indicator.strong;
 
             base.background = Some(Background::Color(if is_empty {
                 theme.extended_palette().background.strong.color
             } else {
-                strong_bg
+                strong_background
             }));
             base.text_color = if is_empty {
                 theme.palette().text
             } else {
-                strong_fg
+                strong_text
             };
         }
 

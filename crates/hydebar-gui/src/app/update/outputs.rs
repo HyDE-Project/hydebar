@@ -67,6 +67,10 @@ impl App {
             return false;
         };
 
+        #[expect(
+            clippy::cast_possible_truncation,
+            reason = "surface scale factors are small values that fit f32"
+        )]
         let surface_scale = self.config.appearance.scale_factor as f32;
 
         self.screen_height = Some(geometry.pixels.1 / geometry.scale.max(f32::EPSILON));

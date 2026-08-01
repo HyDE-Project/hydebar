@@ -80,20 +80,17 @@ impl ReadOnlyService for NotificationsService {
 
     fn update(&mut self, event: Self::UpdateEvent) {
         match event {
-            NotificationEvent::Received(_) => {
-                // the server already stored it in the storage this service
-                // shares; the event only tells the view to re-read, and
-                // storing again listed every notification twice
-            }
+            NotificationEvent::Received(_) | NotificationEvent::ActionInvoked(_, _) => {}
             NotificationEvent::Closed(id) => {
                 self.storage().remove(id);
-            }
-            NotificationEvent::ActionInvoked(_, _) => {
-                // Actions handling can be added later
             }
         }
     }
 
+    #[expect(
+        clippy::too_many_lines,
+        reason = "the subscription closure runs the whole server lifecycle in order; splitting it would detach the steps from their error handling"
+    )]
     fn subscribe() -> Subscription<ServiceEvent<Self>> {
         let id = std::any::TypeId::of::<Self>();
         Subscription::run_with(id, |&_id| {

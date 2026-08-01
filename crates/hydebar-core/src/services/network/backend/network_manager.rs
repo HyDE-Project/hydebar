@@ -27,6 +27,12 @@ use crate::services::{
 #[derive(Clone)]
 pub struct NetworkDbus<'a>(NetworkManagerProxy<'a>);
 
+impl std::fmt::Debug for NetworkDbus<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("NetworkDbus").finish_non_exhaustive()
+    }
+}
+
 impl NetworkBackend for NetworkDbus<'_> {
     async fn access_points(&self) -> AppResult<Vec<AccessPoint>> {
         self.wireless_access_points().await
@@ -68,7 +74,7 @@ impl NetworkBackend for NetworkDbus<'_> {
             wireless_access_points,
             known_connections,
             scanning_nearby_wifi: false,
-            link: Default::default(),
+            link: crate::services::network::LinkDetails::default(),
             last_error: None
         })
     }
@@ -265,6 +271,11 @@ impl<'a> Deref for NetworkDbus<'a> {
 }
 
 impl NetworkDbus<'_> {
+    /// Connects to the `NetworkManager` service on the given bus connection.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the `NetworkManager` proxy cannot be created.
     pub async fn new(conn: &zbus::Connection) -> AppResult<Self> {
         let nm = NetworkManagerProxy::new(conn).await.map_err(|e| {
             AppError::internal(format!("Failed to create NetworkManagerProxy: {e}"))

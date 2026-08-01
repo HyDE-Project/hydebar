@@ -46,12 +46,14 @@ impl App {
         let theme = themes
             .entry(key)
             .or_insert_with(|| {
-                let base = match palette_local {
-                    Some(local) => hydebar_core::style::hydebar_theme(
-                        &self.appearance_transition.sample(local)
-                    ),
-                    None => self.theme_cache.clone()
-                };
+                let base = palette_local.map_or_else(
+                    || self.theme_cache.clone(),
+                    |local| {
+                        hydebar_core::style::hydebar_theme(
+                            &self.appearance_transition.sample(local)
+                        )
+                    }
+                );
 
                 if arrival < 1.0 {
                     hydebar_core::style::faded_theme(&base, arrival)
@@ -117,6 +119,10 @@ impl App {
     /// sweep, so a travelling palette crosses the sections as one front
     /// instead of restarting in each.
     #[must_use]
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "island counts are tiny and far below f32 precision limits"
+    )]
     pub fn modules_section<'a>(
         &'a self,
         modules_def: &'a [ModuleDef],

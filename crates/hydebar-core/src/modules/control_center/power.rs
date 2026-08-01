@@ -47,13 +47,11 @@ pub fn power_menu<'a>(
     icons: &IconTheme
 ) -> Element<'a, PowerMessage> {
     column!(
-        button(
-            row!(icon(icons, Icons::Suspend), text("Suspend")).spacing(scale::scaled(16.0))
-        )
-        .padding([scale::scaled(4.0), scale::scaled(12.0)])
-        .on_press(PowerMessage::Suspend(config.suspend_cmd.clone()))
-        .width(Length::Fill)
-        .style(ghost_button_style(opacity)),
+        button(row!(icon(icons, Icons::Suspend), text("Suspend")).spacing(scale::scaled(16.0)))
+            .padding([scale::scaled(4.0), scale::scaled(12.0)])
+            .on_press(PowerMessage::Suspend(config.suspend_cmd.clone()))
+            .width(Length::Fill)
+            .style(ghost_button_style(opacity)),
         button(row!(icon(icons, Icons::Reboot), text("Reboot")).spacing(scale::scaled(16.0)))
             .padding([scale::scaled(4.0), scale::scaled(12.0)])
             .on_press(PowerMessage::Reboot(config.reboot_cmd.clone()))

@@ -39,7 +39,6 @@ pub enum PlaybackStatus {
 impl From<String> for PlaybackStatus {
     fn from(playback_status: String) -> Self {
         match playback_status.as_str() {
-            "Playing" => Self::Playing,
             "Paused" => Self::Paused,
             "Stopped" => Self::Stopped,
             _ => Self::Playing
@@ -91,14 +90,12 @@ impl Display for MprisPlayerMetadata {
 
 impl From<HashMap<String, OwnedValue>> for MprisPlayerMetadata {
     fn from(value: HashMap<String, OwnedValue>) -> Self {
-        let artists = match value.get("xesam:artist") {
-            Some(entry) => entry.clone().try_into().ok(),
-            None => None
-        };
-        let title = match value.get("xesam:title") {
-            Some(entry) => entry.clone().try_into().ok(),
-            None => None
-        };
+        let artists = value
+            .get("xesam:artist")
+            .and_then(|entry| entry.clone().try_into().ok());
+        let title = value
+            .get("xesam:title")
+            .and_then(|entry| entry.clone().try_into().ok());
 
         Self {
             artists,

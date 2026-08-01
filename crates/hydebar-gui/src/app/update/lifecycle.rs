@@ -64,6 +64,10 @@ impl App {
     }
 
     /// Handles the messages this module owns.
+    #[expect(
+        clippy::too_many_lines,
+        reason = "one match arm per lifecycle message, read as a single dispatch table"
+    )]
     pub(super) fn update_lifecycle(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::Frame(now) => {
@@ -179,7 +183,6 @@ impl App {
 
                 Task::none()
             }
-            Message::None => Task::none(),
             Message::ConfigChanged(update) => {
                 let hydebar_core::config::ConfigApplied {
                     config,
@@ -194,9 +197,10 @@ impl App {
                 // reload that changed nothing. The blur restatement still
                 // goes out — the compositor may have wiped the rules
                 // regardless of what the file says.
-                let raw_unchanged = self.raw_config.as_ref().is_some_and(|raw| {
-                    std::sync::Arc::ptr_eq(raw, &config) || raw == &config
-                });
+                let raw_unchanged = self
+                    .raw_config
+                    .as_ref()
+                    .is_some_and(|raw| std::sync::Arc::ptr_eq(raw, &config) || raw == &config);
 
                 if raw_unchanged {
                     debug!("config reload carries no change");
@@ -207,7 +211,7 @@ impl App {
 
                 self.raw_config = Some(std::sync::Arc::clone(&config));
 
-                let config = self.adopted(config);
+                let config = self.adopted(&config);
 
                 if self.config == config {
                     debug!("config reload settles to what already runs");
@@ -253,6 +257,10 @@ impl App {
                     }
                 }
 
+                #[expect(
+                    clippy::float_cmp,
+                    reason = "identity check on a value copied verbatim"
+                )]
                 let outputs_need_sync = impact.outputs_changed
                     || impact.position_changed
                     || self.config.appearance.style != config.appearance.style

@@ -3,7 +3,8 @@ use std::time::Duration;
 use serde::Deserialize;
 
 /// Where the catalogue lives.
-const INDEX_URL: &str = "https://raw.githubusercontent.com/HyDE-Project/hyde-gallery/hyde-gallery/hyde-themes.json";
+const INDEX_URL: &str =
+    "https://raw.githubusercontent.com/HyDE-Project/hyde-gallery/hyde-gallery/hyde-themes.json";
 
 /// How long a fetched catalogue serves before it is fetched again.
 const CACHE_LIFE: Duration = Duration::from_hours(24);
@@ -208,13 +209,13 @@ pub(super) async fn local_author() -> Option<String> {
 
 /// Whatever the cache still holds, fresh or not.
 async fn stale(cache: Option<&std::path::Path>) -> Vec<GalleryTheme> {
-    match cache {
-        Some(path) => match tokio::fs::read_to_string(path).await {
-            Ok(raw) => parse(&raw),
-            Err(_) => Vec::new()
-        },
-        None => Vec::new()
-    }
+    let Some(path) = cache else {
+        return Vec::new();
+    };
+
+    tokio::fs::read_to_string(path)
+        .await
+        .map_or_else(|_| Vec::new(), |raw| parse(&raw))
 }
 
 #[cfg(test)]

@@ -120,10 +120,7 @@ fn resolve(symbol: char) -> IconFace {
         return IconFace::PLAIN;
     };
 
-    let factor = match measured_share(symbol, &file, index) {
-        Some(share) => correction(share),
-        None => 1.0
-    };
+    let factor = measured_share(symbol, &file, index).map_or(1.0, correction);
 
     debug!(
         "glyph U+{:04X} drawn by `{family}` at {factor:.2}",
@@ -194,6 +191,8 @@ fn immortal(family: String) -> &'static str {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::float_cmp)]
+
     use super::*;
 
     #[test]

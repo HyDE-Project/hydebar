@@ -67,6 +67,11 @@ impl Outputs {
         let tasks = self
             .main_ids()
             .flat_map(|id| {
+                #[expect(
+                    clippy::cast_possible_truncation,
+                    clippy::cast_sign_loss,
+                    reason = "the height is rounded and clamped to at least one pixel"
+                )]
                 [
                     set_size(id, (0, rounded as u32)),
                     set_exclusive_zone(id, rounded as i32)

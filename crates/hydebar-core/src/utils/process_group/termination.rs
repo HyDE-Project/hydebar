@@ -29,7 +29,13 @@ static WAKE_WRITER: AtomicI32 = AtomicI32::new(-1);
 ///
 /// Sends the polite signal first and the final one after, since a shell loop
 /// blocked in `sleep` ignores the first until the sleep is over.
+///
+/// # Errors
+///
+/// Returns the failure reported by the kernel when a signal could not be
+/// sent; an already gone group is not an error.
 pub fn terminate_group(pid: u32) -> io::Result<()> {
+    #[expect(clippy::cast_possible_wrap, reason = "Linux PIDs fit in i32")]
     let group = -(pid as i32);
 
     signal(group, libc::SIGTERM)?;
@@ -38,6 +44,7 @@ pub fn terminate_group(pid: u32) -> io::Result<()> {
 
 /// [`terminate_group`] without a report, for the paths that cannot make one.
 pub(super) fn kill_group(pid: u32) {
+    #[expect(clippy::cast_possible_wrap, reason = "Linux PIDs fit in i32")]
     let group = -(pid as i32);
 
     unsafe {

@@ -116,7 +116,7 @@ pub struct GroupGuard {
     /// Leader of the group, absent once it has been released.
     pub(super) pid: Option<u32>,
     /// Spawn stamp to sweep for once the group has been ended.
-    spawn: Option<String>
+    spawn:          Option<String>
 }
 
 impl GroupGuard {

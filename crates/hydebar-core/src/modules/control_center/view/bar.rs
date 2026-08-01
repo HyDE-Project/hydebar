@@ -22,7 +22,7 @@ impl ControlCenter {
     pub(super) fn render_bar<M>(
         &self,
         icons: &IconTheme
-    ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)>
+    ) -> (Element<'static, M>, Option<OnModulePress<M>>)
     where
         M: 'static + From<Message>
     {
@@ -49,15 +49,17 @@ impl ControlCenter {
             .and_then(|upower| upower.battery)
             .map(|battery| battery.indicator(icons));
 
-        Some((
+        (
             Row::new()
                 .push_maybe(if idle_inhibited {
-                    Some(container(icon(icons, Icons::EyeOpened)).style(
-                        |theme: &Theme| container::Style {
-                            text_color: Some(theme.palette().danger),
-                            ..Default::default()
-                        }
-                    ))
+                    Some(
+                        container(icon(icons, Icons::EyeOpened)).style(|theme: &Theme| {
+                            container::Style {
+                                text_color: Some(theme.palette().danger),
+                                ..Default::default()
+                            }
+                        })
+                    )
                 } else {
                     None
                 })
@@ -73,6 +75,6 @@ impl ControlCenter {
                 .spacing(scale::item_gap())
                 .into(),
             Some(OnModulePress::ToggleMenu(MenuType::ControlCenter))
-        ))
+        )
     }
 }

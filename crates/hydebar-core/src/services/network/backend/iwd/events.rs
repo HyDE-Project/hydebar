@@ -11,6 +11,16 @@ use super::{IwdDbus, agents::SignalAgent};
 use crate::services::network::{ConnectivityState, NetworkBackend, NetworkEvent};
 
 impl IwdDbus<'_> {
+    /// Assembles one stream carrying every network event iwd signals.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the adapters, devices or stations cannot be
+    /// listed, or when registering the signal level agent fails.
+    #[expect(
+        clippy::too_many_lines,
+        reason = "one subscription per iwd signal is wired into a single merged stream; splitting would scatter the wiring"
+    )]
     pub async fn subscribe_events(&self) -> AppResult<impl Stream<Item = Vec<NetworkEvent>>> {
         let _conn = self.inner().connection();
         let iwd = self;

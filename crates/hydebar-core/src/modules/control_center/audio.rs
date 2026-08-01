@@ -193,11 +193,16 @@ impl AudioData {
     }
 }
 
+#[derive(Debug)]
 pub enum SliderType {
     Sink,
     Source
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "each argument feeds a distinct visual piece of the slider row"
+)]
 pub fn audio_slider<'a, Message: 'a + Clone>(
     icons: &IconTheme,
     slider_type: SliderType,
@@ -243,8 +248,8 @@ pub fn audio_slider<'a, Message: 'a + Clone>(
             button(icon(
                 icons,
                 match (slider_type, submenu) {
-                    (SliderType::Sink, Some(SubMenu::Sinks)) => Icons::Close,
-                    (SliderType::Source, Some(SubMenu::Sources)) => Icons::Close,
+                    (SliderType::Sink, Some(SubMenu::Sinks))
+                    | (SliderType::Source, Some(SubMenu::Sources)) => Icons::Close,
                     _ => Icons::RightArrow
                 }
             ))
@@ -257,6 +262,7 @@ pub fn audio_slider<'a, Message: 'a + Clone>(
         .into()
 }
 
+#[derive(Debug)]
 pub struct SubmenuEntry<Message> {
     pub name:   String,
     pub device: DeviceType,

@@ -22,6 +22,17 @@ use super::{
 use crate::services::network::{ConnectivityState, DeviceState, NetworkEvent};
 
 impl<'a> NetworkDbus<'a> {
+    /// Assembles one stream carrying every network event the daemon signals.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the settings service proxy cannot be created or
+    /// when the devices needed for the per-device subscriptions cannot be
+    /// listed.
+    #[expect(
+        clippy::too_many_lines,
+        reason = "one subscription per NetworkManager signal is wired into a single merged stream; splitting would scatter the wiring"
+    )]
     pub async fn subscribe_events(
         &'a self
     ) -> AppResult<impl Stream<Item = AppResult<NetworkEvent>> + 'a> {

@@ -159,6 +159,10 @@ fn fan_out<T>(tx: &broadcast::Sender<T>, event: T) {
 }
 
 /// Wires every handler of every domain onto one fresh connection.
+#[expect(
+    clippy::too_many_lines,
+    reason = "declarative wiring of every Hyprland event handler; splitting would scatter the registrations"
+)]
 fn build_listener(mux: &Arc<Multiplexer>, client: &HyprlandClient) -> AsyncEventListener {
     let mut listener = AsyncEventListener::new();
 

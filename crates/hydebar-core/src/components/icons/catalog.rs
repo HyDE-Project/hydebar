@@ -299,6 +299,10 @@ impl Icons {
 
     /// Glyph compiled into the binary, used when no override applies.
     #[must_use]
+    #[expect(
+        clippy::match_same_arms,
+        reason = "each icon names its own glyph even when glyphs coincide"
+    )]
     pub const fn default_glyph(self) -> &'static str {
         match self {
             Self::None => "",

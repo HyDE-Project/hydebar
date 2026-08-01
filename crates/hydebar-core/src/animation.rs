@@ -191,9 +191,14 @@ impl Spring {
         let stiffness = angular_frequency * angular_frequency;
         let damping = 2.0 * self.damping_ratio * angular_frequency;
 
+        #[expect(
+            clippy::while_float,
+            reason = "fixed-substep integration drains the remaining time to zero"
+        )]
         while remaining > 0.0 {
             let step = remaining.min(MAX_SUBSTEP);
-            let acceleration = (-stiffness).mul_add(self.value - self.target, -(damping * self.velocity));
+            let acceleration =
+                (-stiffness).mul_add(self.value - self.target, -(damping * self.velocity));
 
             self.velocity += acceleration * step;
             self.value = self.velocity.mul_add(step, self.value);
@@ -350,6 +355,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::float_cmp)]
+
     use super::*;
 
     fn run_to_rest(spring: &mut Spring) -> usize {

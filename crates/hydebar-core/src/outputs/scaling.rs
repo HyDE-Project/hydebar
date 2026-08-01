@@ -121,11 +121,12 @@ pub struct ScreenGeometry {
 /// the bar. Within a burst the geometry cannot have meaningfully changed.
 const GEOMETRY_FRESHNESS: std::time::Duration = std::time::Duration::from_secs(1);
 
+/// One cached answer: the moment it was read and what the compositor said.
+type GeometryAnswer = (std::time::Instant, Option<ScreenGeometry>);
+
 /// The last answer per screen name, with the moment it was read.
 static GEOMETRY_CACHE: std::sync::LazyLock<
-    std::sync::Mutex<
-        std::collections::HashMap<String, (std::time::Instant, Option<ScreenGeometry>)>
-    >
+    std::sync::Mutex<std::collections::HashMap<String, GeometryAnswer>>
 > = std::sync::LazyLock::new(std::sync::Mutex::default);
 
 /// Reads the geometry of the named screen from the compositor.
@@ -139,6 +140,10 @@ static GEOMETRY_CACHE: std::sync::LazyLock<
 /// A fresh answer is served from the cache: the question is asked from the
 /// drawing thread, and a burst of output events must not stack up process
 /// spawns there.
+///
+/// # Panics
+///
+/// Panics when the geometry cache lock was poisoned by a panicking thread.
 #[must_use]
 pub fn screen_geometry(name: &str) -> Option<ScreenGeometry> {
     let now = std::time::Instant::now();
@@ -184,6 +189,10 @@ fn parse_geometry(json: &str, name: &str) -> Option<ScreenGeometry> {
         .iter()
         .find(|monitor| monitor["name"].as_str() == Some(name))?;
 
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "screen dimensions fit f32 exactly"
+    )]
     let number = |key: &str| monitor[key].as_f64().unwrap_or(0.0) as f32;
 
     Some(ScreenGeometry {
@@ -195,6 +204,8 @@ fn parse_geometry(json: &str, name: &str) -> Option<ScreenGeometry> {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::float_cmp)]
+
     use super::*;
 
     /// A twenty four inch monitor, the screen the sizes were tuned on.

@@ -59,10 +59,16 @@ impl fmt::Display for InstanceError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Directory(path, err) => {
-                write!(f, "failed to create the runtime directory {path:?}: {err}")
+                write!(
+                    f,
+                    "failed to create the runtime directory {}: {err}",
+                    path.display()
+                )
             }
-            Self::Open(path, err) => write!(f, "failed to open the lock file {path:?}: {err}"),
-            Self::Lock(path, err) => write!(f, "failed to lock {path:?}: {err}"),
+            Self::Open(path, err) => {
+                write!(f, "failed to open the lock file {}: {err}", path.display())
+            }
+            Self::Lock(path, err) => write!(f, "failed to lock {}: {err}", path.display()),
             Self::Signal(pid, err) => {
                 write!(f, "failed to ask the running instance {pid} to quit: {err}")
             }
@@ -84,8 +90,10 @@ impl fmt::Display for InstanceError {
 impl std::error::Error for InstanceError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            Self::Directory(_, err) | Self::Open(_, err) | Self::Lock(_, err) => Some(err),
-            Self::Signal(_, err) => Some(err),
+            Self::Directory(_, err)
+            | Self::Open(_, err)
+            | Self::Lock(_, err)
+            | Self::Signal(_, err) => Some(err),
             Self::Timeout(..) => None
         }
     }
@@ -263,7 +271,7 @@ where
     S: Fn(i32) -> io::Result<()>
 {
     if let Some(lock) = try_acquire(path)? {
-        debug!("took the instance lock at {path:?}");
+        debug!("took the instance lock at {}", path.display());
 
         return Ok(lock);
     }
@@ -275,7 +283,10 @@ where
             info!("another hydebar instance ({pid}) is running, asking it to quit");
             signal_owner(pid).map_err(|err| InstanceError::Signal(pid, err))?;
         }
-        None => warn!("the instance lock at {path:?} is held by an unidentified process")
+        None => warn!(
+            "the instance lock at {} is held by an unidentified process",
+            path.display()
+        )
     }
 
     wait_for_takeover(path, policy, owner)
@@ -370,7 +381,7 @@ mod tests {
             .arg("exit 0")
             .spawn()
             .expect("failed to spawn the throwaway process");
-        let pid = child.id() as i32;
+        let pid = child.id().cast_signed();
         child.wait().expect("failed to reap the throwaway process");
 
         pid
@@ -386,7 +397,7 @@ mod tests {
             .expect("an unheld lock must be acquired");
 
         assert_eq!(lock.path(), path);
-        assert_eq!(read_owner(&path), Some(std::process::id() as i32));
+        assert_eq!(read_owner(&path), Some(std::process::id().cast_signed()));
     }
 
     #[test]
@@ -406,7 +417,7 @@ mod tests {
         );
 
         let owner = read_owner(&path).expect("the holder records its process id");
-        assert_eq!(owner, std::process::id() as i32);
+        assert_eq!(owner, std::process::id().cast_signed());
         assert!(process_is_alive(owner));
     }
 
@@ -424,7 +435,7 @@ mod tests {
             .expect("a stale lock must not block startup");
 
         assert_eq!(lock.path(), path);
-        assert_eq!(read_owner(&path), Some(std::process::id() as i32));
+        assert_eq!(read_owner(&path), Some(std::process::id().cast_signed()));
     }
 
     #[test]
@@ -450,10 +461,10 @@ mod tests {
 
         assert_eq!(
             signalled.into_inner().expect("signal log poisoned"),
-            vec![std::process::id() as i32]
+            vec![std::process::id().cast_signed()]
         );
         assert_eq!(lock.path(), path);
-        assert_eq!(read_owner(&path), Some(std::process::id() as i32));
+        assert_eq!(read_owner(&path), Some(std::process::id().cast_signed()));
     }
 
     #[test]
@@ -472,7 +483,7 @@ mod tests {
 
         assert!(started.elapsed() >= policy.timeout);
         assert!(
-            matches!(err, InstanceError::Timeout(Some(pid), _) if pid == std::process::id() as i32)
+            matches!(err, InstanceError::Timeout(Some(pid), _) if pid == std::process::id().cast_signed())
         );
     }
 

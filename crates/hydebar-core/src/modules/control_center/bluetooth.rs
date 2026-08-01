@@ -73,36 +73,26 @@ impl BluetoothData {
                 .width(Length::Fill)
                 .into()
         } else {
-            Column::with_children(
-                self.devices
-                    .iter()
-                    .map(|d| {
-                        Row::new()
-                            .push(text(d.name.clone()).width(Length::Fill))
-                            .push_maybe(
-                                d.battery.map(|battery| Self::battery_level(battery, icons))
-                            )
-                            .push(
-                                iced::widget::mouse_area(
-                                    button(text(if d.connected {
-                                        "Disconnect"
-                                    } else {
-                                        "Connect"
-                                    }))
-                                    .padding([scale::scaled(4.0), scale::scaled(12.0)])
-                                    .style(ghost_button_style(opacity))
-                                )
-                                .on_press(Message::Bluetooth(if d.connected {
-                                    BluetoothMessage::DisconnectDevice(d.path.clone())
-                                } else {
-                                    BluetoothMessage::ConnectDevice(d.path.clone())
-                                }))
-                            )
-                            .spacing(scale::scaled(8.0))
-                            .align_y(iced::Alignment::Center)
-                            .into()
-                    })
-            )
+            Column::with_children(self.devices.iter().map(|d| {
+                Row::new()
+                    .push(text(d.name.clone()).width(Length::Fill))
+                    .push_maybe(d.battery.map(|battery| Self::battery_level(battery, icons)))
+                    .push(
+                        iced::widget::mouse_area(
+                            button(text(if d.connected { "Disconnect" } else { "Connect" }))
+                                .padding([scale::scaled(4.0), scale::scaled(12.0)])
+                                .style(ghost_button_style(opacity))
+                        )
+                        .on_press(Message::Bluetooth(if d.connected {
+                            BluetoothMessage::DisconnectDevice(d.path.clone())
+                        } else {
+                            BluetoothMessage::ConnectDevice(d.path.clone())
+                        }))
+                    )
+                    .spacing(scale::scaled(8.0))
+                    .align_y(iced::Alignment::Center)
+                    .into()
+            }))
             .spacing(scale::scaled(8.0))
             .width(Length::Fill)
             .into()

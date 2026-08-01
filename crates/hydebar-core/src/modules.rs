@@ -95,6 +95,12 @@ pub trait Module<Message> {
     type ViewData<'a>;
     type RegistrationData<'a>;
 
+    /// Starts the module's background work, if it owns any.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`ModuleError`] when the module fails to start its listeners
+    /// or background tasks; the default implementation never fails.
     fn register(
         &mut self,
         ctx: &crate::module_context::ModuleContext,
@@ -136,6 +142,11 @@ pub trait Module<Message> {
     /// more often than the cadence it declared. A module that publishes a
     /// reading identical to the one already on screen should drop it instead:
     /// every event reaching the bar rebuilds every surface it draws.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`ModuleError`] when taking or publishing the sample fails;
+    /// the default implementation never fails.
     ///
     /// [`poll_schedule`]: Module::poll_schedule
     fn poll(&mut self, ctx: &crate::module_context::ModuleContext) -> Result<(), ModuleError> {

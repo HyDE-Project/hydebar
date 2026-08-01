@@ -17,6 +17,10 @@ use crate::{
     style::{quick_settings_button_style, quick_settings_submenu_button_style}
 };
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "each argument feeds a distinct visual piece of the toggle button"
+)]
 pub fn quick_setting_button<'a, Msg: Clone + 'static>(
     icons: &IconTheme,
     icon_type: Icons,

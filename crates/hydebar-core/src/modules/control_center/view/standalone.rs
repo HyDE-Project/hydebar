@@ -146,10 +146,9 @@ impl ControlCenter {
         position: Position,
         icons: &IconTheme
     ) -> Element<'_, Message> {
-        let (sink_slider, source_slider) = self
-            .audio
-            .as_ref()
-            .map_or((None, None), |a| a.audio_sliders(self.sub_menu, opacity, icons));
+        let (sink_slider, source_slider) = self.audio.as_ref().map_or((None, None), |a| {
+            a.audio_sliders(self.sub_menu, opacity, icons)
+        });
 
         let (top_sink_slider, bottom_sink_slider) = match position {
             Position::Top => (sink_slider, None),

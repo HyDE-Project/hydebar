@@ -61,10 +61,9 @@ const fn is_name_char(c: char) -> bool {
 /// A value keeps its inner spaces: font families are written bare, so
 /// `JetBrainsMono Nerd Font` has to survive intact.
 fn strip_comment(value: &str) -> &str {
-    match value.find('#') {
-        Some(start) => value[..start].trim(),
-        None => value.trim()
-    }
+    value
+        .find('#')
+        .map_or_else(|| value.trim(), |start| value[..start].trim())
 }
 
 #[cfg(test)]

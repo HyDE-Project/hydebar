@@ -157,7 +157,9 @@ mod tests {
 
     /// Takes the lock and forgets whatever an earlier test remembered.
     fn with_a_forgotten_dialect() -> MutexGuard<'static, ()> {
-        let guard = REMEMBERED.lock().unwrap_or_else(|err| err.into_inner());
+        let guard = REMEMBERED
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         DIALECT.store(UNKNOWN, Ordering::Relaxed);
 
         guard

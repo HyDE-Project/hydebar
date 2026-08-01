@@ -65,16 +65,13 @@ pub async fn fetch_players(conn: &Connection, names: &[String]) -> Vec<MprisPlay
                 let volume = proxy.volume().await.map(|value| value * 100.0).ok();
                 let state = proxy.playback_status().await.map(PlaybackStatus::from);
 
-                match state {
-                    Ok(state) => Some(MprisPlayerData {
-                        service: service.clone(),
-                        metadata,
-                        volume,
-                        state,
-                        proxy
-                    }),
-                    Err(_) => None
-                }
+                state.ok().map(|state| MprisPlayerData {
+                    service: service.clone(),
+                    metadata,
+                    volume,
+                    state,
+                    proxy
+                })
             }
             Err(_) => None
         }

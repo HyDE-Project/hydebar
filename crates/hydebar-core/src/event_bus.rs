@@ -18,6 +18,10 @@ const COALESCE_WINDOW: std::time::Duration = std::time::Duration::from_millis(8)
 
 #[derive(Debug, Clone)]
 #[non_exhaustive]
+#[expect(
+    clippy::large_enum_variant,
+    reason = "boxing the module payload would ripple through every publish path"
+)]
 pub enum BusEvent {
     Redraw,
     PopupToggle,
@@ -47,9 +51,9 @@ impl BusEvent {
             Self::Module(ModuleEvent::WindowTitle(
                 modules::window_title::Message::TitleChanged(_)
             )) => Some(1),
-            Self::Module(ModuleEvent::SystemInfo(
-                modules::system_info::Message::Sampled(_)
-            )) => Some(2),
+            Self::Module(ModuleEvent::SystemInfo(modules::system_info::Message::Sampled(_))) => {
+                Some(2)
+            }
             _ => None
         }
     }
@@ -57,6 +61,10 @@ impl BusEvent {
 
 #[derive(Debug, Clone)]
 #[non_exhaustive]
+#[expect(
+    clippy::large_enum_variant,
+    reason = "boxing the module payload would ripple through every publish path"
+)]
 pub enum ModuleEvent {
     Updates(modules::updates::Message),
     Workspaces(modules::workspaces::Message),
@@ -174,12 +182,7 @@ impl std::error::Error for EventBusError {}
 
 impl From<EventBusError> for AppError {
     fn from(err: EventBusError) -> Self {
-        match err {
-            EventBusError::QueueFull {
-                ..
-            } => Self::internal(err.to_string()),
-            EventBusError::Poisoned => Self::internal(err.to_string())
-        }
+        Self::internal(err.to_string())
     }
 }
 
@@ -210,10 +213,23 @@ impl EventBus {
         }
     }
 
+    /// Appends `event` unless it coalesces with the queue tail.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`EventBusError::QueueFull`] when the queue reached its
+    /// capacity and [`EventBusError::Poisoned`] when a producer panicked while
+    /// holding the queue lock.
     pub fn publish(&self, event: BusEvent) -> Result<(), EventBusError> {
         self.inner.enqueue(event)
     }
 
+    /// Removes and returns every queued event.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`EventBusError::Poisoned`] when a producer panicked while
+    /// holding the queue lock.
     pub fn drain(&self) -> Result<Vec<BusEvent>, EventBusError> {
         self.inner.drain()
     }
@@ -225,6 +241,13 @@ pub struct EventSender {
 }
 
 impl EventSender {
+    /// Appends `event` unless it coalesces with the queue tail.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`EventBusError::QueueFull`] when the queue reached its
+    /// capacity and [`EventBusError::Poisoned`] when a producer panicked while
+    /// holding the queue lock.
     pub fn try_send(&self, event: BusEvent) -> Result<(), EventBusError> {
         self.inner.enqueue(event)
     }
@@ -236,6 +259,12 @@ pub struct EventReceiver {
 }
 
 impl EventReceiver {
+    /// Removes and returns the front event, when one is queued.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`EventBusError::Poisoned`] when a producer panicked while
+    /// holding the queue lock.
     pub fn try_recv(&mut self) -> Result<Option<BusEvent>, EventBusError> {
         let mut queue = self
             .inner

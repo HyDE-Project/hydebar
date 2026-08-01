@@ -8,6 +8,10 @@ use iced::{
 use super::builder::Centerbox;
 
 /// Paints every section clipped to the box the [`Centerbox`] occupies.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "mirrors the parameter list of the iced widget draw contract"
+)]
 pub(super) fn draw<Message, Theme, Renderer>(
     centerbox: &Centerbox<'_, Message, Theme, Renderer>,
     tree: &Tree,

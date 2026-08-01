@@ -16,9 +16,10 @@ use super::{
 use crate::services::{ServiceEvent, ServiceEventPublisher};
 
 impl UPowerService {
+    #[expect(clippy::needless_continue, reason = "the continue lives inside the stream_select macro expansion")]
     async fn events(
         conn: &zbus::Connection,
-        battery_devices: &Option<Vec<ObjectPath<'static>>>
+        battery_devices: Option<&Vec<ObjectPath<'static>>>
     ) -> AppResult<impl Stream<Item = UPowerEvent> + use<>> {
         let battery_event = if let Some(battery_devices) = battery_devices {
             let upower = UPowerDbus::new(conn).await?;
@@ -118,7 +119,7 @@ impl UPowerService {
                 }
             },
             State::Active(conn, battery_devices) => {
-                match Self::events(&conn, &battery_devices).await {
+                match Self::events(&conn, battery_devices.as_ref()).await {
                     Ok(mut events) => {
                         while let Some(event) = events.next().await {
                             let () = publisher.send(ServiceEvent::Update(event)).await;

@@ -17,6 +17,18 @@ pub struct KeyboardSubmap {
     shown:    crate::components::crossfade::Crossfade
 }
 
+impl std::fmt::Debug for KeyboardSubmap {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("KeyboardSubmap")
+            .field("hyprland", &"<HyprlandPort>")
+            .field("submap", &self.submap)
+            .field("sender", &self.sender)
+            .field("task", &self.task)
+            .field("shown", &self.shown)
+            .finish()
+    }
+}
+
 const SUBMAP_EVENT_RETRY_DELAY: Duration = Duration::from_millis(500);
 
 impl KeyboardSubmap {
@@ -164,7 +176,7 @@ mod tests {
     #[test]
     fn initializes_with_port_submap() {
         let port = Arc::new(MockHyprlandPort::default());
-        let port_trait: Arc<dyn HyprlandPort> = port.clone();
+        let port_trait: Arc<dyn HyprlandPort> = port;
 
         let module = KeyboardSubmap::new(port_trait);
 
@@ -174,7 +186,7 @@ mod tests {
     #[test]
     fn update_replaces_submap_value() {
         let port = Arc::new(MockHyprlandPort::default());
-        let port_trait: Arc<dyn HyprlandPort> = port.clone();
+        let port_trait: Arc<dyn HyprlandPort> = port;
         let mut module = KeyboardSubmap::new(port_trait);
 
         module.update(Message::SubmapChanged("launch".into()), false);

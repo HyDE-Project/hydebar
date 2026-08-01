@@ -61,7 +61,7 @@ impl App {
             | Message::NavigateDown
             | Message::NavigateLeft
             | Message::NavigateRight
-            | Message::ActivateFocusedModule => self.update_navigation(message),
+            | Message::ActivateFocusedModule => self.update_navigation(&message),
             Message::OutputEvent(_) => self.update_outputs(message),
             other => self.update_modules(other)
         }

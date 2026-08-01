@@ -94,9 +94,7 @@ pub(super) async fn run_custom_listener(
         .stdout(Stdio::piped());
 
     let (mut child, mut guard) = crate::utils::process_group::spawn_guarded(&mut spawner)
-        .map_err(|err| {
-            CustomListenerError::Command(CustomCommandError::Spawn(Arc::new(err)))
-        })?;
+        .map_err(|err| CustomListenerError::Command(CustomCommandError::Spawn(Arc::new(err))))?;
 
     let stdout = child.stdout.take().ok_or(CustomListenerError::Command(
         CustomCommandError::MissingStdout

@@ -1,4 +1,4 @@
-//! Unit tests for the NetworkManager backend helpers.
+//! Unit tests for the `NetworkManager` backend helpers.
 
 use super::*;
 use crate::services::network::ConnectivityState;

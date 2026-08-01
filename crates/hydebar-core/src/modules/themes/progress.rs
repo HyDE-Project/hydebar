@@ -90,6 +90,10 @@ impl Spinner {
     /// so a chip tinted with it breathes instead of snapping dark
     /// once a cycle.
     #[must_use]
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "frame counts are tiny, fit f32 exactly"
+    )]
     pub fn pulse(self) -> f32 {
         let half = FRAMES.len() as f32 / 2.0;
         let position = self.frame as f32;

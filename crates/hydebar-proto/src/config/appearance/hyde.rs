@@ -50,6 +50,10 @@ impl Appearance {
                 };
             }
 
+            #[expect(
+                clippy::float_cmp,
+                reason = "checks whether the field still holds its exact serde default"
+            )]
             if self.opacity == default_opacity() {
                 self.opacity = module_background.a;
             }
@@ -57,6 +61,10 @@ impl Appearance {
 
         let island = self.background_color.get_base();
 
+        #[expect(
+            clippy::float_cmp,
+            reason = "checks whether the field still holds its exact serde default"
+        )]
         if let Some(bar_background) = theme.bar_background
             && self.bar_opacity == default_bar_opacity()
         {
@@ -118,6 +126,11 @@ const fn hex_to_color(color: HexColor) -> Color {
 /// only the tint is resolved here.
 fn blend_hex(color: Rgba, backdrop: Color) -> HexColor {
     let alpha = color.a.clamp(0.0, 1.0);
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        reason = "the value is clamped to 0.0..=255.0 before the cast"
+    )]
     let mix = |channel: u8, under: f32| -> u8 {
         let over = f32::from(channel) / 255.0;
         let blended = over.mul_add(alpha, under * (1.0 - alpha));
@@ -144,6 +157,7 @@ const fn text_hex(color: AppearanceColor) -> Option<HexColor> {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::float_cmp)]
     use super::{super::metrics::MODULE_GAP_EM, *};
 
     fn hyde_theme() -> HydeTheme {

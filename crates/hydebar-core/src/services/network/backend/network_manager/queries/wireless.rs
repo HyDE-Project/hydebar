@@ -9,6 +9,12 @@ use super::super::{DeviceType, NetworkDbus, proxies::DeviceProxy};
 use crate::services::network::AccessPoint;
 
 impl NetworkDbus<'_> {
+    /// Lists the object paths of every wifi device.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the devices cannot be listed or a device proxy
+    /// cannot be built.
     pub async fn wireless_devices(&self) -> AppResult<Vec<OwnedObjectPath>> {
         let conn = self.0.inner().connection();
         let devices = self
@@ -36,6 +42,11 @@ impl NetworkDbus<'_> {
         Ok(wireless_devices)
     }
 
+    /// Lists the access points every wifi device can currently see.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the wireless devices cannot be listed.
     pub async fn wireless_access_points(&self) -> AppResult<Vec<AccessPoint>> {
         let conn = self.0.inner().connection();
         let mut all = Vec::new();

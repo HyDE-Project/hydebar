@@ -69,6 +69,11 @@ impl UPowerService {
         Ok(profile)
     }
 
+    #[expect(
+        clippy::cast_sign_loss,
+        clippy::cast_possible_truncation,
+        reason = "UPower reports non-negative charge times and a 0-100 percentage"
+    )]
     pub(super) async fn initialize_battery_data(
         conn: &zbus::Connection
     ) -> AppResult<Option<(BatteryData, Battery)>> {

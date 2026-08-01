@@ -19,6 +19,11 @@ pub struct AccessPointProbe {
 
 impl AccessPointProbe {
     /// Reads the access points the wireless devices can currently see.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the backend cannot list the access points over
+    /// the bus.
     pub async fn access_points(&self) -> AppResult<Vec<AccessPoint>> {
         self.backend_choice
             .with_connection(self.conn.clone())
@@ -33,6 +38,11 @@ impl NetworkService {
     /// Costs a bus round trip per access point, which is why the bar calls it
     /// on the clock that follows the user's attention rather than on every
     /// signal the daemon emits about a band it can hear.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the backend cannot list the access points over
+    /// the bus.
     pub async fn access_points(&self) -> AppResult<Vec<AccessPoint>> {
         self.backend_choice
             .with_connection(self.conn.clone())

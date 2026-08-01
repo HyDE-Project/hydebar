@@ -135,7 +135,7 @@ where
         &self,
         icons: Self::ViewData<'_>
     ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
-        if let Some(service) = self.service.as_ref() {
+        self.service.as_ref().and_then(|service| {
             if service.no_access() {
                 None
             } else {
@@ -166,9 +166,7 @@ where
                     None
                 ))
             }
-        } else {
-            None
-        }
+        })
     }
 }
 

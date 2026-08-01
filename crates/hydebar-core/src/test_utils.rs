@@ -61,6 +61,9 @@ impl Default for MockHyprlandPort {
 }
 
 impl MockHyprlandPort {
+    /// # Panics
+    ///
+    /// Panics when the active window lock was poisoned by a panicking thread.
     #[must_use]
     pub fn with_active_window(title: &str, class: &str) -> Self {
         let port = Self::default();

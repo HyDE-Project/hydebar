@@ -84,6 +84,10 @@ impl AudioService {
         }
     }
 
+    #[expect(
+        clippy::unused_async,
+        reason = "kept async to match the service command runner signature expected by the control center"
+    )]
     pub async fn run_command(mut self, command: AudioCommand) -> Option<ServiceEvent<Self>> {
         self.apply_command(command);
         None

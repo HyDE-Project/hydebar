@@ -102,24 +102,6 @@ impl From<&IconsConfig> for IconTheme {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn a_fresh_table_carries_no_size() {
-        assert_eq!(IconTheme::default().size(), None);
-    }
-
-    #[test]
-    fn the_size_travels_with_the_table() {
-        let theme = IconTheme::default().with_size(13.0);
-
-        assert_eq!(theme.size(), Some(13.0));
-        assert!(theme.is_default());
-    }
-}
-
 /// A glyph made immortal for the renderer.
 ///
 /// The same bargain the font family cache strikes: a handful of bytes per
@@ -137,4 +119,22 @@ fn leaked(glyph: &str) -> &'static str {
     glyphs.insert(immortal);
 
     immortal
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_fresh_table_carries_no_size() {
+        assert_eq!(IconTheme::default().size(), None);
+    }
+
+    #[test]
+    fn the_size_travels_with_the_table() {
+        let theme = IconTheme::default().with_size(13.0);
+
+        assert_eq!(theme.size(), Some(13.0));
+        assert!(theme.is_default());
+    }
 }

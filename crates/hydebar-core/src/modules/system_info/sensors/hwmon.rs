@@ -57,8 +57,7 @@ pub fn scan(root: &Path) -> Vec<Chip> {
         return Vec::new();
     };
 
-    let mut directories: Vec<PathBuf> =
-        entries.flatten().map(|entry| entry.path()).collect();
+    let mut directories: Vec<PathBuf> = entries.flatten().map(|entry| entry.path()).collect();
     directories.sort();
 
     directories
@@ -100,8 +99,7 @@ fn read_chip(directory: &Path) -> Option<Chip> {
             facts.fan = true;
         } else if file_name.starts_with("in")
             && file_name.ends_with("_label")
-            && read_trimmed(file)
-                .is_some_and(|label| label.eq_ignore_ascii_case(NORTHBRIDGE_RAIL))
+            && read_trimmed(file).is_some_and(|label| label.eq_ignore_ascii_case(NORTHBRIDGE_RAIL))
         {
             facts.northbridge_voltage = true;
         }
@@ -140,6 +138,11 @@ fn read_trimmed(path: &Path) -> Option<String> {
 /// taken as degrees. The value is truncated rather than
 /// rounded, the same way every other reading the module shows
 /// is, so two indicators never disagree by a degree.
+///
+/// # Errors
+///
+/// Returns an error when the attribute cannot be read or does not parse
+/// as a number.
 pub fn read_temperature(path: &Path, buffer: &mut String) -> io::Result<i32> {
     let raw: i64 = read_number(path, buffer)?;
 
@@ -147,6 +150,11 @@ pub fn read_temperature(path: &Path, buffer: &mut String) -> io::Result<i32> {
 }
 
 /// Whole number behind a sysfs attribute.
+///
+/// # Errors
+///
+/// Returns an error when the attribute cannot be read or does not parse
+/// as a number.
 pub fn read_number<T>(path: &Path, buffer: &mut String) -> io::Result<T>
 where
     T: std::str::FromStr
@@ -154,12 +162,17 @@ where
     buffer.clear();
     File::open(path)?.read_to_string(buffer)?;
 
-    buffer.trim().parse().map_err(|_| {
-        io::Error::new(io::ErrorKind::InvalidData, "attribute is not a number")
-    })
+    buffer
+        .trim()
+        .parse()
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "attribute is not a number"))
 }
 
 /// Folds a raw reading onto whole degrees Celsius.
+#[expect(
+    clippy::cast_possible_truncation,
+    reason = "hwmon readings folded to whole degrees Celsius sit far inside i32"
+)]
 const fn to_degrees(raw: i64) -> i32 {
     if raw.abs() >= 1000 {
         (raw / 1000) as i32

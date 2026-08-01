@@ -30,31 +30,28 @@ impl IslandFinish {
     /// The border an island draws, rounded to `radius`.
     #[must_use]
     pub fn border(&self, radius: f32) -> Border {
-        match self.border {
-            Some(border) => Border {
-                width:  border.width,
-                color:  rgba(border.color),
-                radius: radius.into()
-            },
-            None => Border {
+        self.border.map_or_else(
+            || Border {
                 width:  0.0,
                 color:  Color::TRANSPARENT,
                 radius: radius.into()
+            },
+            |border| Border {
+                width:  border.width,
+                color:  rgba(border.color),
+                radius: radius.into()
             }
-        }
+        )
     }
 
     /// The shadow an island casts.
     #[must_use]
     pub fn shadow(&self) -> Shadow {
-        match self.shadow {
-            Some(shadow) => Shadow {
-                color:       rgba(shadow.color),
-                offset:      Vector::new(0.0, 0.0),
-                blur_radius: shadow.range
-            },
-            None => Shadow::default()
-        }
+        self.shadow.map_or_else(Shadow::default, |shadow| Shadow {
+            color:       rgba(shadow.color),
+            offset:      Vector::new(0.0, 0.0),
+            blur_radius: shadow.range
+        })
     }
 }
 
@@ -70,6 +67,8 @@ const fn rgba([r, g, b, a]: [f32; 4]) -> Color {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::float_cmp)]
+
     use super::*;
 
     #[test]

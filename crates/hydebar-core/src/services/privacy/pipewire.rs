@@ -33,6 +33,10 @@ pub(crate) trait PipewireEventSource {
 pub(crate) struct PipewireListener;
 
 impl PipewireListener {
+    #[expect(
+        clippy::too_many_lines,
+        reason = "the PipeWire runtime, its registry listener and the bridging thread live in one closure by necessity"
+    )]
     async fn create_receiver(&self) -> Result<Receiver<PrivacyEvent>, PrivacyError> {
         let (tx, rx) = channel::<PrivacyEvent>(EVENT_CAPACITY);
         let (init_tx, init_rx) = oneshot::channel::<Result<(), PrivacyError>>();

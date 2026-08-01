@@ -34,6 +34,10 @@ impl WebcamWatcher {
         }
     }
 
+    #[expect(
+        clippy::unused_async,
+        reason = "the subscribe adapter boxes this call as the source future, so it must stay async"
+    )]
     async fn create_stream(&self) -> Result<PrivacyStream, PrivacyError> {
         let inotify =
             Inotify::init().map_err(|err| PrivacyError::inotify_init(err.to_string()))?;

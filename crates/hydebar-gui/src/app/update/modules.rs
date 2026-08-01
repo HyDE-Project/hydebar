@@ -82,6 +82,10 @@ impl App {
             format!("{}: {}", notification.summary, notification.body)
         };
 
+        #[expect(
+            clippy::cast_possible_truncation,
+            reason = "popup lifetimes are far below u32 milliseconds"
+        )]
         notify(
             notice,
             duration.as_millis() as u32,
@@ -102,6 +106,10 @@ impl App {
     }
 
     /// Handles the messages this module owns.
+    #[expect(
+        clippy::too_many_lines,
+        reason = "one dispatch arm per module message, read as a single table"
+    )]
     pub(super) fn update_modules(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::Updates(message) => {

@@ -96,7 +96,7 @@ pub(super) async fn check_for_updates(command: &str) -> Result<Vec<Update>, Chec
     let stdout = String::from_utf8_lossy(&output.stdout);
     let updates = parse_updates(stdout.trim_end_matches('\n'));
 
-    classify(&output.status, &updates, &output.stderr)?;
+    classify(output.status, &updates, &output.stderr)?;
 
     Ok(updates)
 }
@@ -104,21 +104,17 @@ pub(super) async fn check_for_updates(command: &str) -> Result<Vec<Update>, Chec
 /// Decides whether a finished check is worth believing.
 ///
 /// Split out of the spawn so the policy can be exercised without a shell.
-fn classify(
-    status: &ExitStatus,
-    updates: &[Update],
-    stderr: &[u8]
-) -> Result<(), CheckFailure> {
+fn classify(status: ExitStatus, updates: &[Update], stderr: &[u8]) -> Result<(), CheckFailure> {
     if status.success() || !updates.is_empty() {
         return Ok(());
     }
 
     if status.code() == Some(COMMAND_NOT_FOUND) {
-        return Err(CheckFailure::Unavailable(CommandError::Status(*status)));
+        return Err(CheckFailure::Unavailable(CommandError::Status(status)));
     }
 
     if stderr.iter().any(|byte| !byte.is_ascii_whitespace()) {
-        return Err(CheckFailure::Transient(CommandError::Status(*status)));
+        return Err(CheckFailure::Transient(CommandError::Status(status)));
     }
 
     Ok(())
@@ -287,9 +283,10 @@ where
 
     let mut child = spawner.spawn()?;
 
-    let stdout = child.stdout.take().ok_or_else(|| {
-        CommandError::Io(std::io::Error::other("the update has no output pipe"))
-    })?;
+    let stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| CommandError::Io(std::io::Error::other("the update has no output pipe")))?;
 
     let mut lines = BufReader::new(stdout).lines();
     let mut tail: std::collections::VecDeque<String> = std::collections::VecDeque::new();
@@ -436,7 +433,7 @@ mod tests {
 
     #[test]
     fn a_successful_check_is_believed() {
-        assert!(classify(&status(0), &[], b"").is_ok());
+        assert!(classify(status(0), &[], b"").is_ok());
     }
 
     /// `checkupdates; paru -Qua` ends in a query that fails when the AUR
@@ -444,19 +441,19 @@ mod tests {
     /// "everything is current".
     #[test]
     fn a_silent_failure_means_nothing_is_out_of_date() {
-        assert!(classify(&status(1), &[], b"\n").is_ok());
+        assert!(classify(status(1), &[], b"\n").is_ok());
     }
 
     #[test]
     fn output_that_parses_outweighs_a_failing_status() {
-        assert!(classify(&status(1), &one_update(), b"mirror is slow").is_ok());
+        assert!(classify(status(1), &one_update(), b"mirror is slow").is_ok());
     }
 
     #[test]
     fn a_missing_command_makes_the_check_unavailable() {
         assert!(matches!(
             classify(
-                &status(COMMAND_NOT_FOUND),
+                status(COMMAND_NOT_FOUND),
                 &[],
                 b"bash: checkupdates: not found"
             ),
@@ -467,7 +464,7 @@ mod tests {
     #[test]
     fn a_complaint_without_output_is_a_passing_failure() {
         assert!(matches!(
-            classify(&status(1), &[], b"could not reach the mirror"),
+            classify(status(1), &[], b"could not reach the mirror"),
             Err(CheckFailure::Transient(_))
         ));
     }

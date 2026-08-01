@@ -111,9 +111,7 @@ async fn run_once(
 
     let output = crate::utils::process_group::guarded_output(&mut spawner)
         .await
-        .map_err(|err| {
-            CustomListenerError::Command(CustomCommandError::Spawn(Arc::new(err)))
-        })?;
+        .map_err(|err| CustomListenerError::Command(CustomCommandError::Spawn(Arc::new(err))))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let payload = stdout.trim();
@@ -144,11 +142,8 @@ async fn run_once(
             send_event(sender, ServiceEvent::Update(data)).map_err(CustomListenerError::Module)
         }
         Err(err) => {
-            let parse_error =
-                CustomCommandError::Parse(truncate_snippet(payload), Arc::new(err));
-            error!(
-                "Custom module '{module_name}' failed to parse JSON output: {parse_error:?}"
-            );
+            let parse_error = CustomCommandError::Parse(truncate_snippet(payload), Arc::new(err));
+            error!("Custom module '{module_name}' failed to parse JSON output: {parse_error:?}");
             *published = None;
 
             send_event(sender, ServiceEvent::Error(parse_error))

@@ -55,12 +55,13 @@ impl App {
 
     /// Keeps the indicator of a running desktop change moving.
     ///
-    /// A `HyDE` theme switch takes seconds and the bar has nothing to do for any
-    /// of them, so nothing would otherwise make it redraw: the indicator would
-    /// be drawn once on the press and then stand still, which is exactly what a
-    /// hung bar looks like. The tick runs only while a switch is running, and
-    /// on the indicator's own cadence rather than on the frame clock, so a wait
-    /// costs a handful of redraws a second instead of one per refresh.
+    /// A `HyDE` theme switch takes seconds and the bar has nothing to do for
+    /// any of them, so nothing would otherwise make it redraw: the
+    /// indicator would be drawn once on the press and then stand still,
+    /// which is exactly what a hung bar looks like. The tick runs only
+    /// while a switch is running, and on the indicator's own cadence rather
+    /// than on the frame clock, so a wait costs a handful of redraws a
+    /// second instead of one per refresh.
     fn switch_subscription(&self) -> Subscription<Message> {
         if self.themes.is_waiting() {
             iced::time::every(themes::FRAME_INTERVAL)
@@ -75,10 +76,11 @@ impl App {
     /// One clock for the whole bar rather than one per module, and none at all
     /// while the layout draws nothing that can be polled.
     fn rest_clock(&self) -> Subscription<Message> {
-        match self.attention.rest_period() {
-            Some(period) => Self::clock(Clock::Rest, period).map(|_| Message::PollAtRest),
-            None => Subscription::none()
-        }
+        self.attention
+            .rest_period()
+            .map_or_else(Subscription::none, |period| {
+                Self::clock(Clock::Rest, period).map(|_| Message::PollAtRest)
+            })
     }
 
     /// The clock refreshing the module the user is looking at.
@@ -86,10 +88,11 @@ impl App {
     /// It exists only while something is attended, so a bar nobody is touching
     /// carries no fast clock at all rather than one ticking on an empty roster.
     fn attended_clock(&self) -> Subscription<Message> {
-        match self.attention.attended_period() {
-            Some(period) => Self::clock(Clock::Attended, period).map(|_| Message::PollAttended),
-            None => Subscription::none()
-        }
+        self.attention
+            .attended_period()
+            .map_or_else(Subscription::none, |period| {
+                Self::clock(Clock::Attended, period).map(|_| Message::PollAttended)
+            })
     }
 
     /// A clock ticking every `period`, told apart from the other one by

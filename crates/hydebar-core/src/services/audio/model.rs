@@ -69,6 +69,11 @@ impl Volume for ChannelVolumes {
         f64::from(self.avg().0) / f64::from(libpulse_binding::volume::Volume::NORMAL.0)
     }
 
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        reason = "max is clamped to [0.0, 1.0], so the scaled raw volume is non-negative and fits in u32"
+    )]
     fn scale_volume(&mut self, max: f64) -> Option<&mut ChannelVolumes> {
         let max = max.clamp(0.0, 1.0);
         self.scale(libpulse_binding::volume::Volume(
@@ -92,7 +97,7 @@ impl Sinks for Vec<Device> {
                 None
             }
         }) {
-            Some((true, _)) => Icons::Speaker0,
+            Some((true, _)) | None => Icons::Speaker0,
             Some((false, volume)) => {
                 if volume > 0.66 {
                     Icons::Speaker3
@@ -104,7 +109,6 @@ impl Sinks for Vec<Device> {
                     Icons::Speaker0
                 }
             }
-            None => Icons::Speaker0
         }
     }
 }

@@ -9,8 +9,8 @@ use iced::{
 use super::{
     super::{Message, data::SystemInfoData},
     metrics::{
-        self, FOOT_GAP, METER_GAP, METER_HEIGHT, NOTE_SIZE, OUTER_PADDING, ROW_GAP,
-        ROW_SIZE, SECTION_GAP, SECTION_TITLE_SIZE, TITLE_SIZE
+        self, FOOT_GAP, METER_GAP, METER_HEIGHT, NOTE_SIZE, OUTER_PADDING, ROW_GAP, ROW_SIZE,
+        SECTION_GAP, SECTION_TITLE_SIZE, TITLE_SIZE
     },
     model::{self, MeterLevel, Row, Section}
 };
@@ -87,9 +87,8 @@ fn section_view<'a>(section: Section, icons: &IconTheme) -> Element<'a, Message>
     let mut body = Column::new().push(header);
 
     if let Some(note) = section.note {
-        body = body.push(
-            container(text(note).size(scale::scaled(NOTE_SIZE))).style(secondary_text)
-        );
+        body =
+            body.push(container(text(note).size(scale::scaled(NOTE_SIZE))).style(secondary_text));
     }
 
     for entry in section.rows {
@@ -145,7 +144,13 @@ fn meter_view<'a>(percent: u32) -> Element<'a, Message> {
     }
 
     if percent < 100 {
-        bar = bar.push(Space::new().width(Length::FillPortion((100 - percent) as u16)));
+        #[expect(
+            clippy::cast_possible_truncation,
+            reason = "the remainder of a share clamped to 0..=100 fits u16"
+        )]
+        {
+            bar = bar.push(Space::new().width(Length::FillPortion((100 - percent) as u16)));
+        }
     }
 
     container(bar)
@@ -157,16 +162,13 @@ fn meter_view<'a>(percent: u32) -> Element<'a, Message> {
 
 fn footnotes_view<'a>(footnotes: Vec<String>) -> Element<'a, Message> {
     let mut body = Column::new().push(rule::horizontal(1)).push(
-        container(
-            text("Not reported on this machine").size(scale::scaled(SECTION_TITLE_SIZE))
-        )
-        .style(secondary_text)
+        container(text("Not reported on this machine").size(scale::scaled(SECTION_TITLE_SIZE)))
+            .style(secondary_text)
     );
 
     for entry in footnotes {
-        body = body.push(
-            container(text(entry).size(scale::scaled(NOTE_SIZE))).style(secondary_text)
-        );
+        body =
+            body.push(container(text(entry).size(scale::scaled(NOTE_SIZE))).style(secondary_text));
     }
 
     body.spacing(scale::scaled(FOOT_GAP)).into()

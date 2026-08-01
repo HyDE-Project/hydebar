@@ -29,8 +29,8 @@
 
 mod guard;
 mod marks;
-mod registry;
 mod reaper;
+mod registry;
 mod termination;
 
 pub use guard::{
@@ -53,12 +53,12 @@ mod tests {
     use tokio::process::Command;
 
     use super::{
-        *,
         marks::{
             LAUNCH_PREFIX, SPAWN_PREFIX, marked_processes, marked_stamp, next_spawn_id,
             terminate_marked
         },
-        registry::{GroupRegistry, LIVE_GROUPS, REGISTRY_CAPACITY}
+        registry::{GroupRegistry, LIVE_GROUPS, REGISTRY_CAPACITY},
+        *
     };
 
     /// A process id far beyond `pid_max`, so signalling it reaches nobody.
@@ -200,11 +200,13 @@ mod tests {
     fn the_registry_reports_when_it_has_no_room_left() {
         let registry = GroupRegistry::new();
 
-        for pid in 1..=REGISTRY_CAPACITY {
-            assert!(registry.insert(pid as u32), "slot {pid} must be free");
+        let capacity = u32::try_from(REGISTRY_CAPACITY).expect("small capacity");
+
+        for pid in 1..=capacity {
+            assert!(registry.insert(pid), "slot {pid} must be free");
         }
 
-        assert!(!registry.insert(REGISTRY_CAPACITY as u32 + 1));
+        assert!(!registry.insert(capacity + 1));
     }
 
     #[tokio::test]

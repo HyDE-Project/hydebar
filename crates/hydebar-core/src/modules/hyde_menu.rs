@@ -246,7 +246,9 @@ mod source {
 
         match std::env::var(name) {
             Ok(value) if !value.is_empty() => format!("{value}{rest}"),
-            _ => data_dir().map_or_else(|| raw.to_owned(), |dir| format!("{}{rest}", dir.display()))
+            _ => {
+                data_dir().map_or_else(|| raw.to_owned(), |dir| format!("{}{rest}", dir.display()))
+            }
         }
     }
 

@@ -56,50 +56,50 @@ pub struct DiskData {
 /// Aggregated system information consumed by the UI layer.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct SystemInfoData {
-    pub cpu_usage:         u32,
+    pub cpu_usage:              u32,
     /// Logical processors the load is averaged over; zero before the
     /// first real sample.
-    pub cpu_count:         u32,
-    pub memory_usage:      u32,
+    pub cpu_count:              u32,
+    pub memory_usage:           u32,
     /// Memory in use, in bytes, behind [`Self::memory_usage`].
-    pub memory_used:       u64,
+    pub memory_used:            u64,
     /// Memory installed, in bytes.
-    pub memory_total:      u64,
-    pub memory_swap_usage: u32,
+    pub memory_total:           u64,
+    pub memory_swap_usage:      u32,
     /// Swap in use, in bytes, behind [`Self::memory_swap_usage`].
-    pub memory_swap_used:  u64,
+    pub memory_swap_used:       u64,
     /// Swap configured, in bytes; zero on a machine without swap.
-    pub memory_swap_total: u64,
+    pub memory_swap_total:      u64,
     /// Processor temperature, absent on a machine that reports none.
-    pub cpu_temperature:   Option<i32>,
+    pub cpu_temperature:        Option<i32>,
     /// Sensor the processor temperature is read from.
     pub cpu_temperature_source: Option<String>,
     /// Graphics readings, absent when the machine exposes no graphics
     /// device.
-    pub gpu:               Option<GpuReadings>,
-    pub disks:             Vec<DiskData>,
-    pub network:           Option<NetworkData>,
+    pub gpu:                    Option<GpuReadings>,
+    pub disks:                  Vec<DiskData>,
+    pub network:                Option<NetworkData>,
     /// Processor model name, as the kernel states it.
-    pub cpu_model:         Option<String>,
+    pub cpu_model:              Option<String>,
     /// Physical cores behind [`Self::cpu_count`] logical threads.
-    pub cpu_cores:         Option<u32>,
+    pub cpu_cores:              Option<u32>,
     /// Highest boost frequency the processor is rated for, in MHz.
-    pub cpu_max_mhz:       Option<u32>,
+    pub cpu_max_mhz:            Option<u32>,
     /// Fastest core at the moment of the sample, in MHz, damped to
     /// 50 MHz steps so an idle machine does not repaint on jitter.
-    pub cpu_current_mhz:   Option<u32>,
+    pub cpu_current_mhz:        Option<u32>,
     /// Frequency governor steering the processor.
-    pub cpu_governor:      Option<String>,
+    pub cpu_governor:           Option<String>,
     /// Microcode revision the processor runs — the freshness of the
     /// firmware side of its driver stack.
-    pub cpu_microcode:     Option<String>,
+    pub cpu_microcode:          Option<String>,
     /// Kernel release, the freshness of the in-tree drivers.
-    pub kernel:            Option<String>,
+    pub kernel:                 Option<String>,
     /// Page cache and reclaimable slab, in bytes: memory in use that an
     /// allocation could still claim back.
-    pub memory_cached:     u64,
+    pub memory_cached:          u64,
     /// The device swap lives on, with its compression when it is zram.
-    pub swap_backend:      Option<String>
+    pub swap_backend:           Option<String>
 }
 
 impl SystemInfoData {
@@ -184,6 +184,10 @@ impl NetworkSnapshot {
             .unwrap_or_default();
         let seconds = elapsed.as_secs();
 
+        #[expect(
+            clippy::cast_possible_truncation,
+            reason = "kilobyte deltas and the seconds of a short sampling window fit u32"
+        )]
         let compute_speed = |current: u64, previous_total: u64| -> u32 {
             if seconds == 0 {
                 return 0;
@@ -283,8 +287,7 @@ impl SystemInfoSampler {
             .refresh_cpu_specifics(sysinfo::CpuRefreshKind::nothing().with_cpu_usage());
         self.system.refresh_memory();
 
-        let cpu_usage = self.system.global_cpu_usage().floor() as u32;
-        let cpu_count = self.system.cpus().len() as u32;
+        let (cpu_usage, cpu_count) = cpu_counters(&self.system);
         let memory_total = self.system.total_memory();
         let memory_swap_total = self.system.total_swap();
         let (memory_usage, memory_used) =
@@ -358,8 +361,7 @@ impl SystemInfoSampler {
             .map(|snapshot| snapshot.to_data(self.last_network.as_ref()));
         self.last_network = observation;
 
-        let cpu_usage = self.system.global_cpu_usage().floor() as u32;
-        let cpu_count = self.system.cpus().len() as u32;
+        let (cpu_usage, cpu_count) = cpu_counters(&self.system);
         let memory_total = self.system.total_memory();
         let memory_swap_total = self.system.total_swap();
         let (memory_usage, memory_used) =
@@ -422,17 +424,36 @@ impl SystemInfoSampler {
 fn stamp_environment(data: &mut SystemInfoData) {
     let identity = hardware::identity();
 
-    data.cpu_model = identity.model.clone();
+    data.cpu_model.clone_from(&identity.model);
     data.cpu_cores = identity.cores;
     data.cpu_max_mhz = identity.max_mhz;
-    data.cpu_microcode = identity.microcode.clone();
-    data.kernel = identity.kernel.clone();
-    data.swap_backend = identity.swap.clone();
+    data.cpu_microcode.clone_from(&identity.microcode);
+    data.kernel.clone_from(&identity.kernel);
+    data.swap_backend.clone_from(&identity.swap);
     data.cpu_current_mhz = hardware::current_mhz();
     data.cpu_governor = hardware::governor();
     data.memory_cached = hardware::cached_bytes();
 }
 
+/// Whole-percent processor load and the logical processor count.
+#[expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    reason = "the floored global load is bounded to 0..=100 and the logical processor count fits u32"
+)]
+fn cpu_counters(system: &System) -> (u32, u32) {
+    (
+        system.global_cpu_usage().floor() as u32,
+        system.cpus().len() as u32
+    )
+}
+
+#[expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    reason = "the ratio times 100 is bounded to 0..=100 and fits u32; f32 blurs only fractions below the whole percent shown"
+)]
 fn percentage(used: u64, total: u64) -> u32 {
     if total == 0 {
         return 0;

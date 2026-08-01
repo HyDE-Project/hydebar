@@ -14,7 +14,7 @@ use crate::{
     }
 };
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct MediaPlayer {
     service: Option<MprisPlayerService>,
     sender:  Option<ModuleEventSender<Message>>,
@@ -66,7 +66,7 @@ mod commands {
     };
 
     impl MediaPlayer {
-        pub(super) fn handle_command(&mut self, service_name: String, command: PlayerCommand) {
+        pub(super) fn handle_command(&self, service_name: String, command: PlayerCommand) {
             let runtime = self.runtime.clone();
             let sender = self.sender.clone();
             let service = self.service.clone();
@@ -95,10 +95,10 @@ mod commands {
         }
 
         pub(super) fn get_title(d: &MprisPlayerData, config: &MediaPlayerModuleConfig) -> String {
-            match &d.metadata {
-                Some(m) => truncate_text(&m.to_string(), config.max_title_length),
-                None => "No Title".to_string()
-            }
+            d.metadata.as_ref().map_or_else(
+                || "No Title".to_string(),
+                |m| truncate_text(&m.to_string(), config.max_title_length)
+            )
         }
     }
 }
@@ -296,74 +296,76 @@ mod view {
             opacity: f32,
             icons: &IconTheme
         ) -> Element<'_, Message> {
-            match &self.service {
-                None => text("Not connected to MPRIS service").into(),
-                Some(s) => column!(
-                    text("Players").size(scale::scaled(20.0)),
-                    rule::horizontal(1),
-                    column(s.iter().map(|d| {
-                        let title = text(Self::get_title(d, config))
-                            .wrapping(iced::widget::text::Wrapping::WordOrGlyph)
-                            .width(Length::Fill);
+            self.service.as_ref().map_or_else(
+                || text("Not connected to MPRIS service").into(),
+                |s| {
+                    column!(
+                        text("Players").size(scale::scaled(20.0)),
+                        rule::horizontal(1),
+                        column(s.iter().map(|d| {
+                            let title = text(Self::get_title(d, config))
+                                .wrapping(iced::widget::text::Wrapping::WordOrGlyph)
+                                .width(Length::Fill);
 
-                        let play_pause_icon = match d.state {
-                            PlaybackStatus::Playing => Icons::Pause,
-                            PlaybackStatus::Paused | PlaybackStatus::Stopped => Icons::Play
-                        };
+                            let play_pause_icon = match d.state {
+                                PlaybackStatus::Playing => Icons::Pause,
+                                PlaybackStatus::Paused | PlaybackStatus::Stopped => Icons::Play
+                            };
 
-                        let buttons = row![
-                            button(icon(icons, Icons::SkipPrevious))
-                                .on_press(Message::Prev(d.service.clone()))
-                                .padding([scale::scaled(5.0), scale::scaled(12.0)])
-                                .style(settings_button_style(opacity)),
-                            button(icon(icons, play_pause_icon))
-                                .on_press(Message::PlayPause(d.service.clone()))
-                                .style(settings_button_style(opacity)),
-                            button(icon(icons, Icons::SkipNext))
-                                .on_press(Message::Next(d.service.clone()))
-                                .padding([scale::scaled(5.0), scale::scaled(12.0)])
-                                .style(settings_button_style(opacity)),
-                        ]
-                        .spacing(scale::scaled(8.0));
+                            let buttons = row![
+                                button(icon(icons, Icons::SkipPrevious))
+                                    .on_press(Message::Prev(d.service.clone()))
+                                    .padding([scale::scaled(5.0), scale::scaled(12.0)])
+                                    .style(settings_button_style(opacity)),
+                                button(icon(icons, play_pause_icon))
+                                    .on_press(Message::PlayPause(d.service.clone()))
+                                    .style(settings_button_style(opacity)),
+                                button(icon(icons, Icons::SkipNext))
+                                    .on_press(Message::Next(d.service.clone()))
+                                    .padding([scale::scaled(5.0), scale::scaled(12.0)])
+                                    .style(settings_button_style(opacity)),
+                            ]
+                            .spacing(scale::scaled(8.0));
 
-                        let volume_slider = d.volume.map(|v| {
-                            slider(0.0..=100.0, v, move |v| {
-                                Message::SetVolume(d.service.clone(), v)
-                            })
-                        });
+                            let volume_slider = d.volume.map(|v| {
+                                slider(0.0..=100.0, v, move |v| {
+                                    Message::SetVolume(d.service.clone(), v)
+                                })
+                            });
 
-                        container(
-                            Column::new()
-                                .push(
-                                    row!(title, buttons)
-                                        .spacing(scale::scaled(8.0))
-                                        .align_y(Vertical::Center)
-                                )
-                                .push_maybe(volume_slider)
-                                .spacing(scale::scaled(8.0))
-                        )
-                        .style(move |theme: &Theme| container::Style {
-                            background: Background::Color(
-                                theme
-                                    .extended_palette()
-                                    .secondary
-                                    .strong
-                                    .color
-                                    .scale_alpha(opacity)
+                            container(
+                                Column::new()
+                                    .push(
+                                        row!(title, buttons)
+                                            .spacing(scale::scaled(8.0))
+                                            .align_y(Vertical::Center)
+                                    )
+                                    .push_maybe(volume_slider)
+                                    .spacing(scale::scaled(8.0))
                             )
-                            .into(),
-                            border: Border::default().rounded(16),
-                            ..container::Style::default()
-                        })
-                        .padding(scale::scaled(16.0))
-                        .width(Length::Fill)
-                        .into()
-                    }))
-                    .spacing(scale::scaled(16.0))
-                )
-                .spacing(scale::scaled(8.0))
-                .into()
-            }
+                            .style(move |theme: &Theme| container::Style {
+                                background: Background::Color(
+                                    theme
+                                        .extended_palette()
+                                        .secondary
+                                        .strong
+                                        .color
+                                        .scale_alpha(opacity)
+                                )
+                                .into(),
+                                border: Border::default().rounded(16),
+                                ..container::Style::default()
+                            })
+                            .padding(scale::scaled(16.0))
+                            .width(Length::Fill)
+                            .into()
+                        }))
+                        .spacing(scale::scaled(16.0))
+                    )
+                    .spacing(scale::scaled(8.0))
+                    .into()
+                }
+            )
         }
     }
 }

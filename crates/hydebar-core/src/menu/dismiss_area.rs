@@ -42,6 +42,15 @@ where
     on_release: Message
 }
 
+impl<Message, Theme, Renderer> std::fmt::Debug for DismissArea<'_, Message, Theme, Renderer>
+where
+    Renderer: iced_core::Renderer
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DismissArea").finish_non_exhaustive()
+    }
+}
+
 /// Wraps `content` so every press on it is reported.
 ///
 /// `on_press` is published when a press lands on the wrapped element and
@@ -268,7 +277,7 @@ mod tests {
             )
         };
 
-        let mut tree = Tree::new(&iced_core::Element::<Reported, Theme, TestRenderer>::new(
+        let mut tree = Tree::new(iced_core::Element::<Reported, Theme, TestRenderer>::new(
             build()
         ));
         let mut area = build();

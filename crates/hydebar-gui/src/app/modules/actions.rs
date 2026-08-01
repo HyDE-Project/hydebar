@@ -35,24 +35,22 @@ impl App {
                 }
             }
             ModuleName::Themes => ModuleActions {
-                left: Some(OnModulePress::Action(Box::new(Message::Themes(
+                left:   Some(OnModulePress::Action(Box::new(Message::Themes(
                     hydebar_core::modules::themes::Message::NextTheme
                 )))),
-                right: Some(OnModulePress::Action(Box::new(Message::Themes(
+                right:  Some(OnModulePress::Action(Box::new(Message::Themes(
                     hydebar_core::modules::themes::Message::PreviousTheme
                 )))),
-                middle: Some(OnModulePress::ToggleMenu(MenuType::Themes)),
-                ..ModuleActions::default()
+                middle: Some(OnModulePress::ToggleMenu(MenuType::Themes))
             },
             ModuleName::Wallpaper => ModuleActions {
-                left: Some(OnModulePress::Action(Box::new(Message::Wallpaper(
+                left:   Some(OnModulePress::Action(Box::new(Message::Wallpaper(
                     hydebar_core::modules::wallpaper::Message::Next
                 )))),
-                right: Some(OnModulePress::Action(Box::new(Message::Wallpaper(
+                right:  Some(OnModulePress::Action(Box::new(Message::Wallpaper(
                     hydebar_core::modules::wallpaper::Message::Previous
                 )))),
-                middle: Some(OnModulePress::ToggleMenu(MenuType::Wallpaper)),
-                ..ModuleActions::default()
+                middle: Some(OnModulePress::ToggleMenu(MenuType::Wallpaper))
             },
             _ => ModuleActions {
                 left,

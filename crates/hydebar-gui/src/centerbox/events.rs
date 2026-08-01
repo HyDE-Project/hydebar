@@ -37,6 +37,10 @@ pub(super) fn operate<Message, Theme, Renderer>(
 }
 
 /// Feeds an event to every section of the [`Centerbox`].
+#[expect(
+    clippy::too_many_arguments,
+    reason = "mirrors the parameter list of the iced widget update contract"
+)]
 pub(super) fn update<Message, Theme, Renderer>(
     centerbox: &mut Centerbox<'_, Message, Theme, Renderer>,
     tree: &mut Tree,

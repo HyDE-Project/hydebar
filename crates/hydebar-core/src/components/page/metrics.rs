@@ -27,6 +27,10 @@ pub const ROW_SLACK_EM: f32 = 2.5;
 
 /// Width `label` takes when drawn at `font_size`.
 #[must_use]
+#[expect(
+    clippy::cast_precision_loss,
+    reason = "label lengths sit far below the f32 mantissa limit"
+)]
 pub fn text_width(label: &str, font_size: f32) -> f32 {
     label.chars().count() as f32 * GLYPH_ADVANCE_EM * font_size
 }
@@ -137,6 +141,11 @@ pub fn wrap_chips_into_rows(
     gap: f32
 ) -> Vec<Vec<usize>> {
     let cell = chip_cell_width(labels, font_size);
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        reason = "the floored cell count is small and clamped to at least one"
+    )]
     let per_row = (((available + gap) / (cell + gap)).floor() as usize).max(1);
 
     (0..labels.len())
@@ -148,6 +157,9 @@ pub fn wrap_chips_into_rows(
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::float_cmp)]
+    #![allow(clippy::suboptimal_flops)]
+
     use super::*;
 
     #[test]
@@ -186,7 +198,7 @@ mod tests {
     #[test]
     fn rows_hold_the_same_number_of_cells_whatever_the_labels() {
         let short = (0..6).map(|i| format!("A{i}")).collect::<Vec<_>>();
-        let mut mixed = short.clone();
+        let mut mixed = short;
         mixed[0] = "A very long theme name".to_owned();
 
         let per_row = |rows: Vec<Vec<usize>>| rows.first().map(Vec::len);

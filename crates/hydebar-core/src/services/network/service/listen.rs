@@ -84,13 +84,12 @@ impl NetworkService {
 
         while let Some(event) = events.next().await {
             let event = event?;
-            let mut exit_loop = false;
-            if let NetworkEvent::WirelessDevice {
-                ..
-            } = event
-            {
-                exit_loop = true;
-            }
+            let exit_loop = matches!(
+                event,
+                NetworkEvent::WirelessDevice {
+                    ..
+                }
+            );
 
             if gate.admits(&event) {
                 let refresh_link = Self::moves_the_link(&event, &mut throttle);
@@ -109,6 +108,10 @@ impl NetworkService {
         Ok(())
     }
 
+    #[expect(
+        clippy::too_many_lines,
+        reason = "one state machine with an arm per listener phase; splitting the arms would separate them from the retry flow"
+    )]
     pub(super) async fn start_listening<P>(
         state: State,
         publisher: &mut P,

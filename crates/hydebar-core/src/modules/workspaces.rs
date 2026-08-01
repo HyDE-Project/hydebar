@@ -125,6 +125,11 @@ fn map_snapshot_to_workspaces(
     // Synthesize "missing" workspaces [1..=max_id] for filling UI.
     let existing_ids = normal.iter().map(|w| w.id).collect::<Vec<_>>();
     let mut max_id = *existing_ids.iter().max().unwrap_or(&0);
+    #[expect(
+        clippy::cast_sign_loss,
+        clippy::cast_possible_wrap,
+        reason = "normal workspace ids are positive and configured maxima are far below i32::MAX"
+    )]
     if let Some(max_workspaces) = config.max_workspaces
         && max_workspaces > max_id as u32
     {
@@ -161,6 +166,10 @@ fn map_snapshot_to_workspaces(
 /// read. A label already wider than that minimum sizes itself instead, which
 /// keeps a long special workspace name from being squeezed.
 fn label_box_width(label: &str, glyph_advance: f32, min_width: f32) -> Length {
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "workspace labels are a handful of glyphs, far inside f32's mantissa"
+    )]
     let natural = glyph_advance * label.chars().count() as f32;
 
     if natural < min_width {
@@ -170,9 +179,22 @@ fn label_box_width(label: &str, glyph_advance: f32, min_width: f32) -> Length {
     }
 }
 
+impl std::fmt::Debug for Workspaces {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Workspaces")
+            .field("hyprland", &"<HyprlandPort>")
+            .field("items", &self.items)
+            .field("urgent_ids", &self.urgent_ids)
+            .field("sender", &self.sender)
+            .field("runtime", &self.runtime)
+            .field("task", &self.task)
+            .finish()
+    }
+}
+
 pub struct Workspaces {
     hyprland:   Arc<dyn HyprlandPort>,
-    workspaces: Vec<Workspace>,
+    items:      Vec<Workspace>,
     /// Workspaces whose windows demanded attention and were not yet visited.
     urgent_ids: std::collections::HashSet<i32>,
     sender:     Option<ModuleEventSender<Message>>,
@@ -186,7 +208,7 @@ impl Workspaces {
 
         Self {
             hyprland,
-            workspaces,
+            items: workspaces,
             urgent_ids: std::collections::HashSet::new(),
             sender: None,
             runtime: None,
@@ -196,7 +218,7 @@ impl Workspaces {
 
     #[cfg(test)]
     pub(crate) fn items(&self) -> &[Workspace] {
-        &self.workspaces
+        &self.items
     }
 
     /// Runs a compositor dispatch off the thread the bar draws on.
@@ -241,36 +263,28 @@ impl Workspaces {
     pub fn update(&mut self, message: Message, config: &WorkspacesModuleConfig) {
         match message {
             Message::WorkspacesChanged(snapshot) => {
-                self.workspaces = map_snapshot_to_workspaces(&snapshot, config);
-                self.urgent_ids.retain(|id| {
-                    self.workspaces
-                        .iter()
-                        .any(|w| w.id == *id && !w.active)
-                });
+                self.items = map_snapshot_to_workspaces(&snapshot, config);
+                self.urgent_ids
+                    .retain(|id| self.items.iter().any(|w| w.id == *id && !w.active));
 
-                for workspace in &mut self.workspaces {
+                for workspace in &mut self.items {
                     workspace.urgent = self.urgent_ids.contains(&workspace.id);
                 }
             }
             Message::WorkspaceUrgent(id) => {
-                let visible = self
-                    .workspaces
-                    .iter()
-                    .any(|w| w.id == id && w.active);
+                let visible = self.items.iter().any(|w| w.id == id && w.active);
 
                 if !visible {
                     self.urgent_ids.insert(id);
 
-                    if let Some(workspace) =
-                        self.workspaces.iter_mut().find(|w| w.id == id)
-                    {
+                    if let Some(workspace) = self.items.iter_mut().find(|w| w.id == id) {
                         workspace.urgent = true;
                     }
                 }
             }
             Message::ChangeWorkspace(id) => {
                 if id > 0 {
-                    let already_active = self.workspaces.iter().any(|w| w.active && w.id == id);
+                    let already_active = self.items.iter().any(|w| w.active && w.id == id);
                     if !already_active {
                         debug!("changing workspace to: {id}");
                         let port = Arc::clone(&self.hyprland);
@@ -281,13 +295,13 @@ impl Workspaces {
                 }
             }
             Message::ToggleSpecialWorkspace(id) => {
-                if let Some(special) = self.workspaces.iter().find(|w| w.id == id && w.id < 0) {
+                if let Some(special) = self.items.iter().find(|w| w.id == id && w.id < 0) {
                     debug!("toggle special workspace: {id}");
 
-                    let monitor_ident = match special.monitor_id {
-                        Some(idx) => HyprlandMonitorSelector::Id(idx),
-                        None => HyprlandMonitorSelector::Name(special.monitor.clone())
-                    };
+                    let monitor_ident = special.monitor_id.map_or_else(
+                        || HyprlandMonitorSelector::Name(special.monitor.clone()),
+                        HyprlandMonitorSelector::Id
+                    );
                     let name = special.name.clone();
                     let port = Arc::clone(&self.hyprland);
 
@@ -399,8 +413,8 @@ where
                                     Ok(HyprlandWorkspaceEvent::Urgent {
                                         workspace_id
                                     }) => {
-                                        if let Err(err) = sender
-                                            .try_send(Message::WorkspaceUrgent(workspace_id))
+                                        if let Err(err) =
+                                            sender.try_send(Message::WorkspaceUrgent(workspace_id))
                                         {
                                             error!("failed to publish workspace urgency: {err}");
                                         }
@@ -457,7 +471,7 @@ where
 
         Some((
             Row::with_children(
-                self.workspaces
+                self.items
                     .iter()
                     .filter_map(|w| {
                         let on_this_screen = monitor_name.is_none_or(|name| w.monitor == name);
@@ -547,7 +561,7 @@ mod tests {
     #[test]
     fn initializes_from_port_snapshot() {
         let port = Arc::new(MockHyprlandPort::default());
-        let port_trait: Arc<dyn HyprlandPort> = port.clone();
+        let port_trait: Arc<dyn HyprlandPort> = port;
         let config = WorkspacesModuleConfig::default();
 
         let module = Workspaces::new(port_trait, &config);

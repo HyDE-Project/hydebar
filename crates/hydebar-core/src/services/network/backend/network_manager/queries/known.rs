@@ -9,6 +9,13 @@ use super::super::{NetworkDbus, NetworkSettingsDbus, proxies::ConnectionSettings
 use crate::services::network::{AccessPoint, KnownConnection, Vpn};
 
 impl NetworkDbus<'_> {
+    /// Lists the stored connection profiles as known connections.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the settings service proxy cannot be created, the
+    /// stored connections cannot be listed, or a connection settings proxy
+    /// cannot be built.
     pub async fn known_connections_internal(
         &self,
         wireless_access_points: &[AccessPoint]

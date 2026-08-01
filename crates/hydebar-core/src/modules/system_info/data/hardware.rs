@@ -54,9 +54,7 @@ pub fn current_mhz() -> Option<u32> {
 
     policies
         .flatten()
-        .filter_map(|policy| {
-            read_khz(policy.path().join("scaling_cur_freq").to_str()?)
-        })
+        .filter_map(|policy| read_khz(policy.path().join("scaling_cur_freq").to_str()?))
         .max()
         .map(|mhz| mhz / FREQUENCY_STEP_MHZ * FREQUENCY_STEP_MHZ)
 }
@@ -88,9 +86,7 @@ fn read_khz(path: &str) -> Option<u32> {
 }
 
 /// Model, physical cores and microcode out of `/proc/cpuinfo`.
-pub(super) fn parse_cpuinfo(
-    cpuinfo: &str
-) -> (Option<String>, Option<u32>, Option<String>) {
+pub(super) fn parse_cpuinfo(cpuinfo: &str) -> (Option<String>, Option<u32>, Option<String>) {
     let field = |name: &str| {
         cpuinfo.lines().find_map(|line| {
             let (key, value) = line.split_once(':')?;

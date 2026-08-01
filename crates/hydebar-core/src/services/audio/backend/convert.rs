@@ -28,7 +28,7 @@ impl From<&SinkInfo<'_>> for Device {
             name:        value
                 .name
                 .as_ref()
-                .map_or(String::default(), ToString::to_string),
+                .map_or_else(String::default, ToString::to_string),
             description: value
                 .proplist
                 .get_str("device.description")
@@ -47,14 +47,13 @@ impl From<&SinkInfo<'_>> for Device {
                             name:        port
                                 .name
                                 .as_ref()
-                                .map_or(String::default(), ToString::to_string),
+                                .map_or_else(String::default, ToString::to_string),
                             description: port
                                 .description
                                 .as_ref()
-                                .map_or(String::default(), ToString::to_string),
+                                .map_or_else(String::default, ToString::to_string),
                             device_type: match port.r#type {
                                 DevicePortType::Headphones => DeviceType::Headphones,
-                                DevicePortType::Speaker => DeviceType::Speaker,
                                 DevicePortType::Headset => DeviceType::Headset,
                                 DevicePortType::HDMI => DeviceType::Hdmi,
                                 _ => DeviceType::Speaker
@@ -75,7 +74,7 @@ impl From<&SourceInfo<'_>> for Device {
             name:        value
                 .name
                 .as_ref()
-                .map_or(String::default(), ToString::to_string),
+                .map_or_else(String::default, ToString::to_string),
             description: value
                 .proplist
                 .get_str("device.description")
@@ -94,14 +93,13 @@ impl From<&SourceInfo<'_>> for Device {
                             name:        port
                                 .name
                                 .as_ref()
-                                .map_or(String::default(), ToString::to_string),
+                                .map_or_else(String::default, ToString::to_string),
                             description: port
                                 .description
                                 .as_ref()
-                                .map_or(String::default(), ToString::to_string),
+                                .map_or_else(String::default, ToString::to_string),
                             device_type: match port.r#type {
                                 DevicePortType::Headphones => DeviceType::Headphones,
-                                DevicePortType::Speaker => DeviceType::Speaker,
                                 DevicePortType::Headset => DeviceType::Headset,
                                 DevicePortType::HDMI => DeviceType::Hdmi,
                                 _ => DeviceType::Speaker

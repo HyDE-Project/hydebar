@@ -8,7 +8,7 @@ use super::super::state::{App, Message};
 
 impl App {
     /// Handles the messages this module owns.
-    pub(super) fn update_navigation(&mut self, message: Message) -> Task<Message> {
+    pub(super) fn update_navigation(&mut self, message: &Message) -> Task<Message> {
         match message {
             Message::ActivateNavigationMode => {
                 if !self.navigation_mode && self.config.keybindings.enabled {
@@ -71,9 +71,7 @@ impl App {
 
                 let index = self.focused_module_index.unwrap();
 
-                let main_window_id = if let Some(id) = self.outputs.first_main_window_id() {
-                    id
-                } else {
+                let Some(main_window_id) = self.outputs.first_main_window_id() else {
                     return Task::none();
                 };
 

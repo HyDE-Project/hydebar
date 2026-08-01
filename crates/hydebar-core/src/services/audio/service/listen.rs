@@ -109,6 +109,10 @@ impl AudioService {
         }
     }
 
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "the normalized volume scaled to percent is far below i32::MAX; fractional percent is intentionally dropped"
+    )]
     pub(super) fn active_device_volume(devices: &[Device], default: &str) -> i32 {
         let volume = devices
             .iter()

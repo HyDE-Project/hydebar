@@ -39,7 +39,7 @@ impl Deref for BrightnessService {
 }
 
 impl BrightnessService {
-    async fn get_max_brightness(device_path: &Path) -> Result<u32, BrightnessError> {
+    fn get_max_brightness(device_path: &Path) -> Result<u32, BrightnessError> {
         let path = device_path.join("max_brightness");
         let contents = fs::read_to_string(&path)
             .map_err(|err| BrightnessError::filesystem(format!("{}: {err}", path.display())))?;
@@ -51,7 +51,7 @@ impl BrightnessService {
         Ok(value)
     }
 
-    async fn get_actual_brightness(device_path: &Path) -> Result<u32, BrightnessError> {
+    fn get_actual_brightness(device_path: &Path) -> Result<u32, BrightnessError> {
         let path = device_path.join("actual_brightness");
         let contents = fs::read_to_string(&path)
             .map_err(|err| BrightnessError::filesystem(format!("{}: {err}", path.display())))?;
@@ -63,9 +63,9 @@ impl BrightnessService {
         Ok(value)
     }
 
-    async fn initialize_data(device_path: &Path) -> Result<BrightnessData, BrightnessError> {
-        let max_brightness = Self::get_max_brightness(device_path).await?;
-        let actual_brightness = Self::get_actual_brightness(device_path).await?;
+    fn initialize_data(device_path: &Path) -> Result<BrightnessData, BrightnessError> {
+        let max_brightness = Self::get_max_brightness(device_path)?;
+        let actual_brightness = Self::get_actual_brightness(device_path)?;
 
         debug!("Max brightness: {max_brightness}, current brightness: {actual_brightness}");
 
@@ -101,8 +101,14 @@ impl BrightnessService {
         Ok((conn, device_path))
     }
 
-    pub async fn backlight_monitor_listener()
-    -> Result<AsyncFd<udev::MonitorSocket>, BrightnessError> {
+    /// Builds an async file descriptor watching udev backlight events.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the udev monitor cannot be created, the
+    /// backlight subsystem filter cannot be applied, or the socket cannot be
+    /// registered with the async runtime.
+    pub fn backlight_monitor_listener() -> Result<AsyncFd<udev::MonitorSocket>, BrightnessError> {
         let builder = udev::MonitorBuilder::new().map_err(BrightnessError::from)?;
         let builder = builder
             .match_subsystem("backlight")
@@ -132,7 +138,7 @@ impl BrightnessService {
         match state {
             State::Init => {
                 let (conn, device_path) = Self::init_service().await?;
-                let data = Self::initialize_data(&device_path).await?;
+                let data = Self::initialize_data(&device_path)?;
                 let service = Self {
                     data,
                     device_path: device_path.clone(),
@@ -144,8 +150,8 @@ impl BrightnessService {
             }
             State::Active(device_path) => {
                 info!("Listening for brightness events");
-                let mut current_value = Self::get_actual_brightness(&device_path).await?;
-                let mut socket = Self::backlight_monitor_listener().await?;
+                let mut current_value = Self::get_actual_brightness(&device_path)?;
+                let mut socket = Self::backlight_monitor_listener()?;
 
                 loop {
                     let mut guard = socket.writable_mut().await.map_err(BrightnessError::from)?;
@@ -159,8 +165,8 @@ impl BrightnessService {
 
                         match evt.event_type() {
                             udev::EventType::Change => {
-                                debug!("Changed backlight device: {:?}", evt.syspath());
-                                let new_value = Self::get_actual_brightness(&device_path).await?;
+                                debug!("Changed backlight device: {}", evt.syspath().display());
+                                let new_value = Self::get_actual_brightness(&device_path)?;
 
                                 if new_value != current_value {
                                     current_value = new_value;
@@ -250,7 +256,7 @@ impl BrightnessService {
                 }
             }
             BrightnessCommand::Refresh => {
-                match Self::get_actual_brightness(&self.device_path).await {
+                match Self::get_actual_brightness(&self.device_path) {
                     Ok(value) => ServiceEvent::Update(BrightnessEvent(value)),
                     Err(err) => ServiceEvent::Error(err)
                 }

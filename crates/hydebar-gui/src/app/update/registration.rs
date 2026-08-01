@@ -79,6 +79,10 @@ impl App {
     ///
     /// Called again after every configuration reload, so a module added to or
     /// removed from the layout starts and stops with it.
+    #[expect(
+        clippy::too_many_lines,
+        reason = "one gate call per module, read as a single registration roster"
+    )]
     pub(crate) fn register_modules(&mut self) {
         let ctx = &self.module_context;
 
@@ -259,7 +263,7 @@ impl App {
             })
             .collect();
 
-        if self.monitor_window_needs_its_own_roster_entry(&placed)
+        if Self::monitor_window_needs_its_own_roster_entry(&placed)
             && let Some(schedule) = self.module_poll_schedule(&ModuleName::SystemInfo)
         {
             schedules.push((ModuleName::SystemInfo, schedule));
@@ -292,7 +296,7 @@ impl App {
     /// attends its owner rather than the entry it was opened from. Without
     /// the owner on the roster the fast clock would stand still for exactly
     /// the window it exists to keep fresh.
-    fn monitor_window_needs_its_own_roster_entry(&self, placed: &[ModuleName]) -> bool {
+    fn monitor_window_needs_its_own_roster_entry(placed: &[ModuleName]) -> bool {
         !placed.contains(&ModuleName::SystemInfo)
             && SYSTEM_INFO_CONSUMERS
                 .iter()

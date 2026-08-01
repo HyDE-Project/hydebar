@@ -31,6 +31,7 @@ pub fn http_client() -> &'static reqwest::Client {
     &HTTP_CLIENT
 }
 
+#[derive(Debug)]
 pub enum IndicatorState {
     Normal,
     Success,

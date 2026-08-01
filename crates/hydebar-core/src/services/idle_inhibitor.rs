@@ -25,6 +25,12 @@ pub struct IdleInhibitorManager {
     data:        IdleInhibitorManagerData
 }
 
+impl std::fmt::Debug for IdleInhibitorManager {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("IdleInhibitorManager").finish_non_exhaustive()
+    }
+}
+
 impl IdleInhibitorManager {
     /// Create a new idle inhibitor manager connected to the Wayland compositor.
     ///

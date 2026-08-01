@@ -15,6 +15,10 @@ use tokio::sync::mpsc::{Receiver, Sender};
 use super::{BackendCommand, BackendEvent, PulseAudioServer};
 
 impl PulseAudioServer {
+    #[expect(
+        clippy::too_many_lines,
+        reason = "the listener thread body is one sequential PulseAudio bootstrap; splitting it would detach each step from its error reporting"
+    )]
     pub(super) async fn start_listener(
         from_server_tx: Sender<BackendEvent>
     ) -> AppResult<JoinHandle<()>> {
@@ -38,7 +42,7 @@ impl PulseAudioServer {
                     );
 
                     if let Err(err) =
-                        server.wait_for_response(server.introspector.get_server_info({
+                        server.wait_for_response(&server.introspector.get_server_info({
                             let tx = from_server_tx.clone();
                             move |info| {
                                 Self::send_server_info(info, &tx);
@@ -51,11 +55,11 @@ impl PulseAudioServer {
 
                     let sinks = Rc::new(RefCell::new(Vec::new()));
                     if let Err(err) =
-                        server.wait_for_response(server.introspector.get_sink_info_list({
+                        server.wait_for_response(&server.introspector.get_sink_info_list({
                             let tx = from_server_tx.clone();
                             let sinks = sinks.clone();
                             move |info| {
-                                Self::populate_and_send_sinks(info, &tx, &mut sinks.borrow_mut());
+                                Self::populate_and_send_sinks(&info, &tx, &mut sinks.borrow_mut());
                             }
                         }))
                     {
@@ -65,12 +69,12 @@ impl PulseAudioServer {
 
                     let sources = Rc::new(RefCell::new(Vec::new()));
                     if let Err(err) =
-                        server.wait_for_response(server.introspector.get_source_info_list({
+                        server.wait_for_response(&server.introspector.get_source_info_list({
                             let tx = from_server_tx.clone();
                             let sources = sources.clone();
                             move |info| {
                                 Self::populate_and_send_sources(
-                                    info,
+                                    &info,
                                     &tx,
                                     &mut sources.borrow_mut()
                                 );
@@ -99,7 +103,7 @@ impl PulseAudioServer {
 
                                 move |info| {
                                     Self::populate_and_send_sinks(
-                                        info,
+                                        &info,
                                         &tx,
                                         &mut sinks.borrow_mut()
                                     );
@@ -111,7 +115,7 @@ impl PulseAudioServer {
 
                                 move |info| {
                                     Self::populate_and_send_sources(
-                                        info,
+                                        &info,
                                         &tx,
                                         &mut sources.borrow_mut()
                                     );

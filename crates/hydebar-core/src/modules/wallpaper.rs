@@ -11,7 +11,10 @@
 //! a tile and the desktop wears it.
 
 use hydebar_proto::config::Config;
-use iced::{Element, Length, Task, widget::{Column, Row, container}};
+use iced::{
+    Element, Length, Task,
+    widget::{Column, Row, container}
+};
 use log::error;
 use serde::Deserialize;
 
@@ -72,8 +75,7 @@ fn list_wallpapers() -> Vec<WallpaperEntry> {
         return Vec::new();
     }
 
-    let listed: Vec<ListedWallpaper> =
-        serde_json::from_slice(&output.stdout).unwrap_or_default();
+    let listed: Vec<ListedWallpaper> = serde_json::from_slice(&output.stdout).unwrap_or_default();
 
     listed
         .into_iter()

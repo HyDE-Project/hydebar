@@ -1,3 +1,5 @@
+#![allow(clippy::float_cmp)]
+
 use hydebar_core::position_button::position_button;
 use iced::{
     Alignment, Length, Padding, Point, Size,

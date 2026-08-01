@@ -13,6 +13,10 @@ use super::{
 
 /// Feeds an event to the button, dispatching the handler the pressed mouse
 /// button carries and keeping the interaction state in sync.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "mirrors the upstream widget update signature"
+)]
 pub(super) fn update<Message, Theme, Renderer>(
     button: &mut PositionButton<'_, Message, Theme, Renderer>,
     tree: &mut Tree,
@@ -46,10 +50,10 @@ pub(super) fn update<Message, Theme, Renderer>(
                 mouse::Button::Left | mouse::Button::Right | mouse::Button::Middle
             ) =>
         {
-            if button.handler(pressed).is_some() && cursor.is_over(layout.bounds()) {
+            if button.handler(*pressed).is_some() && cursor.is_over(layout.bounds()) {
                 let state = tree.state.downcast_mut::<State>();
 
-                *state.hold_mut(pressed) = true;
+                *state.hold_mut(*pressed) = true;
             }
         }
         Event::Touch(touch::Event::FingerPressed {
@@ -67,10 +71,10 @@ pub(super) fn update<Message, Theme, Renderer>(
                 mouse::Button::Left | mouse::Button::Right | mouse::Button::Middle
             ) =>
         {
-            if let Some(handler) = button.handler(released) {
+            if let Some(handler) = button.handler(*released) {
                 let state = tree.state.downcast_mut::<State>();
 
-                let was_pressed = std::mem::take(state.hold_mut(released));
+                let was_pressed = std::mem::take(state.hold_mut(*released));
 
                 if was_pressed && cursor.is_over(layout.bounds()) {
                     publish(handler, layout, viewport, shell);
@@ -167,7 +171,7 @@ mod tests {
     }
 
     fn harness<'a>(pressable: bool) -> Harness<'a> {
-        let mut tree = Tree::new(&iced_core::Element::<(), Theme, TestRenderer>::new(button(
+        let mut tree = Tree::new(iced_core::Element::<(), Theme, TestRenderer>::new(button(
             pressable
         )));
         let mut button = button(pressable);
@@ -290,7 +294,7 @@ mod tests {
     }
 
     fn button_harness<'a>() -> ButtonHarness<'a> {
-        let mut tree = Tree::new(&iced_core::Element::<Pressed, Theme, TestRenderer>::new(
+        let mut tree = Tree::new(iced_core::Element::<Pressed, Theme, TestRenderer>::new(
             every_button()
         ));
         let mut button = every_button();
@@ -353,7 +357,7 @@ mod tests {
 
     #[test]
     fn ignores_a_mouse_button_without_a_handler() {
-        let mut tree = Tree::new(&iced_core::Element::<Pressed, Theme, TestRenderer>::new(
+        let mut tree = Tree::new(iced_core::Element::<Pressed, Theme, TestRenderer>::new(
             position_button(Space::new().width(16.0).height(16.0)).on_press(Pressed::Left)
         ));
         let mut button: PositionButton<'_, Pressed, Theme, TestRenderer> =

@@ -10,12 +10,21 @@ use crate::services::network::{AccessPoint, ActiveConnectionInfo, DeviceState};
 /// iwd hands back signal strength in centi-dBm, roughly 0 down to -10000,
 /// while every consumer expects 0 to 100. The clamp keeps values outside
 /// that window from wrapping when narrowed to `u8`.
+#[expect(
+    clippy::cast_sign_loss,
+    reason = "the value is clamped to [0, 100] just before the cast, so it is never negative"
+)]
 pub(super) fn strength_from_rssi(s: i16) -> u8 {
     (s / 100 + 100).clamp(0, 100) as u8
 }
 
 impl IwdDbus<'_> {
     /// Get the state of all station interfaces
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the stations cannot be listed or a station
+    /// refuses to report its state.
     pub async fn connectivity(&self) -> AppResult<Vec<String>> {
         let mut states = Vec::new();
         for s in self.stations().await? {
@@ -29,6 +38,11 @@ impl IwdDbus<'_> {
     }
 
     /// Return true if any device in station mode is present
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the wireless devices cannot be listed or a device
+    /// refuses to report its powered state.
     pub async fn wifi_device_present(&self) -> AppResult<bool> {
         let devices = self.wireless_devices().await?;
 
@@ -43,6 +57,11 @@ impl IwdDbus<'_> {
     }
 
     /// List all networks currently connected (Connected = true)
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the reachable networks cannot be listed or a
+    /// network refuses to report its connected state.
     pub async fn active_connections(&self) -> AppResult<Vec<(NetworkProxy, i16)>> {
         let mut networks = Vec::new();
         for (net, strength) in self.reachable_networks().await? {
@@ -56,6 +75,11 @@ impl IwdDbus<'_> {
     }
 
     /// Detailed info on active connections
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the active connections cannot be listed or a
+    /// network refuses to report its name.
     pub async fn active_connections_info(&self) -> AppResult<Vec<ActiveConnectionInfo>> {
         // INFO: probably way cleaner with a custom dbus object - SignalLevelAgent
 
@@ -76,6 +100,11 @@ impl IwdDbus<'_> {
     }
 
     /// List all wireless (station-mode) devices
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the devices cannot be listed or a device refuses
+    /// to report its mode.
     pub async fn wireless_devices(&self) -> AppResult<Vec<DeviceProxy>> {
         let devices = self.devices().await?;
         let mut devs = Vec::new();
@@ -92,6 +121,11 @@ impl IwdDbus<'_> {
     }
 
     /// Scan and list available access points
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the reachable networks cannot be listed or a
+    /// network refuses to report its name, type or device.
     pub async fn wireless_access_points(&self) -> AppResult<Vec<AccessPoint>> {
         let mut aps = Vec::new();
         {
@@ -126,6 +160,12 @@ impl IwdDbus<'_> {
         Ok(aps)
     }
 
+    /// Return true if any wireless device is powered.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the wireless devices cannot be listed or a device
+    /// refuses to report its powered state.
     pub async fn wireless_enabled(&self) -> AppResult<bool> {
         let devs = self.wireless_devices().await?;
         for d in devs {

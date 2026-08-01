@@ -146,7 +146,9 @@ mod month {
         /// English name of the month in view.
         #[must_use]
         pub fn month_name(&self) -> &'static str {
-            Month::try_from(self.month as u8)
+            u8::try_from(self.month)
+                .ok()
+                .and_then(|month| Month::try_from(month).ok())
                 .map_or("Unknown", |month| month.name())
         }
 
@@ -176,6 +178,11 @@ mod month {
 
     impl CalendarData {
         /// The grid for `year`/`month`, padded with the neighbouring months.
+        ///
+        /// # Panics
+        ///
+        /// Panics when `year` lies outside the range `chrono::NaiveDate`
+        /// supports, so even the fallback first of January cannot be built.
         #[must_use]
         pub fn generate(year: i32, month: u32) -> Self {
             let today = Local::now().date_naive();
@@ -210,11 +217,11 @@ mod month {
                 });
             }
 
-            let remaining = 42 - days.len();
+            let remaining = u32::try_from(42 - days.len()).unwrap_or(0);
 
             for day in 1..=remaining {
                 days.push(DayInfo {
-                    day:      day as u32,
+                    day,
                     is_today: false,
                     in_month: false
                 });
@@ -233,7 +240,9 @@ mod month {
                     } else {
                         NaiveDate::from_ymd_opt(year, month + 1, 1)
                     }
-                    .map(|next| next.signed_duration_since(date).num_days() as u32)
+                    .and_then(|next| {
+                        u32::try_from(next.signed_duration_since(date).num_days()).ok()
+                    })
                 })
                 .unwrap_or(30)
         }
@@ -307,7 +316,10 @@ mod metrics {
 
     /// Width the menu box needs, box padding included.
     pub(super) fn content_width(font_size: f32) -> f32 {
-        (2.0 * crate::menu::MENU_PADDING_EM).mul_add(font_size, scale::scaled(2.0f32.mul_add(OUTER_PADDING, 6.0f32.mul_add(CELL_GAP, 7.0 * CELL))))
+        (2.0 * crate::menu::MENU_PADDING_EM).mul_add(
+            font_size,
+            scale::scaled(2.0f32.mul_add(OUTER_PADDING, 6.0f32.mul_add(CELL_GAP, 7.0 * CELL)))
+        )
     }
 
     /// Height the menu content needs.
@@ -367,16 +379,12 @@ mod view {
         .align_y(Alignment::Center)
         .spacing(scale::scaled(SECTION_GAP));
 
-        let weekday_header = Row::with_children(
-            WEEKDAYS
-                .iter()
-                .map(|day| {
-                    container(text(*day).size(scale::scaled(WEEKDAY_SIZE)))
-                        .width(Length::Fixed(scale::scaled(CELL)))
-                        .align_x(Alignment::Center)
-                        .into()
-                })
-        )
+        let weekday_header = Row::with_children(WEEKDAYS.iter().map(|day| {
+            container(text(*day).size(scale::scaled(WEEKDAY_SIZE)))
+                .width(Length::Fixed(scale::scaled(CELL)))
+                .align_x(Alignment::Center)
+                .into()
+        }))
         .spacing(scale::scaled(CELL_GAP));
 
         let calendar_data = state.generate_calendar();

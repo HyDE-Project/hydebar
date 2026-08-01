@@ -6,6 +6,11 @@ use super::super::{DeviceType, NetworkDbus, proxies::DeviceProxy};
 use crate::services::network::ConnectivityState;
 
 impl NetworkDbus<'_> {
+    /// Reads the daemon's overall connectivity state.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the daemon refuses the connectivity query.
     pub async fn connectivity(&self) -> AppResult<ConnectivityState> {
         self.0
             .connectivity()
@@ -14,6 +19,12 @@ impl NetworkDbus<'_> {
             .map(ConnectivityState::from)
     }
 
+    /// Reports whether any wifi device is known to the daemon.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the devices cannot be listed or a device proxy
+    /// cannot be built.
     pub async fn wifi_device_present(&self) -> AppResult<bool> {
         let devices = self
             .devices()

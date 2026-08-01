@@ -84,6 +84,11 @@ impl ModuleContext {
     /// let context = ModuleContext::new(bus.sender(), runtime.handle().clone());
     /// context.request_redraw().expect("queued");
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`EventBusError::QueueFull`] when the bus is at capacity and
+    /// [`EventBusError::Poisoned`] when the queue lock was poisoned.
     pub fn request_redraw(&self) -> Result<(), EventBusError> {
         self.event_sender.try_send(BusEvent::Redraw)
     }
@@ -105,6 +110,11 @@ impl ModuleContext {
     /// let context = ModuleContext::new(bus.sender(), runtime.handle().clone());
     /// context.toggle_popup().expect("queued");
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`EventBusError::QueueFull`] when the bus is at capacity and
+    /// [`EventBusError::Poisoned`] when the queue lock was poisoned.
     pub fn toggle_popup(&self) -> Result<(), EventBusError> {
         self.event_sender.try_send(BusEvent::PopupToggle)
     }
@@ -214,6 +224,11 @@ where
     ///     .try_send(modules::updates::Message::CheckNow)
     ///     .expect("queued");
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`EventBusError::QueueFull`] when the bus is at capacity and
+    /// [`EventBusError::Poisoned`] when the queue lock was poisoned.
     pub fn try_send(&self, payload: T) -> Result<(), EventBusError> {
         let event = (self.convert)(payload);
         self.context.publish_module_event(event)

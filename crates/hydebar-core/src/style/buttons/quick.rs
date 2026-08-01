@@ -34,7 +34,6 @@ pub fn quick_settings_button_style(
             ..button::Style::default()
         };
         match status {
-            Status::Active => base,
             Status::Hovered => {
                 let peach = theme.extended_palette().primary.weak.color;
                 base.background = Some(
@@ -74,7 +73,6 @@ pub fn quick_settings_submenu_button_style(
             ..button::Style::default()
         };
         match status {
-            Status::Active => base,
             Status::Hovered => {
                 base.background = Some(
                     theme

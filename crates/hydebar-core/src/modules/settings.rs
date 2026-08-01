@@ -197,7 +197,7 @@ impl Message {
 ///
 /// A module that moved would otherwise leave the pick pointing at whatever
 /// took its place, and the next button press would act on the wrong module.
-fn follow(edit: LayoutEdit, modules: &Modules) -> Option<Slot> {
+fn follow(edit: &LayoutEdit, modules: &Modules) -> Option<Slot> {
     let slot = edit.slot()?;
 
     match edit {
@@ -320,7 +320,7 @@ impl Settings {
             Message::EditLayout(edit) => {
                 let modules = layout::apply(&config.modules, &edit);
                 store_layout(&self.config_path, &modules);
-                self.selected = follow(edit, &modules);
+                self.selected = follow(&edit, &modules);
 
                 if let Some(slot) = self.selected {
                     self.section = slot.section;
@@ -407,6 +407,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::float_cmp)]
+
     use super::*;
 
     #[test]

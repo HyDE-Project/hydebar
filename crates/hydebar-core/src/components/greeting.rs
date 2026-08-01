@@ -63,20 +63,21 @@ fn line(hour: u32, user: Option<&str>) -> String {
         _ => "Good night"
     };
 
-    match user.map(str::trim).filter(|user| !user.is_empty()) {
-        Some(user) => format!("{phrase}, {}", capitalized(user)),
-        None => phrase.to_owned()
-    }
+    user.map(str::trim)
+        .filter(|user| !user.is_empty())
+        .map_or_else(
+            || phrase.to_owned(),
+            |user| format!("{phrase}, {}", capitalized(user))
+        )
 }
 
 /// `name` with its first letter raised, the way a greeting addresses one.
 fn capitalized(name: &str) -> String {
     let mut chars = name.chars();
 
-    match chars.next() {
-        Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
-        None => String::new()
-    }
+    chars.next().map_or_else(String::new, |first| {
+        first.to_uppercase().collect::<String>() + chars.as_str()
+    })
 }
 
 #[cfg(test)]

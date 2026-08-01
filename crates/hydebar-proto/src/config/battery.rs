@@ -3,6 +3,10 @@
 use serde::Deserialize;
 
 /// Battery module behaviour.
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "each flag is an independent configuration switch"
+)]
 #[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct BatteryModuleConfig {
     #[serde(default = "default_show_percentage")]

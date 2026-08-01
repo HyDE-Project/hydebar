@@ -275,10 +275,9 @@ pub fn display_label(name: &str) -> String {
     let spaced = name.replace(['-', '_'], " ");
     let mut chars = spaced.chars();
 
-    match chars.next() {
-        Some(first) => first.to_uppercase().chain(chars).collect(),
-        None => spaced
-    }
+    chars.next().map_or_else(String::new, |first| {
+        first.to_uppercase().chain(chars).collect()
+    })
 }
 
 /// Strips the relaxed syntax the layout files carry down to plain JSON.

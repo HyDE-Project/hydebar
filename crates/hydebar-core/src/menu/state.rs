@@ -156,11 +156,11 @@ impl Menu {
 
     pub fn close_if<Message: 'static>(
         &mut self,
-        menu_type: MenuType,
+        menu_type: &MenuType,
         config: &crate::config::Config
     ) -> Task<Message> {
         if let Some((current_type, _)) = self.menu_info.as_ref() {
-            if *current_type == menu_type {
+            if current_type == menu_type {
                 self.close(config)
             } else {
                 Task::none()

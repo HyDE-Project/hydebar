@@ -152,6 +152,10 @@ impl AppearanceTransition {
     pub fn advance_reporting(&mut self, elapsed: Duration) -> (bool, bool) {
         let before = self.progress.value();
         let running = self.progress.advance(elapsed);
+        #[expect(
+            clippy::float_cmp,
+            reason = "identity check on a value copied verbatim"
+        )]
         let moved = running || self.progress.value() != before;
 
         if moved {
@@ -213,7 +217,14 @@ fn blend_f32(from: f32, to: f32, t: f32) -> f32 {
 fn blend_u8(from: u8, to: u8, t: f32) -> u8 {
     let blended = (f32::from(to) - f32::from(from)).mul_add(t, f32::from(from));
 
-    blended.round().clamp(0.0, 255.0) as u8
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        reason = "the value is rounded and clamped into the u8 range"
+    )]
+    let channel = blended.round().clamp(0.0, 255.0) as u8;
+
+    channel
 }
 
 fn blend_hex(from: HexColor, to: HexColor, t: f32) -> HexColor {
@@ -285,9 +296,9 @@ fn blend_optional(
 fn blend_colors(from: &[AppearanceColor], to: &[AppearanceColor], t: f32) -> Vec<AppearanceColor> {
     to.iter()
         .enumerate()
-        .map(|(index, target)| match from.get(index) {
-            Some(source) => blend_color(*source, *target, t),
-            None => *target
+        .map(|(index, target)| {
+            from.get(index)
+                .map_or(*target, |source| blend_color(*source, *target, t))
         })
         .collect()
 }
@@ -304,6 +315,8 @@ fn blend_optional_colors(
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::float_cmp)]
+
     use super::*;
 
     fn hex(value: u8) -> HexColor {
@@ -504,7 +517,9 @@ mod tests {
             AppearanceColor::Complete {
                 strong, ..
             } => assert_eq!(strong, Some(hex(100))),
-            other => panic!("expected a complete colour, got {other:?}")
+            other @ AppearanceColor::Simple(_) => {
+                panic!("expected a complete colour, got {other:?}")
+            }
         }
     }
 }

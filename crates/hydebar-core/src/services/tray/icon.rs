@@ -5,6 +5,10 @@ use log::{debug, trace};
 
 use super::{TrayIcon, dbus::Icon};
 
+#[expect(
+    clippy::cast_sign_loss,
+    reason = "a tray pixmap reports positive dimensions over the bus"
+)]
 pub fn icon_from_pixmaps(pixmaps: Vec<Icon>) -> Option<TrayIcon> {
     pixmaps
         .into_iter()
@@ -75,18 +79,16 @@ pub fn icon_from_name(icon_name: &str) -> Option<TrayIcon> {
         debug!("icon theme found {theme_name}");
     }
 
-    let icon_path = if let Some(theme_name) = theme.as_deref() {
-        // Try with theme first
-        lookup(icon_name)
-            .with_cache()
-            .with_theme(theme_name)
-            .find()
-            // Fall back to default lookup if theme lookup fails
-            .or_else(|| lookup(icon_name).with_cache().find())
-    } else {
-        // No theme, use default lookup
-        lookup(icon_name).with_cache().find()
-    }?;
+    let icon_path = theme.as_deref().map_or_else(
+        || lookup(icon_name).with_cache().find(),
+        |theme_name| {
+            lookup(icon_name)
+                .with_cache()
+                .with_theme(theme_name)
+                .find()
+                .or_else(|| lookup(icon_name).with_cache().find())
+        }
+    )?;
 
     if icon_path.extension().is_some_and(|ext| ext == "svg") {
         Some(rasterized_svg(&icon_path).unwrap_or_else(|| {
@@ -110,6 +112,11 @@ const SVG_RASTER_SIDE: f32 = 96.0;
 /// whatever sizes their authors left around the ink. Rasterising with the
 /// same engine the renderer uses, then trimming like any pixmap, is what
 /// puts them in one row with everything else.
+#[expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    reason = "the scaled sides are positive and bounded by the raster side constant"
+)]
 fn rasterized_svg(path: &std::path::Path) -> Option<TrayIcon> {
     let data = std::fs::read(path).ok()?;
     let tree = resvg::usvg::Tree::from_data(&data, &resvg::usvg::Options::default()).ok()?;
@@ -174,7 +181,7 @@ fn trimmed_raster(path: &std::path::Path) -> TrayIcon {
 
 #[cfg(test)]
 fn icon_path_with_theme_fallback<F, G>(
-    theme: Option<String>,
+    theme: Option<&str>,
     mut themed_lookup: F,
     mut default_lookup: G
 ) -> Option<std::path::PathBuf>
@@ -182,7 +189,7 @@ where
     F: FnMut(&str) -> Option<std::path::PathBuf>,
     G: FnMut() -> Option<std::path::PathBuf>
 {
-    if let Some(theme_name) = theme.as_deref()
+    if let Some(theme_name) = theme
         && let Some(path) = themed_lookup(theme_name)
     {
         return Some(path);
@@ -254,7 +261,7 @@ mod tests {
         let expected = PathBuf::from("/tmp/themed.svg");
 
         let result = icon_path_with_theme_fallback(
-            Some(String::from("test")),
+            Some("test"),
             |_| {
                 theme_calls.fetch_add(1, Ordering::Relaxed);
                 Some(expected.clone())
@@ -278,7 +285,7 @@ mod tests {
         let expected = PathBuf::from("/tmp/default.svg");
 
         let result = icon_path_with_theme_fallback(
-            Some(String::from("test")),
+            Some("test"),
             |_| {
                 theme_calls.fetch_add(1, Ordering::Relaxed);
                 None

@@ -91,9 +91,8 @@ pub fn scan(root: &Path) -> Vec<Card> {
 /// The subsystem lists connectors beside the cards as `card0-HDMI-A-1`,
 /// and a connector publishes neither load nor memory.
 fn is_card_name(name: &str) -> bool {
-    name.strip_prefix("card").is_some_and(|rest| {
-        !rest.is_empty() && rest.bytes().all(|byte| byte.is_ascii_digit())
-    })
+    name.strip_prefix("card")
+        .is_some_and(|rest| !rest.is_empty() && rest.bytes().all(|byte| byte.is_ascii_digit()))
 }
 
 fn read_card(path: &Path) -> Card {
@@ -101,14 +100,14 @@ fn read_card(path: &Path) -> Card {
     let resolved = std::fs::canonicalize(&device).ok();
 
     Card {
-        driver:         std::fs::canonicalize(device.join("driver")).ok().and_then(
-            |driver| {
+        driver:         std::fs::canonicalize(device.join("driver"))
+            .ok()
+            .and_then(|driver| {
                 driver
                     .file_name()
                     .and_then(|name| name.to_str())
                     .map(str::to_owned)
-            }
-        ),
+            }),
         vendor:         std::fs::read_to_string(device.join("vendor"))
             .ok()
             .and_then(|id| super::catalog::gpu_vendor_from_pci(&id)),

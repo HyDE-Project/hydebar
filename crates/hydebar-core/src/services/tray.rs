@@ -51,12 +51,17 @@ pub struct StatusNotifierItem {
 }
 
 impl StatusNotifierItem {
+    /// Builds the item and menu proxies for a registered tray item.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the item or menu proxy cannot be configured or
+    /// built, or when the item refuses to report its menu path.
     pub async fn new(conn: &zbus::Connection, name: String) -> AppResult<Self> {
-        let (dest, path) = if let Some(idx) = name.find('/') {
-            (&name[..idx], &name[idx..])
-        } else {
-            (name.as_ref(), "/StatusNotifierItem")
-        };
+        let (dest, path) = name.find('/').map_or_else(
+            || (name.as_ref(), "/StatusNotifierItem"),
+            |idx| (&name[..idx], &name[idx..])
+        );
 
         let item_proxy = StatusNotifierItemProxy::builder(conn)
             .destination(dest.to_owned())
@@ -169,6 +174,12 @@ impl TrayService {
         watcher::start_listening(publisher).await;
     }
 
+    /// Sends the click for a menu entry and reads the refreshed layout.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the click event cannot be delivered or the menu
+    /// refuses the layout query afterwards.
     pub async fn menu_voice_selected(
         menu_proxy: &DBusMenuProxy<'_>,
         id: i32

@@ -302,7 +302,10 @@ impl ThemeChip {
     /// has to hear about it. Only the chip already being applied stays deaf
     /// — pressing it could mean nothing new.
     pub(crate) const fn is_pressable(self) -> bool {
-        matches!(self, Self::Active | Self::Idle | Self::Condemned | Self::Blocked)
+        matches!(
+            self,
+            Self::Active | Self::Idle | Self::Condemned | Self::Blocked
+        )
     }
 }
 
@@ -317,6 +320,15 @@ impl ThemeChip {
 /// for — the grid becomes a palette of the themes themselves — and the theme
 /// in force is told apart by a ring of its own accent, since a fill can no
 /// longer mark it.
+#[expect(
+    clippy::too_many_arguments,
+    clippy::too_many_lines,
+    reason = "the chip states everything a theme tile shows in one call"
+)]
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "callers outside this module hand over owned paint and screenshot values"
+)]
 pub fn theme_chip<'a, M: Clone + 'static>(
     label: String,
     badge: Option<&'static str>,
@@ -597,10 +609,7 @@ fn busy_strip<'a, M: 'a>(spinner: Spinner, control: f32) -> Element<'a, M> {
 ///
 /// Drawn smaller than a value so it reads as an aside rather than as something
 /// the bar is reporting.
-pub fn note<'a, M: 'a>(
-    label: impl text::IntoFragment<'a>,
-    font_size: f32
-) -> Element<'a, M> {
+pub fn note<'a, M: 'a>(label: impl text::IntoFragment<'a>, font_size: f32) -> Element<'a, M> {
     text(label).size(style::caption_size(font_size)).into()
 }
 
@@ -698,11 +707,7 @@ pub fn labelled_row<'a, M: 'a>(
 }
 
 /// Renders a card the detail of a picked entry lives in.
-pub fn card<'a, M: 'a>(
-    content: Element<'a, M>,
-    font_size: f32,
-    opacity: f32
-) -> Element<'a, M> {
+pub fn card<'a, M: 'a>(content: Element<'a, M>, font_size: f32, opacity: f32) -> Element<'a, M> {
     container(content)
         .padding(style::card_padding(font_size))
         .width(Length::Fill)
@@ -776,6 +781,10 @@ mod tests {
     }
 
     #[test]
+    #[expect(
+        clippy::assertions_on_constants,
+        reason = "the test pins the constant inside its documented range"
+    )]
     fn a_blocked_chip_is_dimmed_but_not_erased() {
         assert!(BLOCKED_ALPHA > 0.0);
         assert!(BLOCKED_ALPHA < 1.0);

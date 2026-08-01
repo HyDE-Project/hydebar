@@ -10,6 +10,7 @@ use iced::widget::{Column, Row};
 /// Pushes a child that may not be there, leaving the container unchanged
 /// when it is not.
 pub trait PushMaybe<'a, Message, Theme, Renderer>: Sized {
+    #[must_use]
     fn push_maybe(
         self,
         child: Option<impl Into<iced_core::Element<'a, Message, Theme, Renderer>>>

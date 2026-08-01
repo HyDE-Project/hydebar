@@ -2,9 +2,9 @@
 //!
 //! `HyDE` exposes every desktop action through the `hyde-shell` dispatcher, so
 //! the bar asks for a change the same way the user's own keybindings do instead
-//! of writing `HyDE`'s state files behind its back. That keeps the whole switch —
-//! wallpaper, colours, the other clients — in `HyDE`'s hands, and it means the
-//! bar stays correct when `HyDE` changes how a switch is performed.
+//! of writing `HyDE`'s state files behind its back. That keeps the whole switch
+//! — wallpaper, colours, the other clients — in `HyDE`'s hands, and it means
+//! the bar stays correct when `HyDE` changes how a switch is performed.
 //!
 //! A theme switch is the one exception. It goes through the bar's own script
 //! (see [`theme_script`]), which runs the very same `HyDE` switch but leaves
@@ -72,6 +72,24 @@ fn quote(value: &str) -> String {
     format!("'{}'", value.replace('\'', r"'\''"))
 }
 
+/// Runs a desktop command, reporting why it failed if it did.
+///
+/// The command is run detached rather than with its output collected: a `HyDE`
+/// switch leaves background children behind that would keep a collected stream
+/// open long after the switch itself is over, and the bar has to hear that the
+/// switch ended when it ends. What the command printed goes to the bar's own
+/// log, which is where the detail belongs.
+pub async fn run(command: String) -> Option<String> {
+    let command: Arc<str> = Arc::from(command);
+
+    log::info!("desktop command runs: {command}");
+
+    launcher::run_detached(&command)
+        .await
+        .err()
+        .map(|error| error.to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -118,22 +136,4 @@ mod tests {
         assert_eq!(next_wallpaper(), "hyde-shell wallpaper --next");
         assert_eq!(previous_wallpaper(), "hyde-shell wallpaper --previous");
     }
-}
-
-/// Runs a desktop command, reporting why it failed if it did.
-///
-/// The command is run detached rather than with its output collected: a `HyDE`
-/// switch leaves background children behind that would keep a collected stream
-/// open long after the switch itself is over, and the bar has to hear that the
-/// switch ended when it ends. What the command printed goes to the bar's own
-/// log, which is where the detail belongs.
-pub async fn run(command: String) -> Option<String> {
-    let command: Arc<str> = Arc::from(command);
-
-    log::info!("desktop command runs: {command}");
-
-    launcher::run_detached(&command)
-        .await
-        .err()
-        .map(|error| error.to_string())
 }

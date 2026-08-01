@@ -72,6 +72,17 @@ pub async fn initialize_data(
     Ok(TrayData(status_items))
 }
 
+/// Merges registration, icon and menu signals into one tray event stream.
+///
+/// # Errors
+///
+/// Returns an error when the watcher proxy cannot be created or one of its
+/// signal subscriptions fails.
+#[expect(
+    clippy::too_many_lines,
+    reason = "one subscription per tray signal is wired into a single merged stream; splitting would scatter the wiring"
+)]
+#[expect(clippy::needless_continue, reason = "the continue lives inside the stream_select macro expansion")]
 pub async fn events(conn: &zbus::Connection) -> Result<TrayEventStream, TrayWatcherError> {
     let watcher = StatusNotifierWatcherProxy::new(conn).await.map_err(|err| {
         TrayWatcherError::EventStream(AppError::internal(format!(
@@ -116,10 +127,10 @@ pub async fn events(conn: &zbus::Connection) -> Result<TrayEventStream, TrayWatc
         })?
         .filter_map(|event| async move {
             debug!("unregistered {event:?}");
-            match event.args() {
-                Ok(args) => Some(TrayEvent::Unregistered(args.service.to_string())),
-                _ => None
-            }
+            event
+                .args()
+                .ok()
+                .map(|args| TrayEvent::Unregistered(args.service.to_string()))
         })
         .boxed();
 
@@ -254,9 +265,9 @@ where
 
                     State::Active(conn)
                 }
-                Err(err) => transition_to_error(err)
+                Err(err) => transition_to_error(&err)
             },
-            Err(err) => transition_to_error(TrayWatcherError::Connection(err))
+            Err(err) => transition_to_error(&TrayWatcherError::Connection(err))
         },
         State::Active(conn) => {
             info!("Listening for tray events");
@@ -277,7 +288,7 @@ where
 
                     State::Active(conn)
                 }
-                Err(err) => transition_to_error(err)
+                Err(err) => transition_to_error(&err)
             }
         }
         State::Error => {
@@ -289,7 +300,7 @@ where
     }
 }
 
-fn transition_to_error(error: TrayWatcherError) -> State {
+fn transition_to_error(error: &TrayWatcherError) -> State {
     error!("{error}");
     State::Error
 }
@@ -302,7 +313,7 @@ mod tests {
 
     #[test]
     fn transition_sets_error_state() {
-        let state = transition_to_error(TrayWatcherError::Connection(AppError::internal("boom")));
+        let state = transition_to_error(&TrayWatcherError::Connection(AppError::internal("boom")));
         assert!(matches!(state, State::Error));
     }
 

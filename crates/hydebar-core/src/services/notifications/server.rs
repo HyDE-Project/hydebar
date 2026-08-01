@@ -18,6 +18,13 @@ pub struct NotificationsServer {
     announce: UnboundedSender<NotificationEvent>
 }
 
+impl std::fmt::Debug for NotificationsServer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("NotificationsServer")
+            .finish_non_exhaustive()
+    }
+}
+
 impl NotificationsServer {
     pub const fn new(
         storage: std::sync::Arc<std::sync::Mutex<NotificationStorage>>,
@@ -50,11 +57,19 @@ impl NotificationsServer {
 #[interface(name = "org.freedesktop.Notifications")]
 impl NotificationsServer {
     /// Get server information
+    #[expect(
+        clippy::unused_self,
+        reason = "the zbus interface macro dispatches D-Bus calls through a method receiver"
+    )]
     const fn get_server_information(&self) -> (&str, &str, &str, &str) {
         ("hydebar", "RAprogramm", "0.6.7", "1.2")
     }
 
     /// Get server capabilities
+    #[expect(
+        clippy::unused_self,
+        reason = "the zbus interface macro dispatches D-Bus calls through a method receiver"
+    )]
     fn get_capabilities(&self) -> Vec<String> {
         vec![
             "body".to_string(),
@@ -66,6 +81,14 @@ impl NotificationsServer {
 
     /// Notify - main method for sending notifications
     #[allow(clippy::too_many_arguments)]
+    #[expect(
+        clippy::needless_pass_by_value,
+        reason = "the argument types mirror the D-Bus Notify signature the zbus macro deserializes into"
+    )]
+    #[expect(
+        clippy::needless_pass_by_ref_mut,
+        reason = "a mutable receiver makes zbus serialize calls to this method"
+    )]
     fn notify(
         &mut self,
         app_name: String,
@@ -121,10 +144,9 @@ impl NotificationsServer {
             ..notification
         }));
 
-        let storage = self.storage();
+        let sounds_enabled = self.storage().sounds_enabled();
 
-        // Play sound if enabled
-        if storage.sounds_enabled() {
+        if sounds_enabled {
             Self::play_notification_sound(&urgency);
         }
 
@@ -132,6 +154,10 @@ impl NotificationsServer {
     }
 
     /// Close notification
+    #[expect(
+        clippy::needless_pass_by_ref_mut,
+        reason = "a mutable receiver makes zbus serialize calls to this method"
+    )]
     fn close_notification(&mut self, id: u32) {
         self.storage().remove(id);
         self.announce(NotificationEvent::Closed(id));

@@ -59,9 +59,7 @@ impl<S: ReadOnlyService> ServiceEventPublisher<S> for EventForwarder<S> {
 }
 
 /// The forwarder of the audio service.
-pub(super) fn audio_forwarder(
-    sender: ModuleEventSender<Message>
-) -> EventForwarder<AudioService> {
+pub(super) fn audio_forwarder(sender: ModuleEventSender<Message>) -> EventForwarder<AudioService> {
     EventForwarder::new(
         sender,
         |event| Message::Audio(AudioMessage::Event(Box::new(event))),
@@ -141,7 +139,7 @@ mod tests {
         let (runtime, mut receiver, sender) = setup_forwarder();
         let mut forwarder = audio_forwarder(sender);
 
-        let _ = forwarder.send(ServiceEvent::Error(()));
+        drop(forwarder.send(ServiceEvent::Error(())));
 
         let event = receiver.try_recv().expect("event queued");
         match event {
@@ -160,17 +158,17 @@ mod tests {
         let mut forwarder = network_forwarder(sender);
 
         let error = crate::services::network::NetworkServiceError::new("failure");
-        let _ = forwarder.send(ServiceEvent::Error(error.clone()));
+        drop(forwarder.send(ServiceEvent::Error(error.clone())));
 
         let event = receiver.try_recv().expect("event queued");
         match event {
             Some(BusEvent::Module(ModuleEvent::ControlCenter(Message::Network(
-                NetworkMessage::Event(received)
+                NetworkMessage::Event(payload)
             )))) => {
-                let ServiceEvent::Error(received) = *received else {
+                let ServiceEvent::Error(reported) = *payload else {
                     panic!("expected an error event");
                 };
-                assert_eq!(received.message(), error.message());
+                assert_eq!(reported.message(), error.message());
             }
             other => panic!("unexpected event: {other:?}")
         }

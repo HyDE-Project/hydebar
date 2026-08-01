@@ -25,14 +25,13 @@ impl BluetoothDbus<'_> {
             .await
             .map_err(|e| AppError::internal(format!("Failed to get managed objects: {e}")))?
             .into_iter()
-            .filter_map(|(key, item)| {
+            .find_map(|(key, item)| {
                 if item.contains_key("org.bluez.Adapter1") {
                     Some(key)
                 } else {
                     None
                 }
-            })
-            .next();
+            });
 
         let adapter = if let Some(adapter) = adapter {
             Some(

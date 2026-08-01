@@ -96,7 +96,9 @@ pub fn item_gap() -> f32 {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::{Mutex, MutexGuard};
+    #![allow(clippy::float_cmp)]
+
+    use std::sync::{Mutex, MutexGuard, PoisonError};
 
     use super::*;
 
@@ -105,7 +107,7 @@ mod tests {
     static GUARD: Mutex<()> = Mutex::new(());
 
     fn alone() -> MutexGuard<'static, ()> {
-        let guard = GUARD.lock().unwrap_or_else(|err| err.into_inner());
+        let guard = GUARD.lock().unwrap_or_else(PoisonError::into_inner);
         forget();
         SCREEN.store(0, Ordering::Relaxed);
         guard

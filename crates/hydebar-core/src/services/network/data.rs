@@ -111,6 +111,10 @@ pub enum NetworkCommand {
 /// assert!(matches!(data.connectivity, ConnectivityState::Unknown));
 /// ```
 #[derive(Debug, Default, Clone)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "each flag mirrors an independent daemon property; packing them into enums would change the public data model"
+)]
 pub struct NetworkData {
     /// Whether a Wi-Fi adapter is present.
     pub wifi_present:           bool,
@@ -264,11 +268,11 @@ impl ActiveConnectionInfo {
         match self {
             Self::Wired {
                 name, ..
-            } => name.clone(),
-            Self::WiFi {
+            }
+            | Self::WiFi {
                 name, ..
-            } => name.clone(),
-            Self::Vpn {
+            }
+            | Self::Vpn {
                 name, ..
             } => name.clone()
         }

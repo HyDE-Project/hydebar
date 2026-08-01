@@ -55,6 +55,10 @@ fn parse_focused(json: &str) -> Option<ScreenGeometry> {
         .find(|monitor| monitor["focused"].as_bool().unwrap_or(false))
         .or_else(|| monitors.first())?;
 
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "monitor geometry fits well within f32 precision"
+    )]
     let number = |key: &str| monitor[key].as_f64().unwrap_or(0.0) as f32;
 
     let geometry = ScreenGeometry {
@@ -70,6 +74,7 @@ fn parse_focused(json: &str) -> Option<ScreenGeometry> {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::float_cmp)]
     use super::*;
 
     const ANSWER: &str = r#"[

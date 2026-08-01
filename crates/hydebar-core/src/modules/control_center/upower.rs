@@ -94,7 +94,7 @@ impl PowerProfile {
         icons: &IconTheme
     ) -> Option<Element<'static, Message>> {
         match self {
-            Self::Balanced => None,
+            Self::Balanced | Self::Unknown => None,
             Self::Performance => Some(
                 container(icon(icons, Icons::Performance))
                     .style(|theme: &Theme| container::Style {
@@ -110,8 +110,7 @@ impl PowerProfile {
                         ..Default::default()
                     })
                     .into()
-            ),
-            Self::Unknown => None
+            )
         }
     }
 

@@ -453,12 +453,10 @@ mod tests {
 
             for (position, (label, value)) in inputs.iter().enumerate() {
                 let input = position + 1;
-                fs::write(directory.join(format!("temp{input}_input")), value)
-                    .expect("reading");
+                fs::write(directory.join(format!("temp{input}_input")), value).expect("reading");
 
                 if !label.is_empty() {
-                    fs::write(directory.join(format!("temp{input}_label")), label)
-                        .expect("label");
+                    fs::write(directory.join(format!("temp{input}_label")), label).expect("label");
                 }
             }
 
@@ -568,11 +566,10 @@ mod tests {
 
     #[test]
     fn a_second_card_does_not_lend_its_load_to_another_device() {
-        let machine = Machine::new().chip(0, "amdgpu", &[("edge", "47000")]).card(
-            1,
-            "0x1002",
-            Some("11")
-        );
+        let machine =
+            Machine::new()
+                .chip(0, "amdgpu", &[("edge", "47000")])
+                .card(1, "0x1002", Some("11"));
 
         let gpu = machine.sensors().read().gpu.expect("graphics readings");
 

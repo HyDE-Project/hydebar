@@ -49,6 +49,10 @@ impl App {
     }
 
     /// Handles the messages this module owns.
+    #[expect(
+        clippy::too_many_lines,
+        reason = "one match arm per menu message, read as a single dispatch table"
+    )]
     pub(super) fn update_menus(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::ModuleHover {

@@ -71,7 +71,7 @@ impl std::fmt::Display for LauncherError {
 impl std::error::Error for LauncherError {}
 
 impl LauncherError {
-    fn spawn_error(command: Arc<str>, error: std::io::Error) -> Self {
+    fn spawn_error(command: Arc<str>, error: &std::io::Error) -> Self {
         Self::Spawn {
             command,
             context: Arc::from(error.to_string())
@@ -99,7 +99,7 @@ pub async fn run_shell_command_with_output(command: &Arc<str>) -> Result<Output,
     let output = process
         .output()
         .await
-        .map_err(|error| LauncherError::spawn_error(command.clone(), error))?;
+        .map_err(|error| LauncherError::spawn_error(command.clone(), &error))?;
 
     if output.status.success() {
         Ok(output)
@@ -135,12 +135,12 @@ pub async fn run_detached(command: &Arc<str>) -> Result<(), LauncherError> {
 
     let mut child = process
         .spawn()
-        .map_err(|error| LauncherError::spawn_error(command.clone(), error))?;
+        .map_err(|error| LauncherError::spawn_error(command.clone(), &error))?;
 
     let status = child
         .wait()
         .await
-        .map_err(|error| LauncherError::spawn_error(command.clone(), error))?;
+        .map_err(|error| LauncherError::spawn_error(command.clone(), &error))?;
 
     if status.success() {
         Ok(())

@@ -26,7 +26,7 @@ pub enum ScreenshotAction {
 }
 
 /// Message emitted by the screenshot module.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum ScreenshotMessage {
     TakeScreenshot(ScreenshotAction),
     StartRecording,

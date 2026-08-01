@@ -1,3 +1,4 @@
+#![allow(clippy::float_cmp)]
 use hex_color::HexColor;
 
 use super::themes::PresetTheme;
@@ -149,15 +150,15 @@ fn all_themes_have_scale_factor() {
 
 #[test]
 fn deserialize_preset_theme_from_string() {
-    let toml_content = r#"
-        appearance = "catppuccin-mocha"
-    "#;
-
     #[derive(serde::Deserialize)]
     struct TestConfig {
         #[serde(deserialize_with = "super::themes::deserialize_theme_or_appearance")]
         appearance: Appearance
     }
+
+    let toml_content = r#"
+        appearance = "catppuccin-mocha"
+    "#;
 
     let config: TestConfig = ::toml::from_str(toml_content).expect("Failed to deserialize");
     assert_eq!(
@@ -168,17 +169,17 @@ fn deserialize_preset_theme_from_string() {
 
 #[test]
 fn deserialize_custom_appearance() {
-    let toml_content = r##"
-        [appearance]
-        opacity = 0.85
-        background_color = "#1a1b26"
-    "##;
-
     #[derive(serde::Deserialize)]
     struct TestConfig {
         #[serde(deserialize_with = "super::themes::deserialize_theme_or_appearance")]
         appearance: Appearance
     }
+
+    let toml_content = r##"
+        [appearance]
+        opacity = 0.85
+        background_color = "#1a1b26"
+    "##;
 
     let config: TestConfig = ::toml::from_str(toml_content).expect("Failed to deserialize");
     assert_eq!(config.appearance.opacity, 0.85);
@@ -190,15 +191,15 @@ fn deserialize_custom_appearance() {
 
 #[test]
 fn preset_theme_takes_precedence_over_appearance_fields() {
-    let toml_content = r#"
-        appearance = "dracula"
-    "#;
-
     #[derive(serde::Deserialize)]
     struct TestConfig {
         #[serde(deserialize_with = "super::themes::deserialize_theme_or_appearance")]
         appearance: Appearance
     }
+
+    let toml_content = r#"
+        appearance = "dracula"
+    "#;
 
     let config: TestConfig = ::toml::from_str(toml_content).expect("Failed to deserialize");
     assert_eq!(

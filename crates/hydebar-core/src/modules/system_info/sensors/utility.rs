@@ -62,6 +62,7 @@ impl UtilityMetrics {
 }
 
 /// A program the panel may ask for metrics the kernel does not publish.
+#[derive(Debug)]
 pub struct Utility {
     /// Program name, looked up on `PATH`.
     pub program: &'static str,
@@ -107,6 +108,11 @@ pub fn on_path(program: &str) -> Option<PathBuf> {
 /// Runs a program and hands back what it wrote.
 pub trait Runner: Send + 'static {
     /// Runs the program, or fails the way the operating system did.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the program cannot be started or exits
+    /// unsuccessfully.
     fn run(&self, program: &str, args: &[&str]) -> io::Result<String>;
 }
 
@@ -146,12 +152,7 @@ impl Feed {
     /// `gate` decides whether the device may be queried at all, which
     /// is how a sleeping card is left alone instead of
     /// being woken up for a reading.
-    pub fn spawn<R, G>(
-        utility: &'static Utility,
-        runner: R,
-        gate: G,
-        period: Duration
-    ) -> Self
+    pub fn spawn<R, G>(utility: &'static Utility, runner: R, gate: G, period: Duration) -> Self
     where
         R: Runner,
         G: Fn() -> bool + Send + 'static
@@ -172,7 +173,7 @@ impl Feed {
 
                     let mut waited = Duration::ZERO;
                     while waited < period && !stop.load(Ordering::Relaxed) {
-                        thread::sleep(STOP_CHECK.min(period.checked_sub(waited).unwrap()));
+                        thread::sleep(STOP_CHECK.min(period.saturating_sub(waited)));
                         waited += STOP_CHECK;
                     }
                 }
@@ -323,8 +324,7 @@ mod tests {
 
     #[test]
     fn only_the_first_card_of_the_answer_is_read() {
-        let metrics =
-            parse_query_row("66, 15, 1234, 8192\n71, 40, 512, 8192\n").expect("metrics");
+        let metrics = parse_query_row("66, 15, 1234, 8192\n71, 40, 512, 8192\n").expect("metrics");
 
         assert_eq!(metrics.temperature, Some(66));
     }

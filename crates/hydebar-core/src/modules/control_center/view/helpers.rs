@@ -5,9 +5,7 @@ use iced::{
     widget::{Space, column, container, row}
 };
 
-use crate::{
-    components::scale, modules::control_center::state::Message, style::darken_color
-};
+use crate::{components::scale, modules::control_center::state::Message, style::darken_color};
 
 /// How much darker an unfolded zone is than the menu it sits in.
 ///
@@ -62,15 +60,11 @@ pub(super) fn quick_settings_section<'a>(
     section.into()
 }
 
-pub fn sub_menu_wrapper<Msg: 'static>(
-    content: Element<Msg>,
-    opacity: f32
-) -> Element<Msg> {
+pub fn sub_menu_wrapper<Msg: 'static>(content: Element<Msg>, opacity: f32) -> Element<Msg> {
     container(content)
         .style(move |theme: &Theme| container::Style {
             background: Background::Color(
-                darken_color(theme.palette().background, SUB_MENU_DARKENING)
-                    .scale_alpha(opacity)
+                darken_color(theme.palette().background, SUB_MENU_DARKENING).scale_alpha(opacity)
             )
             .into(),
             border: Border::default().rounded(scale::scaled(16.0)),

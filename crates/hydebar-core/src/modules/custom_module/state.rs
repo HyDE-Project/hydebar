@@ -15,7 +15,7 @@ use super::{
 };
 use crate::{
     ModuleContext, ModuleEventSender, config::CustomModuleDef, event_bus::ModuleEvent,
-    modules::ModuleError, services::ServiceEvent
+    services::ServiceEvent
 };
 
 /// State of a single custom module instance.
@@ -112,7 +112,7 @@ impl Custom {
         &mut self,
         ctx: &ModuleContext,
         config: Option<&CustomModuleDef>
-    ) -> Result<(), ModuleError> {
+    ) {
         self.abort_listener();
         self.sender = None;
         self.last_error = None;
@@ -124,7 +124,7 @@ impl Custom {
         });
 
         let Some(registration) = self.registration.clone() else {
-            return Ok(());
+            return;
         };
 
         let module_name_for_sender = Arc::clone(&registration.name);
@@ -148,21 +148,13 @@ impl Custom {
                     period,
                     signal
                 } => {
-                    run_custom_poller(
-                        Arc::clone(&module_name),
-                        command,
-                        period,
-                        signal,
-                        sender
-                    )
-                    .await
+                    run_custom_poller(Arc::clone(&module_name), command, period, signal, sender)
+                        .await
                 }
             };
 
             report_listener_outcome(outcome, &module_name, &error_sender);
         }));
-
-        Ok(())
     }
 }
 
@@ -290,7 +282,9 @@ mod tests {
             RegistrationSource::Stream {
                 command
             } => assert_eq!(command.as_ref(), "tail -f log"),
-            other => panic!("unexpected source: {other:?}")
+            other @ RegistrationSource::Poll {
+                ..
+            } => panic!("unexpected source: {other:?}")
         }
     }
 
@@ -312,7 +306,9 @@ mod tests {
                 assert_eq!(period, Some(Duration::from_secs(5)));
                 assert_eq!(signal, Some(20));
             }
-            other => panic!("unexpected source: {other:?}")
+            other @ RegistrationSource::Stream {
+                ..
+            } => panic!("unexpected source: {other:?}")
         }
     }
 
@@ -333,7 +329,9 @@ mod tests {
                 assert!(period.is_none());
                 assert!(signal.is_none());
             }
-            other => panic!("unexpected source: {other:?}")
+            other @ RegistrationSource::Stream {
+                ..
+            } => panic!("unexpected source: {other:?}")
         }
     }
 }

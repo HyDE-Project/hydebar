@@ -125,28 +125,28 @@ mod tests {
             }
         }
 
-        fn write(&self, path: std::path::PathBuf, contents: &str) {
+        fn write(path: std::path::PathBuf, contents: &str) {
             fs::create_dir_all(path.parent().expect("parent")).expect("create directory");
             fs::write(path, contents).expect("write fixture");
         }
 
         fn with_staterc(self, contents: &str) -> Self {
-            self.write(self.dirs.staterc(), contents);
+            Self::write(self.dirs.staterc(), contents);
             self
         }
 
         fn with_wall_dcol(self, contents: &str) -> Self {
-            self.write(self.dirs.wall_dcol(), contents);
+            Self::write(self.dirs.wall_dcol(), contents);
             self
         }
 
         fn with_theme_dcol(self, theme: &str, contents: &str) -> Self {
-            self.write(self.dirs.theme_dcol(theme), contents);
+            Self::write(self.dirs.theme_dcol(theme), contents);
             self
         }
 
         fn with_hypr_theme(self, theme: &str, contents: &str) -> Self {
-            self.write(self.dirs.hypr_theme(theme), contents);
+            Self::write(self.dirs.hypr_theme(theme), contents);
             self
         }
     }
@@ -205,7 +205,7 @@ mod tests {
             .with_staterc("HYDE_THEME=\"Fixture\"\nenableWallDcol=\"0\"\n")
             .with_wall_dcol(WALL_DCOL)
             .with_hypr_theme("Fixture", "$COLOR_SCHEME = prefer-light\n");
-        install.write(
+        Install::write(
             install.dirs.hyprland_override(),
             "$COLOR_SCHEME = prefer-dark\n"
         );

@@ -28,9 +28,7 @@ impl App {
             | ModuleName::Cpu
             | ModuleName::Memory
             | ModuleName::CpuTemp
-            | ModuleName::GpuTemp => {
-                Module::<Message>::poll_schedule(&self.system_info)
-            }
+            | ModuleName::GpuTemp => Module::<Message>::poll_schedule(&self.system_info),
             _ => None
         }
     }
@@ -48,9 +46,7 @@ impl App {
             | ModuleName::Cpu
             | ModuleName::Memory
             | ModuleName::CpuTemp
-            | ModuleName::GpuTemp => {
-                Module::<Message>::poll(&mut self.system_info, &ctx)
-            }
+            | ModuleName::GpuTemp => Module::<Message>::poll(&mut self.system_info, &ctx),
             _ => Ok(())
         };
 
@@ -74,6 +70,10 @@ impl App {
         }
     }
 
+    #[expect(
+        clippy::too_many_lines,
+        reason = "one view arm per module name, read as a single dispatch table"
+    )]
     pub(super) fn get_module_view(
         &self,
         module_name: &ModuleName,
@@ -158,8 +158,10 @@ impl App {
             ),
             ModuleName::KeyboardLayout => self.keyboard_layout.view(&self.config.keyboard_layout),
             ModuleName::KeyboardSubmap => self.keyboard_submap.view(()),
-            ModuleName::Tray => crate::views::tray::render_tray(&self.tray, id, opacity, self.icons())
-                .map(|content| (content, None)),
+            ModuleName::Tray => {
+                crate::views::tray::render_tray(&self.tray, id, opacity, self.icons())
+                    .map(|content| (content, None))
+            }
             ModuleName::Clock => self.clock.view(&self.config.clock),
             ModuleName::HydeMenu => self.hyde_menu.view(self.icons()),
             ModuleName::Battery => self.battery.data().map(|data| {
@@ -231,17 +233,16 @@ impl App {
             | ModuleName::Cpu
             | ModuleName::Memory
             | ModuleName::CpuTemp
-            | ModuleName::GpuTemp => {
-                self.system_info.subscription()
-            }
+            | ModuleName::GpuTemp => self.system_info.subscription(),
             ModuleName::KeyboardLayout => self.keyboard_layout.subscription(),
             ModuleName::KeyboardSubmap => self.keyboard_submap.subscription(),
             ModuleName::Tray => self.tray.subscription(),
-            ModuleName::Clock => None,
-            ModuleName::HydeMenu => None,
-            ModuleName::Themes => None,
-            ModuleName::Wallpaper => None,
-            ModuleName::Battery => None,
+            ModuleName::Clock
+            | ModuleName::HydeMenu
+            | ModuleName::Themes
+            | ModuleName::Wallpaper
+            | ModuleName::Battery
+            | ModuleName::Settings => None,
             ModuleName::Privacy => self.privacy.subscription(),
             ModuleName::ControlCenter
             | ModuleName::Audio
@@ -251,7 +252,6 @@ impl App {
             ModuleName::MediaPlayer => self.media_player.subscription(),
             ModuleName::Notifications => self.notifications.subscription(),
             ModuleName::Screenshot => self.screenshot.subscription(),
-            ModuleName::Settings => None,
             ModuleName::IdleInhibitor => Module::<Message>::subscription(&self.idle_inhibitor)
         }
     }

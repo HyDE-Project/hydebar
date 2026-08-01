@@ -84,6 +84,7 @@ impl BluetoothService {
         })
     }
 
+    #[expect(clippy::needless_continue, reason = "the continue lives inside the stream_select macro expansion")]
     async fn events(conn: &zbus::Connection) -> AppResult<impl Stream<Item = ()> + use<>> {
         let bluetooth = BluetoothDbus::new(conn).await?;
 
@@ -110,7 +111,7 @@ impl BluetoothService {
         let combined = match bluetooth.adapter.as_ref() {
             Some(adapter) => {
                 let powered = adapter.receive_powered_changed().await.map(|_| {});
-                let rfkill = Self::listen_rfkill_soft_block_changes().await?;
+                let rfkill = Self::listen_rfkill_soft_block_changes()?;
                 let devices = bluetooth.devices().await?;
 
                 let mut batteries = Vec::new();
@@ -199,6 +200,13 @@ impl BluetoothService {
         }
     }
 
+    /// Reports whether the bluetooth radio is soft blocked according to
+    /// `rfkill`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the `rfkill` command cannot be executed or its
+    /// output is not valid UTF-8.
     pub async fn check_rfkill_soft_block() -> AppResult<bool> {
         let output = Command::new("rfkill")
             .arg("list")
@@ -212,7 +220,13 @@ impl BluetoothService {
         Ok(output.contains("Soft blocked: yes"))
     }
 
-    pub async fn listen_rfkill_soft_block_changes() -> AppResult<impl Stream<Item = ()>> {
+    /// Watches `/dev/rfkill` and yields a unit item on every modification.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the inotify instance cannot be created or the
+    /// watch on `/dev/rfkill` cannot be added.
+    pub fn listen_rfkill_soft_block_changes() -> AppResult<impl Stream<Item = ()>> {
         let inotify = Inotify::init()?;
 
         inotify.watches().add("/dev/rfkill", WatchMask::MODIFY)?;

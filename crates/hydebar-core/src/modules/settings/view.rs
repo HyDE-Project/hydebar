@@ -156,6 +156,8 @@ impl Settings {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::float_cmp, clippy::suboptimal_flops)]
+
     use super::*;
     use crate::modules::settings::{Section, Tab};
 

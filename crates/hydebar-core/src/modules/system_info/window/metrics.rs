@@ -50,6 +50,15 @@ fn line(size: f32) -> f32 {
     scale::scaled(size) * 1.3
 }
 
+/// A count of rows or lines as the f32 the layout math runs in.
+#[expect(
+    clippy::cast_precision_loss,
+    reason = "row and line counts stay far below f32's exact integer range"
+)]
+const fn count(value: usize) -> f32 {
+    value as f32
+}
+
 /// Width of the content column alone.
 pub(super) fn column_width() -> f32 {
     scale::scaled(WIDTH)
@@ -57,7 +66,10 @@ pub(super) fn column_width() -> f32 {
 
 /// Width the menu box needs, box padding included.
 pub fn content_width(font_size: f32) -> f32 {
-    (2.0 * crate::menu::MENU_PADDING_EM).mul_add(font_size, scale::scaled(2.0f32.mul_add(OUTER_PADDING, WIDTH)))
+    (2.0 * crate::menu::MENU_PADDING_EM).mul_add(
+        font_size,
+        scale::scaled(2.0f32.mul_add(OUTER_PADDING, WIDTH))
+    )
 }
 
 fn row_height(row: &Row) -> f32 {
@@ -76,7 +88,7 @@ fn section_height(section: &Section) -> f32 {
     let note = section.note.as_ref().map_or(0.0, |_| line(NOTE_SIZE));
     let rows: f32 = section.rows.iter().map(row_height).sum();
     let inner_gaps = section.rows.len() + usize::from(section.note.is_some());
-    let gaps = scale::scaled(ROW_GAP) * inner_gaps as f32;
+    let gaps = scale::scaled(ROW_GAP) * count(inner_gaps);
 
     title + note + rows + gaps
 }
@@ -88,8 +100,8 @@ fn footnotes_height(footnotes: &[String]) -> f32 {
 
     let rule = 1.0;
     let heading = line(SECTION_TITLE_SIZE);
-    let lines = footnotes.len() as f32 * line(NOTE_SIZE);
-    let gaps = scale::scaled(FOOT_GAP) * (footnotes.len() as f32 + 1.0);
+    let lines = count(footnotes.len()) * line(NOTE_SIZE);
+    let gaps = scale::scaled(FOOT_GAP) * (count(footnotes.len()) + 1.0);
 
     rule + heading + lines + gaps
 }
@@ -111,7 +123,7 @@ pub fn content_height(data: &SystemInfoData, config: &SystemModuleConfig) -> f32
     let rule = 1.0;
     let body: f32 = sections.iter().map(section_height).sum();
     let blocks = 2 + sections.len() + usize::from(!footnotes.is_empty());
-    let gaps = scale::scaled(SECTION_GAP) * (blocks as f32 - 1.0);
+    let gaps = scale::scaled(SECTION_GAP) * (count(blocks) - 1.0);
     let padding = scale::scaled(2.0 * OUTER_PADDING);
 
     title + rule + body + footnotes_height(&footnotes) + gaps + padding

@@ -136,6 +136,11 @@ async fn wireless_link(interface: &str) -> Option<(Option<i32>, Option<u32>)> {
 }
 
 /// Pulls the signal and frequency out of an `iw dev <if> link` report.
+#[expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    reason = "a reported radio frequency is a small positive number of megahertz, so its rounded value fits in u32"
+)]
 fn parse_wireless(report: &str) -> (Option<i32>, Option<u32>) {
     let mut dbm = None;
     let mut mhz = None;

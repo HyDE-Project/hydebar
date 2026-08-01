@@ -96,7 +96,7 @@ mod tests {
 
     #[test]
     fn converts_io_errors() {
-        let err = BrightnessError::from(std::io::Error::new(std::io::ErrorKind::Other, "boom"));
+        let err = BrightnessError::from(std::io::Error::other("boom"));
         assert!(matches!(
             err,
             BrightnessError::Filesystem { ref context } if context.as_ref() == "boom"

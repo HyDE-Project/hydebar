@@ -73,8 +73,8 @@ impl BackendHandle {
         }
     }
 
-    #[cfg(test)]
-    pub(crate) fn from_parts(
+    #[cfg(all(test, feature = "enable-broken-tests"))]
+    pub(crate) const fn from_parts(
         receiver: Receiver<BackendEvent>,
         sender: Sender<BackendCommand>
     ) -> Self {

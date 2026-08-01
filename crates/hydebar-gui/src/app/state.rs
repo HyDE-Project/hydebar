@@ -58,7 +58,10 @@ pub(super) const GREETING_LIFETIME: std::time::Duration = std::time::Duration::f
 pub struct App {
     pub(super) config_path: PathBuf,
     pub(super) logger: LoggerHandle,
-    pub(super) _hyprland: Arc<dyn HyprlandPort>,
+    /// Keeps the injected compositor adapter alive for the app's lifetime;
+    /// the outputs facade is meant to adopt it in place of its own client.
+    #[cfg_attr(not(test), expect(dead_code, reason = "held until the outputs facade adopts the injected port"))]
+    pub(super) hyprland: Arc<dyn HyprlandPort>,
     pub(super) config_manager: Arc<ConfigManager>,
     pub(super) bus_receiver: EventReceiver,
     pub(super) last_frame: Option<Instant>,
@@ -140,7 +143,23 @@ pub struct App {
     pub(super) stated_layer_metrics: Option<(AppearanceStyle, u64, Option<u32>)>
 }
 
+impl std::fmt::Debug for App {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("App")
+            .field("config_path", &self.config_path)
+            .field("navigation_mode", &self.navigation_mode)
+            .field("focused_module_index", &self.focused_module_index)
+            .field("magnification", &self.magnification)
+            .field("screen_height", &self.screen_height)
+            .finish_non_exhaustive()
+    }
+}
+
 #[derive(Debug, Clone)]
+#[expect(
+    clippy::large_enum_variant,
+    reason = "messages are dispatched by value once and never stored; boxing would touch every construction site"
+)]
 pub enum Message {
     None,
     /// A compositor frame callback carrying the frame timestamp.
@@ -318,13 +337,13 @@ impl App {
     /// outermost islands line up with and fall back to the font-derived
     /// margin, which is why the whole restatement lives in one place and both
     /// the first load and every reload after it go through it.
-    pub(super) fn adopted(&self, config: Arc<Config>) -> Arc<Config> {
+    pub(super) fn adopted(&self, config: &Config) -> Arc<Config> {
         self.adopted_with(config, &CompositorLook::read())
     }
 
     /// Restates `config` against a compositor look the caller already has.
-    fn adopted_with(&self, config: Arc<Config>, look: &CompositorLook) -> Arc<Config> {
-        let mut adopted = (*config).clone();
+    fn adopted_with(&self, config: &Config, look: &CompositorLook) -> Arc<Config> {
+        let mut adopted = config.clone();
         adopted.appearance.adopt_screen(self.magnification, look);
 
         Arc::new(adopted)
@@ -375,7 +394,7 @@ impl App {
         let incoming = self
             .themes
             .switching()
-            .or(self.themes.hyde().theme.as_deref());
+            .or_else(|| self.themes.hyde().theme.as_deref());
         self.sweep = hydebar_core::style::SweepStyle::of(incoming, &appearance);
         self.appearance_transition
             .restyle(self.sweep.response, self.sweep.damping);
@@ -436,7 +455,7 @@ impl App {
         let mut app = Self {
             config_path: config_path.clone(),
             logger,
-            _hyprland: hyprland,
+            hyprland,
             config_manager,
             bus_receiver,
             last_frame: None,
@@ -530,6 +549,8 @@ impl App {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::float_cmp)]
+
     use std::{num::NonZeroUsize, sync::OnceLock};
 
     use flexi_logger::LoggerHandle;
@@ -577,7 +598,7 @@ mod tests {
             bus_receiver
         ));
 
-        assert!(Arc::ptr_eq(&app._hyprland, &mock_port));
+        assert!(Arc::ptr_eq(&app.hyprland, &mock_port));
     }
 
     #[test]
@@ -643,11 +664,11 @@ mod tests {
 
     fn window_look() -> CompositorLook {
         CompositorLook {
-            rounding:   Some(3.0),
-            gaps_out:   Some(8.0),
-            gaps_in:    Some(3.0),
+            rounding: Some(3.0),
+            gaps_out: Some(8.0),
+            gaps_in: Some(3.0),
             animations: Some(true),
-            blur:       Some(true),
+            blur: Some(true),
             ..CompositorLook::default()
         }
     }
@@ -659,7 +680,7 @@ mod tests {
         config.appearance.font_size = Some(10.0);
         config.appearance.side_padding = None;
 
-        let reloaded = app.adopted_with(Arc::new(config), &window_look());
+        let reloaded = app.adopted_with(&config, &window_look());
 
         assert_eq!(reloaded.appearance.side_padding, Some(8.0));
         assert_eq!(reloaded.appearance.bar_padding()[1], 8.0);
@@ -670,10 +691,9 @@ mod tests {
         let app = test_app(2.0);
         let mut config = Config::default();
         config.appearance.font_size = Some(10.0);
-        let config = Arc::new(config);
 
-        let once = app.adopted_with(Arc::clone(&config), &window_look());
-        let twice = app.adopted_with(config, &window_look());
+        let once = app.adopted_with(&config, &window_look());
+        let twice = app.adopted_with(&config, &window_look());
 
         assert_eq!(
             once.appearance.bar_padding(),
@@ -687,7 +707,7 @@ mod tests {
         let app = test_app(1.0);
         let config = Config::default();
 
-        let reloaded = app.adopted_with(Arc::new(config), &window_look());
+        let reloaded = app.adopted_with(&config, &window_look());
 
         assert_eq!(reloaded.appearance.side_padding, Some(8.0));
     }

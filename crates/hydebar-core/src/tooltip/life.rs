@@ -259,6 +259,8 @@ impl Hints {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::float_cmp)]
+
     use iced::Point;
 
     use super::*;

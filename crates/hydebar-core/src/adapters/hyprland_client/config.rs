@@ -53,7 +53,7 @@ mod tests {
         let config = HyprlandClientConfig::default();
 
         assert_eq!(config.request_timeout, Duration::from_secs(2));
-        assert_eq!(config.listener_stability_window, Duration::from_secs(60));
+        assert_eq!(config.listener_stability_window, Duration::from_mins(1));
         assert_eq!(config.retry_attempts, 3);
         assert_eq!(config.retry_backoff, Duration::from_millis(250));
     }

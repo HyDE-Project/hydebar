@@ -19,7 +19,6 @@ pub fn ghost_button_style(opacity: f32) -> impl Fn(&Theme, Status) -> button::St
             ..button::Style::default()
         };
         match status {
-            Status::Active => base,
             Status::Hovered => {
                 base.background = Some(
                     theme
@@ -72,7 +71,6 @@ pub fn outline_button_style(opacity: f32) -> impl Fn(&Theme, Status) -> button::
             ..button::Style::default()
         };
         match status {
-            Status::Active => base,
             Status::Hovered => {
                 base.background = Some(
                     theme
@@ -112,7 +110,6 @@ pub fn confirm_button_style(opacity: f32) -> impl Fn(&Theme, Status) -> button::
             ..button::Style::default()
         };
         match status {
-            Status::Active => base,
             Status::Hovered => {
                 base.background = Some(
                     theme
@@ -152,7 +149,6 @@ pub fn settings_button_style(opacity: f32) -> impl Fn(&Theme, Status) -> button:
             ..button::Style::default()
         };
         match status {
-            Status::Active => base,
             Status::Hovered => {
                 base.background = Some(
                     theme

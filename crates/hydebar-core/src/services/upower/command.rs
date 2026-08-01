@@ -77,6 +77,7 @@ impl UPowerService {
     }
 }
 
+#[derive(Debug)]
 pub enum PowerProfileCommand {
     Toggle
 }

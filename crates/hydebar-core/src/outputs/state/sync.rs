@@ -34,6 +34,10 @@ impl Outputs {
     /// );
     /// # let _ = task;
     /// ```
+    #[expect(
+        clippy::too_many_lines,
+        reason = "one pass reconciles every surface facet in order"
+    )]
     pub fn sync<Message: 'static>(
         &mut self,
         style: AppearanceStyle,
@@ -119,6 +123,10 @@ impl Outputs {
             ));
         }
 
+        #[expect(
+            clippy::float_cmp,
+            reason = "identity check on a value copied verbatim"
+        )]
         for shell_info in self.0.iter_mut().filter_map(|(_, shell_info, _)| {
             if let Some(shell_info) = shell_info
                 && (shell_info.style != style
@@ -142,6 +150,11 @@ impl Outputs {
                 config.appearance.scale_factor,
                 config.appearance.height
             );
+            #[expect(
+                clippy::cast_possible_truncation,
+                clippy::cast_sign_loss,
+                reason = "the layer height is a small positive pixel count"
+            )]
             tasks.push(Task::batch(vec![
                 set_size(shell_info.id, (0, height as u32)),
                 set_exclusive_zone(shell_info.id, height as i32),

@@ -102,6 +102,10 @@ impl App {
     /// Derived from the reported screen, never from a button viewport: the
     /// strip below the bar minus the box's own breathing room.
     fn menu_room(&self) -> Option<f32> {
+        #[expect(
+            clippy::cast_possible_truncation,
+            reason = "the bar height constant is exactly representable in f32"
+        )]
         let bar = self.appearance().height.unwrap_or(HEIGHT as f32);
 
         self.screen_height
@@ -129,6 +133,10 @@ impl App {
     /// [`None`] stands for a menu whose owner is gone, such as a custom module
     /// the configuration no longer declares.
     #[allow(clippy::type_complexity)]
+    #[expect(
+        clippy::too_many_lines,
+        reason = "one table naming what every menu shows, one arm per menu"
+    )]
     fn menu_page(
         &self,
         menu_type: &MenuType,
@@ -387,6 +395,10 @@ impl App {
     }
 
     #[must_use]
+    #[expect(
+        clippy::too_many_lines,
+        reason = "the bar, menu, popup and tooltip surfaces are drawn from one match"
+    )]
     pub fn view(&self, id: Id) -> Element<'_, Message> {
         match self.outputs.has(id) {
             Some(HasOutput::Main) => {
@@ -409,6 +421,10 @@ impl App {
                     self.config.modules.left.len() + self.config.modules.center.len()
                 );
 
+                #[expect(
+                    clippy::cast_possible_truncation,
+                    reason = "the bar height constant is exactly representable in f32"
+                )]
                 let bar_height = self.appearance().height.unwrap_or(HEIGHT as f32);
 
                 let centerbox = centerbox::Centerbox::new([left, center, right])
@@ -514,12 +530,12 @@ impl App {
                 let menu = menu_info.and_then(|(menu_type, button_ui_ref)| {
                     self.menu_page(menu_type, id, menu_opacity).map(
                         |(content, size, measured_height)| {
-                            let layout = match measured_height {
-                                Some(height) => {
+                            let layout = measured_height.map_or_else(
+                                || self.menu_layout(menu_opacity, menu_progress),
+                                |height| {
                                     self.measured_menu_layout(menu_opacity, menu_progress, height)
                                 }
-                                None => self.menu_layout(menu_opacity, menu_progress)
-                            };
+                            );
 
                             menu_wrapper(
                                 id,
@@ -534,23 +550,25 @@ impl App {
                     )
                 });
 
-                match menu {
-                    Some(menu) => self.faded_menu(menu, menu_progress),
-                    None => self.screen_greeting()
-                }
+                menu.map_or_else(
+                    || self.screen_greeting(),
+                    |menu| self.faded_menu(menu, menu_progress)
+                )
             }
             Some(HasOutput::Notifications) => notifications_popup::view(
                 &self.notification_popups,
                 self.appearance(),
                 self.config.position
             ),
-            Some(HasOutput::Tooltip) => match self.outputs.tooltip(id) {
-                Some(info) => self.faded_menu(
-                    tooltip_wrapper(info, self.config.position, self.appearance()),
-                    self.hints.presence()
-                ),
-                None => Row::new().into()
-            },
+            Some(HasOutput::Tooltip) => self.outputs.tooltip(id).map_or_else(
+                || Row::new().into(),
+                |info| {
+                    self.faded_menu(
+                        tooltip_wrapper(info, self.config.position, self.appearance()),
+                        self.hints.presence()
+                    )
+                }
+            ),
             None => Row::new().into()
         }
     }

@@ -31,6 +31,10 @@ const GLYPH_ADVANCE_EM: f32 = 0.7;
 /// Estimates how wide the tooltip box will be, in pixels.
 ///
 /// Multi line tooltips are as wide as their longest line.
+#[expect(
+    clippy::cast_precision_loss,
+    reason = "line lengths sit far below the f32 mantissa limit"
+)]
 fn estimated_width(text: &str, font_size: f32, horizontal_padding: f32) -> f32 {
     let glyphs = text
         .lines()
@@ -98,6 +102,9 @@ pub fn tooltip_wrapper<'a, Message: 'a>(
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::float_cmp)]
+    #![allow(clippy::suboptimal_flops)]
+
     use iced::Point;
 
     use super::*;

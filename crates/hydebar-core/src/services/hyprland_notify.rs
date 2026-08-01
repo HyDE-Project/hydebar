@@ -43,6 +43,11 @@ impl Notice {
 
 /// Renders a colour the way the compositor spells colours.
 #[must_use]
+#[expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    reason = "each channel is clamped to [0.0, 1.0] before scaling, so the rounded value is non-negative and fits in u8"
+)]
 pub fn compositor_color(color: AppearanceColor) -> String {
     let base = color.get_base();
     let channel = |value: f32| (value.clamp(0.0, 1.0) * 255.0).round() as u8;
@@ -62,6 +67,11 @@ pub fn compositor_color(color: AppearanceColor) -> String {
 /// compositor accepts it, so a themed bar and a themed notice stay the same
 /// size.
 #[must_use]
+#[expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    reason = "a configured font size is a small positive number, so its rounded value fits in u32"
+)]
 pub fn notify_args(
     notice: Notice,
     duration: u32,

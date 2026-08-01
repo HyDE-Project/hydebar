@@ -167,7 +167,10 @@ fn build_extended_palette(appearance: &Appearance, palette: Palette) -> palette:
 /// from white depending on this answer; stating "dark" for every theme hands a
 /// light `HyDE` palette shades derived the wrong way round.
 fn palette_is_dark(background: Color) -> bool {
-    0.0722f32.mul_add(background.b, 0.7152f32.mul_add(background.g, 0.2126 * background.r)) < 0.5
+    0.0722f32.mul_add(
+        background.b,
+        0.7152f32.mul_add(background.g, 0.2126 * background.r)
+    ) < 0.5
 }
 
 fn build_pair(
@@ -294,6 +297,9 @@ pub fn text_input_style(theme: &Theme, status: text_input::Status) -> text_input
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::float_cmp)]
+    #![allow(clippy::suboptimal_flops)]
+
     use hex_color::HexColor;
     use iced::Color;
 
@@ -389,7 +395,7 @@ mod tests {
         assert!(palette.is_dark);
     }
 
-    /// A light HyDE theme hands the bar a light island; the derived shades
+    /// A light `HyDE` theme hands the bar a light island; the derived shades
     /// have to follow it instead of staying on the dark side for ever.
     #[test]
     fn a_light_background_yields_a_light_palette() {

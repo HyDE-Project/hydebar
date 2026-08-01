@@ -135,6 +135,7 @@ impl Sources {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::float_cmp)]
     use std::path::PathBuf;
 
     use super::*;

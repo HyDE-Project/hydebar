@@ -55,6 +55,8 @@ pub fn menu_backdrop_style(backdrop: f32) -> impl Fn(&Theme) -> Style {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::float_cmp)]
+
     use iced::{Background, Color};
 
     use super::*;
@@ -62,7 +64,7 @@ mod tests {
     fn color(background: Option<Background>) -> Color {
         match background.expect("background should be set") {
             Background::Color(color) => color,
-            other => panic!("unexpected background: {other:?}")
+            other @ Background::Gradient(_) => panic!("unexpected background: {other:?}")
         }
     }
 

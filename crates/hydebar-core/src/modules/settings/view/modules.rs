@@ -254,11 +254,7 @@ fn catalogue<'a>(
 }
 
 /// Renders the row of section tabs.
-fn section_tabs<'a>(
-    active: Section,
-    font_size: f32,
-    opacity: f32
-) -> Element<'a, Message> {
+fn section_tabs<'a>(active: Section, font_size: f32, opacity: f32) -> Element<'a, Message> {
     let mut row = group(font_size);
 
     for section in Section::ALL {
@@ -368,6 +364,10 @@ const ACTION_LABELS: [&str; 4] = [TO_LEFT, TO_RIGHT, MERGE, REMOVE];
 
 /// Rows this page draws for `section`, its section headings counted in.
 #[must_use]
+#[expect(
+    clippy::cast_precision_loss,
+    reason = "island counts are small, fit f32 exactly"
+)]
 pub(super) fn rows(config: &Config, section: Section) -> f32 {
     let entries = section.entries(&config.modules);
 
@@ -390,9 +390,12 @@ pub(super) fn desired_width(config: &Config, font_size: f32, section: Section) -
     let gap = style::group_gap(font_size);
     let entries = section.entries(&config.modules);
 
-    let tabs =
-        button_row_width(Section::ALL.into_iter().map(Section::label), control, gap);
+    let tabs = button_row_width(Section::ALL.into_iter().map(Section::label), control, gap);
 
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "island sizes are small, fit f32 exactly"
+    )]
     let widest_island = islands(&entries)
         .into_iter()
         .map(|island| {
@@ -402,8 +405,10 @@ pub(super) fn desired_width(config: &Config, font_size: f32, section: Section) -
                 .map(|index| chip_width(entries[index].module.as_str(), control))
                 .sum();
 
-            gap.mul_add((count - 1.0).max(0.0), labelled_row_width(font_size) + chips)
-                + style::card_overhead(font_size)
+            gap.mul_add(
+                (count - 1.0).max(0.0),
+                labelled_row_width(font_size) + chips
+            ) + style::card_overhead(font_size)
         })
         .fold(0.0_f32, f32::max);
 
@@ -430,6 +435,8 @@ pub(super) fn desired_height(config: &Config, font_size: f32, section: Section) 
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::float_cmp)]
+
     use hydebar_proto::config::{ModuleDef, ModuleName, Modules};
 
     use super::{super::metrics::text_width, *};
@@ -515,8 +522,7 @@ mod tests {
         ]);
 
         assert!(
-            desired_height(&many, 16.0, Section::Left)
-                > desired_height(&few, 16.0, Section::Left)
+            desired_height(&many, 16.0, Section::Left) > desired_height(&few, 16.0, Section::Left)
         );
     }
 
@@ -525,10 +531,7 @@ mod tests {
         let font_size = 16.0;
         let modules = config(vec![ModuleDef::Single(ModuleName::Clock)]);
 
-        assert!(
-            desired_width(&modules, font_size, Section::Left)
-                > style::label_width(font_size)
-        );
+        assert!(desired_width(&modules, font_size, Section::Left) > style::label_width(font_size));
     }
 
     #[test]

@@ -26,6 +26,10 @@ impl Rgba {
     }
 
     /// Builds a color from its channels and an explicit alpha.
+    #[expect(
+        clippy::self_named_constructors,
+        reason = "named after the CSS rgba() notation it mirrors"
+    )]
     #[must_use]
     pub const fn rgba(r: u8, g: u8, b: u8, a: f32) -> Self {
         Self {
@@ -75,6 +79,11 @@ pub(super) fn parse_color(value: &str) -> Option<Rgba> {
 }
 
 /// Parses one `rgb()` channel, accepting both absolute and percentage forms.
+#[expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    reason = "the channel is clamped to 0.0..=255.0 before the cast"
+)]
 fn parse_channel(part: &str) -> Option<u8> {
     let value: f32 = match part.strip_suffix('%') {
         Some(number) => number.trim().parse::<f32>().ok()? * 2.55,
@@ -103,7 +112,7 @@ fn parse_hex(body: &str) -> Option<Rgba> {
     }
 
     let expand = |c: u8| -> Option<u8> {
-        let digit = (c as char).to_digit(16)? as u8;
+        let digit = u8::try_from((c as char).to_digit(16)?).ok()?;
         Some(digit * 17)
     };
     let pair = |slice: &str| -> Option<u8> { u8::from_str_radix(slice, 16).ok() };

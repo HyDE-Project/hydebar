@@ -18,7 +18,7 @@ use crate::services::audio::model::{AudioEvent, Device};
 impl PulseAudioServer {
     pub(super) fn wait_for_response<T: ?Sized>(
         &mut self,
-        operation: Operation<T>
+        operation: &Operation<T>
     ) -> AppResult<()> {
         loop {
             match self.mainloop.iterate(true) {
@@ -45,7 +45,7 @@ impl PulseAudioServer {
     }
 
     pub(super) fn populate_and_send_sinks(
-        info: ListResult<&SinkInfo<'_>>,
+        info: &ListResult<&SinkInfo<'_>>,
         tx: &Sender<BackendEvent>,
         sinks: &mut Vec<Device>
     ) {
@@ -57,7 +57,7 @@ impl PulseAudioServer {
                     .any(|port| port.available != PortAvailable::No)
                 {
                     debug!("Adding sink data: {data:?}");
-                    sinks.push(data.into());
+                    sinks.push((*data).into());
                 }
             }
             ListResult::End => {
@@ -70,7 +70,7 @@ impl PulseAudioServer {
     }
 
     pub(super) fn populate_and_send_sources(
-        info: ListResult<&SourceInfo<'_>>,
+        info: &ListResult<&SourceInfo<'_>>,
         tx: &Sender<BackendEvent>,
         sources: &mut Vec<Device>
     ) {
@@ -84,7 +84,7 @@ impl PulseAudioServer {
                     .is_some_and(|name| !name.contains("monitor"))
                 {
                     debug!("Adding source data: {data:?}");
-                    sources.push(data.into());
+                    sources.push((*data).into());
                 }
             }
             ListResult::End => {
@@ -98,12 +98,12 @@ impl PulseAudioServer {
 
     pub(super) fn set_sink_mute(&mut self, name: &str, mute: bool) -> AppResult<()> {
         let op = self.introspector.set_sink_mute_by_name(name, mute, None);
-        self.wait_for_response(op)
+        self.wait_for_response(&op)
     }
 
     pub(super) fn set_source_mute(&mut self, name: &str, mute: bool) -> AppResult<()> {
         let op = self.introspector.set_source_mute_by_name(name, mute, None);
-        self.wait_for_response(op)
+        self.wait_for_response(&op)
     }
 
     pub(super) fn set_sink_volume(
@@ -114,7 +114,7 @@ impl PulseAudioServer {
         let op = self
             .introspector
             .set_sink_volume_by_name(name, volume, None);
-        self.wait_for_response(op)
+        self.wait_for_response(&op)
     }
 
     pub(super) fn set_source_volume(
@@ -125,22 +125,22 @@ impl PulseAudioServer {
         let op = self
             .introspector
             .set_source_volume_by_name(name, volume, None);
-        self.wait_for_response(op)
+        self.wait_for_response(&op)
     }
 
     pub(super) fn set_default_sink(&mut self, name: &str, port: &str) -> AppResult<()> {
         let op = self.context.set_default_sink(name, |_| {});
-        self.wait_for_response(op)?;
+        self.wait_for_response(&op)?;
 
         let op = self.introspector.set_sink_port_by_name(name, port, None);
-        self.wait_for_response(op)
+        self.wait_for_response(&op)
     }
 
     pub(super) fn set_default_source(&mut self, name: &str, port: &str) -> AppResult<()> {
         let op = self.context.set_default_source(name, |_| {});
-        self.wait_for_response(op)?;
+        self.wait_for_response(&op)?;
 
         let op = self.introspector.set_source_port_by_name(name, port, None);
-        self.wait_for_response(op)
+        self.wait_for_response(&op)
     }
 }

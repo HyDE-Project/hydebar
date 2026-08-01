@@ -78,6 +78,10 @@ impl Appearance {
 /// reaches the screen. A gap the compositor measured in screen pixels would
 /// therefore land twice as far in if it were passed through untouched, so it is
 /// divided out here and the renderer puts it back.
+#[expect(
+    clippy::cast_possible_truncation,
+    reason = "compositor gaps are small pixel counts that fit f32 exactly"
+)]
 fn unscaled_padding(gap: f32, scale_factor: f64) -> f32 {
     if scale_factor <= 0.0 {
         return gap;
@@ -88,6 +92,7 @@ fn unscaled_padding(gap: f32, scale_factor: f64) -> f32 {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::float_cmp)]
     use super::*;
 
     fn look() -> CompositorLook {

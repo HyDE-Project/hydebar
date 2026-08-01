@@ -41,10 +41,10 @@ impl<V> Thresholds<V> {
 /// Builds the text of an indicator out of an optional prefix, a value and
 /// its unit.
 fn indicator_label(prefix: Option<&str>, value: impl std::fmt::Display, unit: &str) -> String {
-    match prefix {
-        Some(prefix) => format!("{prefix} {value}{unit}"),
-        None => format!("{value}{unit}")
-    }
+    prefix.map_or_else(
+        || format!("{value}{unit}"),
+        |prefix| format!("{prefix} {value}{unit}")
+    )
 }
 
 /// Amount of bytes rendered as gibibytes with a single decimal.
@@ -52,6 +52,10 @@ fn indicator_label(prefix: Option<&str>, value: impl std::fmt::Display, unit: &s
 /// The divisor is binary, so the unit next to the number has to be the
 /// binary one: eight gibibytes shown as `8.0GB` overstated every
 /// readout by seven percent against the unit it named.
+#[expect(
+    clippy::cast_precision_loss,
+    reason = "byte totals are shown with one decimal; f64 keeps far more precision than the display"
+)]
 pub fn gigabytes(bytes: u64) -> String {
     format!("{:.1}", bytes as f64 / (1024.0 * 1024.0 * 1024.0))
 }
@@ -111,10 +115,10 @@ pub fn gpu_title(gpu: &GpuReadings) -> String {
         GpuPlacement::Discrete | GpuPlacement::Unknown => "Graphics"
     };
 
-    match gpu.source.as_deref() {
-        Some(source) => format!("{placement} ({source})"),
-        None => format!("{placement} ({})", gpu.name)
-    }
+    gpu.source.as_deref().map_or_else(
+        || format!("{placement} ({})", gpu.name),
+        |source| format!("{placement} ({source})")
+    )
 }
 
 /// Glyph a graphics device wears on the bar.
@@ -148,6 +152,10 @@ pub fn format_speed(speed: u32) -> String {
 /// of the same sample the combined module renders, so the one spelling of
 /// every readout lives here and the thin entries cannot drift from it.
 #[must_use]
+#[expect(
+    clippy::too_many_lines,
+    reason = "one match arm per configured indicator keeps every readout spelling in one place"
+)]
 pub fn single_indicator<M>(
     indicator: &SystemIndicator,
     data: &SystemInfoData,
@@ -262,8 +270,7 @@ where
         }),
         SystemIndicator::IpAddress => data.network.as_ref().map(|network| {
             let ip = network.ip.clone();
-            container(row!(icon(icons, Icons::IpAddress), text(ip)).spacing(icon_label_gap))
-                .into()
+            container(row!(icon(icons, Icons::IpAddress), text(ip)).spacing(icon_label_gap)).into()
         }),
         SystemIndicator::DownloadSpeed => data.network.as_ref().map(|network| {
             indicator_info_element::<u32>(
@@ -295,7 +302,7 @@ where
 /// by `appearance`, so the bar row keeps its proportions across themes.
 #[must_use]
 pub fn indicator_elements<M>(
-    data: SystemInfoData,
+    data: &SystemInfoData,
     config: &SystemModuleConfig,
     memory_format: MemoryFormat,
     appearance: &Appearance,
@@ -304,10 +311,10 @@ pub fn indicator_elements<M>(
 where
     M: 'static + From<Message>
 {
-    indicators::resolve(config, &data)
+    indicators::resolve(config, data)
         .iter()
         .filter_map(|indicator| {
-            single_indicator(indicator, &data, config, memory_format, appearance, icons)
+            single_indicator(indicator, data, config, memory_format, appearance, icons)
         })
         .collect()
 }
@@ -328,8 +335,7 @@ pub fn build_indicator_view<M>(
 where
     M: 'static + From<Message>
 {
-    let indicators =
-        indicator_elements(data.clone(), config, memory_format, appearance, icons);
+    let indicators = indicator_elements(data, config, memory_format, appearance, icons);
 
     let on_press = if config.has_alternatives() {
         OnModulePress::Action(Box::new(M::from(Message::NextFormat)))
@@ -352,23 +358,23 @@ mod tests {
 
     fn data_fixture() -> SystemInfoData {
         SystemInfoData {
-            cpu_usage:         25,
-            cpu_count:         8,
-            memory_usage:      50,
-            memory_used:       8 * 1024 * 1024 * 1024,
-            memory_total:      16 * 1024 * 1024 * 1024,
+            cpu_usage: 25,
+            cpu_count: 8,
+            memory_usage: 50,
+            memory_used: 8 * 1024 * 1024 * 1024,
+            memory_total: 16 * 1024 * 1024 * 1024,
             memory_swap_usage: 10,
-            memory_swap_used:  1024 * 1024 * 1024,
+            memory_swap_used: 1024 * 1024 * 1024,
             memory_swap_total: 10 * 1024 * 1024 * 1024,
-            cpu_temperature:   Some(42),
-            gpu:               None,
-            disks:             vec![crate::modules::system_info::DiskData {
+            cpu_temperature: Some(42),
+            gpu: None,
+            disks: vec![crate::modules::system_info::DiskData {
                 mount:         "/".to_string(),
                 used:          60 * 1024 * 1024 * 1024,
                 total:         100 * 1024 * 1024 * 1024,
                 usage_percent: 60
             }],
-            network:           None,
+            network: None,
             ..SystemInfoData::default()
         }
     }
@@ -381,7 +387,7 @@ mod tests {
         };
 
         let indicators: Vec<Element<'_, Message>> = indicator_elements(
-            data_fixture(),
+            &data_fixture(),
             &config,
             MemoryFormat::Percentage,
             &Appearance::default(),
@@ -406,7 +412,7 @@ mod tests {
         };
 
         let indicators: Vec<Element<'_, Message>> = indicator_elements(
-            data,
+            &data,
             &config,
             MemoryFormat::Percentage,
             &Appearance::default(),

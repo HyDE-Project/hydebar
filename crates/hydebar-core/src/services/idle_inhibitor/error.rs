@@ -140,10 +140,7 @@ mod tests {
     #[test]
     fn dispatch_error_converts() {
         let err = IdleInhibitorError::from(wayland_client::DispatchError::Backend(
-            wayland_client::backend::WaylandError::from(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "dispatch"
-            ))
+            wayland_client::backend::WaylandError::from(std::io::Error::other("dispatch"))
         ));
         assert!(matches!(err, IdleInhibitorError::Dispatch { .. }));
     }

@@ -267,21 +267,22 @@ mod view {
             opacity: f32,
             icons: &IconTheme
         ) -> Element<'_, TrayMessage> {
-            match self
-                .service
+            self.service
                 .as_ref()
                 .and_then(|service| service.data.iter().find(|item| item.name == name))
-            {
-                Some(item) => Column::with_children(
-                    item.menu
-                        .2
-                        .iter()
-                        .map(|menu| self.menu_voice(name, menu, opacity, icons))
+                .map_or_else(
+                    || Row::new().into(),
+                    |item| {
+                        Column::with_children(
+                            item.menu
+                                .2
+                                .iter()
+                                .map(|menu| self.menu_voice(name, menu, opacity, icons))
+                        )
+                        .spacing(scale::scaled(8.0))
+                        .into()
+                    }
                 )
-                .spacing(scale::scaled(8.0))
-                .into(),
-                _ => Row::new().into()
-            }
         }
 
         pub(super) fn menu_voice(
@@ -440,8 +441,8 @@ mod tests {
 
                 impl Drop for CancellationProbe {
                     fn drop(&mut self) {
-                        if let Some(sender) = self.signal.lock().expect("cancellation lock").take()
-                        {
+                        let mut signal = self.signal.lock().expect("cancellation lock");
+                        if let Some(sender) = signal.take() {
                             let _ = sender.send(());
                         }
                     }

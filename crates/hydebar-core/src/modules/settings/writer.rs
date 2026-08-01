@@ -243,8 +243,7 @@ mod tests {
         let file = scratch("missing-table");
         fs::write(&file, "position = \"Top\"\n").expect("seed");
 
-        write_setting(&file, &["appearance", "menu", "backdrop"], 0.5_f32.into())
-            .expect("write");
+        write_setting(&file, &["appearance", "menu", "backdrop"], 0.5_f32.into()).expect("write");
 
         let written = fs::read_to_string(&file).expect("read");
         assert!(written.contains("[appearance.menu]"));

@@ -8,6 +8,10 @@ use hydebar_proto::config::{Config, ConfigValidationError, CustomModuleDef, Modu
 
 /// Represents the effect a configuration update has on the running system.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "each flag mirrors one independent facet of a reload"
+)]
 pub struct ConfigImpact {
     /// Modules whose configuration changed and may require additional handling.
     pub affected_modules:       BTreeSet<ModuleName>,
@@ -79,13 +83,13 @@ impl std::fmt::Display for ConfigUpdateError {
                 path,
                 context
             } => {
-                write!(f, "failed to read config at {path:?}: {context}")
+                write!(f, "failed to read config at {}: {context}", path.display())
             }
             Self::Parse {
                 path,
                 context
             } => {
-                write!(f, "failed to parse config at {path:?}: {context}")
+                write!(f, "failed to parse config at {}: {context}", path.display())
             }
             Self::Validation(err) => write!(f, "{err}"),
             Self::Removed => write!(f, "configuration file removed"),
@@ -192,12 +196,22 @@ impl ConfigManager {
     }
 
     /// Returns the last successfully applied configuration.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ConfigManagerError::Poisoned`] when the internal state lock
+    /// was poisoned by a panicking writer.
     pub fn last_valid(&self) -> Result<Config, ConfigManagerError> {
         self.with_state(Clone::clone)
     }
 
     /// Records a degradation event and returns contextual information for
     /// consumers.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ConfigManagerError::Poisoned`] when the internal state lock
+    /// was poisoned by a panicking writer.
     pub fn degraded(
         &self,
         reason: ConfigUpdateError
@@ -210,6 +224,11 @@ impl ConfigManager {
 
     /// Applies a freshly loaded configuration, computing the impact relative to
     /// the previous state.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ConfigManagerError::Poisoned`] when the internal state lock
+    /// was poisoned by a panicking writer.
     pub fn apply(&self, updated: Config) -> Result<ConfigApplied, ConfigManagerError> {
         let mut guard = self
             .state
@@ -218,6 +237,7 @@ impl ConfigManager {
 
         let impact = compute_impact(&guard, &updated);
         *guard = updated.clone();
+        drop(guard);
 
         Ok(ConfigApplied {
             config: Arc::new(updated),
@@ -226,6 +246,10 @@ impl ConfigManager {
     }
 }
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "one flat comparison per module keeps every impact visible in one place"
+)]
 fn compute_impact(previous: &Config, next: &Config) -> ConfigImpact {
     let mut impact = ConfigImpact::default();
 
@@ -372,10 +396,9 @@ fn update_custom_module_impact(
         .collect();
 
     for (name, module) in &next_map {
-        let needs_update = match previous_map.get(name) {
-            Some(current) => *current != *module,
-            None => true
-        };
+        let needs_update = previous_map
+            .get(name)
+            .is_none_or(|current| *current != *module);
 
         if needs_update {
             impact
