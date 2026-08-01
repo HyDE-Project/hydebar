@@ -35,7 +35,7 @@ pub(super) fn update<Message, Theme, Renderer>(
     button.content.as_widget_mut().update(
         &mut tree.children[0],
         event,
-        layout.children().next().unwrap(),
+        super::content_layout(layout),
         cursor,
         renderer,
         clipboard,

@@ -28,7 +28,7 @@ pub(super) fn draw<Message, Theme, Renderer>(
     Theme: Catalog
 {
     let bounds = layout.bounds();
-    let content_layout = layout.children().next().unwrap();
+    let content_layout = super::content_layout(layout);
     let state = tree.state.downcast_ref::<State>();
 
     let status = resolve_status(

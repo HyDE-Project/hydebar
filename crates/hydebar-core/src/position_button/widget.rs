@@ -64,7 +64,7 @@ where
         operation.container(None, layout.bounds());
         self.content.as_widget_mut().operate(
             &mut tree.children[0],
-            layout.children().next().unwrap(),
+            super::content_layout(layout),
             renderer,
             operation
         );
@@ -135,7 +135,7 @@ where
     ) -> Option<iced_core::overlay::Element<'b, Message, Theme, Renderer>> {
         self.content.as_widget_mut().overlay(
             &mut tree.children[0],
-            layout.children().next().unwrap(),
+            super::content_layout(layout),
             renderer,
             viewport,
             translation

@@ -59,9 +59,13 @@ pub fn rebuild(entries: &[Entry]) -> Vec<ModuleDef> {
 
     islands
         .into_iter()
-        .map(|island| match island.len() {
-            1 => ModuleDef::Single(island.into_iter().next().expect("one module")),
-            _ => ModuleDef::Group(island)
+        .map(|mut island| match (island.pop(), island.is_empty()) {
+            (Some(only), true) => ModuleDef::Single(only),
+            (Some(module), false) => {
+                island.push(module);
+                ModuleDef::Group(island)
+            }
+            (None, _) => ModuleDef::Group(island)
         })
         .collect()
 }

@@ -78,7 +78,7 @@ pub(super) fn resolved(glyph: &str) -> IconFace {
 
     if let Some(face) = RESOLVED
         .read()
-        .expect("icon face cache poisoned")
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
         .get(&first)
     {
         return *face;
@@ -86,7 +86,7 @@ pub(super) fn resolved(glyph: &str) -> IconFace {
 
     if PENDING
         .lock()
-        .expect("icon face queue poisoned")
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
         .insert(first)
     {
         std::thread::spawn(move || {
@@ -94,11 +94,11 @@ pub(super) fn resolved(glyph: &str) -> IconFace {
 
             RESOLVED
                 .write()
-                .expect("icon face cache poisoned")
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
                 .insert(first, face);
             PENDING
                 .lock()
-                .expect("icon face queue poisoned")
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
                 .remove(&first);
         });
     }
@@ -185,7 +185,9 @@ fn measured_share(symbol: char, file: &str, index: u32) -> Option<f32> {
 /// Each distinct family is leaked once and reused; a handful of icon fonts
 /// exist on any system, so the leak is bounded.
 fn immortal(family: String) -> &'static str {
-    let mut families = FAMILIES.lock().expect("family cache poisoned");
+    let mut families = FAMILIES
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
 
     if let Some(&name) = families.get(&family) {
         return name;

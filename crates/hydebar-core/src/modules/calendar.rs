@@ -188,7 +188,8 @@ mod month {
             let today = Local::now().date_naive();
 
             let first_day = NaiveDate::from_ymd_opt(year, month, 1)
-                .unwrap_or_else(|| NaiveDate::from_ymd_opt(year, 1, 1).expect("fallback date"));
+                .or_else(|| NaiveDate::from_ymd_opt(year, 1, 1))
+                .unwrap_or_default();
             let weekday = first_day.weekday().num_days_from_monday();
             let days_in_month = Self::days_in_month(year, month);
             let prev_month_days = if month == 1 {

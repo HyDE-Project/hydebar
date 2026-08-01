@@ -1,6 +1,11 @@
-// Module available for both internal tests and cross-crate testing via feature
-// flag
+//! Test doubles available to internal tests and, via the `test-utils`
+//! feature, to other crates' tests.
 #![cfg(any(test, feature = "test-utils"))]
+#![allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    reason = "a test double fails loudly instead of masking a broken fixture"
+)]
 
 use std::sync::{
     Mutex,

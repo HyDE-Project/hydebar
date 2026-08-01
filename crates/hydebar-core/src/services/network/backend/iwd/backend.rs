@@ -4,7 +4,7 @@ use iced::futures::future::join_all;
 use log::{debug, info};
 use masterror::{AppError, AppResult};
 use tokio::process::Command;
-use zbus::zvariant::OwnedObjectPath;
+use zbus::zvariant::{ObjectPath, OwnedObjectPath};
 
 use super::{IwdDbus, adapter::AdapterProxy, agents::PWAgent, network::NetworkProxy};
 use crate::services::{
@@ -149,7 +149,8 @@ impl NetworkBackend for IwdDbus<'_> {
 
         // If password is provided, register a new agent to handle it
         if let Some(p) = password {
-            let path = OwnedObjectPath::try_from("/hydebar/pwagent/main").unwrap();
+            let path: OwnedObjectPath =
+                ObjectPath::from_static_str_unchecked("/hydebar/pwagent/main").into();
 
             match agent_manager.unregister_agent(&path).await {
                 Ok(()) => info!("Successfully unregistered agent at {path}"),

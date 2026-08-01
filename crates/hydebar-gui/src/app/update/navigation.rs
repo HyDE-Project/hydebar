@@ -65,11 +65,13 @@ impl App {
                 Task::none()
             }
             Message::ActivateFocusedModule => {
-                if !self.navigation_mode || self.focused_module_index.is_none() {
+                let Some(index) = self.focused_module_index else {
+                    return Task::none();
+                };
+
+                if !self.navigation_mode {
                     return Task::none();
                 }
-
-                let index = self.focused_module_index.unwrap();
 
                 let Some(main_window_id) = self.outputs.first_main_window_id() else {
                     return Task::none();

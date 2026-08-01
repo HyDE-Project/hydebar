@@ -110,6 +110,24 @@ fn reap_and_guard_children() {
     }
 }
 
+/// Surrenders `deps` to the first boot call and refuses a second.
+///
+/// iced's boot contract offers no error path, so the closure can only die
+/// loudly on the programming error of being called twice.
+fn boot_once<D, A>(deps: D, build: fn(D) -> A) -> impl Fn() -> A {
+    let deps = std::cell::Cell::new(Some(deps));
+
+    #[expect(
+        clippy::expect_used,
+        reason = "iced's boot contract offers no error path for a repeated call"
+    )]
+    move || {
+        deps.take()
+            .map(build)
+            .expect("boot called more than once")
+    }
+}
+
 fn run(runtime_handle: Handle) -> Result<(), MainError> {
     let args = Args::parse();
     debug!("args: {args:?}");
@@ -184,8 +202,8 @@ fn run(runtime_handle: Handle) -> Result<(), MainError> {
     let event_sender = event_bus.sender();
     let bus_receiver = event_bus.receiver();
 
-    let boot = {
-        let deps = std::cell::Cell::new(Some((
+    let boot = boot_once(
+        (
             logger,
             config,
             config_manager,
@@ -194,13 +212,9 @@ fn run(runtime_handle: Handle) -> Result<(), MainError> {
             event_sender,
             runtime_handle,
             bus_receiver
-        )));
-        move || {
-            deps.take()
-                .map(App::new)
-                .expect("boot called more than once")
-        }
-    };
+        ),
+        App::new
+    );
 
     let outcome = iced::application(
         boot,

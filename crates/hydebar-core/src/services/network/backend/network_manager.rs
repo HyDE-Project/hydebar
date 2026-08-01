@@ -233,11 +233,8 @@ impl NetworkBackend for NetworkDbus<'_> {
     ) -> AppResult<Vec<KnownConnection>> {
         if enable {
             debug!("Activating VPN: {connection:?}");
-            self.activate_connection(
-                connection,
-                OwnedObjectPath::try_from("/").unwrap(),
-                OwnedObjectPath::try_from("/").unwrap()
-            )
+            let root = || zvariant::ObjectPath::from_static_str_unchecked("/").into();
+            self.activate_connection(connection, root(), root())
             .await
             .map_err(|e| AppError::internal(format!("Failed to activate VPN connection: {e}")))?;
         } else {
