@@ -1,5 +1,7 @@
-use log::warn;
-use tokio::runtime::Handle;
+//! Service commands the control center spawns onto its runtime.
+
+use event::{EventCommandParams, spawn_event_command};
+use optional::{OptionalEventCommandParams, spawn_optional_event_command};
 
 use super::{
     audio::AudioMessage,
@@ -10,13 +12,15 @@ use super::{
     upower::UPowerMessage
 };
 use crate::services::{
-    ReadOnlyService, ServiceEvent,
     audio::{AudioCommand, AudioService},
     bluetooth::{BluetoothCommand, BluetoothService},
     brightness::{BrightnessCommand, BrightnessService},
     network::{NetworkCommand, NetworkService},
     upower::{PowerProfileCommand, UPowerService}
 };
+
+mod event;
+mod optional;
 
 pub(super) trait ControlCenterCommandExt {
     fn spawn_audio_command(&self, command: AudioCommand) -> bool;
@@ -90,101 +94,6 @@ impl ControlCenterCommandExt for ControlCenter {
             event_ctor: |event| UPowerMessage::Event(Box::new(event)),
             service_name: "upower"
         })
-    }
-}
-
-struct EventCommandParams<S, Command, Fut, Msg>
-where
-    S: Send + Clone + ReadOnlyService + 'static,
-    Command: Send + 'static,
-    Fut: std::future::Future<Output = ServiceEvent<S>> + Send + 'static,
-    Msg: Send + 'static
-{
-    runtime:      Option<Handle>,
-    sender:       Option<crate::ModuleEventSender<Message>>,
-    service:      Option<S>,
-    command:      Command,
-    runner:       fn(S, Command) -> Fut,
-    message_ctor: fn(Msg) -> Message,
-    event_ctor:   fn(ServiceEvent<S>) -> Msg,
-    service_name: &'static str
-}
-
-fn spawn_event_command<S, Command, Fut, Msg>(
-    params: EventCommandParams<S, Command, Fut, Msg>
-) -> bool
-where
-    S: Send + Clone + ReadOnlyService + 'static,
-    Command: Send + 'static,
-    Fut: std::future::Future<Output = ServiceEvent<S>> + Send + 'static,
-    Msg: Send + 'static
-{
-    if let (Some(handle), Some(sender), Some(service)) =
-        (params.runtime, params.sender, params.service)
-    {
-        let runner = params.runner;
-        let message_ctor = params.message_ctor;
-        let event_ctor = params.event_ctor;
-        let command = params.command;
-        handle.spawn(async move {
-            let event = runner(service, command).await;
-            sender.send(message_ctor(event_ctor(event)));
-        });
-        true
-    } else {
-        warn!(
-            "{} command ignored because runtime, sender, or service is unavailable",
-            params.service_name
-        );
-        false
-    }
-}
-
-struct OptionalEventCommandParams<S, Command, Fut, Msg>
-where
-    S: Send + Clone + ReadOnlyService + 'static,
-    Command: Send + 'static,
-    Fut: std::future::Future<Output = Option<ServiceEvent<S>>> + Send + 'static,
-    Msg: Send + 'static
-{
-    runtime:      Option<Handle>,
-    sender:       Option<crate::ModuleEventSender<Message>>,
-    service:      Option<S>,
-    command:      Command,
-    runner:       fn(S, Command) -> Fut,
-    message_ctor: fn(Msg) -> Message,
-    event_ctor:   fn(ServiceEvent<S>) -> Msg,
-    service_name: &'static str
-}
-
-fn spawn_optional_event_command<S, Command, Fut, Msg>(
-    params: OptionalEventCommandParams<S, Command, Fut, Msg>
-) -> bool
-where
-    S: Send + Clone + ReadOnlyService + 'static,
-    Command: Send + 'static,
-    Fut: std::future::Future<Output = Option<ServiceEvent<S>>> + Send + 'static,
-    Msg: Send + 'static
-{
-    if let (Some(handle), Some(sender), Some(service)) =
-        (params.runtime, params.sender, params.service)
-    {
-        let runner = params.runner;
-        let message_ctor = params.message_ctor;
-        let event_ctor = params.event_ctor;
-        let command = params.command;
-        handle.spawn(async move {
-            if let Some(event) = runner(service, command).await {
-                sender.send(message_ctor(event_ctor(event)));
-            }
-        });
-        true
-    } else {
-        warn!(
-            "{} command ignored because runtime, sender, or service is unavailable",
-            params.service_name
-        );
-        false
     }
 }
 
