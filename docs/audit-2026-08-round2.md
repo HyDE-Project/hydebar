@@ -99,39 +99,40 @@ inside each section; a checked box means the fix has landed on `main`.
   refresh rate that is not 62.5 Hz; every animation rides it
   (`app/update/subscriptions.rs:120`). Drive it from the compositor's
   redraw callback.
-- [ ] **The faded theme allocates a name, an arc and a full palette blend
-  per surface per animated frame**, and the sweep memo lives per section
-  instead of per frame (`style/theme.rs:16`, `app/view.rs:53`,
-  `app/modules/section.rs:131`). Quantise the share, memoise on the app.
-- [ ] **The wallpaper picker re-lists and re-decodes every thumbnail on
-  every toggle, including the closing one** — full texture-cache miss each
-  open, subprocess each close (`app/update/menus.rs:105`,
-  `modules/wallpaper.rs:63`). Cache entries; reload only when the theme's
-  set changes. The swatch reload has the same missing gate
-  (`app/update/menus.rs:107`).
-- [ ] **The theme subscription re-walks the environment on every
-  re-evaluation** — eight env lookups and a dozen path joins, dozens of
-  times a second under traffic, for values that cannot change
-  (`config/theme_watch/recipe.rs:200`). Cache the roots once.
-- [ ] **Sampled system data is deep-cloned per publish and per bar frame**
-  (`system_info/runtime.rs:166`, `system_info/view.rs:328`), and the sample
-  rides the bus by value — the largest variant in three queues
-  (`event_bus.rs`, `app/state.rs`). Share it behind an `Arc`.
-- [ ] **Small per-frame allocations that never stop:** media-player title
-  formats through three strings per repaint (`modules/media_player.rs:97`,
-  `services/mpris/data.rs:77`), window title re-truncates per view
-  (`modules/window_title.rs:66`), tray strip clones each bus name per icon
-  (`views.rs:132`), settings window measures and renders the same page
-  separately per frame (`settings/view.rs:98-152`).
-- [ ] **Startup raises menu surfaces every frame for three seconds** —
-  compositor round-trips per surface per frame during the greeting
-  (`app/update/lifecycle.rs:39`). Raise once, re-raise on output events.
-- [ ] **The HyDE menu re-reads and re-parses its definition files inline in
-  update** when opening (`modules/hyde_menu.rs:62`). Move to a blocking
-  task like the swatch loader.
-- [ ] **Output bookkeeping grows on hotplug.** Removal re-pushes a
-  placeholder and untargeted adds never replace by name; every frame then
-  linear-scans the grown list (`outputs/state/lifecycle.rs:64-168`).
+- [x] **The faded theme allocates a name, an arc and a full palette blend
+  per surface per animated frame.** Fade shares snap to a sixty-fourth and
+  every derived theme lands in one app-level memo cleared per frame — one
+  palette blend serves every island and menu on the same step of the
+  wave.
+- [x] **The wallpaper picker re-lists and re-decodes every thumbnail on
+  every toggle, including the closing one.** The loads fire only on the
+  opening toggle now, and decoded thumbnails ride along by path — a
+  reopened picker decodes nothing, a theme switch decodes only the
+  pictures it brought. The theme swatch and catalogue loads carry the
+  same opening gate.
+- [x] **The theme subscription re-walks the environment on every
+  re-evaluation.** The roots and targets are derived once per process —
+  the environment cannot change under a running one — while the follow
+  flag stays live so a reload can still turn the watch off.
+- [x] **Sampled system data is deep-cloned per publish and per bar frame.**
+  The sample crosses the bus behind an `Arc`; the publish baseline is a
+  reference count, and the oversized-variant expects on three message
+  enums became unfulfilled and were removed — proof of the shrink.
+- [x] **Small per-frame allocations that never stop.** The media title is
+  composed once per service event, the window title is cut once per focus
+  change, and the settings window builds its entries once per frame for
+  the width, the height and the drawing together. The tray strip still
+  clones each bus name per icon — two small strings per icon per animated
+  frame, left as the cost of the owned menu message.
+- [x] **Startup raises menu surfaces every frame for three seconds.** Each
+  surface is raised exactly once; newcomers are checked for per frame but
+  a raised surface costs no further compositor request.
+- [x] **The HyDE menu re-reads and re-parses its definition files inline in
+  update.** The reads and the parse run on the blocking pool and come back
+  as a message; the opening animation no longer waits on the filesystem.
+- [x] **Output bookkeeping grows on hotplug.** An untargeted add now
+  replaces the same-name entry the way the targeted one always did, so a
+  reconnect cycle leaves the roster the same size.
 
 ## Architecture
 

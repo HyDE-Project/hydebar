@@ -322,23 +322,22 @@ fn section_islands<'a>(
 }
 
 /// Renders the module editor against the running `config`.
-pub(super) fn view(
-    config: &Config,
+pub(super) fn view<'a>(
+    config: &'a Config,
     opacity: f32,
     font_size: f32,
     section: Section,
     selected: Option<Slot>,
-    available_width: f32
-) -> Element<'_, Message> {
-    let entries = section.entries(&config.modules);
-
+    available_width: f32,
+    entries: &[Entry]
+) -> Element<'a, Message> {
     let mut bar = row_stack(font_size).push(section_islands(
-        section, &entries, selected, font_size, opacity
+        section, entries, selected, font_size, opacity
     ));
 
     bar = match selected {
         Some(slot) if slot.section == section => {
-            bar.push(detail(slot, &entries, font_size, opacity))
+            bar.push(detail(slot, entries, font_size, opacity))
         }
         _ => bar.push(note("pick a module to move, group or remove it", font_size))
     };
@@ -368,11 +367,9 @@ const ACTION_LABELS: [&str; 4] = [TO_LEFT, TO_RIGHT, MERGE, REMOVE];
     clippy::cast_precision_loss,
     reason = "island counts are small, fit f32 exactly"
 )]
-pub(super) fn rows(config: &Config, section: Section) -> f32 {
-    let entries = section.entries(&config.modules);
-
+pub(super) fn rows(entries: &[Entry]) -> f32 {
     SECTION_COUNT.mul_add(style::SECTION_TITLE_ROWS, TAB_ROWS)
-        + islands(&entries).len().max(1) as f32
+        + islands(entries).len().max(1) as f32
         + CARD_ROWS
         + CATALOGUE_ROWS
 }
@@ -385,10 +382,9 @@ pub(super) fn rows(config: &Config, section: Section) -> f32 {
 /// on purpose, since it wraps into whatever width the rest
 /// settles on.
 #[must_use]
-pub(super) fn desired_width(config: &Config, font_size: f32, section: Section) -> f32 {
+pub(super) fn desired_width(font_size: f32, entries: &[Entry]) -> f32 {
     let control = style::control_size(font_size);
     let gap = style::group_gap(font_size);
-    let entries = section.entries(&config.modules);
 
     let tabs = button_row_width(Section::ALL.into_iter().map(Section::label), control, gap);
 
@@ -396,7 +392,7 @@ pub(super) fn desired_width(config: &Config, font_size: f32, section: Section) -
         clippy::cast_precision_loss,
         reason = "island sizes are small, fit f32 exactly"
     )]
-    let widest_island = islands(&entries)
+    let widest_island = islands(entries)
         .into_iter()
         .map(|island| {
             let count = island.len() as f32;
@@ -427,10 +423,10 @@ fn labelled_row_width(font_size: f32) -> f32 {
     style::label_width(font_size) + style::row_gap(font_size)
 }
 
-/// Height this page needs for `section`.
+/// Height this page needs for the entries on show.
 #[must_use]
-pub(super) fn desired_height(config: &Config, font_size: f32, section: Section) -> f32 {
-    style::page_height(rows(config, section), font_size)
+pub(super) fn desired_height(font_size: f32, entries: &[Entry]) -> f32 {
+    style::page_height(rows(entries), font_size)
 }
 
 #[cfg(test)]
@@ -507,7 +503,7 @@ mod tests {
         let empty = config(Vec::new());
 
         assert_eq!(
-            rows(&empty, Section::Left),
+            rows(&Section::Left.entries(&empty.modules)),
             SECTION_COUNT + TAB_ROWS + 1.0 + CARD_ROWS + CATALOGUE_ROWS
         );
     }
@@ -522,7 +518,8 @@ mod tests {
         ]);
 
         assert!(
-            desired_height(&many, 16.0, Section::Left) > desired_height(&few, 16.0, Section::Left)
+            desired_height(16.0, &Section::Left.entries(&many.modules))
+                > desired_height(16.0, &Section::Left.entries(&few.modules))
         );
     }
 
@@ -531,7 +528,10 @@ mod tests {
         let font_size = 16.0;
         let modules = config(vec![ModuleDef::Single(ModuleName::Clock)]);
 
-        assert!(desired_width(&modules, font_size, Section::Left) > style::label_width(font_size));
+        assert!(
+            desired_width(font_size, &Section::Left.entries(&modules.modules))
+                > style::label_width(font_size)
+        );
     }
 
     #[test]
@@ -551,9 +551,10 @@ mod tests {
         let font_size = 16.0;
         let modules = config(vec![ModuleDef::Single(ModuleName::Clock)]);
 
+        let entries = Section::Left.entries(&modules.modules);
         assert_eq!(
-            desired_height(&modules, font_size, Section::Left),
-            style::page_height(rows(&modules, Section::Left), font_size)
+            desired_height(font_size, &entries),
+            style::page_height(rows(&entries), font_size)
         );
     }
 }

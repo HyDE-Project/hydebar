@@ -35,17 +35,28 @@ impl Settings {
     /// `magnification` is the factor the bar is drawn at, so the pages can
     /// show the sizes as they are written in the file rather than
     /// as they render.
+    /// The settings window and its lengths, with the content walked once.
+    ///
+    /// The module entries feed the width, the height and the drawing; they
+    /// are stated once per frame instead of once per question.
     #[must_use]
-    pub fn menu_view<'a>(
+    pub fn window<'a>(
         &self,
         config: &'a Config,
         opacity: f32,
         icons: &IconTheme,
-        magnification: f32,
-        page_width: f32
-    ) -> Element<'a, Message> {
+        magnification: f32
+    ) -> (Element<'a, Message>, crate::menu::MenuMetrics) {
         let font_size = config.appearance.font_size.unwrap_or(DEFAULT_FONT_SIZE);
         let active = self.tab();
+        let entries = match active {
+            Tab::Modules => Some(self.section().entries(&config.modules)),
+            Tab::Appearance => None
+        };
+
+        let width = self.width_of(config, font_size, entries.as_deref());
+        let page_width = metrics::ROW_SLACK_EM.mul_add(-font_size, width);
+        let height = self.height_of(config, font_size, entries.as_deref());
 
         let header = Row::new()
             .push(icon(icons, Icons::Settings))
@@ -73,17 +84,27 @@ impl Settings {
                 font_size,
                 self.section(),
                 self.selected(),
-                page_width
+                page_width,
+                entries.as_deref().unwrap_or(&[])
             )
         };
 
-        Column::new()
+        let element = Column::new()
             .push(header)
             .push(tabs)
             .push(page)
             .width(Length::Fill)
             .spacing(style::window_gap(font_size))
-            .into()
+            .into();
+
+        (
+            element,
+            crate::menu::MenuMetrics {
+                width,
+                page_width,
+                height
+            }
+        )
     }
 
     /// Width a page is actually given to draw into, slack excluded.
@@ -95,9 +116,13 @@ impl Settings {
     ///
     /// The window asks for exactly this much and no more: the screen only
     /// ever caps it, it never stretches it.
-    #[must_use]
-    pub fn content_width(&self, config: &Config) -> f32 {
-        let font_size = config.appearance.font_size.unwrap_or(DEFAULT_FONT_SIZE);
+    /// Width the window asks for, measured from the entries on show.
+    fn width_of(
+        &self,
+        config: &Config,
+        font_size: f32,
+        entries: Option<&[super::layout::Entry]>
+    ) -> f32 {
         let tabs = Tab::ALL.into_iter().map(Tab::label).collect::<Vec<_>>();
 
         let header = metrics::text_width(TITLE, font_size)
@@ -111,8 +136,9 @@ impl Settings {
 
         let page = match self.tab() {
             Tab::Appearance => appearance::desired_width(font_size),
-            Tab::Modules => modules::desired_width(config, font_size, self.section())
+            Tab::Modules => modules::desired_width(font_size, entries.unwrap_or(&[]))
         };
+        let _ = config;
 
         metrics::ROW_SLACK_EM.mul_add(font_size, header.max(tab_row).max(page))
     }
@@ -122,23 +148,12 @@ impl Settings {
     /// Measured rather than guessed so the window can be capped to the
     /// screen and scroll the rest: a page taller than the screen
     /// would otherwise have its last rows cut off by the edge.
-    /// The three window lengths, with the content walked exactly once.
-    #[must_use]
-    pub fn window_metrics(&self, config: &Config) -> crate::menu::MenuMetrics {
-        let font_size = config.appearance.font_size.unwrap_or(DEFAULT_FONT_SIZE);
-        let width = self.content_width(config);
-
-        crate::menu::MenuMetrics {
-            width,
-            page_width: metrics::ROW_SLACK_EM.mul_add(-font_size, width),
-            height: self.content_height(config)
-        }
-    }
-
-    #[must_use]
-    pub fn content_height(&self, config: &Config) -> f32 {
-        let font_size = config.appearance.font_size.unwrap_or(DEFAULT_FONT_SIZE);
-
+    fn height_of(
+        &self,
+        config: &Config,
+        font_size: f32,
+        entries: Option<&[super::layout::Entry]>
+    ) -> f32 {
         let header = style::row_height(font_size);
         let tabs = style::row_height(font_size);
         let page = match self.tab() {
@@ -147,7 +162,7 @@ impl Settings {
                 config.appearance.auto_scale,
                 config.updates.is_some()
             ),
-            Tab::Modules => modules::desired_height(config, font_size, self.section())
+            Tab::Modules => modules::desired_height(font_size, entries.unwrap_or(&[]))
         };
 
         style::window_gap(font_size).mul_add(style::WINDOW_GAP_COUNT, header + tabs + page)
@@ -169,9 +184,10 @@ mod tests {
             appearance::desired_height(font_size, false, false),
             style::page_height(appearance::rows(false, false), font_size)
         );
+        let entries = Section::Left.entries(&config.modules);
         assert_eq!(
-            modules::desired_height(&config, font_size, Section::Left),
-            style::page_height(modules::rows(&config, Section::Left), font_size)
+            modules::desired_height(font_size, &entries),
+            style::page_height(modules::rows(&entries), font_size)
         );
     }
 
@@ -182,7 +198,9 @@ mod tests {
         let column = style::label_width(font_size);
 
         assert!(appearance::desired_width(font_size) > column);
-        assert!(modules::desired_width(&config, font_size, Section::Left) > column);
+        assert!(
+            modules::desired_width(font_size, &Section::Left.entries(&config.modules)) > column
+        );
     }
 
     #[test]
@@ -193,10 +211,8 @@ mod tests {
             appearance::desired_height(20.0, false, false)
                 > appearance::desired_height(16.0, false, false)
         );
-        assert!(
-            modules::desired_height(&config, 20.0, Section::Left)
-                > modules::desired_height(&config, 16.0, Section::Left)
-        );
+        let entries = Section::Left.entries(&config.modules);
+        assert!(modules::desired_height(20.0, &entries) > modules::desired_height(16.0, &entries));
     }
 
     #[test]
@@ -206,7 +222,7 @@ mod tests {
         let font_size = config.appearance.font_size.unwrap_or(DEFAULT_FONT_SIZE);
 
         assert!(
-            settings.content_height(&config)
+            settings.height_of(&config, font_size, None)
                 >= 2.0 * style::row_height(font_size)
                     + appearance::desired_height(
                         font_size,
@@ -221,7 +237,9 @@ mod tests {
         let config = Config::default();
         let settings = Settings::default();
 
-        assert!(settings.window_metrics(&config).page_width < settings.content_width(&config));
+        let font_size = config.appearance.font_size.unwrap_or(DEFAULT_FONT_SIZE);
+        let width = settings.width_of(&config, font_size, None);
+        assert!(metrics::ROW_SLACK_EM.mul_add(-font_size, width) < width);
     }
 
     #[test]
@@ -230,7 +248,9 @@ mod tests {
         let config = Config::default();
         let settings = Settings::default();
 
-        assert!(settings.content_width(&config) >= metrics::text_width(TITLE, font_size));
+        assert!(
+            settings.width_of(&config, font_size, None) >= metrics::text_width(TITLE, font_size)
+        );
     }
 
     #[test]
@@ -243,8 +263,10 @@ mod tests {
                 ..Settings::default()
             };
 
-            assert!(settings.content_width(&config) > 0.0);
-            assert!(settings.content_height(&config) > 0.0);
+            let font_size = config.appearance.font_size.unwrap_or(DEFAULT_FONT_SIZE);
+            let entries = Section::Left.entries(&config.modules);
+            assert!(settings.width_of(&config, font_size, Some(&entries)) > 0.0);
+            assert!(settings.height_of(&config, font_size, Some(&entries)) > 0.0);
         }
     }
 }

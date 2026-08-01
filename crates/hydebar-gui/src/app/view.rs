@@ -227,18 +227,12 @@ impl App {
                 None
             )),
             MenuType::Settings => {
-                let metrics = self.settings.window_metrics(&self.config);
+                let (window, metrics) =
+                    self.settings
+                        .window(&self.config, opacity, self.icons(), self.magnification);
 
                 Some((
-                    self.settings
-                        .menu_view(
-                            &self.config,
-                            opacity,
-                            self.icons(),
-                            self.magnification,
-                            metrics.page_width
-                        )
-                        .map(Message::Settings),
+                    window.map(Message::Settings),
                     MenuSize::Content(metrics.width),
                     Some(metrics.height)
                 ))
