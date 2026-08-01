@@ -2,9 +2,9 @@
 //!
 //! A `HyDE` theme states the choices that are not colours — the bar font, the
 //! GTK theme, the light/dark preference — as hyprlang variables inside
-//! `hypr.theme`: `$BAR_FONT = JetBrainsMono Nerd Font`. `HyDE` itself reads them
-//! with `hyq`, a whole config parser, but the bar only ever wants the right
-//! hand side of a handful of names, so a line scan is enough and costs no
+//! `hypr.theme`: `$BAR_FONT = JetBrainsMono Nerd Font`. `HyDE` itself reads
+//! them with `hyq`, a whole config parser, but the bar only ever wants the
+//! right hand side of a handful of names, so a line scan is enough and costs no
 //! process.
 //!
 //! The grammar differs from [`crate::shell_vars`] in two ways that matter: the

@@ -1,15 +1,15 @@
 //! Where the `HyDE` Project keeps the files the bar reads.
 //!
-//! `HyDE` spreads itself over all four XDG roots: the installation and the themes
-//! are configuration, the active selection is session state, the generated
-//! palettes are cache and the shipped fallbacks are shared data. Reading any
-//! one value therefore needs more than one root, and every reader used to
-//! resolve them again from the environment — which made it possible for two
-//! readers to disagree about where `HyDE` lives.
+//! `HyDE` spreads itself over all four XDG roots: the installation and the
+//! themes are configuration, the active selection is session state, the
+//! generated palettes are cache and the shipped fallbacks are shared data.
+//! Reading any one value therefore needs more than one root, and every reader
+//! used to resolve them again from the environment — which made it possible for
+//! two readers to disagree about where `HyDE` lives.
 //!
 //! This module resolves them once and names every file the bar reads, so the
-//! layout of a `HyDE` install is stated in one place instead of being spelled out
-//! again at each call site.
+//! layout of a `HyDE` install is stated in one place instead of being spelled
+//! out again at each call site.
 
 use std::path::{Path, PathBuf};
 
@@ -62,9 +62,9 @@ impl HydeDirs {
     /// Whether `HyDE` is installed at all.
     ///
     /// The bar has to tell "`HyDE` is here but has not written this value" from
-    /// "there is no HyDE": in the first case the documented `HyDE` default is the
-    /// right answer, in the second imposing `HyDE`'s fonts and colours on a
-    /// desktop that never asked for them would be wrong.
+    /// "there is no HyDE": in the first case the documented `HyDE` default is
+    /// the right answer, in the second imposing `HyDE`'s fonts and colours
+    /// on a desktop that never asked for them would be wrong.
     #[must_use]
     pub fn is_installed(&self) -> bool {
         self.hyde_config_dir().is_dir() || self.hyde_state_dir().is_dir()
@@ -182,8 +182,9 @@ impl HydeDirs {
 
     /// Bar layouts `HyDE` ships, `~/.local/share/waybar/layouts`.
     ///
-    /// The directory carries the name of the bar `HyDE` shipped with before this
-    /// one; the path is read as found because that is where the layouts are.
+    /// The directory carries the name of the bar `HyDE` shipped with before
+    /// this one; the path is read as found because that is where the
+    /// layouts are.
     #[must_use]
     pub fn bar_layouts_dir(&self) -> PathBuf {
         self.data.join("waybar").join("layouts")

@@ -55,7 +55,9 @@ impl AppearanceColor {
             } => weak.map(|color| {
                 palette::Pair::new(
                     Color::from_rgb8(color.r, color.g, color.b),
-                    text.map_or(text_fallback, |color| Color::from_rgb8(color.r, color.g, color.b))
+                    text.map_or(text_fallback, |color| {
+                        Color::from_rgb8(color.r, color.g, color.b)
+                    })
                 )
             })
         }
@@ -73,7 +75,9 @@ impl AppearanceColor {
             } => strong.map(|color| {
                 palette::Pair::new(
                     Color::from_rgb8(color.r, color.g, color.b),
-                    text.map_or(text_fallback, |color| Color::from_rgb8(color.r, color.g, color.b))
+                    text.map_or(text_fallback, |color| {
+                        Color::from_rgb8(color.r, color.g, color.b)
+                    })
                 )
             })
         }

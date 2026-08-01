@@ -62,7 +62,7 @@ pub struct ConfigApplied {
 
 /// Describes failures that occurred while attempting to refresh the
 /// configuration.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ConfigUpdateError {
     /// Reading the configuration file from disk failed.
     Read { path: PathBuf, context: String },

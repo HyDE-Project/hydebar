@@ -57,8 +57,8 @@ fn read_palette(dirs: &HydeDirs) -> Option<DcolPalette> {
 /// the recolouring switch says it wins.
 ///
 /// The wallpaper palette is read through `~/.cache/hyde/wall.dcol`, a symlink
-/// `HyDE` re-points on every wallpaper change, so following it is what makes the
-/// bar see the same colours the rest of the desktop was given.
+/// `HyDE` re-points on every wallpaper change, so following it is what makes
+/// the bar see the same colours the rest of the desktop was given.
 fn read_source(dirs: &HydeDirs, theme: Option<&str>, recolour: Recolour) -> Option<String> {
     if recolour.prefers_theme_palette()
         && let Some(theme) = theme
@@ -72,10 +72,11 @@ fn read_source(dirs: &HydeDirs, theme: Option<&str>, recolour: Recolour) -> Opti
 
 /// Resolves the light/dark preference that is in force.
 ///
-/// Follows the order `HyDE` resolves a theme variable in: the user's own Hyprland
-/// override outranks the theme fragment, which outranks the values `HyDE` ships.
-/// Reading all three matters because the preference is what decides whether the
-/// palette is mirrored, and a wrong answer inverts the whole bar.
+/// Follows the order `HyDE` resolves a theme variable in: the user's own
+/// Hyprland override outranks the theme fragment, which outranks the values
+/// `HyDE` ships. Reading all three matters because the preference is what
+/// decides whether the palette is mirrored, and a wrong answer inverts the
+/// whole bar.
 fn color_scheme(dirs: &HydeDirs, theme: Option<&str>) -> Option<String> {
     let override_source = fs::read_to_string(dirs.hyprland_override()).unwrap_or_default();
 

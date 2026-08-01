@@ -60,8 +60,8 @@ impl HydeTheme {
 ///
 /// Sources, in the order they are preferred:
 ///
-/// 1. the `HyDE` directories — `~/.cache/hyde` for the colours, `~/.config/hyde`
-///    and `~/.local/state/hyde` for the font;
+/// 1. the `HyDE` directories — `~/.cache/hyde` for the colours,
+///    `~/.config/hyde` and `~/.local/state/hyde` for the font;
 /// 2. the compositor, for the corner radius, because the bar should round its
 ///    islands exactly as the windows beside them are rounded;
 /// 3. the stylesheets under `~/.config/waybar`, and only as a last resort — see

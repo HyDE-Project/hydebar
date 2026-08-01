@@ -152,11 +152,12 @@ inside each section; a checked box means the fix has landed on `main`.
   files directly (`hydebar-proto/Cargo.toml`, `bar_layout.rs:54`,
   `theme_source/`). A domain colour type and a theme-source port belong
   there instead.
-- [ ] **Config failures collapse into silence.** Layout and theme reads
-  fold every error into `None`/defaults, numeric appearance values accept
-  any number, and unknown keys pass unnoticed — a typo yields a silently
-  wrong bar (`bar_layout.rs:54`, `config/validation.rs:53`,
-  `appearance/settings.rs`). Validating newtypes and logged degradations.
+- [ ] **Config failures collapse into silence.** Numeric appearance values
+  are now range-checked with named refusals — a zero scale, a negative
+  font or a twelvefold opacity is rejected with the field and the allowed
+  range, and the reload keeps the last valid configuration. Still open:
+  layout and theme reads folding errors into `None`, and unknown keys
+  passing unnoticed.
 - [ ] **Errors are strings at heart.** Nearly two hundred sites flatten
   typed failures into internal strings; callers cannot distinguish a gone
   device from refused auth (`services/network/backend/network_manager.rs`,

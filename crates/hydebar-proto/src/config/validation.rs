@@ -3,13 +3,27 @@ use std::collections::HashSet;
 use super::{Config, ModuleDef, ModuleName};
 
 /// Errors returned when validating a [`Config`].
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ConfigValidationError {
     /// Duplicate custom module definitions were found.
     DuplicateCustomModule { name: String },
 
     /// A module references a custom module definition that does not exist.
-    MissingCustomModule { name: String }
+    MissingCustomModule { name: String },
+
+    /// A numeric setting stands outside the range the bar can draw.
+    ///
+    /// Caught here rather than clamped silently: a zero scale or a
+    /// twelvefold opacity is a typo, and a typo deserves a named refusal
+    /// with the allowed range, not a bar that quietly looks wrong.
+    ValueOutOfRange {
+        /// The setting as the file spells it.
+        field:   &'static str,
+        /// The range the bar accepts, spelled for the message.
+        allowed: &'static str,
+        /// What the file said.
+        got:     f64
+    }
 }
 
 impl std::fmt::Display for ConfigValidationError {
@@ -28,7 +42,33 @@ impl std::fmt::Display for ConfigValidationError {
                     "custom module '{name}' referenced in layout but not defined"
                 )
             }
+            Self::ValueOutOfRange {
+                field,
+                allowed,
+                got
+            } => {
+                write!(f, "'{field}' is {got}, allowed range is {allowed}")
+            }
         }
+    }
+}
+
+/// Refuses a value outside `low..=high`, naming the field and the range.
+fn in_range(
+    field: &'static str,
+    value: f64,
+    low: f64,
+    high: f64,
+    allowed: &'static str
+) -> Result<(), ConfigValidationError> {
+    if value.is_finite() && (low..=high).contains(&value) {
+        Ok(())
+    } else {
+        Err(ConfigValidationError::ValueOutOfRange {
+            field,
+            allowed,
+            got: value
+        })
     }
 }
 
@@ -51,6 +91,8 @@ impl Config {
     /// assert!(config.validate().is_ok());
     /// ```
     pub fn validate(&self) -> Result<(), ConfigValidationError> {
+        self.validate_appearance()?;
+
         let mut seen_custom_modules = HashSet::new();
 
         for module in &self.custom_modules {
@@ -92,6 +134,62 @@ impl Config {
                 ModuleDef::Single(_) => {}
             }
         }
+
+        Ok(())
+    }
+
+    /// Refuses appearance numbers the bar cannot draw.
+    fn validate_appearance(&self) -> Result<(), ConfigValidationError> {
+        let appearance = &self.appearance;
+
+        if let Some(font_size) = appearance.font_size {
+            in_range(
+                "appearance.font_size",
+                f64::from(font_size),
+                4.0,
+                128.0,
+                "4 to 128"
+            )?;
+        }
+
+        if let Some(height) = appearance.height {
+            in_range(
+                "appearance.height",
+                f64::from(height),
+                8.0,
+                512.0,
+                "8 to 512"
+            )?;
+        }
+
+        in_range(
+            "appearance.scale_factor",
+            appearance.scale_factor,
+            0.1,
+            10.0,
+            "0.1 to 10"
+        )?;
+        in_range(
+            "appearance.opacity",
+            f64::from(appearance.opacity),
+            0.0,
+            1.0,
+            "0 to 1"
+        )?;
+        in_range(
+            "appearance.menu.opacity",
+            f64::from(appearance.menu.opacity),
+            0.0,
+            1.0,
+            "0 to 1"
+        )?;
+        in_range(
+            "appearance.menu.backdrop",
+            f64::from(appearance.menu.backdrop),
+            0.0,
+            1.0,
+            "0 to 1"
+        )?;
 
         Ok(())
     }
@@ -150,5 +248,49 @@ mod tests {
             error,
             ConfigValidationError::MissingCustomModule { ref name } if name == "bar"
         ));
+    }
+
+    #[test]
+    fn a_defaulted_appearance_passes_the_range_checks() {
+        assert!(Config::default().validate().is_ok());
+    }
+
+    #[test]
+    fn a_twelvefold_opacity_is_named_and_refused() {
+        let mut config = Config::default();
+        config.appearance.opacity = 12.0;
+
+        let error = config.validate().expect_err("opacity must be refused");
+        assert!(matches!(
+            error,
+            ConfigValidationError::ValueOutOfRange {
+                field: "appearance.opacity",
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn a_zero_scale_factor_is_refused() {
+        let mut config = Config::default();
+        config.appearance.scale_factor = 0.0;
+
+        assert!(config.validate().is_err());
+    }
+
+    #[test]
+    fn a_nan_menu_backdrop_is_refused() {
+        let mut config = Config::default();
+        config.appearance.menu.backdrop = f32::NAN;
+
+        assert!(config.validate().is_err());
+    }
+
+    #[test]
+    fn a_negative_font_size_is_refused() {
+        let mut config = Config::default();
+        config.appearance.font_size = Some(-3.0);
+
+        assert!(config.validate().is_err());
     }
 }

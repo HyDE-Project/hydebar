@@ -10,8 +10,8 @@ use super::settings::Appearance;
 /// resolves to `4px` at the default `96dpi` scale.
 pub const DEFAULT_RADIUS: f32 = 4.0;
 
-/// Text size used when neither the configuration nor the `HyDE` theme names one,
-/// in pixels.
+/// Text size used when neither the configuration nor the `HyDE` theme names
+/// one, in pixels.
 ///
 /// Mirrors the renderer default so a bar without a theme keeps the proportions
 /// it renders text at.

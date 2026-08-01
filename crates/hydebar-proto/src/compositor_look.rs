@@ -29,21 +29,21 @@ static LAST_READ: Mutex<Option<(Instant, CompositorLook)>> = Mutex::new(None);
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct CompositorLook {
     /// Corner radius of a window, in pixels.
-    pub rounding:   Option<f32>,
+    pub rounding:     Option<f32>,
     /// Gap kept outside a window, in pixels.
-    pub gaps_out:   Option<f32>,
+    pub gaps_out:     Option<f32>,
     /// Gap kept between windows, in pixels.
-    pub gaps_in:    Option<f32>,
+    pub gaps_in:      Option<f32>,
     /// Whether the session animates at all.
-    pub animations: Option<bool>,
+    pub animations:   Option<bool>,
     /// Whether the compositor blurs at all.
-    pub blur:       Option<bool>,
+    pub blur:         Option<bool>,
     /// Width of the border around a window, in pixels.
     pub border_width: Option<f32>,
     /// Leading colour of the active window border, as RGBA in unit range.
     pub border_color: Option<[f32; 4]>,
     /// Whether windows cast a shadow at all.
-    pub shadow: Option<bool>,
+    pub shadow:       Option<bool>,
     /// Reach of the shadow, in pixels.
     pub shadow_range: Option<f32>,
     /// Colour of the shadow, as RGBA in unit range.
@@ -86,15 +86,16 @@ impl CompositorLook {
     /// Asks the compositor for every part of the look.
     fn query_compositor() -> Self {
         Self {
-            rounding:   query("decoration:rounding").and_then(|answer| parse_number(&answer)),
-            gaps_out:   query("general:gaps_out").and_then(|answer| parse_gap(&answer)),
-            gaps_in:    query("general:gaps_in").and_then(|answer| parse_gap(&answer)),
-            animations: query("animations:enabled").and_then(|answer| parse_flag(&answer)),
-            blur:       query("decoration:blur:enabled").and_then(|answer| parse_flag(&answer)),
+            rounding:     query("decoration:rounding").and_then(|answer| parse_number(&answer)),
+            gaps_out:     query("general:gaps_out").and_then(|answer| parse_gap(&answer)),
+            gaps_in:      query("general:gaps_in").and_then(|answer| parse_gap(&answer)),
+            animations:   query("animations:enabled").and_then(|answer| parse_flag(&answer)),
+            blur:         query("decoration:blur:enabled").and_then(|answer| parse_flag(&answer)),
             border_width: query("general:border_size").and_then(|answer| parse_number(&answer)),
             border_color: query("general:col.active_border")
                 .and_then(|answer| parse_gradient_color(&answer)),
-            shadow: query("decoration:shadow:enabled").and_then(|answer| parse_flag(&answer)),
+            shadow:       query("decoration:shadow:enabled")
+                .and_then(|answer| parse_flag(&answer)),
             shadow_range: query("decoration:shadow:range")
                 .and_then(|answer| parse_number(&answer)),
             shadow_color: query("decoration:shadow:color")

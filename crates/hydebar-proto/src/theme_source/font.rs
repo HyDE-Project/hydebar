@@ -18,8 +18,9 @@
 //! 5. the `HyDE` defaults, `JetBrainsMono Nerd Font` at `10`
 //!
 //! The size is resolved slightly differently from the family, again mirroring
-//! `HyDE`: the session state outranks the theme, because a size is something the
-//! user nudges for their screen while a family is something the theme picks.
+//! `HyDE`: the session state outranks the theme, because a size is something
+//! the user nudges for their screen while a family is something the theme
+//! picks.
 
 use std::fs;
 
@@ -58,8 +59,8 @@ pub(super) struct BarFont {
 /// Resolves the bar font of a `HyDE` install.
 ///
 /// Always answers, because every link of the chain ends in a `HyDE` default; a
-/// caller that must not impose those defaults on a machine without `HyDE` should
-/// check [`HydeDirs::is_installed`] first.
+/// caller that must not impose those defaults on a machine without `HyDE`
+/// should check [`HydeDirs::is_installed`] first.
 #[must_use]
 pub(super) fn read(dirs: &HydeDirs) -> BarFont {
     let sources = Sources::read(dirs);

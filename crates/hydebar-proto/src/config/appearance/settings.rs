@@ -57,7 +57,8 @@ pub struct Appearance {
     /// to a value of its own, whatever the compositor is configured with.
     #[serde(default)]
     pub side_padding:             Option<f32>,
-    /// Whether the appearance follows the theme published by the `HyDE` Project.
+    /// Whether the appearance follows the theme published by the `HyDE`
+    /// Project.
     ///
     /// Enabled by default: every field the user did not set explicitly is taken
     /// from the `HyDE` theme, so the bar changes along with the rest of the
@@ -151,9 +152,9 @@ impl Default for Appearance {
             text_color:               default_text_color(),
             workspace_colors:         default_workspace_colors(),
             special_workspace_colors: None,
-            island_borders: false,
-            window_border: None,
-            window_shadow: None
+            island_borders:           false,
+            window_border:            None,
+            window_shadow:            None
         }
     }
 }
