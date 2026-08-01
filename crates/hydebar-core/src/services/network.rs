@@ -6,6 +6,7 @@ mod service;
 pub use backend::{NetworkBackend, iwd::IwdDbus, network_manager::NetworkDbus};
 pub use data::LinkDetails;
 pub use service::{
-    AccessPoint, ActiveConnectionInfo, ConnectivityState, DeviceState, KnownConnection,
+    AccessPoint, AccessPointProbe, ActiveConnectionInfo, ConnectivityState, DeviceState,
+    KnownConnection,
     NetworkCommand, NetworkData, NetworkEvent, NetworkService, NetworkServiceError, Vpn
 };

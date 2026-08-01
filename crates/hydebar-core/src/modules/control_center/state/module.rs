@@ -52,11 +52,11 @@ impl ControlCenter {
             return;
         };
 
-        let service = service.clone();
+        let probe = service.access_point_probe();
         let known = service.wireless_access_points.clone();
 
         self.network_poll = Some(ctx.runtime_handle().spawn(async move {
-            match service.access_points().await {
+            match probe.access_points().await {
                 Ok(access_points) => {
                     if access_points == known {
                         return;

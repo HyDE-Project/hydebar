@@ -10,6 +10,23 @@ use super::super::{
 };
 use crate::services::{Service, ServiceEvent};
 
+/// Cheap handle reading access points without carrying the service's data.
+#[derive(Debug, Clone)]
+pub struct AccessPointProbe {
+    conn:           zbus::Connection,
+    backend_choice: super::choice::BackendChoice
+}
+
+impl AccessPointProbe {
+    /// Reads the access points the wireless devices can currently see.
+    pub async fn access_points(&self) -> AppResult<Vec<AccessPoint>> {
+        self.backend_choice
+            .with_connection(self.conn.clone())
+            .access_points()
+            .await
+    }
+}
+
 impl NetworkService {
     /// Reads the access points the wireless devices can currently see.
     ///
@@ -21,6 +38,18 @@ impl NetworkService {
             .with_connection(self.conn.clone())
             .access_points()
             .await
+    }
+
+    /// A detachable reader of the same access points.
+    ///
+    /// The attended poll runs on its own task; handing it the whole service
+    /// meant cloning every list the service holds two times a second, when
+    /// all the read needs is the bus handle and the backend name.
+    pub fn access_point_probe(&self) -> AccessPointProbe {
+        AccessPointProbe {
+            conn:           self.conn.clone(),
+            backend_choice: self.backend_choice
+        }
     }
 
     pub async fn run_command(self, command: NetworkCommand) -> ServiceEvent<Self> {

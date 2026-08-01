@@ -37,6 +37,7 @@ enum State {
 
 mod choice;
 mod command;
+pub use command::AccessPointProbe;
 mod gate;
 mod listen;
 mod reactive;
