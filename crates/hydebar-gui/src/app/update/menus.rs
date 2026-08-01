@@ -101,6 +101,9 @@ impl App {
                             self.tray.submenus.clear();
                         }
                     }
+                    MenuType::Wallpaper => {
+                        cmd.push(self.wallpaper.load_entries().map(Message::Wallpaper));
+                    }
                     MenuType::Themes => {
                         cmd.push(self.themes.load_swatches().map(Message::Themes));
                         cmd.push(self.themes.load_catalogue().map(Message::Themes));

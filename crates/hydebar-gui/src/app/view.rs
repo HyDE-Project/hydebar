@@ -276,6 +276,13 @@ impl App {
                 ),
                 Some(self.system_info.memory_content_height())
             )),
+            MenuType::Wallpaper => Some((
+                self.wallpaper
+                    .menu_view(self.appearance().font_size_px())
+                    .map(Message::Wallpaper),
+                MenuSize::Medium,
+                None
+            )),
             MenuType::CpuTemp => Some((
                 self.system_info
                     .cpu_temp_menu_view(self.icons())

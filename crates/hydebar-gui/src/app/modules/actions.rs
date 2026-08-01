@@ -41,6 +41,7 @@ impl App {
                 right: Some(OnModulePress::Action(Box::new(Message::Wallpaper(
                     hydebar_core::modules::wallpaper::Message::Previous
                 )))),
+                middle: Some(OnModulePress::ToggleMenu(MenuType::Wallpaper)),
                 ..ModuleActions::default()
             },
             _ => ModuleActions {
@@ -95,7 +96,12 @@ pub(super) fn attach_module_actions<'a>(
     };
 
     match actions.middle {
-        Some(message) => button.on_middle_press(message),
+        Some(OnModulePress::Action(action)) => button.on_middle_press(*action),
+        Some(OnModulePress::ToggleMenu(menu_type)) => {
+            button.on_middle_press_with_position(move |button_ui_ref| {
+                Message::ToggleMenu(menu_type.clone(), id, button_ui_ref)
+            })
+        }
         None => button
     }
 }
@@ -119,6 +125,7 @@ fn custom_module_actions(definition: &CustomModuleDef) -> ModuleActions {
         left:   custom_module_action(definition),
         right:  custom_module_right_action(definition),
         middle: launch_command(definition.command_middle.as_deref())
+            .map(|message| OnModulePress::Action(Box::new(message)))
     }
 }
 
@@ -239,7 +246,7 @@ mod tests {
             Some("hyde-shell wallpaper -p")
         );
         assert_eq!(
-            launched(actions.middle).as_deref(),
+            launched_action(actions.middle).as_deref(),
             Some("hyde-shell wallpaper --select")
         );
     }

@@ -20,8 +20,8 @@ pub struct ModuleActions {
     /// custom module declaring a context menu opens it from here, and a menu
     /// has to be anchored under the module it belongs to.
     right:  Option<OnModulePress<Message>>,
-    /// Message published on a middle press.
-    middle: Option<Message>
+    /// Action bound to the middle mouse button.
+    middle: Option<OnModulePress<Message>>
 }
 
 impl ModuleActions {
