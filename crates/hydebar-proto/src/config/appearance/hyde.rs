@@ -9,7 +9,8 @@ use super::{
         AppearanceColor, default_background_color, default_primary_color, default_text_color,
         default_workspace_colors
     },
-    settings::{Appearance, default_bar_opacity, default_opacity}
+    defaults::{default_bar_opacity, default_opacity},
+    settings::Appearance
 };
 use crate::theme_source::{HydeTheme, Rgba};
 

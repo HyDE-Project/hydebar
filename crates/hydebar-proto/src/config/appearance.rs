@@ -2,16 +2,20 @@
 //!
 //! The palette lives in [`color`], the layout metrics derived from the themed
 //! font size in [`metrics`], the overlay of the `HyDE` Project theme in
-//! [`hyde`] and the configuration struct tying them together in [`settings`].
+//! [`hyde`], the border and shadow adopted from the compositor's windows in
+//! [`window`], the serde defaults and range checks in [`defaults`] and the
+//! configuration struct tying them together in [`settings`].
 
 mod animation;
 mod color;
 mod compositor;
+mod defaults;
 mod hyde;
 mod menu;
 mod metrics;
 mod settings;
 mod style;
+mod window;
 
 pub use animation::AnimationConfig;
 pub use color::AppearanceColor;
@@ -22,5 +26,6 @@ pub use metrics::{
     WORKSPACE_ACTIVE_PADDING_EM, WORKSPACE_GAP_EM, WORKSPACE_GLYPH_ADVANCE_EM,
     WORKSPACE_MIN_HEIGHT_EM, WORKSPACE_MIN_WIDTH_EM, WORKSPACE_PADDING_EM
 };
-pub use settings::{Appearance, WindowBorder, WindowShadow};
+pub use settings::Appearance;
 pub use style::AppearanceStyle;
+pub use window::{WindowBorder, WindowShadow};

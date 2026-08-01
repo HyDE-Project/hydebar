@@ -2,7 +2,7 @@
 
 use serde::Deserialize;
 
-use super::settings::{default_opacity, opacity_deserializer};
+use super::defaults::{default_opacity, opacity_deserializer};
 
 /// Menu-specific appearance configuration.
 #[derive(Deserialize, Clone, Debug, PartialEq)]
