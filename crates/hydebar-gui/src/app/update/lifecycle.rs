@@ -30,26 +30,34 @@ impl App {
     ///
     /// The greeting lives mid-screen on the menu surfaces, which idle on the
     /// background layer; they are held on the overlay for exactly as long as
-    /// the greeting is present. Raising repeats every frame on purpose — the
-    /// real surfaces may only be created a few frames into the bar's life —
-    /// while the release fires once, and never touches a surface a menu has
-    /// meanwhile opened on.
+    /// the greeting is present. Each surface is raised exactly once — the
+    /// real surfaces may only be created a few frames into the bar's life,
+    /// so newcomers are checked for every frame, but a surface already
+    /// raised costs no further compositor request. The release fires once
+    /// and never touches a surface a menu has meanwhile opened on.
     fn greeting_surface_tasks(&mut self) -> Task<Message> {
         let visible = self.greeting.value() > 0.004 || self.greeting.is_animating();
 
         if visible {
-            self.greeting_raised = true;
+            let newcomers: Vec<_> = self
+                .outputs
+                .menu_surfaces()
+                .into_iter()
+                .filter(|(id, _)| !self.greeting_raised.contains(id))
+                .map(|(id, _)| id)
+                .collect();
+
+            self.greeting_raised.extend(newcomers.iter().copied());
 
             return Task::batch(
-                self.outputs
-                    .menu_surfaces()
+                newcomers
                     .into_iter()
-                    .map(|(id, _)| iced::set_layer(id, iced::Layer::Overlay))
+                    .map(|id| iced::set_layer(id, iced::Layer::Overlay))
             );
         }
 
-        if self.greeting_raised {
-            self.greeting_raised = false;
+        if !self.greeting_raised.is_empty() {
+            self.greeting_raised.clear();
 
             return Task::batch(
                 self.outputs

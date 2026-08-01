@@ -128,8 +128,8 @@ pub struct App {
     pub entrance: hydebar_core::animation::Spring,
     /// Presence of the greeting shown mid-screen while the bar comes up.
     pub greeting: hydebar_core::animation::Spring,
-    /// Whether the greeting currently holds the menu surfaces raised.
-    pub(super) greeting_raised: bool,
+    /// The menu surfaces the greeting has raised, each exactly once.
+    pub(super) greeting_raised: Vec<Id>,
     /// The frame instant past which the greeting lets itself out.
     pub(super) greeting_deadline: Option<Instant>,
     /// The one tooltip lifecycle: dwell, warmth and the fade either way.
@@ -510,7 +510,7 @@ impl App {
             sweep: hydebar_core::style::SweepStyle::default(),
             entrance: hydebar_core::animation::Spring::new(0.0),
             greeting: hydebar_core::animation::Spring::new(0.0),
-            greeting_raised: false,
+            greeting_raised: Vec::new(),
             greeting_deadline: None,
             hints: hydebar_core::tooltip::Hints::default(),
             greeting_line: String::new(),
