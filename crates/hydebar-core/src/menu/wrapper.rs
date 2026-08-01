@@ -54,7 +54,10 @@ pub struct MenuLayout {
     ///
     /// The box slides in from the bar edge by the remainder of this while it
     /// fades, so the window reads as growing out of the module that owns it
-    /// rather than materialising in place.
+    /// rather than materialising in place. The backdrop follows the square of
+    /// it: a veil over the whole screen stays visible at alphas where the box
+    /// already reads as gone, and a linear backdrop outlived the window on
+    /// every close.
     pub progress: f32
 }
 
@@ -142,7 +145,7 @@ pub fn menu_wrapper<Message: Clone + 'static>(
         .width(Length::Fill)
         .height(Length::Fill)
         .style(menu_backdrop_style(
-            layout.menu_backdrop * layout.progress.clamp(0.0, 1.0)
+            layout.menu_backdrop * layout.progress.clamp(0.0, 1.0).powi(2)
         ))
     )
     .on_press(close_menu_message)
