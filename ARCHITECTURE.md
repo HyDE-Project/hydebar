@@ -99,6 +99,24 @@ directory named after it, one file per submodule, nested where a submodule
 outgrows its own file — `modules/system_info/` is the worked example, with
 `sensors/` and `window/` nested inside.
 
+### Where module design is heading
+
+The trait is a transitional shape. The target is the battery pattern: data
+and update logic live in core, rendering is a plain function the GUI's
+dispatch calls with the data it owns, and background work is started by
+`register`-style methods only where a module genuinely owns any. A module
+with no state of its own is nothing but render functions — `cpu`, `memory`,
+`cpu_temp`, `gpu_temp` and `idle_inhibitor` are the worked examples; a
+stateful module keeps its state in core without the trait — `battery` and
+`calendar` show that shape.
+
+Migration ledger — still on the trait: `bar_layout`, `clock`,
+`command_button`, `control_center`, `custom_module`, `hyde_menu`,
+`keyboard_layout`, `keyboard_submap`, `media_player`, `notifications`,
+`privacy`, `screenshot`, `settings`, `system_info`, `themes`, `tray`,
+`updates`, `wallpaper`, `weather`, `window_title`, `workspaces`. A migrated
+module leaves this list in the commit that moves it.
+
 ### Registration: one law
 
 `crates/hydebar-gui/src/app/update/registration.rs` states the single rule: a

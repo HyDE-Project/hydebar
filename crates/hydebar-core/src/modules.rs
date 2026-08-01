@@ -79,9 +79,11 @@ impl ModuleError {
 
 /// Behaviour shared by all UI modules rendered inside the bar.
 ///
-/// NOTE: This trait is being phased out in favor of clean architecture.
-/// New modules should follow the Battery pattern: separate data/logic (core)
-/// from rendering (gui).
+/// A transitional shape: the target convention separates data and logic
+/// (core) from rendering (a plain view function dispatch calls), as the
+/// battery and idle-inhibitor modules already do. The migration ledger in
+/// `ARCHITECTURE.md` names every module still implementing this trait; a
+/// new module starts on the target convention, not here.
 pub trait Module<Message> {
     type ViewData<'a>;
     type RegistrationData<'a>;
