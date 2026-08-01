@@ -647,9 +647,11 @@ impl Themes {
 
         match decide_switch(&theme, self.switching.as_deref(), &self.hyde.themes) {
             SwitchDecision::AlreadySwitching(running) => {
-                if self.pending.as_deref() != Some(theme.as_str())
-                    && self.switching.as_deref() != Some(theme.as_str())
-                {
+                if self.switching.as_deref() == Some(theme.as_str()) {
+                    report(config, &format!("`{theme}` is being applied right now"));
+                } else if self.pending.as_deref() == Some(theme.as_str()) {
+                    report(config, &format!("`{theme}` is already queued next"));
+                } else {
                     report(
                         config,
                         &format!("`{running}` is still being applied; `{theme}` is queued next")
