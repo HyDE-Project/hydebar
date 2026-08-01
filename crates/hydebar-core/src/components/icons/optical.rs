@@ -135,7 +135,9 @@ fn resolve(symbol: char) -> IconFace {
 
 /// Best face for `symbol` by the system's own fallback rules.
 fn fontconfig_match(symbol: char) -> Option<(String, String, u32)> {
-    let output = std::process::Command::new("fc-match")
+    let output = std::process::Command::new("timeout")
+        .arg("5")
+        .arg("fc-match")
         .arg("-f")
         .arg("%{family[0]}\n%{file}\n%{index}")
         .arg(format!(":charset={:x}", u32::from(symbol)))

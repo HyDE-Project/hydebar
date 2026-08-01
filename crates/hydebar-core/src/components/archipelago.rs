@@ -46,6 +46,8 @@ where
     keys:       Vec<u64>,
     /// Which configured island each child belongs to, in order.
     islands:    Vec<usize>,
+    /// How far each child's entrance wave has arrived, one meaning fully.
+    arrivals:   Vec<f32>,
     island_gap: f32,
     /// Horizontal room a pill keeps around its content.
     pad_x:      f32,
@@ -71,6 +73,7 @@ where
             children: Vec::new(),
             keys: Vec::new(),
             islands: Vec::new(),
+            arrivals: Vec::new(),
             island_gap,
             pad_x,
             progress,
@@ -85,11 +88,13 @@ where
         mut self,
         key: u64,
         island: usize,
+        arrival: f32,
         child: impl Into<iced_core::Element<'a, Message, Theme, Renderer>>
     ) -> Self {
         self.children.push(child.into());
         self.keys.push(key);
         self.islands.push(island);
+        self.arrivals.push(arrival.clamp(0.0, 1.0));
         self
     }
 
@@ -300,22 +305,31 @@ where
         };
 
         if let Some(paint) = (self.paint)(theme) {
-            let mut clusters: Vec<(f32, f32)> = Vec::new();
-            let mut sorted = spans;
+            let mut clusters: Vec<(f32, f32, f32)> = Vec::new();
+            let mut sorted: Vec<(f32, f32, f32)> = spans
+                .iter()
+                .zip(self.arrivals.iter())
+                .map(|(&(start, end), &arrival)| (start, end, arrival))
+                .collect();
             sorted.sort_by(|a, b| a.0.total_cmp(&b.0));
 
             let fuse = self.island_gap * 0.5;
 
-            for (start, end) in sorted {
+            for (start, end, arrival) in sorted {
                 match clusters.last_mut() {
-                    Some((_, tail)) if start - *tail <= fuse => {
+                    Some((_, tail, shown)) if start - *tail <= fuse => {
                         *tail = tail.max(end);
+                        *shown = shown.max(arrival);
                     }
-                    _ => clusters.push((start, end))
+                    _ => clusters.push((start, end, arrival))
                 }
             }
 
-            for (start, end) in clusters {
+            for (start, end, shown) in clusters {
+                if shown <= f32::EPSILON {
+                    continue;
+                }
+
                 renderer.fill_quad(
                     renderer::Quad {
                         bounds: Rectangle {
@@ -328,7 +342,7 @@ where
                         shadow: paint.shadow,
                         ..renderer::Quad::default()
                     },
-                    paint.background
+                    paint.background.scale_alpha(shown)
                 );
             }
         }

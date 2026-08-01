@@ -199,6 +199,14 @@ impl App {
                     strip = strip.push(
                         Self::flip_key(module_name, id).wrapping_add(occurrence),
                         island_index,
+                        self.entrance
+                            .value()
+                            .clamp(0.0, 1.0)
+                            .min(hydebar_core::animation::sweep(
+                                self.entrance.value().clamp(0.0, 1.0),
+                                position,
+                                self.sweep.spread
+                            )),
                         element
                     );
                     seated = true;

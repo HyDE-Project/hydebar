@@ -292,7 +292,20 @@ where
     let mut tail: std::collections::VecDeque<String> = std::collections::VecDeque::new();
     let mut last_flush: Option<std::time::Instant> = None;
 
-    while let Ok(Some(line)) = lines.next_line().await {
+    loop {
+        let line = match lines.next_line().await {
+            Ok(Some(line)) => line,
+            Ok(None) => break,
+            Err(err) => {
+                log::error!("reading the update output failed: {err}");
+                if tail.len() == LOG_TAIL {
+                    tail.pop_front();
+                }
+                tail.push_back(format!("[the output stream broke: {err}]"));
+                break;
+            }
+        };
+
         let clean = strip_ansi(&line);
         let clean = clean.trim();
 
