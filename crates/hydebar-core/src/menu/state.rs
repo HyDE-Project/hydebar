@@ -253,6 +253,11 @@ impl Menu {
         self.opacity.is_animating()
     }
 
+    /// Returns whether the menu is playing its way out.
+    pub fn is_closing(&self) -> bool {
+        self.closing
+    }
+
     /// Get the current animated opacity for rendering
     pub fn get_opacity(&self) -> f32 {
         self.opacity.value()

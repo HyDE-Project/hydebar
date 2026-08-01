@@ -1,5 +1,14 @@
 use std::f32::consts::PI;
 
+/// Travelled share below which a closing menu stops drawing at all.
+///
+/// The fade spring spends its last stretch walking alphas nobody can call
+/// colour any more — yet a large dark panel blended over a bright wallpaper
+/// stays readable as a ghost all the way down. Below this share everything
+/// on the surface is faint enough that dropping it outright is invisible,
+/// and the ghost dies with the window instead of outliving it.
+const CLOSING_CUTOFF: f32 = 0.4;
+
 use hydebar_core::{
     HEIGHT,
     menu::{MenuLayout, MenuSize, MenuType, dismiss_area, menu_wrapper},
@@ -498,7 +507,10 @@ impl App {
                 let menu_opacity = self.config.appearance.menu.opacity;
                 let menu_progress = self.outputs.get_menu_progress(id);
 
-                let menu = menu_info.and_then(|(menu_type, button_ui_ref)| {
+                let faded_out =
+                    self.outputs.menu_is_closing(id) && menu_progress < CLOSING_CUTOFF;
+
+                let menu = menu_info.filter(|_| !faded_out).and_then(|(menu_type, button_ui_ref)| {
                     self.menu_page(menu_type, id, menu_opacity).map(
                         |(content, size, measured_height)| {
                             let layout = match measured_height {

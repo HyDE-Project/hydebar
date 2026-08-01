@@ -57,6 +57,14 @@ impl Outputs {
             .unwrap_or(1.0)
     }
 
+    /// Whether the menu on the given surface is playing its way out.
+    pub fn menu_is_closing(&self, id: Id) -> bool {
+        self.0
+            .iter()
+            .filter_map(|(_, shell_info, _)| shell_info.as_ref())
+            .any(|shell_info| shell_info.menu.id == id && shell_info.menu.is_closing())
+    }
+
     /// Menu surface of every output, with whether a menu is open on it.
     ///
     /// The greeting borrows these surfaces while the bar is born: they span
