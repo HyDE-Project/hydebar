@@ -18,7 +18,6 @@ use hydebar_core::{
         control_center::ControlCenter,
         custom_module::Custom,
         hyde_menu::HydeMenu,
-        idle_inhibitor::IdleInhibitor,
         keyboard_layout::KeyboardLayout,
         keyboard_submap::KeyboardSubmap,
         media_player::MediaPlayer,
@@ -108,7 +107,6 @@ pub struct App {
     pub media_player: MediaPlayer,
     pub notifications: Notifications,
     pub screenshot: Screenshot,
-    pub idle_inhibitor: IdleInhibitor,
     pub settings: Settings,
     /// Bar entry choosing the desktop theme, and the one holder of a running
     /// switch.
@@ -521,7 +519,6 @@ impl App {
             media_player: MediaPlayer::default(),
             notifications: Notifications::default(),
             screenshot: Screenshot::default(),
-            idle_inhibitor: IdleInhibitor,
             settings: Settings::new(config_path),
             themes: Themes::new(),
             wallpaper: Wallpaper::new(),

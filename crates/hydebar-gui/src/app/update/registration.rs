@@ -212,14 +212,6 @@ impl App {
             ctx,
             ()
         );
-        gate(
-            "idle-inhibitor",
-            hosts(ModuleName::IdleInhibitor),
-            &mut self.idle_inhibitor,
-            ctx,
-            ()
-        );
-
         for definition in &self.config.custom_modules {
             let placed = layout.hosts(&ModuleName::Custom(definition.name.clone()));
 

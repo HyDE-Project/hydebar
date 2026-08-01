@@ -178,9 +178,10 @@ impl App {
                 .view((&self.config.media_player, self.icons())),
             ModuleName::Notifications => self.notifications.view(self.icons()),
             ModuleName::Screenshot => self.screenshot.view(self.icons()),
-            ModuleName::IdleInhibitor => self
-                .idle_inhibitor
-                .view((self.control_center.is_idle_inhibited(), self.icons()))
+            ModuleName::IdleInhibitor => Some(hydebar_core::modules::idle_inhibitor::bar_view(
+                self.control_center.is_idle_inhibited(),
+                self.icons()
+            ))
         }
     }
 
@@ -228,6 +229,7 @@ impl App {
             | ModuleName::Wallpaper
             | ModuleName::BarLayout
             | ModuleName::Battery
+            | ModuleName::IdleInhibitor
             | ModuleName::Settings => None,
             ModuleName::Privacy => self.privacy.subscription(),
             ModuleName::ControlCenter
@@ -237,8 +239,7 @@ impl App {
             | ModuleName::PowerProfile => self.control_center.subscription(),
             ModuleName::MediaPlayer => self.media_player.subscription(),
             ModuleName::Notifications => self.notifications.subscription(),
-            ModuleName::Screenshot => self.screenshot.subscription(),
-            ModuleName::IdleInhibitor => Module::<Message>::subscription(&self.idle_inhibitor)
+            ModuleName::Screenshot => self.screenshot.subscription()
         }
     }
 }
