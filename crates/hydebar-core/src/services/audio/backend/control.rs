@@ -10,7 +10,7 @@ use libpulse_binding::{
 };
 use log::{debug, error, trace};
 use masterror::{AppError, AppResult};
-use tokio::sync::mpsc::UnboundedSender;
+use tokio::sync::mpsc::Sender;
 
 use super::{BackendEvent, PulseAudioServer};
 use crate::services::audio::model::{AudioEvent, Device};
@@ -39,14 +39,14 @@ impl PulseAudioServer {
 
     pub(super) fn send_server_info(
         info: &libpulse_binding::context::introspect::ServerInfo<'_>,
-        tx: &UnboundedSender<BackendEvent>
+        tx: &Sender<BackendEvent>
     ) {
         let _ = tx.send(BackendEvent::Update(AudioEvent::ServerInfo(info.into())));
     }
 
     pub(super) fn populate_and_send_sinks(
         info: ListResult<&SinkInfo<'_>>,
-        tx: &UnboundedSender<BackendEvent>,
+        tx: &Sender<BackendEvent>,
         sinks: &mut Vec<Device>
     ) {
         match info {
@@ -71,7 +71,7 @@ impl PulseAudioServer {
 
     pub(super) fn populate_and_send_sources(
         info: ListResult<&SourceInfo<'_>>,
-        tx: &UnboundedSender<BackendEvent>,
+        tx: &Sender<BackendEvent>,
         sources: &mut Vec<Device>
     ) {
         match info {

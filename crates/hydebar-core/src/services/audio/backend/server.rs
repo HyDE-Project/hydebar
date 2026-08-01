@@ -71,8 +71,15 @@ impl PulseAudioServer {
     }
 
     pub(super) async fn start() -> AppResult<BackendHandle> {
-        let (from_server_tx, from_server_rx) = tokio::sync::mpsc::unbounded_channel();
-        let (to_server_tx, to_server_rx) = tokio::sync::mpsc::unbounded_channel();
+        /// Events either side may fall behind before new ones are dropped.
+        ///
+        /// Both directions carry state snapshots and commands a stalled
+        /// peer can afford to lose to staleness; an unbounded queue behind
+        /// a stalled consumer was unbounded memory.
+        const BRIDGE_CAPACITY: usize = 256;
+
+        let (from_server_tx, from_server_rx) = tokio::sync::mpsc::channel(BRIDGE_CAPACITY);
+        let (to_server_tx, to_server_rx) = tokio::sync::mpsc::channel(BRIDGE_CAPACITY);
 
         let listener = Self::start_listener(from_server_tx.clone()).await?;
         let commander = Self::start_commander(from_server_tx.clone(), to_server_rx).await?;

@@ -7,7 +7,7 @@ use crate::services::ServiceEvent;
 
 impl AudioService {
     fn send_backend_command(&self, command: BackendCommand) {
-        if let Err(err) = self.commander.send(command) {
+        if let Err(err) = self.commander.try_send(command) {
             error!("Failed to dispatch audio command: {err}");
         }
     }

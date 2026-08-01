@@ -4,7 +4,7 @@ use std::{future::Future, pin::Pin, thread::JoinHandle};
 
 use libpulse_binding::volume::ChannelVolumes;
 use masterror::AppResult;
-use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
+use tokio::sync::mpsc::{Receiver, Sender};
 
 use super::PulseAudioServer;
 use crate::services::audio::model::AudioEvent;
@@ -52,16 +52,16 @@ impl AudioBackend for PulseAudioBackend {
 /// of the backend. When dropped, the threads will be aborted.
 #[derive(Debug)]
 pub struct BackendHandle {
-    pub(crate) receiver: UnboundedReceiver<BackendEvent>,
-    pub(crate) sender:   UnboundedSender<BackendCommand>,
+    pub(crate) receiver: Receiver<BackendEvent>,
+    pub(crate) sender:   Sender<BackendCommand>,
     _listener:           Option<JoinHandle<()>>,
     _commander:          Option<JoinHandle<()>>
 }
 
 impl BackendHandle {
     pub(super) fn new(
-        receiver: UnboundedReceiver<BackendEvent>,
-        sender: UnboundedSender<BackendCommand>,
+        receiver: Receiver<BackendEvent>,
+        sender: Sender<BackendCommand>,
         listener: JoinHandle<()>,
         commander: JoinHandle<()>
     ) -> Self {
@@ -75,8 +75,8 @@ impl BackendHandle {
 
     #[cfg(test)]
     pub(crate) fn from_parts(
-        receiver: UnboundedReceiver<BackendEvent>,
-        sender: UnboundedSender<BackendCommand>
+        receiver: Receiver<BackendEvent>,
+        sender: Sender<BackendCommand>
     ) -> Self {
         Self {
             receiver,
@@ -86,7 +86,7 @@ impl BackendHandle {
         }
     }
 
-    pub(crate) fn commander(&self) -> UnboundedSender<BackendCommand> {
+    pub(crate) fn commander(&self) -> Sender<BackendCommand> {
         self.sender.clone()
     }
 

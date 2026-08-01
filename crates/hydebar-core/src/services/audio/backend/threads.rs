@@ -10,21 +10,21 @@ use iced::futures::executor::block_on;
 use libpulse_binding::{context::subscribe::InterestMaskSet, mainloop::standard::IterateResult};
 use log::error;
 use masterror::{AppError, AppResult};
-use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
+use tokio::sync::mpsc::{Receiver, Sender};
 
 use super::{BackendCommand, BackendEvent, PulseAudioServer};
 
 impl PulseAudioServer {
     pub(super) async fn start_listener(
-        from_server_tx: UnboundedSender<BackendEvent>
+        from_server_tx: Sender<BackendEvent>
     ) -> AppResult<JoinHandle<()>> {
-        let (ready_tx, mut ready_rx) = tokio::sync::mpsc::unbounded_channel();
+        let (ready_tx, mut ready_rx) = tokio::sync::mpsc::channel(4);
 
         let handle = thread::spawn({
             let from_server_tx = from_server_tx.clone();
             move || match Self::new() {
                 Ok(mut server) => {
-                    let _ = ready_tx.send(true);
+                    let _ = ready_tx.try_send(true);
 
                     server.context.subscribe(
                         InterestMaskSet::SERVER
@@ -46,7 +46,7 @@ impl PulseAudioServer {
                         }))
                     {
                         error!("Failed to get server info: {err}");
-                        let _ = from_server_tx.send(BackendEvent::Error(err.to_string()));
+                        let _ = from_server_tx.try_send(BackendEvent::Error(err.to_string()));
                     }
 
                     let sinks = Rc::new(RefCell::new(Vec::new()));
@@ -60,7 +60,7 @@ impl PulseAudioServer {
                         }))
                     {
                         error!("Failed to get sink info: {err}");
-                        let _ = from_server_tx.send(BackendEvent::Error(err.to_string()));
+                        let _ = from_server_tx.try_send(BackendEvent::Error(err.to_string()));
                     }
 
                     let sources = Rc::new(RefCell::new(Vec::new()));
@@ -78,7 +78,7 @@ impl PulseAudioServer {
                         }))
                     {
                         error!("Failed to get source info: {err}");
-                        let _ = from_server_tx.send(BackendEvent::Error(err.to_string()));
+                        let _ = from_server_tx.try_send(BackendEvent::Error(err.to_string()));
                     }
 
                     let introspector = server.context.introspect();
@@ -124,15 +124,14 @@ impl PulseAudioServer {
                         let data = server.mainloop.iterate(true);
                         if let IterateResult::Quit(_) | IterateResult::Err(_) = data {
                             error!("PulseAudio mainloop error");
-                            let _ = from_server_tx
-                                .send(BackendEvent::Error("PulseAudio mainloop error".into()));
+                            let _ = from_server_tx.try_send(BackendEvent::Error("PulseAudio mainloop error".into()));
                             break;
                         }
                     }
                 }
                 Err(err) => {
                     error!("Failed to start PulseAudio listener thread: {err}");
-                    let _ = ready_tx.send(false);
+                    let _ = ready_tx.try_send(false);
                 }
             }
         });
@@ -146,16 +145,16 @@ impl PulseAudioServer {
     }
 
     pub(super) async fn start_commander(
-        from_server_tx: UnboundedSender<BackendEvent>,
-        mut to_server_rx: UnboundedReceiver<BackendCommand>
+        from_server_tx: Sender<BackendEvent>,
+        mut to_server_rx: Receiver<BackendCommand>
     ) -> AppResult<JoinHandle<()>> {
-        let (ready_tx, mut ready_rx) = tokio::sync::mpsc::unbounded_channel();
+        let (ready_tx, mut ready_rx) = tokio::sync::mpsc::channel(4);
 
         let handle = thread::spawn(move || {
             block_on(async move {
                 match Self::new() {
                     Ok(mut server) => {
-                        let _ = ready_tx.send(true);
+                        let _ = ready_tx.try_send(true);
                         while let Some(command) = to_server_rx.recv().await {
                             if let Err(err) = match command {
                                 BackendCommand::SinkMute(name, mute) => {
@@ -183,7 +182,7 @@ impl PulseAudioServer {
                     }
                     Err(err) => {
                         error!("Failed to start PulseAudio commander: {err}");
-                        let _ = from_server_tx.send(BackendEvent::Error(err.to_string()));
+                        let _ = from_server_tx.try_send(BackendEvent::Error(err.to_string()));
                     }
                 }
             })

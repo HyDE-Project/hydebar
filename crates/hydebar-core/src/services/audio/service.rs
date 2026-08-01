@@ -1,4 +1,4 @@
-use tokio::{sync::mpsc::UnboundedSender, time::Duration};
+use tokio::{sync::mpsc::Sender, time::Duration};
 
 use super::{backend::BackendCommand, model::AudioData};
 
@@ -20,7 +20,7 @@ pub enum AudioCommand {
 #[derive(Debug, Clone)]
 pub struct AudioService {
     data:      AudioData,
-    commander: UnboundedSender<BackendCommand>
+    commander: Sender<BackendCommand>
 }
 
 mod commands;
