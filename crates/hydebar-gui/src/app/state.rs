@@ -129,6 +129,8 @@ pub struct App {
     pub entrance: hydebar_core::animation::Spring,
     /// Travel of the blocks gliding to a rearranged layout's places.
     pub relayout: hydebar_core::animation::Spring,
+    /// The book of seats every module records its place in, per frame.
+    pub flip: std::cell::RefCell<hydebar_core::components::flip::FlipMemo>,
     /// Presence of the greeting shown mid-screen while the bar comes up.
     pub greeting: hydebar_core::animation::Spring,
     /// The menu surfaces the greeting has raised, each exactly once.
@@ -526,6 +528,7 @@ impl App {
             sweep: hydebar_core::style::SweepStyle::default(),
             entrance: hydebar_core::animation::Spring::new(0.0),
             relayout: hydebar_core::animation::Spring::new(1.0),
+            flip: std::cell::RefCell::new(hydebar_core::components::flip::FlipMemo::default()),
             greeting: hydebar_core::animation::Spring::new(0.0),
             greeting_raised: Vec::new(),
             greeting_deadline: None,

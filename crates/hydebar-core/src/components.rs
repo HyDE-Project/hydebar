@@ -1,4 +1,5 @@
 pub mod crossfade;
+pub mod flip;
 pub mod greeting;
 pub mod icons;
 pub(crate) mod page;

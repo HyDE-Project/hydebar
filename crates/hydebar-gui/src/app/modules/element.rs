@@ -45,6 +45,35 @@ impl App {
         }
     }
 
+    /// The seat key of one module on one surface.
+    ///
+    /// The surface rides along because the same module stands on every
+    /// output's bar, and two outputs must not fight over one seat.
+    fn flip_key(module_name: &ModuleName, id: Id) -> u64 {
+        use std::hash::{Hash, Hasher};
+
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        module_name.hash(&mut hasher);
+        id.hash(&mut hasher);
+        hasher.finish()
+    }
+
+    /// Wraps a module so it glides to wherever its seat moves.
+    fn gliding<'a>(
+        &'a self,
+        module_name: &ModuleName,
+        id: Id,
+        module: Element<'a, Message>
+    ) -> Element<'a, Message> {
+        hydebar_core::components::flip::FlipAnchor::new(
+            Self::flip_key(module_name, id),
+            self.relayout.value().clamp(0.0, 1.0),
+            &self.flip,
+            module
+        )
+        .into()
+    }
+
     pub(super) fn single_module_wrapper<'a>(
         &'a self,
         module_name: &'a ModuleName,
@@ -57,8 +86,9 @@ impl App {
 
         module.map(|(content, actions)| {
             let module = self.module_element(content, actions, module_name, id, false);
+            let module = self.with_tooltip(module_name, module, id);
 
-            self.with_tooltip(module_name, module, id)
+            self.gliding(module_name, id, module)
         })
     }
 
@@ -270,8 +300,9 @@ impl App {
                         .map(|(module_name, content, actions)| {
                             let module =
                                 self.module_element(content, actions, module_name, id, true);
+                            let module = self.with_tooltip(module_name, module, id);
 
-                            self.with_tooltip(module_name, module, id)
+                            self.gliding(module_name, id, module)
                         })
                         .collect::<Vec<_>>()
                 )
