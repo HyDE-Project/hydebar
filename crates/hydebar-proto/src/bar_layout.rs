@@ -183,6 +183,14 @@ fn module_for(name: &str, custom: &BTreeSet<&str>) -> Option<ModuleName> {
             return Some(ModuleName::Themes);
         }
 
+        if tail == "wallchange" {
+            return Some(ModuleName::Wallpaper);
+        }
+
+        if matches!(tail, "wbar" | "waybar") {
+            return Some(ModuleName::BarLayout);
+        }
+
         if tail == "hyde-menu" {
             return Some(ModuleName::HydeMenu);
         }
@@ -229,6 +237,7 @@ fn builtin_for_custom(tail: &str) -> Option<ModuleName> {
         "power" | "powermenu" => ModuleName::Settings,
         "theme" | "themeswitch" => ModuleName::Themes,
         "wallchange" => ModuleName::Wallpaper,
+        "wbar" | "waybar" => ModuleName::BarLayout,
         "hyde-menu" => ModuleName::HydeMenu,
         "spotify" | "mediaplayer" => ModuleName::MediaPlayer,
         "swaync" | "dunst" | "notifications" => ModuleName::Notifications,
@@ -458,16 +467,35 @@ mod tests {
     /// about.
     #[test]
     fn a_defined_custom_module_wins_over_the_built_in_map() {
-        let custom = vec!["wallchange".to_owned()];
-        let source = r#"{ "modules-left": ["custom/wallchange", "custom/updates"] }"#;
+        let custom = vec!["my_widget".to_owned()];
+        let source = r#"{ "modules-left": ["custom/my_widget", "custom/updates"] }"#;
 
         let modules = parse(source, &custom).expect("layout");
 
         assert_eq!(
             modules.left,
             vec![
-                ModuleDef::Single(ModuleName::Custom("wallchange".to_owned())),
+                ModuleDef::Single(ModuleName::Custom("my_widget".to_owned())),
                 ModuleDef::Single(ModuleName::Updates),
+            ]
+        );
+    }
+
+    /// The wallpaper and layout seats belong to the built-ins even when a
+    /// legacy wrapper of the same name is configured: the wrappers speak
+    /// one command, the built-ins speak the whole mouse.
+    #[test]
+    fn the_wallpaper_and_layout_seats_always_go_to_the_built_ins() {
+        let custom = vec!["wallchange".to_owned(), "wbar".to_owned()];
+        let source = r#"{ "modules-left": ["custom/wallchange", "custom/wbar"] }"#;
+
+        let modules = parse(source, &custom).expect("layout");
+
+        assert_eq!(
+            modules.left,
+            vec![
+                ModuleDef::Single(ModuleName::Wallpaper),
+                ModuleDef::Single(ModuleName::BarLayout),
             ]
         );
     }

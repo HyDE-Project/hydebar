@@ -106,9 +106,11 @@ pub async fn initialize_data(conn: &zbus::Connection) -> Result<TrayData, TrayWa
             )))
         })?;
 
-    let mut status_items = Vec::with_capacity(items.len());
+    let mut status_items: Vec<StatusNotifierItem> = Vec::with_capacity(items.len());
     for item in items {
         if let Some(item) = build_item(conn, item).await {
+            status_items
+                .retain(|kept| super::app_identity(&kept.name) != super::app_identity(&item.name));
             status_items.push(item);
         }
     }

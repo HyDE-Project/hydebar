@@ -146,6 +146,7 @@ impl StatusNotifierWatcher {
             warn!("failed to announce a tray item registration: {err}");
         }
 
+        self.items.retain(|(_, registered)| registered != &service);
         self.items.push((sender.to_owned(), service));
     }
 
