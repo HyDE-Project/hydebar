@@ -33,9 +33,12 @@ impl FlipMemo {
     /// Freezes the live seats as the departure points of a new journey.
     ///
     /// Called at the moment a rearrangement is adopted, before the next
-    /// frame lays the new arrangement out.
+    /// frame lays the new arrangement out. The live book is taken, not
+    /// copied: the coming frames restate every surviving seat, and a seat
+    /// nobody restates belonged to a surface or module that is gone —
+    /// taking is what keeps the book from hoarding the dead.
     pub fn depart(&mut self) {
-        self.from = self.live.clone();
+        self.from = std::mem::take(&mut self.live);
     }
 
     /// Writes the seat `key` rests at on the current frame.

@@ -284,10 +284,10 @@ where
             for (index, child_layout) in layout.children().enumerate() {
                 let child_bounds = child_layout.bounds();
 
-                memo.record(self.keys[index], child_bounds.x);
-
                 let offset = self.offset(memo.from_map(), index, child_bounds.x);
                 let current = child_bounds.x + offset;
+
+                memo.record(self.keys[index], current);
 
                 offsets.push(offset);
                 spans.push((
@@ -374,7 +374,17 @@ where
         viewport: &Rectangle,
         renderer: &Renderer
     ) -> mouse::Interaction {
-        let memo = self.memo.borrow();
+        let offsets: Vec<f32> = {
+            let memo = self.memo.borrow();
+
+            layout
+                .children()
+                .enumerate()
+                .map(|(index, child_layout)| {
+                    self.offset(memo.from_map(), index, child_layout.bounds().x)
+                })
+                .collect()
+        };
 
         self.children
             .iter()
@@ -382,10 +392,10 @@ where
             .zip(layout.children())
             .enumerate()
             .map(|(index, ((child, sub_tree), child_layout))| {
-                let offset = self.offset(memo.from_map(), index, child_layout.bounds().x);
+                let _ = child_layout;
                 let shifted = match cursor {
-                    mouse::Cursor::Available(point) if offset.abs() > f32::EPSILON => {
-                        mouse::Cursor::Available(point - Vector::new(offset, 0.0))
+                    mouse::Cursor::Available(point) if offsets[index].abs() > f32::EPSILON => {
+                        mouse::Cursor::Available(point - Vector::new(offsets[index], 0.0))
                     }
                     other => other
                 };

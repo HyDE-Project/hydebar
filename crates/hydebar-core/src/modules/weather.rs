@@ -128,6 +128,29 @@ pub struct Weather {
     runtime:         Option<Handle>
 }
 
+/// Spells `value` safely inside one URL query component.
+///
+/// The location comes from the configuration file; an ampersand or a hash
+/// in it must read as part of the place name, never as query syntax.
+fn percent_encoded(value: &str) -> String {
+    let mut encoded = String::with_capacity(value.len());
+
+    for byte in value.bytes() {
+        match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' => {
+                encoded.push(byte as char);
+            }
+            other => {
+                use std::fmt::Write;
+
+                let _ = write!(encoded, "%{other:02X}");
+            }
+        }
+    }
+
+    encoded
+}
+
 impl Weather {
     #[must_use]
     pub fn new(
@@ -303,7 +326,9 @@ impl Weather {
             .ok_or_else(|| AppError::internal("Weather API key not configured in config.toml"))?;
 
         let url = format!(
-            "https://api.openweathermap.org/data/2.5/weather?q={location}&appid={api_key}"
+            "https://api.openweathermap.org/data/2.5/weather?q={}&appid={}",
+            percent_encoded(location),
+            percent_encoded(api_key)
         );
 
         let response = crate::utils::http_client()

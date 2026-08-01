@@ -203,6 +203,8 @@ pub struct Themes {
     author:          Option<String>,
     /// Theme an install is running for, while one is.
     installing:      Option<String>,
+    /// Theme a removal is deleting, while one is.
+    removing:        Option<String>,
     /// Theme an update is fetching, while one is; `None` name means all.
     #[expect(
         clippy::option_option,
@@ -242,6 +244,7 @@ impl Themes {
             updating:        None,
             list_layout:     false,
             spinner:         Spinner::default(),
+            removing:        None,
             offered:         Vec::new(),
             catalogue_index: HashMap::new()
         };
@@ -301,7 +304,7 @@ impl Themes {
     /// this holds.
     #[must_use]
     pub const fn is_waiting(&self) -> bool {
-        if self.installing.is_some() || self.updating.is_some() {
+        if self.installing.is_some() || self.updating.is_some() || self.removing.is_some() {
             return true;
         }
 
@@ -514,6 +517,8 @@ impl Themes {
 
     /// Records what the desktop made of the removal that just ended.
     fn removed(&mut self, theme: &str, failure: Option<&str>, config: &Config) -> Task<Message> {
+        self.removing = None;
+
         match failure {
             Some(failure) => report(
                 config,
@@ -558,6 +563,11 @@ impl Themes {
     /// theme directories, and two writers racing over them is how a desktop
     /// ends up half one theme and half another.
     fn install(&mut self, theme: String, config: &Config) -> Task<Message> {
+        if self.removing.is_some() {
+            report(config, "a removal is running, installs must wait");
+            return Task::none();
+        }
+
         if let Some(pending) = self.switching.as_deref() {
             info!("ignoring the install of `{theme}`: `{pending}` is still being applied");
             return Task::none();
@@ -594,7 +604,12 @@ impl Themes {
     /// Only a theme the removal was armed for goes, never the one the desktop
     /// is on, never during a switch or an install, and strictly the directory
     /// the installed list names — nothing about the path comes from outside.
-    fn remove(&self, theme: String, config: &Config) -> Task<Message> {
+    fn remove(&mut self, theme: String, config: &Config) -> Task<Message> {
+        if self.removing.is_some() {
+            report(config, "a removal is already running, one at a time");
+            return Task::none();
+        }
+
         if self.switching.is_some() {
             report(config, "a theme switch is running, removal must wait");
             return Task::none();
@@ -634,6 +649,8 @@ impl Themes {
             directory.display()
         );
 
+        self.removing = Some(theme.clone());
+
         Task::perform(
             async move {
                 tokio::fs::remove_dir_all(directory)
@@ -653,7 +670,11 @@ impl Themes {
     /// One writer at a time over the theme directories: a fetch never starts
     /// beside a switch, an install, or another fetch.
     fn fetch_updates(&mut self, scope: Option<String>) -> Task<Message> {
-        if self.switching.is_some() || self.installing.is_some() || self.updating.is_some() {
+        if self.switching.is_some()
+            || self.installing.is_some()
+            || self.updating.is_some()
+            || self.removing.is_some()
+        {
             return Task::none();
         }
 
@@ -733,6 +754,11 @@ impl Themes {
     /// current one — and a missing switch script is reported instead of being
     /// logged where nobody looks.
     fn switch(&mut self, theme: String, config: &Config) -> Task<Message> {
+        if self.removing.is_some() {
+            report(config, "a removal is running, switches must wait");
+            return Task::none();
+        }
+
         self.refresh();
 
         info!(

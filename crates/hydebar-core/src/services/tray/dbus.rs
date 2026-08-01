@@ -90,19 +90,28 @@ impl StatusNotifierWatcher {
                     }
                 } else if let BusName::Unique(name) = &args.name {
                     let mut interface = interface.get_mut().await;
-                    if let Some(idx) = interface
-                        .items
-                        .iter()
-                        .position(|(unique_name, _)| unique_name == name)
-                    {
-                        let Ok(emitter) = SignalEmitter::new(&internal_connection, OBJECT_PATH)
-                        else {
-                            warn!("tray connection is gone, cannot announce the removal");
-                            continue;
-                        };
-                        let service = interface.items.remove(idx).1;
-                        drop(interface);
+                    let mut services = Vec::new();
 
+                    interface.items.retain(|(unique_name, service)| {
+                        if unique_name == name {
+                            services.push(service.clone());
+                            false
+                        } else {
+                            true
+                        }
+                    });
+                    drop(interface);
+
+                    if services.is_empty() {
+                        continue;
+                    }
+
+                    let Ok(emitter) = SignalEmitter::new(&internal_connection, OBJECT_PATH) else {
+                        warn!("tray connection is gone, cannot announce the removal");
+                        continue;
+                    };
+
+                    for service in services {
                         if let Err(err) =
                             Self::status_notifier_item_unregistered(&emitter, &service).await
                         {

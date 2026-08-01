@@ -1,6 +1,6 @@
 use iced::{
     Rectangle,
-    core::{Clipboard, Layout, Shell, event::Event, keyboard, mouse, touch, widget::Tree},
+    core::{Clipboard, Layout, Shell, event::Event, mouse, touch, widget::Tree},
     widget::button::Catalog,
     window
 };
@@ -87,19 +87,6 @@ pub(super) fn update<Message, Theme, Renderer>(
                 let state = tree.state.downcast_mut::<State>();
 
                 if std::mem::take(&mut state.is_pressed) && cursor.is_over(layout.bounds()) {
-                    publish(on_press, layout, viewport, shell);
-                }
-            }
-        }
-        Event::Keyboard(keyboard::Event::KeyPressed {
-            key, ..
-        }) => {
-            if let Some(on_press) = button.on_press.as_ref() {
-                let state = tree.state.downcast_mut::<State>();
-                if state.is_focused
-                    && matches!(key, keyboard::Key::Named(keyboard::key::Named::Enter))
-                {
-                    state.is_pressed = true;
                     publish(on_press, layout, viewport, shell);
                 }
             }

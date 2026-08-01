@@ -166,6 +166,8 @@ impl App {
 
         let total = self.island_count().max(1) as f32;
         let mut island_index = 0usize;
+        let mut occurrences: std::collections::HashMap<hydebar_core::config::ModuleName, u64> =
+            std::collections::HashMap::new();
 
         for (index, module_def) in modules_def.iter().enumerate() {
             let names: Vec<&hydebar_core::config::ModuleName> = match module_def {
@@ -189,7 +191,16 @@ impl App {
                     let element = self.with_tooltip(module_name, element, id);
                     let element = self.swept_island(element, position);
 
-                    strip = strip.push(Self::flip_key(module_name, id), island_index, element);
+                    let occurrence = *occurrences
+                        .entry(module_name.clone())
+                        .and_modify(|count| *count += 1)
+                        .or_insert(0u64);
+
+                    strip = strip.push(
+                        Self::flip_key(module_name, id).wrapping_add(occurrence),
+                        island_index,
+                        element
+                    );
                     seated = true;
                 }
             }
