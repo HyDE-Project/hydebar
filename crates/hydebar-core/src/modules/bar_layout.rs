@@ -63,9 +63,7 @@ pub struct BarLayout {
 }
 
 /// Reads the roster and the record of the layout in force.
-fn list_layouts(previous: &[LayoutEntry]) -> Vec<LayoutEntry> {
-    let _ = previous;
-
+fn list_layouts() -> Vec<LayoutEntry> {
     let Ok(output) = std::process::Command::new("hyde-shell")
         .args(["waybar", "--json"])
         .output()
@@ -81,46 +79,66 @@ fn list_layouts(previous: &[LayoutEntry]) -> Vec<LayoutEntry> {
 
     let active = active_layout_name();
 
-    listed["layouts"]
+    let names: Vec<String> = listed["layouts"]
         .as_array()
         .map(|layouts| {
             layouts
                 .iter()
                 .filter_map(|entry| entry["name"].as_str())
-                .map(|name| LayoutEntry {
-                    name:   name.to_owned(),
-                    active: active
-                        .as_deref()
-                        .is_some_and(|active| names_match(name, active))
-                })
+                .map(str::to_owned)
                 .collect()
         })
-        .unwrap_or_default()
+        .unwrap_or_default();
+
+    let chosen = active
+        .as_deref()
+        .and_then(|active| active_index(&names, active));
+
+    names
+        .into_iter()
+        .enumerate()
+        .map(|(index, name)| LayoutEntry {
+            active: Some(index) == chosen,
+            name
+        })
+        .collect()
 }
 
-/// Whether a listed name and the recorded one speak of the same layout.
+/// The one roster position the recorded name speaks of, if it names one.
 ///
-/// The roster lists `hyprdots/02` while the state records the bare `02`:
-/// the record keeps only the last path piece, so the comparison walks
-/// from the tail.
-fn names_match(listed: &str, recorded: &str) -> bool {
-    listed == recorded
-        || listed
-            .rsplit('/')
+/// The roster lists `hyprdots/02` while the state may record the bare
+/// `02`: an exact match wins outright, and the tail spelling is honoured
+/// only while it is unambiguous — `02` beside two differently housed
+/// `02`s marks nobody rather than everybody.
+fn active_index(names: &[String], recorded: &str) -> Option<usize> {
+    if let Some(index) = names.iter().position(|name| name == recorded) {
+        return Some(index);
+    }
+
+    let mut tails = names.iter().enumerate().filter(|(_, name)| {
+        name.rsplit('/')
             .next()
             .is_some_and(|tail| tail == recorded)
+    });
+
+    let first = tails.next().map(|(index, _)| index);
+
+    match tails.next() {
+        Some(_) => None,
+        None => first
+    }
 }
 
 /// The layout name the desktop's state records as in force.
+///
+/// Read through the same shell-variable reader the layout loader uses,
+/// so the picker's active mark and the arrangement on the bar can never
+/// disagree about what the record says.
 fn active_layout_name() -> Option<String> {
     let staterc = hydebar_proto::hyde_dirs::HydeDirs::from_env()?.staterc();
     let source = std::fs::read_to_string(staterc).ok()?;
 
-    source.lines().find_map(|line| {
-        let value = line.strip_prefix("WAYBAR_LAYOUT_NAME=")?;
-
-        Some(value.trim().trim_matches('"').to_owned())
-    })
+    hydebar_proto::shell_vars::value_of(&source, "WAYBAR_LAYOUT_NAME")
 }
 
 impl BarLayout {
@@ -147,11 +165,9 @@ impl BarLayout {
     pub fn load_entries(&mut self) -> Task<Message> {
         self.loading = true;
 
-        let previous = self.entries.clone();
-
         Task::perform(
-            async move {
-                tokio::task::spawn_blocking(move || list_layouts(&previous))
+            async {
+                tokio::task::spawn_blocking(list_layouts)
                     .await
                     .unwrap_or_default()
             },
@@ -236,9 +252,9 @@ impl BarLayout {
             } => {
                 if let Some(reason) = failure {
                     error!("the bar layout could not be changed: {reason}");
-                } else {
-                    return self.load_entries();
                 }
+
+                return self.load_entries();
             }
             Message::Listed(entries) => {
                 self.entries = entries;

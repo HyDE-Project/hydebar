@@ -238,16 +238,25 @@ async fn claim_name(
                 return Err(SessionEnd::Failed);
             }
 
-            if let Err(err) = connection
+            match connection
                 .request_name_with_flags("org.freedesktop.Notifications", flags)
                 .await
             {
-                error!("the notification bus stayed out of reach: {err}");
-                return Err(SessionEnd::Failed);
+                Ok(RequestNameReply::PrimaryOwner) => {
+                    debug!("took the notification bus over from {unit}");
+                    Ok(())
+                }
+                Ok(reply) => {
+                    error!(
+                        "the notification bus was not released yet ({reply:?}), knocking again"
+                    );
+                    Err(SessionEnd::Failed)
+                }
+                Err(err) => {
+                    error!("the notification bus stayed out of reach: {err}");
+                    Err(SessionEnd::Failed)
+                }
             }
-
-            debug!("took the notification bus over from {unit}");
-            Ok(())
         }
         Ok(reply) => {
             error!(

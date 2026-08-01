@@ -67,23 +67,25 @@ pub fn previous_wallpaper() -> String {
 ///
 /// The desktop's tool restarts its own bar as part of every switch; this
 /// bar is the bar here, so the switch is followed by putting that one back
-/// down. The state record survives, and this bar re-reads it on its watch.
+/// down — unconditionally, so a switch that stumbles half way still does
+/// not leave the other bar standing. The state record survives, and this
+/// bar re-reads it on its watch.
 #[must_use]
 pub fn next_bar_layout() -> String {
-    "hyde-shell waybar --next && hyde-shell waybar --kill".to_owned()
+    "hyde-shell waybar --next; hyde-shell waybar --kill".to_owned()
 }
 
 /// Command stepping the desktop to the previous bar layout.
 #[must_use]
 pub fn previous_bar_layout() -> String {
-    "hyde-shell waybar --prev && hyde-shell waybar --kill".to_owned()
+    "hyde-shell waybar --prev; hyde-shell waybar --kill".to_owned()
 }
 
 /// Command arranging the bar by the named layout.
 #[must_use]
 pub fn set_bar_layout(name: &str) -> String {
     format!(
-        "hyde-shell waybar --set {} && hyde-shell waybar --kill",
+        "hyde-shell waybar --set {}; hyde-shell waybar --kill",
         quote(name)
     )
 }

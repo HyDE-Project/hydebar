@@ -27,9 +27,11 @@ impl BrightnessData {
         row!(
             container(icon(icons, Icons::Brightness))
                 .padding([scale::scaled(8.0), scale::scaled(11.0)]),
-            slider(0..=100, self.current * 100 / self.max, |v| {
-                Message::Brightness(BrightnessMessage::Change(v * self.max / 100))
-            })
+            slider(
+                0..=100,
+                self.current.saturating_mul(100) / self.max.max(1),
+                |v| Message::Brightness(BrightnessMessage::Change(v * self.max.max(1) / 100))
+            )
             .step(1_u32)
             .width(Length::Fill),
         )

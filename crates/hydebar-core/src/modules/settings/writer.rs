@@ -100,7 +100,7 @@ impl From<bool> for SettingValue {
 ///
 /// Missing intermediate tables are created, existing comments and ordering
 /// are kept. The write is atomic in the sense the bar cares about: the
-/// document is rendered in full and replaces the file in one call, so
+/// document is rendered in full beside the file and renamed into place, so
 /// the watcher never observes a half written configuration.
 ///
 /// # Errors
@@ -135,7 +135,9 @@ pub fn write_settings(
         apply_setting(&mut document, path, setting)?;
     }
 
-    fs::write(file, document.to_string())?;
+    let scratch = file.with_extension("toml.tmp");
+    fs::write(&scratch, document.to_string())?;
+    fs::rename(&scratch, file)?;
 
     Ok(())
 }

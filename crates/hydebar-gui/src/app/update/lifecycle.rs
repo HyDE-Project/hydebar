@@ -119,7 +119,7 @@ impl App {
                     self.appearance_transition.advance_reporting(elapsed);
                 let hover_animating = self.hover.advance(elapsed);
                 let entering = self.entrance.advance(elapsed);
-                let _sliding = self.relayout.advance(elapsed);
+                let sliding = self.relayout.advance(elapsed);
                 let greeting_animating = self.greeting.advance(elapsed);
                 let values_fading = self.clock.tick_fade(elapsed)
                     | self.updates.tick_fade(elapsed)
@@ -140,6 +140,7 @@ impl App {
                     && !theme_animating
                     && !hover_animating
                     && !entering
+                    && !sliding
                     && !greeting_animating
                     && !hints_fading
                     && !values_fading
@@ -298,7 +299,9 @@ impl App {
                     self.register_modules();
                 }
 
-                if impact.layout_changed && self.config.appearance.animations.enabled {
+                if (impact.layout_changed || impact.custom_modules_changed)
+                    && self.config.appearance.animations.enabled
+                {
                     self.flip.borrow_mut().depart();
                     self.relayout = hydebar_core::animation::Spring::new(0.0)
                         .with_response(hydebar_core::animation::STANDARD);
