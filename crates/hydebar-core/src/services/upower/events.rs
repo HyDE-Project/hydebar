@@ -134,11 +134,7 @@ impl UPowerService {
                     }
                 }
             }
-            State::Error => {
-                tokio::time::sleep(crate::services::RECONNECT_MAX_DELAY).await;
-
-                State::Init
-            }
+            State::Error => State::Init
         }
     }
 
@@ -147,9 +143,19 @@ impl UPowerService {
         P: ServiceEventPublisher<Self> + Send
     {
         let mut state = State::Init;
+        let mut failures: u32 = 0;
 
         loop {
             state = Self::start_listening(state, publisher).await;
+
+            match &state {
+                State::Error => {
+                    failures = failures.saturating_add(1);
+                    tokio::time::sleep(crate::services::reconnect_delay(failures)).await;
+                }
+                State::Active(..) => failures = 0,
+                State::Init => {}
+            }
         }
     }
 }

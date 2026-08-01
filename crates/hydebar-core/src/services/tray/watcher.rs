@@ -234,9 +234,19 @@ where
     Fut: Future<Output = ()> + Send
 {
     let mut state = State::Init;
+    let mut failures: u32 = 0;
 
     loop {
         state = drive_state(state, &mut publisher).await;
+
+        match &state {
+            State::Error => {
+                failures = failures.saturating_add(1);
+                tokio::time::sleep(crate::services::reconnect_delay(failures)).await;
+            }
+            State::Active(_) => failures = 0,
+            State::Init => {}
+        }
     }
 }
 
@@ -294,7 +304,6 @@ where
         State::Error => {
             error!("Tray service error, retrying soon");
 
-            tokio::time::sleep(crate::services::RECONNECT_MAX_DELAY).await;
             State::Init
         }
     }

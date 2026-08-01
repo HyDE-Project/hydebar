@@ -189,7 +189,6 @@ impl BrightnessService {
             }
             State::Error => {
                 error!("Brightness service error, retrying soon");
-                tokio::time::sleep(crate::services::RECONNECT_MAX_DELAY).await;
                 Ok(State::Init)
             }
         }
@@ -228,6 +227,7 @@ impl BrightnessService {
         P: ServiceEventPublisher<Self> + Send
     {
         let mut state = State::Init;
+        let mut failures: u32 = 0;
 
         loop {
             match Self::start_listening(state, publisher).await {
@@ -243,6 +243,15 @@ impl BrightnessService {
                     let () = publisher.send(ServiceEvent::Error(err.clone())).await;
                     state = State::Error;
                 }
+            }
+
+            match &state {
+                State::Error => {
+                    failures = failures.saturating_add(1);
+                    tokio::time::sleep(crate::services::reconnect_delay(failures)).await;
+                }
+                State::Active(_) => failures = 0,
+                State::Init => {}
             }
         }
     }
