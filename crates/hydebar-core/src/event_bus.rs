@@ -23,27 +23,39 @@ impl BusEvent {
         )
     }
 
-    /// Key identifying a whole-state message an older queued one yields to.
+    /// The snapshot family this message belongs to, when it is one.
     ///
     /// The chattiest producers publish snapshots, not increments: a fresh
     /// workspace list, a fresh title, a fresh metrics sample each carry the
     /// whole truth, so a queue holding two of the same kind delivers stale
     /// state first and wastes a repaint on it. Incremental messages — the
-    /// tray above all — have no key and are never replaced.
-    const fn snapshot_key(&self) -> Option<u8> {
+    /// tray above all — have no family and are never replaced.
+    const fn snapshot_kind(&self) -> Option<SnapshotKind> {
         match self {
             Self::Module(ModuleEvent::Workspaces(
                 modules::workspaces::Message::WorkspacesChanged(_)
-            )) => Some(0),
+            )) => Some(SnapshotKind::Workspaces),
             Self::Module(ModuleEvent::WindowTitle(
                 modules::window_title::Message::TitleChanged(_)
-            )) => Some(1),
+            )) => Some(SnapshotKind::WindowTitle),
             Self::Module(ModuleEvent::SystemInfo(modules::system_info::Message::Sampled(_))) => {
-                Some(2)
+                Some(SnapshotKind::SystemInfo)
             }
             _ => None
         }
     }
+}
+
+/// The whole-state message families a fresh publication replaces in place.
+///
+/// One named variant per snapshot producer keeps [`BusEvent::snapshot_kind`]
+/// the single spot naming them: a new chatty producer adds a variant here and
+/// one match arm there, instead of inventing the next free number.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SnapshotKind {
+    Workspaces,
+    WindowTitle,
+    SystemInfo
 }
 
 #[derive(Debug, Clone)]
@@ -109,10 +121,10 @@ impl EventBusInner {
     fn enqueue(&self, event: BusEvent) {
         let mut queue = self.queue();
 
-        if let Some(key) = event.snapshot_key()
+        if let Some(kind) = event.snapshot_kind()
             && let Some(stale) = queue
                 .iter_mut()
-                .find(|queued| queued.snapshot_key() == Some(key))
+                .find(|queued| queued.snapshot_kind() == Some(kind))
         {
             *stale = event;
             drop(queue);
