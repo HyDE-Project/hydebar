@@ -253,6 +253,10 @@ impl App {
                         return task;
                     }
 
+                    if self.outputs.open_menu().is_some() {
+                        return task;
+                    }
+
                     let open = self.outputs.toggle_menu(
                         id,
                         hydebar_core::menu::MenuType::BarLayout,
@@ -276,6 +280,10 @@ impl App {
                     if self.wallpaper.is_empty() {
                         log::warn!("the theme offers no wallpapers, the picker stays closed");
 
+                        return task;
+                    }
+
+                    if self.outputs.open_menu().is_some() {
                         return task;
                     }
 

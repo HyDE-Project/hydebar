@@ -128,7 +128,9 @@ impl UPowerService {
                             let () = publisher.send(ServiceEvent::Update(event)).await;
                         }
 
-                        State::Active(conn, battery_devices)
+                        error!("the power event stream ended, reconnecting");
+
+                        State::Error
                     }
                     Err(err) => {
                         error!("Failed to listen for upower events: {err}");

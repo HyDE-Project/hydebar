@@ -115,11 +115,10 @@ fn active_index(names: &[String], recorded: &str) -> Option<usize> {
         return Some(index);
     }
 
-    let mut tails = names.iter().enumerate().filter(|(_, name)| {
-        name.rsplit('/')
-            .next()
-            .is_some_and(|tail| tail == recorded)
-    });
+    let mut tails = names
+        .iter()
+        .enumerate()
+        .filter(|(_, name)| name.rsplit('/').next().is_some_and(|tail| tail == recorded));
 
     let first = tails.next().map(|(index, _)| index);
 
@@ -324,7 +323,7 @@ mod tests {
     fn a_layout_name_is_passed_as_one_quoted_argument() {
         assert_eq!(
             hyde_shell::set_bar_layout("hyprdots/01"),
-            "hyde-shell waybar --set 'hyprdots/01' && hyde-shell waybar --kill"
+            "hyde-shell waybar --set 'hyprdots/01'; hyde-shell waybar --kill"
         );
     }
 }

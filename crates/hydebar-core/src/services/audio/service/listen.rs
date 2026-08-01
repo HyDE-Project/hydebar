@@ -3,13 +3,10 @@
 use log::{error, warn};
 use tokio::time::sleep;
 
-use super::{
-    super::{
-        AudioService,
-        backend::{AudioBackend, BackendEvent, BackendHandle, PulseAudioBackend},
-        model::{AudioData, AudioEvent, Device, Volume}
-    },
-    RECONNECT_BACKOFF
+use super::super::{
+    AudioService,
+    backend::{AudioBackend, BackendEvent, BackendHandle, PulseAudioBackend},
+    model::{AudioData, AudioEvent, Device, Volume}
 };
 use crate::services::{ServiceEvent, ServiceEventPublisher};
 
@@ -28,8 +25,19 @@ impl AudioService {
         let mut state = State::Init;
         let backend = backend;
 
+        let mut failures: u32 = 0;
+
         loop {
             state = Self::start_listening(&backend, state, publisher).await;
+
+            match &state {
+                State::Error => {
+                    failures = failures.saturating_add(1);
+                    sleep(crate::services::reconnect_delay(failures)).await;
+                }
+                State::Active(_) => failures = 0,
+                State::Init => {}
+            }
         }
     }
 
@@ -72,10 +80,7 @@ impl AudioService {
                     State::Error
                 }
             },
-            State::Error => {
-                sleep(RECONNECT_BACKOFF).await;
-                State::Init
-            }
+            State::Error => State::Init
         }
     }
 

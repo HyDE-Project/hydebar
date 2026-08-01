@@ -88,6 +88,8 @@ impl App {
             }
             Message::ToggleMenu(menu_type, id, button_ui_ref) => {
                 self.hints.dismiss();
+                self.wallpaper_pending = None;
+                self.bar_layout_pending = None;
 
                 let mut cmd = vec![];
                 match &menu_type {
@@ -110,6 +112,7 @@ impl App {
 
                             if self.wallpaper.is_empty() {
                                 self.wallpaper_pending = Some((id, button_ui_ref));
+                                cmd.push(self.outputs.close_all_menus(&self.config));
                                 self.attend_the_open_menu();
 
                                 return Task::batch(cmd);
@@ -122,6 +125,7 @@ impl App {
 
                             if self.bar_layout.is_empty() {
                                 self.bar_layout_pending = Some((id, button_ui_ref));
+                                cmd.push(self.outputs.close_all_menus(&self.config));
                                 self.attend_the_open_menu();
 
                                 return Task::batch(cmd);
@@ -185,12 +189,16 @@ impl App {
                 task
             }
             Message::CloseMenu(id) => {
+                self.wallpaper_pending = None;
+                self.bar_layout_pending = None;
                 let task = self.outputs.close_menu(id, &self.config);
                 self.attend_the_open_menu();
 
                 task
             }
             Message::CloseAllMenus => {
+                self.wallpaper_pending = None;
+                self.bar_layout_pending = None;
                 if self.outputs.menu_is_open() {
                     let task = self.outputs.close_all_menus(&self.config);
                     self.attend_the_open_menu();

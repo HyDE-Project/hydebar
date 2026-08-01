@@ -111,11 +111,23 @@ pub async fn run(command: String) -> Option<String> {
 
     log::info!("desktop command runs: {command}");
 
-    launcher::run_detached(&command)
-        .await
-        .err()
-        .map(|error| error.to_string())
+    (tokio::time::timeout(COMMAND_DEADLINE, launcher::run_detached(&command)).await).map_or_else(
+        |_| {
+            Some(format!(
+                "the desktop command gave no answer within {COMMAND_DEADLINE:?}"
+            ))
+        },
+        |outcome| outcome.err().map(|error| error.to_string())
+    )
 }
+
+/// Longest a desktop command may run before the bar stops waiting.
+///
+/// A `HyDE` theme switch legitimately takes many seconds; a command still
+/// running past this is stuck on a lock or a dead helper, and a module
+/// waiting on it forever would refuse every later press for the session.
+/// The guard dropped by the timeout ends the command's process group.
+const COMMAND_DEADLINE: std::time::Duration = std::time::Duration::from_mins(2);
 
 #[cfg(test)]
 mod tests {

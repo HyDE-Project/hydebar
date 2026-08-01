@@ -1,9 +1,6 @@
-use tokio::{sync::mpsc::Sender, time::Duration};
+use tokio::sync::mpsc::Sender;
 
 use super::{backend::BackendCommand, model::AudioData};
-
-/// Delay applied before attempting to reconnect to the backend after an error.
-const RECONNECT_BACKOFF: Duration = Duration::from_millis(500);
 
 /// Commands accepted by the audio service.
 #[derive(Debug, Clone)]

@@ -108,10 +108,11 @@ impl EventBusInner {
     /// Appends `event`, replacing its stale twin or the oldest entry if full.
     ///
     /// Publishing never fails: a snapshot overwrites the stale snapshot of
-    /// its kind in place, an overflowing queue first evicts the oldest
-    /// replaceable snapshot — dropping it is lossless, a fresher one exists —
-    /// and only then the oldest event of all. The bar keeps drawing the
-    /// latest truth instead of punishing producers for a stalled consumer.
+    /// its kind in place, and an overflowing queue lets go of its oldest
+    /// entry — any same-kind twin was already replaced above, so whatever
+    /// stands in the queue is unique and age is the only honest tiebreak.
+    /// The bar keeps drawing the latest truth instead of punishing
+    /// producers for a stalled consumer.
     fn enqueue(&self, event: BusEvent) {
         let mut queue = self.queue();
 
@@ -133,22 +134,11 @@ impl EventBusInner {
             return;
         }
 
-        if queue.len() >= self.capacity {
-            let evicted = queue
-                .iter()
-                .position(|queued| queued.snapshot_key().is_some())
-                .unwrap_or(0);
-
-            if let Some(dropped) = queue.remove(evicted) {
-                log::warn!(
-                    "event bus at capacity {}: evicted {}",
-                    self.capacity,
-                    match dropped.snapshot_key() {
-                        Some(_) => "a stale snapshot",
-                        None => "the oldest event"
-                    }
-                );
-            }
+        if queue.len() >= self.capacity && queue.pop_front().is_some() {
+            log::warn!(
+                "event bus at capacity {}: the oldest event was evicted",
+                self.capacity
+            );
         }
 
         queue.push_back(event);
