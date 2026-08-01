@@ -185,6 +185,11 @@ pub struct Themes {
     screenshots: HashMap<String, std::path::PathBuf>,
     /// Theme a switch is running for, while one is.
     switching:   Option<String>,
+    /// Theme asked for while another switch was still running.
+    ///
+    /// A press mid-switch used to vanish without a word; now it waits its
+    /// turn and runs the moment the desktop settles.
+    pending:     Option<String>,
     /// The upstream catalogue, once the menu has loaded it.
     catalogue:   Vec<gallery::GalleryTheme>,
     /// Name the machine's git identity signs work with, once known.
@@ -214,6 +219,7 @@ impl Themes {
             swatches:    HashMap::new(),
             screenshots: HashMap::new(),
             switching:   None,
+            pending:     None,
             catalogue:   Vec::new(),
             author:      None,
             installing:  None,
@@ -368,12 +374,20 @@ impl Themes {
     /// it has, so a switch that never happened is never drawn as if it had.
     pub fn update(&mut self, message: Message, config: &Config) -> Task<Message> {
         match message {
-            Message::Switch(theme) => return self.switch(theme, config),
+            Message::Switch(theme) => {
+                info!("theme chip pressed: `{theme}`");
+
+                return self.switch(theme, config);
+            }
             Message::Switched {
                 theme,
                 failure
             } => {
                 self.switched(&theme, failure.as_deref(), config);
+
+                if let Some(next) = self.pending.take() {
+                    return Task::batch([self.load_swatches(), self.switch(next, config)]);
+                }
 
                 return self.load_swatches();
             }
@@ -425,13 +439,12 @@ impl Themes {
                 theme,
                 failure
             } => {
-                if let Some(failure) = failure {
-                    report(
+                match failure {
+                    Some(failure) => report(
                         config,
                         &format!("removing the HyDE theme `{theme}` failed: {failure}")
-                    );
-                } else {
-                    info!("the HyDE theme `{theme}` is removed");
+                    ),
+                    None => report(config, &format!("the HyDE theme `{theme}` is removed"))
                 }
 
                 self.refresh();
@@ -627,9 +640,23 @@ impl Themes {
     fn switch(&mut self, theme: String, config: &Config) -> Task<Message> {
         self.refresh();
 
+        info!(
+            "deciding the switch to `{theme}` among {} installed",
+            self.hyde.themes.len()
+        );
+
         match decide_switch(&theme, self.switching.as_deref(), &self.hyde.themes) {
-            SwitchDecision::AlreadySwitching(pending) => {
-                info!("ignoring the switch to `{theme}`: `{pending}` is still being applied");
+            SwitchDecision::AlreadySwitching(running) => {
+                if self.pending.as_deref() != Some(theme.as_str())
+                    && self.switching.as_deref() != Some(theme.as_str())
+                {
+                    report(
+                        config,
+                        &format!("`{running}` is still being applied; `{theme}` is queued next")
+                    );
+                    self.pending = Some(theme);
+                }
+
                 return Task::none();
             }
             SwitchDecision::NotInstalled => {
