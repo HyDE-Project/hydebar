@@ -106,7 +106,13 @@ pub struct Appearance {
     pub text_color:               AppearanceColor,
     #[serde(default = "default_workspace_colors")]
     pub workspace_colors:         Vec<AppearanceColor>,
-    pub special_workspace_colors: Option<Vec<AppearanceColor>>
+    pub special_workspace_colors: Option<Vec<AppearanceColor>>,
+    /// Border the islands draw, adopted from the compositor's windows.
+    #[serde(skip)]
+    pub window_border:            Option<WindowBorder>,
+    /// Shadow the islands cast, adopted when the compositor casts one.
+    #[serde(skip)]
+    pub window_shadow:            Option<WindowShadow>
 }
 
 impl Default for Appearance {
@@ -134,7 +140,9 @@ impl Default for Appearance {
             warning_color:            default_warning_color(),
             text_color:               default_text_color(),
             workspace_colors:         default_workspace_colors(),
-            special_workspace_colors: None
+            special_workspace_colors: None,
+            window_border: None,
+            window_shadow: None
         }
     }
 }
@@ -292,4 +300,22 @@ mod tests {
         assert!(appearance.animations.enabled);
         assert_eq!(appearance.animations.menu_fade_duration_ms, 200);
     }
+}
+
+/// Border of a compositor window, as the islands adopt it.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct WindowBorder {
+    /// Width in the bar's layout pixels.
+    pub width: f32,
+    /// RGBA in unit range, the leading stop of the compositor gradient.
+    pub color: [f32; 4]
+}
+
+/// Shadow of a compositor window, as the islands adopt it.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct WindowShadow {
+    /// Reach of the shadow in the bar's layout pixels.
+    pub range: f32,
+    /// RGBA in unit range.
+    pub color: [f32; 4]
 }

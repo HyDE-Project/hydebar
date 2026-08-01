@@ -199,7 +199,9 @@ fn blend_appearance(from: &Appearance, to: &Appearance, t: f32) -> Appearance {
             from.special_workspace_colors.as_deref(),
             to.special_workspace_colors.as_deref(),
             t
-        )
+        ),
+        window_border:            to.window_border,
+        window_shadow:            to.window_shadow
     }
 }
 

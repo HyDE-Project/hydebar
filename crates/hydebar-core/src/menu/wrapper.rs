@@ -37,6 +37,8 @@ pub struct MenuLayout {
     pub radius:           f32,
     /// Opacity of the dimming behind the menu.
     pub menu_backdrop:    f32,
+    /// Border and shadow the window adopts from the compositor.
+    pub finish:           crate::style::IslandFinish,
     /// Height the content needs, when the caller can measure it.
     ///
     /// Given one the box is capped to the share of the screen a menu may cover
@@ -96,7 +98,7 @@ pub fn menu_wrapper<Message: Clone + 'static>(
         .width(Length::Fill)
         .max_width(width)
         .padding(padding)
-        .style(menu_container_style(layout.opacity, layout.radius));
+        .style(menu_container_style(layout.opacity, layout.radius, layout.finish));
 
     if overflows && let Some(room) = layout.available_height {
         menu_box = menu_box.height(Length::Fixed(room));

@@ -133,7 +133,8 @@ mod tests {
                 PILL_RADIUS,
                 false,
                 false,
-                1.0
+                1.0,
+                crate::style::IslandFinish::bare()
             )
         };
 

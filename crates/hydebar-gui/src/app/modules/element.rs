@@ -8,7 +8,7 @@ use hydebar_core::{
     tooltip::{TooltipInfo, tooltip_anchor}
 };
 use iced::{
-    Alignment, Border, Color, Element, Length, SurfaceId as Id,
+    Alignment, Element, Length, SurfaceId as Id,
     widget::{Row, container}
 };
 
@@ -102,7 +102,8 @@ impl App {
                             self.appearance().pill_radius(),
                             grouped,
                             false,
-                            self.hover.progress(module_name)
+                            self.hover.progress(module_name),
+                            hydebar_core::style::IslandFinish::of(self.appearance())
                         ));
 
                 attach_module_actions(button, actions, id).into()
@@ -126,20 +127,22 @@ impl App {
                 match self.appearance().style {
                     AppearanceStyle::Solid | AppearanceStyle::Gradient => container.into(),
                     AppearanceStyle::Islands => container
-                        .style(|theme| container::Style {
-                            background: Some(
-                                theme
-                                    .palette()
-                                    .background
-                                    .scale_alpha(self.appearance().opacity)
-                                    .into()
-                            ),
-                            border: Border {
-                                width:  0.0,
-                                radius: self.appearance().pill_radius().into(),
-                                color:  Color::TRANSPARENT
-                            },
-                            ..container::Style::default()
+                        .style(|theme| {
+                            let finish =
+                                hydebar_core::style::IslandFinish::of(self.appearance());
+
+                            container::Style {
+                                background: Some(
+                                    theme
+                                        .palette()
+                                        .background
+                                        .scale_alpha(self.appearance().opacity)
+                                        .into()
+                                ),
+                                border: finish.border(self.appearance().pill_radius()),
+                                shadow: finish.shadow(),
+                                ..container::Style::default()
+                            }
                         })
                         .into()
                 }
@@ -279,20 +282,22 @@ impl App {
                         .padding(self.appearance().island_padding())
                         .height(Length::Fill)
                         .align_y(Alignment::Center)
-                        .style(|theme| container::Style {
-                            background: Some(
-                                theme
-                                    .palette()
-                                    .background
-                                    .scale_alpha(self.appearance().opacity)
-                                    .into()
-                            ),
-                            border: Border {
-                                width:  0.0,
-                                radius: self.appearance().pill_radius().into(),
-                                color:  Color::TRANSPARENT
-                            },
-                            ..container::Style::default()
+                        .style(|theme| {
+                            let finish =
+                                hydebar_core::style::IslandFinish::of(self.appearance());
+
+                            container::Style {
+                                background: Some(
+                                    theme
+                                        .palette()
+                                        .background
+                                        .scale_alpha(self.appearance().opacity)
+                                        .into()
+                                ),
+                                border: finish.border(self.appearance().pill_radius()),
+                                shadow: finish.shadow(),
+                                ..container::Style::default()
+                            }
                         })
                         .into()
                 }

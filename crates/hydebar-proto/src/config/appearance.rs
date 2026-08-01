@@ -22,5 +22,5 @@ pub use metrics::{
     WORKSPACE_ACTIVE_PADDING_EM, WORKSPACE_GAP_EM, WORKSPACE_GLYPH_ADVANCE_EM,
     WORKSPACE_MIN_HEIGHT_EM, WORKSPACE_MIN_WIDTH_EM, WORKSPACE_PADDING_EM
 };
-pub use settings::Appearance;
+pub use settings::{Appearance, WindowBorder, WindowShadow};
 pub use style::AppearanceStyle;

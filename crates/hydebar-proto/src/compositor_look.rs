@@ -37,7 +37,17 @@ pub struct CompositorLook {
     /// Whether the session animates at all.
     pub animations: Option<bool>,
     /// Whether the compositor blurs at all.
-    pub blur:       Option<bool>
+    pub blur:       Option<bool>,
+    /// Width of the border around a window, in pixels.
+    pub border_width: Option<f32>,
+    /// Leading colour of the active window border, as RGBA in unit range.
+    pub border_color: Option<[f32; 4]>,
+    /// Whether windows cast a shadow at all.
+    pub shadow: Option<bool>,
+    /// Reach of the shadow, in pixels.
+    pub shadow_range: Option<f32>,
+    /// Colour of the shadow, as RGBA in unit range.
+    pub shadow_color: Option<[f32; 4]>
 }
 
 impl CompositorLook {
@@ -80,7 +90,15 @@ impl CompositorLook {
             gaps_out:   query("general:gaps_out").and_then(|answer| parse_gap(&answer)),
             gaps_in:    query("general:gaps_in").and_then(|answer| parse_gap(&answer)),
             animations: query("animations:enabled").and_then(|answer| parse_flag(&answer)),
-            blur:       query("decoration:blur:enabled").and_then(|answer| parse_flag(&answer))
+            blur:       query("decoration:blur:enabled").and_then(|answer| parse_flag(&answer)),
+            border_width: query("general:border_size").and_then(|answer| parse_number(&answer)),
+            border_color: query("general:col.active_border")
+                .and_then(|answer| parse_gradient_color(&answer)),
+            shadow: query("decoration:shadow:enabled").and_then(|answer| parse_flag(&answer)),
+            shadow_range: query("decoration:shadow:range")
+                .and_then(|answer| parse_number(&answer)),
+            shadow_color: query("decoration:shadow:color")
+                .and_then(|answer| parse_gradient_color(&answer))
         }
     }
 }
@@ -124,6 +142,35 @@ pub fn parse_gap(answer: &str) -> Option<f32> {
                 .ends_with("gap data")
                 .then(|| value.split_whitespace().next()?.parse().ok())?
         })
+}
+
+/// Reads the leading colour out of an answer like
+/// `gradient data: f2e0c8a4 f2524129 45deg`.
+///
+/// The compositor paints the border as a gradient; one border colour is all
+/// an island needs, and the leading stop is the one the eye reads at the
+/// corner the gradient starts from. The spelling is AARRGGBB.
+#[must_use]
+pub fn parse_gradient_color(answer: &str) -> Option<[f32; 4]> {
+    let value = answer
+        .lines()
+        .find_map(|line| line.split_once(':'))
+        .filter(|(kind, _)| kind.trim().ends_with("gradient data"))
+        .map(|(_, value)| value)?;
+
+    let token = value.split_whitespace().next()?;
+
+    if token.len() != 8 || !token.chars().all(|c| c.is_ascii_hexdigit()) {
+        return None;
+    }
+
+    let channel = |from: usize| {
+        u8::from_str_radix(&token[from..from + 2], 16)
+            .map(|byte| f32::from(byte) / 255.0)
+            .ok()
+    };
+
+    Some([channel(2)?, channel(4)?, channel(6)?, channel(0)?])
 }
 
 /// Reads a flag out of an answer like `bool: true`.

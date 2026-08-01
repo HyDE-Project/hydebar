@@ -79,7 +79,9 @@ fn catppuccin_mocha() -> Appearance {
         ],
         special_workspace_colors: Some(vec![AppearanceColor::Simple(HexColor::rgb(
             235, 160, 172
-        ))])
+        ))]),
+        window_border: None,
+        window_shadow: None
     }
 }
 
@@ -123,7 +125,9 @@ fn catppuccin_macchiato() -> Appearance {
         ],
         special_workspace_colors: Some(vec![AppearanceColor::Simple(HexColor::rgb(
             238, 153, 160
-        ))])
+        ))]),
+        window_border: None,
+        window_shadow: None
     }
 }
 
@@ -167,7 +171,9 @@ fn catppuccin_frappe() -> Appearance {
         ],
         special_workspace_colors: Some(vec![AppearanceColor::Simple(HexColor::rgb(
             234, 153, 156
-        ))])
+        ))]),
+        window_border: None,
+        window_shadow: None
     }
 }
 
@@ -209,7 +215,9 @@ fn catppuccin_latte() -> Appearance {
             AppearanceColor::Simple(HexColor::rgb(4, 165, 229)),
             AppearanceColor::Simple(HexColor::rgb(114, 135, 253)),
         ],
-        special_workspace_colors: Some(vec![AppearanceColor::Simple(HexColor::rgb(230, 69, 83))])
+        special_workspace_colors: Some(vec![AppearanceColor::Simple(HexColor::rgb(230, 69, 83))]),
+        window_border: None,
+        window_shadow: None
     }
 }
 
@@ -247,7 +255,9 @@ fn dracula() -> Appearance {
             AppearanceColor::Simple(HexColor::rgb(241, 250, 140)),
             AppearanceColor::Simple(HexColor::rgb(80, 250, 123)),
         ],
-        special_workspace_colors: Some(vec![AppearanceColor::Simple(HexColor::rgb(255, 85, 85))])
+        special_workspace_colors: Some(vec![AppearanceColor::Simple(HexColor::rgb(255, 85, 85))]),
+        window_border: None,
+        window_shadow: None
     }
 }
 
@@ -285,7 +295,9 @@ fn nord() -> Appearance {
             AppearanceColor::Simple(HexColor::rgb(235, 203, 139)),
             AppearanceColor::Simple(HexColor::rgb(208, 135, 112)),
         ],
-        special_workspace_colors: Some(vec![AppearanceColor::Simple(HexColor::rgb(191, 97, 106))])
+        special_workspace_colors: Some(vec![AppearanceColor::Simple(HexColor::rgb(191, 97, 106))]),
+        window_border: None,
+        window_shadow: None
     }
 }
 
@@ -323,7 +335,9 @@ fn gruvbox_dark() -> Appearance {
             AppearanceColor::Simple(HexColor::rgb(250, 189, 47)),
             AppearanceColor::Simple(HexColor::rgb(184, 187, 38)),
         ],
-        special_workspace_colors: Some(vec![AppearanceColor::Simple(HexColor::rgb(251, 73, 52))])
+        special_workspace_colors: Some(vec![AppearanceColor::Simple(HexColor::rgb(251, 73, 52))]),
+        window_border: None,
+        window_shadow: None
     }
 }
 
@@ -361,7 +375,9 @@ fn gruvbox_light() -> Appearance {
             AppearanceColor::Simple(HexColor::rgb(181, 118, 20)),
             AppearanceColor::Simple(HexColor::rgb(121, 116, 14)),
         ],
-        special_workspace_colors: Some(vec![AppearanceColor::Simple(HexColor::rgb(204, 36, 29))])
+        special_workspace_colors: Some(vec![AppearanceColor::Simple(HexColor::rgb(204, 36, 29))]),
+        window_border: None,
+        window_shadow: None
     }
 }
 
@@ -403,7 +419,9 @@ fn tokyo_night() -> Appearance {
         ],
         special_workspace_colors: Some(vec![AppearanceColor::Simple(HexColor::rgb(
             247, 118, 142
-        ))])
+        ))]),
+        window_border: None,
+        window_shadow: None
     }
 }
 
@@ -445,7 +463,9 @@ fn tokyo_night_storm() -> Appearance {
         ],
         special_workspace_colors: Some(vec![AppearanceColor::Simple(HexColor::rgb(
             247, 118, 142
-        ))])
+        ))]),
+        window_border: None,
+        window_shadow: None
     }
 }
 
@@ -485,7 +505,9 @@ fn tokyo_night_light() -> Appearance {
             AppearanceColor::Simple(HexColor::rgb(15, 155, 142)),
             AppearanceColor::Simple(HexColor::rgb(29, 130, 183)),
         ],
-        special_workspace_colors: Some(vec![AppearanceColor::Simple(HexColor::rgb(185, 29, 71))])
+        special_workspace_colors: Some(vec![AppearanceColor::Simple(HexColor::rgb(185, 29, 71))]),
+        window_border: None,
+        window_shadow: None
     }
 }
 

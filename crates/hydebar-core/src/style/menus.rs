@@ -7,20 +7,33 @@ use super::theme::backdrop_color;
 /// The radius is the themed pill radius rather than a constant of its own: a
 /// menu rounded differently from the pills it opens from, and from the windows
 /// the compositor rounds beside it, reads as a foreign surface.
-pub fn menu_container_style(opacity: f32, radius: f32) -> impl Fn(&Theme) -> Style {
-    move |theme: &Theme| Style {
-        background: Some(theme.palette().background.scale_alpha(opacity).into()),
-        border: Border {
-            color:  theme
-                .extended_palette()
-                .secondary
-                .base
-                .color
-                .scale_alpha(opacity),
-            width:  1.0,
-            radius: radius.into()
-        },
-        ..Style::default()
+pub fn menu_container_style(
+    opacity: f32,
+    radius: f32,
+    finish: super::IslandFinish
+) -> impl Fn(&Theme) -> Style {
+    move |theme: &Theme| {
+        let adopted = finish.border(radius);
+
+        Style {
+            background: Some(theme.palette().background.scale_alpha(opacity).into()),
+            border: if adopted.width > 0.0 {
+                adopted
+            } else {
+                Border {
+                    color:  theme
+                        .extended_palette()
+                        .secondary
+                        .base
+                        .color
+                        .scale_alpha(opacity),
+                    width:  1.0,
+                    radius: radius.into()
+                }
+            },
+            shadow: finish.shadow(),
+            ..Style::default()
+        }
     }
 }
 
@@ -29,7 +42,7 @@ pub fn menu_container_style(opacity: f32, radius: f32) -> impl Fn(&Theme) -> Sty
 /// A tooltip is drawn exactly like a menu box: the same colors, the same
 /// themed corner radius.
 pub fn tooltip_container_style(opacity: f32, radius: f32) -> impl Fn(&Theme) -> Style {
-    menu_container_style(opacity, radius)
+    menu_container_style(opacity, radius, super::IslandFinish::bare())
 }
 
 /// Builds the menu backdrop style closure that applies the configured opacity.
@@ -56,7 +69,7 @@ mod tests {
     #[test]
     fn menu_container_style_scales_opacity_and_takes_the_themed_radius() {
         let theme = Theme::Dark;
-        let style_fn = menu_container_style(0.3, 12.0);
+        let style_fn = menu_container_style(0.3, 12.0, super::super::IslandFinish::bare());
         let style = style_fn(&theme);
 
         let background = color(style.background);

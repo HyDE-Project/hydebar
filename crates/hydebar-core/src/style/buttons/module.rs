@@ -25,8 +25,11 @@ pub fn module_button_style(
     radius: f32,
     transparent: bool,
     focused: bool,
-    hover: f32
+    hover: f32,
+    finish: crate::style::IslandFinish
 ) -> impl Fn(&Theme, Status) -> button::Style {
+    let island = matches!(style, AppearanceStyle::Islands) && !transparent;
+
     move |theme, _status| {
         let rest = match style {
             AppearanceStyle::Solid | AppearanceStyle::Gradient => None,
@@ -53,12 +56,19 @@ pub fn module_button_style(
                     radius: radius.into(),
                     color:  theme.palette().primary
                 }
+            } else if island {
+                finish.border(radius)
             } else {
                 Border {
                     width:  0.0,
                     radius: radius.into(),
                     color:  Color::TRANSPARENT
                 }
+            },
+            shadow: if island {
+                finish.shadow()
+            } else {
+                iced::Shadow::default()
             },
             text_color: theme.palette().text,
             ..button::Style::default()
@@ -92,10 +102,10 @@ mod tests {
     fn the_configured_radius_reaches_the_border() {
         let theme = Theme::Dark;
 
-        let styled = module_button_style(AppearanceStyle::Islands, 1.0, 9.0, false, false, 0.0);
+        let styled = module_button_style(AppearanceStyle::Islands, 1.0, 9.0, false, false, 0.0, crate::style::IslandFinish::bare());
         assert_eq!(styled(&theme, Status::Active).border.radius, 9.0.into());
 
-        let focused = module_button_style(AppearanceStyle::Islands, 1.0, 9.0, false, true, 0.0);
+        let focused = module_button_style(AppearanceStyle::Islands, 1.0, 9.0, false, true, 0.0, crate::style::IslandFinish::bare());
         assert_eq!(focused(&theme, Status::Active).border.radius, 9.0.into());
     }
 
@@ -110,7 +120,8 @@ mod tests {
             appearance.pill_radius(),
             false,
             false,
-            0.0
+            0.0,
+            crate::style::IslandFinish::bare()
         );
         assert_eq!(
             styled(&Theme::Dark, Status::Active).border.radius,
@@ -123,7 +134,15 @@ mod tests {
         let theme = Theme::Dark;
         let at = |hover: f32| {
             let styled =
-                module_button_style(AppearanceStyle::Islands, 1.0, 4.0, false, false, hover);
+                module_button_style(
+                    AppearanceStyle::Islands,
+                    1.0,
+                    4.0,
+                    false,
+                    false,
+                    hover,
+                    crate::style::IslandFinish::bare()
+                );
             match styled(&theme, Status::Active).background {
                 Some(iced::Background::Color(color)) => color,
                 other => panic!("expected a colour background, got {other:?}")
@@ -145,10 +164,10 @@ mod tests {
     fn a_transparent_pill_at_rest_paints_nothing() {
         let theme = Theme::Dark;
 
-        let resting = module_button_style(AppearanceStyle::Islands, 1.0, 4.0, true, false, 0.0);
+        let resting = module_button_style(AppearanceStyle::Islands, 1.0, 4.0, true, false, 0.0, crate::style::IslandFinish::bare());
         assert!(resting(&theme, Status::Active).background.is_none());
 
-        let lit = module_button_style(AppearanceStyle::Islands, 1.0, 4.0, true, false, 1.0);
+        let lit = module_button_style(AppearanceStyle::Islands, 1.0, 4.0, true, false, 1.0, crate::style::IslandFinish::bare());
         assert!(lit(&theme, Status::Active).background.is_some());
     }
 }

@@ -86,6 +86,7 @@ impl App {
             opacity,
             radius: self.appearance().pill_radius(),
             menu_backdrop: self.appearance().menu.backdrop,
+            finish: hydebar_core::style::IslandFinish::of(self.appearance()),
             content_height: None,
             available_height: self.menu_room(),
             progress

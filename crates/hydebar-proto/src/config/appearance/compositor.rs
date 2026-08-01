@@ -4,7 +4,10 @@
 //! ten keeps rounding them by ten, while a bar that says nothing follows the
 //! windows around it.
 
-use crate::{compositor_look::CompositorLook, config::Appearance};
+use crate::{
+    compositor_look::CompositorLook,
+    config::{Appearance, WindowBorder, WindowShadow}
+};
 
 impl Appearance {
     /// Takes the look of the compositor for everything the configuration and
@@ -26,6 +29,27 @@ impl Appearance {
 
         if let Some(false) = look.animations {
             self.animations.enabled = false;
+        }
+
+        if self.window_border.is_none()
+            && let (Some(width), Some(color)) = (look.border_width, look.border_color)
+            && width > 0.0
+        {
+            self.window_border = Some(WindowBorder {
+                width: unscaled_padding(width, self.scale_factor).max(1.0),
+                color
+            });
+        }
+
+        if self.window_shadow.is_none()
+            && look.shadow == Some(true)
+            && let (Some(range), Some(color)) = (look.shadow_range, look.shadow_color)
+            && range > 0.0
+        {
+            self.window_shadow = Some(WindowShadow {
+                range: unscaled_padding(range, self.scale_factor),
+                color
+            });
         }
     }
 
@@ -71,7 +95,8 @@ mod tests {
             gaps_out:   Some(8.0),
             gaps_in:    Some(3.0),
             animations: Some(true),
-            blur:       Some(true)
+            blur:       Some(true),
+            ..CompositorLook::default()
         }
     }
 
