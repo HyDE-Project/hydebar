@@ -30,6 +30,17 @@ pub enum TrayEvent {
     None
 }
 
+/// The part of a status notifier name that survives an application restart.
+///
+/// A name reads `:1.744/org/blueman/sni`: the unique bus prefix changes on
+/// every restart of the application, while the object path is the
+/// application's own. An item that re-registers after a restart must replace
+/// its old self, not stand beside it — a missed unregistration otherwise
+/// leaves two icons of one application in the tray.
+fn app_identity(name: &str) -> &str {
+    name.split_once('/').map_or(name, |(_, path)| path)
+}
+
 #[derive(Debug, Clone)]
 pub struct StatusNotifierItem {
     pub name:   String,
@@ -215,11 +226,13 @@ impl ReadOnlyService for TrayService {
     fn update(&mut self, event: Self::UpdateEvent) {
         match event {
             TrayEvent::Registered(new_item) => {
+                let key = app_identity(&new_item.name);
+
                 match self
                     .data
                     .0
                     .iter_mut()
-                    .find(|item| item.name == new_item.name)
+                    .find(|item| app_identity(&item.name) == key)
                 {
                     Some(existing_item) => {
                         *existing_item = new_item;
