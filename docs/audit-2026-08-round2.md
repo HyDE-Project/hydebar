@@ -161,9 +161,11 @@ inside each section; a checked box means the fix has landed on `main`.
   typed failures into internal strings; callers cannot distinguish a gone
   device from refused auth (`services/network/backend/network_manager.rs`,
   `services/tray.rs`). Typed error enums at the service boundary.
-- [ ] **Two modules render outside core** (battery, tray strip in
-  `views.rs`) against the modules-own-their-rendering rule, and the
-  font-size fallback is re-inlined six times in the settings view.
+- [x] **Two modules render outside core.** The battery now draws itself
+  through its module; the tray strip stays in the bar layer by documented
+  necessity — its per-icon press carries a positioned menu reference no
+  message-generic view can construct. The font-size fallback speaks
+  through the one shared derivation everywhere.
 - [ ] **Convention debt:** the updates state file passed 1 000 lines;
   themes plus its view total ~1 900 for one module. The config glob
   re-export gives every proto type two import paths; two workspace-internal

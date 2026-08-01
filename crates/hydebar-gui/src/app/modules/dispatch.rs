@@ -1,7 +1,7 @@
 //! Per module dispatch of the view and subscription of a bar module.
 
 use hydebar_core::{
-    attention::PollSchedule, config::ModuleName, menu::MenuType, modules::OnModulePress
+    attention::PollSchedule, config::ModuleName, modules::OnModulePress
 };
 use iced::{Element, Subscription, SurfaceId as Id};
 use log::error;
@@ -70,10 +70,6 @@ impl App {
         }
     }
 
-    #[expect(
-        clippy::too_many_lines,
-        reason = "one view arm per module name, read as a single dispatch table"
-    )]
     pub(super) fn get_module_view(
         &self,
         module_name: &ModuleName,
@@ -164,21 +160,7 @@ impl App {
             }
             ModuleName::Clock => self.clock.view(&self.config.clock),
             ModuleName::HydeMenu => self.hyde_menu.view(self.icons()),
-            ModuleName::Battery => self.battery.data().map(|data| {
-                (
-                    crate::views::battery::render_battery(
-                        data,
-                        &self.config.battery,
-                        self.icons(),
-                        self.battery
-                            .percent_element(hydebar_core::components::scale::base())
-                    ),
-                    self.config
-                        .battery
-                        .open_settings_on_click
-                        .then(|| OnModulePress::ToggleMenu(MenuType::ControlCenter))
-                )
-            }),
+            ModuleName::Battery => self.battery.bar_view(&self.config.battery, self.icons()),
             ModuleName::Privacy => self.privacy.view(self.icons()),
             ModuleName::ControlCenter => self.control_center.view(self.icons()),
             ModuleName::Audio => self.control_center.audio_bar(self.icons()),
