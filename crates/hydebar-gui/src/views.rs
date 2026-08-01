@@ -113,7 +113,7 @@ pub mod tray {
         icons: &IconTheme
     ) -> Option<Element<'static, Message>> {
         let items = module.service.as_ref().filter(|s| !s.data.is_empty())?;
-        let size = scale::scaled(16.0);
+        let size = icons.size().unwrap_or_else(scale::base);
 
         Some(
             Row::with_children(items.data.iter().map(|item| {
