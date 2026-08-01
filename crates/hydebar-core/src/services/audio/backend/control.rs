@@ -41,7 +41,7 @@ impl PulseAudioServer {
         info: &libpulse_binding::context::introspect::ServerInfo<'_>,
         tx: &Sender<BackendEvent>
     ) {
-        let _ = tx.send(BackendEvent::Update(AudioEvent::ServerInfo(info.into())));
+        let _ = tx.try_send(BackendEvent::Update(AudioEvent::ServerInfo(info.into())));
     }
 
     pub(super) fn populate_and_send_sinks(
@@ -62,7 +62,7 @@ impl PulseAudioServer {
             }
             ListResult::End => {
                 debug!("New sink list {sinks:?}");
-                let _ = tx.send(BackendEvent::Update(AudioEvent::Sinks(sinks.clone())));
+                let _ = tx.try_send(BackendEvent::Update(AudioEvent::Sinks(sinks.clone())));
                 sinks.clear();
             }
             ListResult::Error => error!("Error during sink list population")
@@ -90,7 +90,7 @@ impl PulseAudioServer {
             }
             ListResult::End => {
                 debug!("New sources list {sources:?}");
-                let _ = tx.send(BackendEvent::Update(AudioEvent::Sources(sources.clone())));
+                let _ = tx.try_send(BackendEvent::Update(AudioEvent::Sources(sources.clone())));
                 sources.clear();
             }
             ListResult::Error => error!("Error during sources list population")

@@ -395,7 +395,7 @@ pub(crate) fn theme_chip<'a, M: Clone + 'static>(
             );
         }
 
-        let mut pressable = button(face)
+        let pressable = button(face)
             .padding(0)
             .style(move |theme: &Theme, _| button::Style {
                 background: None,
@@ -461,7 +461,7 @@ pub(crate) fn theme_chip<'a, M: Clone + 'static>(
             None => name.into()
         };
 
-        let mut pressable = button(container(body).width(Length::Fill))
+        let pressable = button(container(body).width(Length::Fill))
             .padding(0)
             .style(move |theme: &Theme, _| button::Style {
                 background: None,
