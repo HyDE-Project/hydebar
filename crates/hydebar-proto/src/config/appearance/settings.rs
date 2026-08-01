@@ -107,6 +107,12 @@ pub struct Appearance {
     #[serde(default = "default_workspace_colors")]
     pub workspace_colors:         Vec<AppearanceColor>,
     pub special_workspace_colors: Option<Vec<AppearanceColor>>,
+    /// Whether the islands adopt the compositor's window border.
+    ///
+    /// Off by default: a border on every island is a strong look, and the
+    /// bar should only wear it when asked.
+    #[serde(default)]
+    pub island_borders:           bool,
     /// Border the islands draw, adopted from the compositor's windows.
     #[serde(skip)]
     pub window_border:            Option<WindowBorder>,
@@ -141,6 +147,7 @@ impl Default for Appearance {
             text_color:               default_text_color(),
             workspace_colors:         default_workspace_colors(),
             special_workspace_colors: None,
+            island_borders: false,
             window_border: None,
             window_shadow: None
         }

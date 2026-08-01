@@ -80,6 +80,7 @@ fn catppuccin_mocha() -> Appearance {
         special_workspace_colors: Some(vec![AppearanceColor::Simple(HexColor::rgb(
             235, 160, 172
         ))]),
+        island_borders: false,
         window_border: None,
         window_shadow: None
     }
@@ -126,6 +127,7 @@ fn catppuccin_macchiato() -> Appearance {
         special_workspace_colors: Some(vec![AppearanceColor::Simple(HexColor::rgb(
             238, 153, 160
         ))]),
+        island_borders: false,
         window_border: None,
         window_shadow: None
     }
@@ -172,6 +174,7 @@ fn catppuccin_frappe() -> Appearance {
         special_workspace_colors: Some(vec![AppearanceColor::Simple(HexColor::rgb(
             234, 153, 156
         ))]),
+        island_borders: false,
         window_border: None,
         window_shadow: None
     }
@@ -216,6 +219,7 @@ fn catppuccin_latte() -> Appearance {
             AppearanceColor::Simple(HexColor::rgb(114, 135, 253)),
         ],
         special_workspace_colors: Some(vec![AppearanceColor::Simple(HexColor::rgb(230, 69, 83))]),
+        island_borders: false,
         window_border: None,
         window_shadow: None
     }
@@ -256,6 +260,7 @@ fn dracula() -> Appearance {
             AppearanceColor::Simple(HexColor::rgb(80, 250, 123)),
         ],
         special_workspace_colors: Some(vec![AppearanceColor::Simple(HexColor::rgb(255, 85, 85))]),
+        island_borders: false,
         window_border: None,
         window_shadow: None
     }
@@ -296,6 +301,7 @@ fn nord() -> Appearance {
             AppearanceColor::Simple(HexColor::rgb(208, 135, 112)),
         ],
         special_workspace_colors: Some(vec![AppearanceColor::Simple(HexColor::rgb(191, 97, 106))]),
+        island_borders: false,
         window_border: None,
         window_shadow: None
     }
@@ -336,6 +342,7 @@ fn gruvbox_dark() -> Appearance {
             AppearanceColor::Simple(HexColor::rgb(184, 187, 38)),
         ],
         special_workspace_colors: Some(vec![AppearanceColor::Simple(HexColor::rgb(251, 73, 52))]),
+        island_borders: false,
         window_border: None,
         window_shadow: None
     }
@@ -376,6 +383,7 @@ fn gruvbox_light() -> Appearance {
             AppearanceColor::Simple(HexColor::rgb(121, 116, 14)),
         ],
         special_workspace_colors: Some(vec![AppearanceColor::Simple(HexColor::rgb(204, 36, 29))]),
+        island_borders: false,
         window_border: None,
         window_shadow: None
     }
@@ -420,6 +428,7 @@ fn tokyo_night() -> Appearance {
         special_workspace_colors: Some(vec![AppearanceColor::Simple(HexColor::rgb(
             247, 118, 142
         ))]),
+        island_borders: false,
         window_border: None,
         window_shadow: None
     }
@@ -464,6 +473,7 @@ fn tokyo_night_storm() -> Appearance {
         special_workspace_colors: Some(vec![AppearanceColor::Simple(HexColor::rgb(
             247, 118, 142
         ))]),
+        island_borders: false,
         window_border: None,
         window_shadow: None
     }
@@ -506,6 +516,7 @@ fn tokyo_night_light() -> Appearance {
             AppearanceColor::Simple(HexColor::rgb(29, 130, 183)),
         ],
         special_workspace_colors: Some(vec![AppearanceColor::Simple(HexColor::rgb(185, 29, 71))]),
+        island_borders: false,
         window_border: None,
         window_shadow: None
     }

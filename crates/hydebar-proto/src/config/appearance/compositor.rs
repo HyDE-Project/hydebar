@@ -31,7 +31,8 @@ impl Appearance {
             self.animations.enabled = false;
         }
 
-        if self.window_border.is_none()
+        if self.island_borders
+            && self.window_border.is_none()
             && let (Some(width), Some(color)) = (look.border_width, look.border_color)
             && width > 0.0
         {

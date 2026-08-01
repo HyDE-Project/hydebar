@@ -200,6 +200,7 @@ fn blend_appearance(from: &Appearance, to: &Appearance, t: f32) -> Appearance {
             to.special_workspace_colors.as_deref(),
             t
         ),
+        island_borders:           to.island_borders,
         window_border:            to.window_border,
         window_shadow:            to.window_shadow
     }
