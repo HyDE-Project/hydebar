@@ -8,7 +8,7 @@ mod tests {
     };
 
     use iced::futures::{StreamExt, channel::mpsc, future, stream};
-    use tokio::{sync::mpsc::unbounded_channel, time::timeout};
+    use tokio::{sync::mpsc::channel, time::timeout};
 
     use crate::services::{
         ServiceEvent,
@@ -21,12 +21,12 @@ mod tests {
     #[derive(Default)]
     struct TestPipewireSource {
         receiver: Mutex<
-            Option<Result<tokio::sync::mpsc::UnboundedReceiver<PrivacyEvent>, PrivacyError>>
+            Option<Result<tokio::sync::mpsc::Receiver<PrivacyEvent>, PrivacyError>>
         >
     }
 
     impl TestPipewireSource {
-        fn new(receiver: tokio::sync::mpsc::UnboundedReceiver<PrivacyEvent>) -> Self {
+        fn new(receiver: tokio::sync::mpsc::Receiver<PrivacyEvent>) -> Self {
             Self {
                 receiver: Mutex::new(Some(Ok(receiver)))
             }
@@ -45,7 +45,7 @@ mod tests {
             Box<
                 dyn Future<
                         Output = Result<
-                            tokio::sync::mpsc::UnboundedReceiver<PrivacyEvent>,
+                            tokio::sync::mpsc::Receiver<PrivacyEvent>,
                             PrivacyError
                         >
                     > + Send
@@ -111,7 +111,7 @@ mod tests {
     #[tokio::test]
     #[ignore = "Stack overflow issue - needs investigation"]
     async fn init_succeeds_with_all_listeners() {
-        let (pipewire_tx, pipewire_rx) = unbounded_channel();
+        let (pipewire_tx, pipewire_rx) = channel(16);
         drop(pipewire_tx);
         let pipewire_source = TestPipewireSource::new(pipewire_rx);
 
@@ -155,7 +155,7 @@ mod tests {
     #[tokio::test]
     #[ignore = "Stack overflow issue - needs investigation"]
     async fn init_falls_back_when_webcam_missing() {
-        let (pipewire_tx, pipewire_rx) = unbounded_channel();
+        let (pipewire_tx, pipewire_rx) = channel(16);
         drop(pipewire_tx);
         let pipewire_source = TestPipewireSource::new(pipewire_rx);
 
@@ -178,7 +178,7 @@ mod tests {
     #[tokio::test]
     #[ignore = "Stack overflow issue - needs investigation"]
     async fn init_fails_when_output_channel_closed() {
-        let (pipewire_tx, pipewire_rx) = unbounded_channel();
+        let (pipewire_tx, pipewire_rx) = channel(16);
         drop(pipewire_tx);
         let pipewire_source = TestPipewireSource::new(pipewire_rx);
 
@@ -199,7 +199,7 @@ mod tests {
     #[tokio::test]
     #[ignore = "Stack overflow issue - needs investigation"]
     async fn pipewire_updates_are_forwarded() {
-        let (pipewire_tx, pipewire_rx) = unbounded_channel();
+        let (pipewire_tx, pipewire_rx) = channel(16);
         let pipewire_source = TestPipewireSource::new(pipewire_rx);
         let webcam_source = TestWebcamSource::new(stream::pending::<PrivacyEvent>().boxed());
         let (mut output_tx, mut output_rx) = mpsc::channel(4);
@@ -225,7 +225,7 @@ mod tests {
         };
 
         pipewire_tx
-            .send(PrivacyEvent::AddNode(ApplicationNode {
+            .try_send(PrivacyEvent::AddNode(ApplicationNode {
                 id:    1,
                 media: Media::Audio
             }))
@@ -264,7 +264,7 @@ mod tests {
     #[tokio::test]
     #[ignore = "Stack overflow issue - needs investigation"]
     async fn webcam_updates_are_forwarded() {
-        let (pipewire_tx, pipewire_rx) = unbounded_channel();
+        let (pipewire_tx, pipewire_rx) = channel(16);
         drop(pipewire_tx);
         let pipewire_source = TestPipewireSource::new(pipewire_rx);
 

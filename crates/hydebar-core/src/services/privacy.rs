@@ -8,7 +8,7 @@ use std::{ops::Deref, pin::Pin};
 pub use error::PrivacyError;
 use iced::futures::Stream;
 pub use publisher::PrivacyEventPublisher;
-use tokio::sync::mpsc::UnboundedReceiver;
+use tokio::sync::mpsc::Receiver;
 
 const WEBCAM_DEVICE_PATH: &str = "/dev/video0";
 
@@ -40,7 +40,7 @@ impl Deref for PrivacyService {
 pub(crate) enum State {
     Init,
     Active {
-        pipewire: UnboundedReceiver<PrivacyEvent>,
+        pipewire: Receiver<PrivacyEvent>,
         webcam:   PrivacyStream
     }
 }

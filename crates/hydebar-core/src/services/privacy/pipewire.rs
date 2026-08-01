@@ -2,16 +2,23 @@ use std::{future::Future, pin::Pin, thread};
 
 use pipewire::{context::ContextRc, core::CoreRc, main_loop::MainLoopRc};
 use tokio::sync::{
-    mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel},
+    mpsc::{Receiver, Sender, channel},
     oneshot
 };
 
 use crate::services::privacy::{ApplicationNode, Media, PrivacyError, PrivacyEvent};
 
+/// Events the consumer may fall behind before new ones are dropped.
+///
+/// PipeWire announces state snapshots per node; a bar that missed some while
+/// stalled re-learns the truth from the next ones, so dropping under
+/// pressure is bounded staleness — an unbounded queue was unbounded memory.
+const EVENT_CAPACITY: usize = 256;
+
 /// Provides access to privacy events published by PipeWire.
 pub(crate) trait PipewireEventSource {
     /// Future returned when subscribing to PipeWire notifications.
-    type Future<'a>: Future<Output = Result<UnboundedReceiver<PrivacyEvent>, PrivacyError>>
+    type Future<'a>: Future<Output = Result<Receiver<PrivacyEvent>, PrivacyError>>
         + Send
         + 'a
     where
@@ -26,8 +33,8 @@ pub(crate) trait PipewireEventSource {
 pub(crate) struct PipewireListener;
 
 impl PipewireListener {
-    async fn create_receiver(&self) -> Result<UnboundedReceiver<PrivacyEvent>, PrivacyError> {
-        let (tx, rx) = unbounded_channel::<PrivacyEvent>();
+    async fn create_receiver(&self) -> Result<Receiver<PrivacyEvent>, PrivacyError> {
+        let (tx, rx) = channel::<PrivacyEvent>(EVENT_CAPACITY);
         let (init_tx, init_rx) = oneshot::channel::<Result<(), PrivacyError>>();
 
         let builder = thread::Builder::new().name("privacy-pipewire".into());
@@ -41,7 +48,7 @@ impl PipewireListener {
                 }
 
                 impl PipewireRuntime {
-                    fn new(tx: UnboundedSender<PrivacyEvent>) -> Result<Self, PrivacyError> {
+                    fn new(tx: Sender<PrivacyEvent>) -> Result<Self, PrivacyError> {
                         let mainloop = MainLoopRc::new(None)
                             .map_err(|err| PrivacyError::pipewire_mainloop(err.to_string()))?;
                         let context = ContextRc::new(&mainloop, None)
@@ -73,7 +80,7 @@ impl PipewireListener {
                                                 Media::Audio
                                             }
                                         });
-                                        if let Err(error) = tx.send(event) {
+                                        if let Err(error) = tx.try_send(event) {
                                             log::warn!(
                                                 "Failed to forward PipeWire add event: {error}"
                                             );
@@ -82,7 +89,7 @@ impl PipewireListener {
                                 }
                             })
                             .global_remove(move |id| {
-                                if let Err(error) = remove_tx.send(PrivacyEvent::RemoveNode(id)) {
+                                if let Err(error) = remove_tx.try_send(PrivacyEvent::RemoveNode(id)) {
                                     log::warn!("Failed to forward PipeWire remove event: {error}");
                                 }
                             })
@@ -140,7 +147,7 @@ impl PipewireEventSource for PipewireListener {
     type Future<'a>
         = Pin<
         Box<
-            dyn Future<Output = Result<UnboundedReceiver<PrivacyEvent>, PrivacyError>> + Send + 'a
+            dyn Future<Output = Result<Receiver<PrivacyEvent>, PrivacyError>> + Send + 'a
         >
     >
     where
