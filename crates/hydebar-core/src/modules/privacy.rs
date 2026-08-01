@@ -1,9 +1,4 @@
 use std::future::{Ready, ready};
-#[cfg(test)]
-use std::sync::{
-    Arc,
-    atomic::{AtomicBool, Ordering}
-};
 
 use iced::{
     Alignment, Element,
@@ -196,132 +191,68 @@ async fn run_start_listening<P>(state: State, publisher: &mut P) -> Result<State
 where
     P: PrivacyEventPublisher + Send
 {
-    // Note: Test override mechanism removed due to GAT incompatibility with dyn
-    // trait objects Tests will now use the real implementation
     PrivacyService::start_listening(state, publisher).await
 }
 
-// Test override infrastructure removed due to GAT incompatibility with dyn
-// trait objects The tests below have been disabled and will need to be
-// rewritten to use concrete types
-
-#[cfg(test)]
-#[allow(dead_code)]
-async fn recv_event(receiver: &mut crate::event_bus::EventReceiver) -> BusEvent {
-    loop {
-        if let Some(event) = receiver.try_recv() {
-            return event;
-        }
-
-        tokio::task::yield_now().await;
-    }
-}
-
-#[cfg(test)]
-#[allow(dead_code)]
-struct CancellationProbe {
-    flag: Arc<AtomicBool>
-}
-
-#[cfg(test)]
-impl Drop for CancellationProbe {
-    fn drop(&mut self) {
-        self.flag.store(true, Ordering::SeqCst);
-    }
-}
-
-/* TESTS DISABLED - need to be rewritten without dyn trait object support
 #[cfg(test)]
 mod tests {
+    use std::num::NonZeroUsize;
+
     use super::*;
+    use crate::event_bus::EventBus;
 
-    // DISABLED: Test infrastructure removed due to GAT incompatibility
-    /*
+    fn context(bus: &EventBus) -> ModuleContext {
+        ModuleContext::new(bus.sender(), tokio::runtime::Handle::current())
+    }
+
     #[tokio::test]
-    async fn reports_listener_errors_via_event_bus() {
-        let error = PrivacyError::channel("boom");
-        let error_clone = error.clone();
+    async fn re_registration_replaces_the_listener_instead_of_stacking_one() {
+        let bus = EventBus::new(NonZeroUsize::new(4).expect("non-zero capacity"));
+        let ctx = context(&bus);
+        let mut privacy = Privacy::default();
 
-        let callback: StartListeningCallback = Arc::new(move |state, _publisher| {
-            let err = error_clone.clone();
-            Box::pin(async move {
-                let _ = state;
-                Err(err)
-            })
-        });
-        let _guard = OverrideGuard::install(Some(callback));
+        <Privacy as Module<()>>::register(&mut privacy, &ctx, ()).expect("first registration");
+        <Privacy as Module<()>>::register(&mut privacy, &ctx, ()).expect("second registration");
 
+        assert_eq!(
+            privacy.tasks.len(),
+            1,
+            "the first listener must be aborted, not accumulated"
+        );
+
+        <Privacy as Module<()>>::deregister(&mut privacy);
+    }
+
+    #[tokio::test]
+    async fn deregistration_releases_the_listener_and_the_sender() {
+        let bus = EventBus::new(NonZeroUsize::new(4).expect("non-zero capacity"));
+        let ctx = context(&bus);
+        let mut privacy = Privacy::default();
+
+        <Privacy as Module<()>>::register(&mut privacy, &ctx, ()).expect("registration");
+        <Privacy as Module<()>>::deregister(&mut privacy);
+
+        assert!(privacy.tasks.is_empty(), "the listener task must be gone");
+        assert!(privacy.sender.is_none(), "the sender must be released");
+    }
+
+    #[tokio::test]
+    async fn the_publisher_forwards_service_events_to_the_bus() {
         let bus = EventBus::new(NonZeroUsize::new(4).expect("non-zero capacity"));
         let mut receiver = bus.receiver();
-        let context = ModuleContext::new(bus.sender(), tokio::runtime::Handle::current());
+        let ctx = context(&bus);
 
-        let mut privacy = Privacy::default();
-        assert!(privacy.register(&context, ()).is_ok());
-
-        let event = timeout(Duration::from_secs(1), recv_event(&mut receiver))
+        let mut publisher = ModulePublisher::new(ctx.module_sender(ModuleEvent::Privacy));
+        publisher
+            .send(ServiceEvent::Error(PrivacyError::WebcamUnavailable))
             .await
-            .expect("privacy event should be emitted");
+            .expect("publishing never fails");
 
-        match event {
-            BusEvent::Module(BusModuleEvent::Privacy(PrivacyMessage::Event(
-                ServiceEvent::Error(err),
-            ))) => {
-                assert_eq!(err, error);
-            }
-            other => panic!("unexpected event: {other:?}"),
-        }
-
-        for task in privacy.tasks.drain(..) {
-            task.abort();
+        match receiver.try_recv() {
+            Some(BusEvent::Module(ModuleEvent::Privacy(PrivacyMessage::Event(
+                ServiceEvent::Error(PrivacyError::WebcamUnavailable)
+            )))) => {}
+            other => panic!("unexpected event: {other:?}")
         }
     }
-
-    #[tokio::test]
-    async fn aborts_previous_listener_tasks_on_re_registration() {
-        let cancelled = Arc::new(AtomicBool::new(false));
-        let call_count = Arc::new(AtomicUsize::new(0));
-
-        let callback: StartListeningCallback = Arc::new({
-            let cancelled = Arc::clone(&cancelled);
-            let call_count = Arc::clone(&call_count);
-            move |state, _publisher| {
-                call_count.fetch_add(1, Ordering::SeqCst);
-                let next_state = state;
-                let flag = Arc::clone(&cancelled);
-                Box::pin(async move {
-                    let _probe = CancellationProbe { flag };
-                    pending::<()>().await;
-                    Ok(next_state)
-                })
-            }
-        });
-        let _guard = OverrideGuard::install(Some(callback));
-
-        let bus = EventBus::new(NonZeroUsize::new(4).expect("non-zero capacity"));
-        let context = ModuleContext::new(bus.sender(), tokio::runtime::Handle::current());
-
-        let mut privacy = Privacy::default();
-        assert!(privacy.register(&context, ()).is_ok());
-        assert_eq!(call_count.load(Ordering::SeqCst), 1);
-
-        assert!(privacy.register(&context, ()).is_ok());
-        assert_eq!(call_count.load(Ordering::SeqCst), 2);
-
-        timeout(Duration::from_secs(1), async {
-            loop {
-                if cancelled.load(Ordering::SeqCst) {
-                    break;
-                }
-                tokio::task::yield_now().await;
-            }
-        })
-        .await
-        .expect("previous listener should be cancelled");
-
-        for task in privacy.tasks.drain(..) {
-            task.abort();
-        }
-    }
-    */
 }
-*/

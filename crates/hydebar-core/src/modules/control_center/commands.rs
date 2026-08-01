@@ -122,7 +122,6 @@ where
     if let (Some(handle), Some(sender), Some(service)) =
         (params.runtime, params.sender, params.service)
     {
-        let _service_name = params.service_name.to_string();
         let runner = params.runner;
         let message_ctor = params.message_ctor;
         let event_ctor = params.event_ctor;
@@ -170,7 +169,6 @@ where
     if let (Some(handle), Some(sender), Some(service)) =
         (params.runtime, params.sender, params.service)
     {
-        let _service_name = params.service_name.to_string();
         let runner = params.runner;
         let message_ctor = params.message_ctor;
         let event_ctor = params.event_ctor;
@@ -190,4 +188,21 @@ where
     }
 }
 
-// TODO: Fix broken tests
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A command sent before registration wired the runtime, the sender and
+    /// the service must be refused, not queued: there is nothing to run it
+    /// on, nobody to report to and no state to run it against.
+    #[test]
+    fn every_command_is_refused_before_registration_wires_the_center() {
+        let center = ControlCenter::default();
+
+        assert!(!center.spawn_audio_command(AudioCommand::ToggleSinkMute));
+        assert!(!center.spawn_brightness_command(BrightnessCommand::Refresh));
+        assert!(!center.spawn_network_command(NetworkCommand::ToggleWiFi));
+        assert!(!center.spawn_bluetooth_command(BluetoothCommand::Toggle));
+        assert!(!center.spawn_upower_command(PowerProfileCommand::Toggle));
+    }
+}
