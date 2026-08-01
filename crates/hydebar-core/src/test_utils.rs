@@ -13,10 +13,10 @@ use std::sync::{
 };
 
 use hydebar_proto::ports::hyprland::{
-    HyprlandError, HyprlandEventStream, HyprlandKeyboardEvent, HyprlandKeyboardState,
-    HyprlandMonitorInfo, HyprlandMonitorSelector, HyprlandPort, HyprlandWindowEvent,
-    HyprlandWindowInfo, HyprlandWorkspaceEvent, HyprlandWorkspaceInfo, HyprlandWorkspaceSelector,
-    HyprlandWorkspaceSnapshot
+    HyprlandClientInfo, HyprlandError, HyprlandEventStream, HyprlandKeyboardEvent,
+    HyprlandKeyboardState, HyprlandMonitorInfo, HyprlandMonitorSelector, HyprlandPort,
+    HyprlandWindowEvent, HyprlandWindowInfo, HyprlandWorkspaceEvent, HyprlandWorkspaceInfo,
+    HyprlandWorkspaceSelector, HyprlandWorkspaceSnapshot
 };
 use tokio_stream;
 
@@ -25,9 +25,11 @@ pub struct MockHyprlandPort {
     pub active_window:          Mutex<Option<HyprlandWindowInfo>>,
     pub workspace_snapshot:     Mutex<HyprlandWorkspaceSnapshot>,
     pub keyboard_state:         Mutex<HyprlandKeyboardState>,
+    pub clients_snapshot:       Mutex<Vec<HyprlandClientInfo>>,
     pub change_workspace_calls: AtomicUsize,
     pub toggle_special_calls:   AtomicUsize,
-    pub switch_layout_calls:    AtomicUsize
+    pub switch_layout_calls:    AtomicUsize,
+    pub focus_window_calls:     AtomicUsize
 }
 
 impl Default for MockHyprlandPort {
@@ -58,9 +60,11 @@ impl Default for MockHyprlandPort {
                 has_multiple_layouts: true,
                 active_submap:        Some("resize".into())
             }),
+            clients_snapshot:       Mutex::new(Vec::new()),
             change_workspace_calls: AtomicUsize::new(0),
             toggle_special_calls:   AtomicUsize::new(0),
-            switch_layout_calls:    AtomicUsize::new(0)
+            switch_layout_calls:    AtomicUsize::new(0),
+            focus_window_calls:     AtomicUsize::new(0)
         }
     }
 }
@@ -152,6 +156,19 @@ impl HyprlandPort for MockHyprlandPort {
 
     fn switch_keyboard_layout(&self) -> Result<(), HyprlandError> {
         self.switch_layout_calls.fetch_add(1, Ordering::SeqCst);
+        Ok(())
+    }
+
+    fn clients_snapshot(&self) -> Result<Vec<HyprlandClientInfo>, HyprlandError> {
+        Ok(self
+            .clients_snapshot
+            .lock()
+            .expect("poisoned clients snapshot lock")
+            .clone())
+    }
+
+    fn focus_window(&self, _: &str) -> Result<(), HyprlandError> {
+        self.focus_window_calls.fetch_add(1, Ordering::SeqCst);
         Ok(())
     }
 }

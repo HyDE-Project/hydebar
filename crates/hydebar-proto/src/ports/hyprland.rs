@@ -170,6 +170,21 @@ pub struct HyprlandWindowInfo {
     pub class: String
 }
 
+/// One mapped window of the compositor's client list.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct HyprlandClientInfo {
+    /// Compositor address uniquely naming the window.
+    pub address:      String,
+    /// Window class name.
+    pub class:        String,
+    /// Window title provided by the client.
+    pub title:        String,
+    /// Identifier of the workspace hosting the window.
+    pub workspace_id: i32,
+    /// Whether the window holds the focus.
+    pub focused:      bool
+}
+
 /// Snapshot of the keyboard state known to Hyprland.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct HyprlandKeyboardState {
@@ -334,6 +349,16 @@ pub enum HyprlandKeyboardEvent {
 ///     fn switch_keyboard_layout(&self) -> Result<(), HyprlandError> {
 ///         Err(HyprlandError::unsupported("switch_keyboard_layout"))
 ///     }
+///
+///     fn clients_snapshot(
+///         &self,
+///     ) -> Result<Vec<hydebar_proto::ports::hyprland::HyprlandClientInfo>, HyprlandError> {
+///         Err(HyprlandError::unsupported("clients_snapshot"))
+///     }
+///
+///     fn focus_window(&self, _: &str) -> Result<(), HyprlandError> {
+///         Err(HyprlandError::unsupported("focus_window"))
+///     }
 /// }
 ///
 /// let port: Arc<dyn HyprlandPort> = Arc::new(DummyPort);
@@ -418,6 +443,22 @@ pub trait HyprlandPort: Send + Sync {
     /// Returns a [`HyprlandError`] when the compositor rejects the request or
     /// the backend does not support it.
     fn switch_keyboard_layout(&self) -> Result<(), HyprlandError>;
+
+    /// Obtain the latest snapshot of the compositor's mapped clients.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`HyprlandError`] when the compositor cannot be queried or
+    /// the backend does not support the operation.
+    fn clients_snapshot(&self) -> Result<Vec<HyprlandClientInfo>, HyprlandError>;
+
+    /// Request Hyprland to focus the window at `address`.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`HyprlandError`] when the compositor rejects the request,
+    /// the dispatch times out, or the backend does not support it.
+    fn focus_window(&self, address: &str) -> Result<(), HyprlandError>;
 }
 
 #[cfg(test)]

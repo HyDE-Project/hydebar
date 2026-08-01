@@ -227,6 +227,7 @@ fn builtin_for(name: &str) -> Option<ModuleName> {
         "battery" => ModuleName::Battery,
         "power-profiles-daemon" => ModuleName::PowerProfile,
         "tray" => ModuleName::Tray,
+        "wlr/taskbar" => ModuleName::Taskbar,
         "privacy" => ModuleName::Privacy,
         "mpris" => ModuleName::MediaPlayer,
         "gamemode" => ModuleName::GameMode,

@@ -27,6 +27,7 @@ pub mod privacy;
 pub mod screenshot;
 pub mod settings;
 pub mod system_info;
+pub mod taskbar;
 pub mod themes;
 pub mod tray;
 pub mod updates;

@@ -7,14 +7,14 @@ mod util;
 use std::sync::Arc;
 
 use hydebar_proto::ports::hyprland::{
-    HyprlandError, HyprlandEventStream, HyprlandKeyboardEvent, HyprlandKeyboardState,
-    HyprlandMonitorInfo, HyprlandMonitorSelector, HyprlandPort, HyprlandWindowEvent,
-    HyprlandWindowInfo, HyprlandWorkspaceEvent, HyprlandWorkspaceInfo, HyprlandWorkspaceSelector,
-    HyprlandWorkspaceSnapshot
+    HyprlandClientInfo, HyprlandError, HyprlandEventStream, HyprlandKeyboardEvent,
+    HyprlandKeyboardState, HyprlandMonitorInfo, HyprlandMonitorSelector, HyprlandPort,
+    HyprlandWindowEvent, HyprlandWindowInfo, HyprlandWorkspaceEvent, HyprlandWorkspaceInfo,
+    HyprlandWorkspaceSelector, HyprlandWorkspaceSnapshot
 };
 use hyprland::{
     ctl::switch_xkb_layout::SwitchXKBLayoutCmdTypes,
-    data::{Client, Devices, Monitors, Workspace, Workspaces},
+    data::{Client, Clients, Devices, Monitors, Workspace, Workspaces},
     keyword::Keyword,
     shared::{HyprData, HyprDataActive, HyprDataActiveOptional}
 };
@@ -28,6 +28,8 @@ const CHANGE_WORKSPACE_OP: &str = "change_workspace";
 const TOGGLE_SPECIAL_OP: &str = "toggle_special_workspace";
 const KEYBOARD_STATE_OP: &str = "keyboard_state";
 const SWITCH_LAYOUT_OP: &str = "switch_keyboard_layout";
+const CLIENTS_SNAPSHOT_OP: &str = "clients_snapshot";
+const FOCUS_WINDOW_OP: &str = "focus_window";
 
 /// [`HyprlandPort`] implementation backed by the `hyprland-rs` crate.
 #[derive(Clone, Debug)]
@@ -222,6 +224,35 @@ impl HyprlandPort for HyprlandClient {
         self.execute_with_retry(SWITCH_LAYOUT_OP, || {
             hyprland::ctl::switch_xkb_layout::call("all", SwitchXKBLayoutCmdTypes::Next)
                 .map_err(|err| Self::backend_error(SWITCH_LAYOUT_OP, err))
+        })
+    }
+
+    fn clients_snapshot(&self) -> Result<Vec<HyprlandClientInfo>, HyprlandError> {
+        self.execute_with_retry(CLIENTS_SNAPSHOT_OP, || {
+            let clients =
+                Clients::get().map_err(|err| Self::backend_error(CLIENTS_SNAPSHOT_OP, err))?;
+
+            Ok(clients
+                .into_iter()
+                .filter(|client| client.mapped)
+                .map(|client| HyprlandClientInfo {
+                    address:      client.address.to_string(),
+                    class:        client.class,
+                    title:        client.title,
+                    workspace_id: client.workspace.id,
+                    focused:      client.focus_history_id == 0
+                })
+                .collect())
+        })
+    }
+
+    fn focus_window(&self, address: &str) -> Result<(), HyprlandError> {
+        let address = address.to_string();
+        self.execute_with_retry(FOCUS_WINDOW_OP, move || {
+            dispatch::dispatch_in_any_dialect(|dialect| {
+                dispatch::focus_window(dialect, &address)
+            })
+            .map_err(|err| Self::backend_error(FOCUS_WINDOW_OP, err))
         })
     }
 }

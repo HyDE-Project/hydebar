@@ -113,6 +113,14 @@ pub fn toggle_special_workspace(dialect: Dialect, name: &str) -> String {
     }
 }
 
+/// Command focusing the window at `address`, in `dialect`.
+pub fn focus_window(dialect: Dialect, address: &str) -> String {
+    match dialect {
+        Dialect::Scripted => format!("hl.dsp.focus{{window=\"address:{address}\"}}"),
+        Dialect::Legacy => format!("focuswindow address:{address}")
+    }
+}
+
 /// Sends the command `build` renders, trying each dialect until one is
 /// accepted.
 ///
@@ -211,6 +219,18 @@ mod tests {
         assert_eq!(
             (focus_monitor(Dialect::Legacy, &HyprlandMonitorSelector::Id(1))),
             "focusmonitor 1"
+        );
+    }
+
+    #[test]
+    fn a_window_address_is_rendered_in_both_dialects() {
+        assert_eq!(
+            (focus_window(Dialect::Scripted, "0xabc123")),
+            "hl.dsp.focus{window=\"address:0xabc123\"}"
+        );
+        assert_eq!(
+            (focus_window(Dialect::Legacy, "0xabc123")),
+            "focuswindow address:0xabc123"
         );
     }
 

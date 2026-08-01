@@ -172,6 +172,10 @@ impl App {
                     .update(message, self.config.appearance.animations.enabled);
                 Task::none()
             }
+            Message::Taskbar(msg) => {
+                self.taskbar.update(msg);
+                Task::none()
+            }
             Message::Tray(msg) => {
                 let close_tray = match &msg {
                     TrayMessage::Event(event) => {

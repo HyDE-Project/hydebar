@@ -180,6 +180,13 @@ impl App {
         );
         gate("tray", hosts(ModuleName::Tray), &mut self.tray, ctx, ());
         gate(
+            "taskbar",
+            hosts(ModuleName::Taskbar),
+            &mut self.taskbar,
+            ctx,
+            ()
+        );
+        gate(
             "privacy",
             hosts(ModuleName::Privacy),
             &mut self.privacy,

@@ -13,6 +13,8 @@ use super::{ReadOnlyService, Service, ServiceEvent};
 pub mod dbus;
 
 mod icon;
+
+pub use icon::icon_from_name;
 mod watcher;
 
 #[derive(Debug, Clone)]

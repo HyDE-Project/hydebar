@@ -113,9 +113,9 @@ stateful module keeps its state in core without the trait — `battery` and
 Migration ledger — still on the trait: `bar_layout`, `clock`,
 `command_button`, `control_center`, `custom_module`, `hyde_menu`,
 `keyboard_layout`, `keyboard_submap`, `media_player`, `notifications`,
-`privacy`, `screenshot`, `settings`, `system_info`, `themes`, `tray`,
-`updates`, `wallpaper`, `weather`, `window_title`, `workspaces`. A migrated
-module leaves this list in the commit that moves it.
+`privacy`, `screenshot`, `settings`, `system_info`, `taskbar`, `themes`,
+`tray`, `updates`, `wallpaper`, `weather`, `window_title`, `workspaces`. A
+migrated module leaves this list in the commit that moves it.
 
 ### Registration: one law
 

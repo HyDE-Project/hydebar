@@ -26,6 +26,7 @@ use hydebar_core::{
         screenshot::Screenshot,
         settings::Settings,
         system_info::SystemInfo,
+        taskbar::Taskbar,
         themes::Themes,
         tray::{TrayMessage, TrayModule},
         updates::Updates,
@@ -98,6 +99,7 @@ pub struct App {
     pub keyboard_layout: KeyboardLayout,
     pub keyboard_submap: KeyboardSubmap,
     pub tray: TrayModule,
+    pub taskbar: Taskbar,
     pub clock: Clock,
     pub calendar: Calendar,
     pub hyde_menu: HydeMenu,
@@ -248,6 +250,7 @@ pub enum Message {
     KeyboardLayout(modules::keyboard_layout::Message),
     KeyboardSubmap(modules::keyboard_submap::Message),
     Tray(TrayMessage),
+    Taskbar(modules::taskbar::Message),
     Clock(modules::clock::Message),
     Calendar(modules::calendar::Message),
     HydeMenu(modules::hyde_menu::Message),
@@ -275,6 +278,12 @@ pub enum Message {
 impl From<modules::control_center::Message> for Message {
     fn from(msg: modules::control_center::Message) -> Self {
         Self::ControlCenter(msg)
+    }
+}
+
+impl From<modules::taskbar::Message> for Message {
+    fn from(msg: modules::taskbar::Message) -> Self {
+        Self::Taskbar(msg)
     }
 }
 
@@ -508,8 +517,9 @@ impl App {
             window_title: WindowTitle::new(Arc::clone(&hyprland_clone), &config.window_title),
             system_info: SystemInfo::default(),
             keyboard_layout: KeyboardLayout::new(Arc::clone(&hyprland_clone)),
-            keyboard_submap: KeyboardSubmap::new(hyprland_clone),
+            keyboard_submap: KeyboardSubmap::new(Arc::clone(&hyprland_clone)),
             tray: TrayModule::default(),
+            taskbar: Taskbar::new(hyprland_clone),
             clock: Clock::default(),
             calendar: Calendar::default(),
             hyde_menu: HydeMenu::default(),

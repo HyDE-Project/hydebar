@@ -27,6 +27,7 @@ impl App {
             ModuleEvent::KeyboardLayout(message) => Message::KeyboardLayout(message),
             ModuleEvent::KeyboardSubmap(message) => Message::KeyboardSubmap(message),
             ModuleEvent::Tray(message) => Message::Tray(message),
+            ModuleEvent::Taskbar(message) => Message::Taskbar(message),
             ModuleEvent::Clock(message) => Message::Clock(message),
             ModuleEvent::Weather(message) => Message::Weather(message),
             ModuleEvent::Battery(message) => Message::Battery(message),

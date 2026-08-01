@@ -48,6 +48,7 @@ pub enum ModuleName {
     KeyboardLayout,
     KeyboardSubmap,
     Tray,
+    Taskbar,
     Clock,
     Battery,
     Privacy,
@@ -76,7 +77,7 @@ pub enum ModuleName {
 
 impl ModuleName {
     /// Every module the bar ships, in the order the editor lists them.
-    pub const BUILT_IN: [Self; 35] = [
+    pub const BUILT_IN: [Self; 36] = [
         Self::AppLauncher,
         Self::Updates,
         Self::Clipboard,
@@ -90,6 +91,7 @@ impl ModuleName {
         Self::KeyboardLayout,
         Self::KeyboardSubmap,
         Self::Tray,
+        Self::Taskbar,
         Self::Clock,
         Self::Battery,
         Self::Privacy,
@@ -131,6 +133,7 @@ impl ModuleName {
             Self::KeyboardLayout => "KeyboardLayout",
             Self::KeyboardSubmap => "KeyboardSubmap",
             Self::Tray => "Tray",
+            Self::Taskbar => "Taskbar",
             Self::Clock => "Clock",
             Self::Battery => "Battery",
             Self::Privacy => "Privacy",
@@ -178,6 +181,7 @@ impl ModuleName {
             Self::KeyboardLayout => "Keyboard layout",
             Self::KeyboardSubmap => "Keyboard submap",
             Self::Tray => "Tray",
+            Self::Taskbar => "Taskbar",
             Self::Clock => "Clock",
             Self::Battery => "Battery",
             Self::Privacy => "Privacy",
