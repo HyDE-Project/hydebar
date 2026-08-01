@@ -63,13 +63,14 @@ inside each section; a checked box means the fix has landed on `main`.
   question is asked from the blocking pool and comes back as its own
   message; the drawing thread only adopts the answer. The cache lock now
   recovers from poisoning instead of panicking the bar.
-- [ ] **Multiplexer singleton can initialise without a supervisor.** The
-  `OnceLock` publishes before the runtime check; on failure subscribers hang
-  forever with no log (`adapters/hyprland_client/listeners/multiplex.rs:41`).
-  Its config is also whatever the first caller happened to hold.
-- [ ] **Listener runtime can be built twice.** The fallible build happens
-  outside the `OnceLock` initialiser; the losing runtime and its threads
-  live on (`adapters/hyprland_client/listeners/runtime.rs:76`).
+- [x] **Multiplexer singleton can initialise without a supervisor.** The
+  singleton is published only after its supervisor is running; a failed
+  start leaves the cell empty and hands out streams that end at once, so
+  every subscriber's retry loop re-knocks instead of hanging. A later
+  caller whose configuration differs from the one in force is told so.
+- [x] **Listener runtime can be built twice.** A build gate serializes the
+  fallible construction with a double check, so racing first callers build
+  exactly one runtime.
 - [ ] **Exit is a fixed 200 ms timer.** `process::exit` fires whether or not
   surface destruction reached the compositor (`app/shutdown.rs:35`). Exit on
   a completion signal, timer as backstop.

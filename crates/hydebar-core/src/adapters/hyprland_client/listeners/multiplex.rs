@@ -6,14 +6,14 @@
 //! socket, and every subscriber taps a broadcast channel instead of the
 //! compositor.
 
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock, PoisonError};
 
 use hydebar_proto::ports::hyprland::{
     HyprlandEventStream, HyprlandKeyboardEvent, HyprlandPort, HyprlandWindowEvent,
     HyprlandWorkspaceEvent
 };
 use hyprland::{event_listener::AsyncEventListener, shared::HyprData};
-use log::warn;
+use log::{error, warn};
 use tokio::{sync::broadcast, time::sleep};
 
 use super::{
@@ -28,38 +28,90 @@ const FAN_OUT_CAPACITY: usize = 64;
 /// The multiplexed listener, started once per process.
 static MULTIPLEXER: OnceLock<Arc<Multiplexer>> = OnceLock::new();
 
+/// Serializes the fallible start so racing first callers start exactly once.
+static START_GATE: Mutex<()> = Mutex::new(());
+
 /// Broadcast taps of the one compositor connection.
 pub struct Multiplexer {
     window:    broadcast::Sender<HyprlandWindowEvent>,
     workspace: broadcast::Sender<HyprlandWorkspaceEvent>,
     keyboard:  broadcast::Sender<HyprlandKeyboardEvent>,
-    reload:    broadcast::Sender<()>
+    reload:    broadcast::Sender<()>,
+    /// The configuration the supervisor was started with.
+    ///
+    /// The first caller decides the reconnect policy for everyone; a later
+    /// caller with different ideas deserves to know its own were discarded.
+    config:    Arc<HyprlandClientConfig>
 }
 
 /// The running multiplexer, started on first use.
-fn multiplexer(client: &HyprlandClient, config: &Arc<HyprlandClientConfig>) -> Arc<Multiplexer> {
-    MULTIPLEXER
-        .get_or_init(|| {
-            let mux = Arc::new(Multiplexer {
-                window:    broadcast::channel(FAN_OUT_CAPACITY).0,
-                workspace: broadcast::channel(FAN_OUT_CAPACITY).0,
-                keyboard:  broadcast::channel(FAN_OUT_CAPACITY).0,
-                reload:    broadcast::channel(FAN_OUT_CAPACITY).0
-            });
+///
+/// The singleton is published only after its supervisor is running: a
+/// multiplexer nobody feeds would leave every subscriber waiting forever on
+/// channels that never speak.
+///
+/// # Errors
+///
+/// Returns an error when the listener runtime cannot be started; the cell
+/// stays empty, so the next subscriber retries the whole start.
+fn multiplexer(
+    client: &HyprlandClient,
+    config: &Arc<HyprlandClientConfig>
+) -> Result<Arc<Multiplexer>, hydebar_proto::ports::hyprland::HyprlandError> {
+    if let Some(mux) = MULTIPLEXER.get() {
+        warn_on_discarded_config(mux, config);
+        return Ok(Arc::clone(mux));
+    }
 
-            if let Ok(handle) = runtime::handle() {
-                let supervised = Arc::clone(&mux);
-                let client = client.clone();
-                let config = Arc::clone(config);
+    let _gate = START_GATE.lock().unwrap_or_else(PoisonError::into_inner);
 
-                handle.spawn(async move {
-                    supervise(supervised, client, config).await;
-                });
-            }
+    if let Some(mux) = MULTIPLEXER.get() {
+        warn_on_discarded_config(mux, config);
+        return Ok(Arc::clone(mux));
+    }
 
-            mux
-        })
-        .clone()
+    let handle = runtime::handle()?;
+
+    let mux = Arc::new(Multiplexer {
+        window:    broadcast::channel(FAN_OUT_CAPACITY).0,
+        workspace: broadcast::channel(FAN_OUT_CAPACITY).0,
+        keyboard:  broadcast::channel(FAN_OUT_CAPACITY).0,
+        reload:    broadcast::channel(FAN_OUT_CAPACITY).0,
+        config:    Arc::clone(config)
+    });
+
+    let supervised = Arc::clone(&mux);
+    let client = client.clone();
+    let config = Arc::clone(config);
+
+    handle.spawn(async move {
+        supervise(supervised, client, config).await;
+    });
+
+    Ok(Arc::clone(MULTIPLEXER.get_or_init(|| mux)))
+}
+
+/// Says plainly when a caller's configuration is not the one in force.
+fn warn_on_discarded_config(mux: &Multiplexer, config: &Arc<HyprlandClientConfig>) {
+    if !Arc::ptr_eq(&mux.config, config) && *mux.config != **config {
+        warn!(
+            target: "hydebar::hyprland",
+            "the compositor listener keeps the configuration of its first subscriber; \
+             this subscriber's differing reconnect policy is not in force"
+        );
+    }
+}
+
+/// The stream handed out when the multiplexer cannot start.
+///
+/// It ends immediately instead of hanging: every subscriber treats a closed
+/// stream as a failure and retries, which retries the multiplexer too.
+fn dead_stream<T: Send + 'static>(
+    err: &hydebar_proto::ports::hyprland::HyprlandError
+) -> HyprlandEventStream<T> {
+    error!(target: "hydebar::hyprland", "compositor events unavailable: {err}");
+
+    Box::pin(iced::futures::stream::empty())
 }
 
 /// Subscribes to the window events of the shared connection.
@@ -67,7 +119,10 @@ pub fn window_events(
     client: &HyprlandClient,
     config: &Arc<HyprlandClientConfig>
 ) -> HyprlandEventStream<HyprlandWindowEvent> {
-    stream_from(multiplexer(client, config).window.subscribe())
+    match multiplexer(client, config) {
+        Ok(mux) => stream_from(mux.window.subscribe()),
+        Err(err) => dead_stream(&err)
+    }
 }
 
 /// Subscribes to the workspace events of the shared connection.
@@ -75,7 +130,10 @@ pub fn workspace_events(
     client: &HyprlandClient,
     config: &Arc<HyprlandClientConfig>
 ) -> HyprlandEventStream<HyprlandWorkspaceEvent> {
-    stream_from(multiplexer(client, config).workspace.subscribe())
+    match multiplexer(client, config) {
+        Ok(mux) => stream_from(mux.workspace.subscribe()),
+        Err(err) => dead_stream(&err)
+    }
 }
 
 /// Subscribes to the keyboard events of the shared connection.
@@ -83,7 +141,10 @@ pub fn keyboard_events(
     client: &HyprlandClient,
     config: &Arc<HyprlandClientConfig>
 ) -> HyprlandEventStream<HyprlandKeyboardEvent> {
-    stream_from(multiplexer(client, config).keyboard.subscribe())
+    match multiplexer(client, config) {
+        Ok(mux) => stream_from(mux.keyboard.subscribe()),
+        Err(err) => dead_stream(&err)
+    }
 }
 
 /// Subscribes to the compositor's configuration reloads.
@@ -94,7 +155,14 @@ pub fn config_reloads(
     client: &HyprlandClient,
     config: &Arc<HyprlandClientConfig>
 ) -> broadcast::Receiver<()> {
-    multiplexer(client, config).reload.subscribe()
+    match multiplexer(client, config) {
+        Ok(mux) => mux.reload.subscribe(),
+        Err(err) => {
+            error!(target: "hydebar::hyprland", "compositor reloads unavailable: {err}");
+
+            broadcast::channel(1).0.subscribe()
+        }
+    }
 }
 
 /// Wraps a broadcast tap into the stream shape the port promises.

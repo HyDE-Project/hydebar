@@ -11,7 +11,7 @@ use std::time::Duration;
 /// let client = HyprlandClient::with_config(HyprlandClientConfig::default());
 /// assert!(client.active_window().is_ok());
 /// ```
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct HyprlandClientConfig {
     /// Maximum duration to wait for a synchronous Hyprland request to complete.
     pub request_timeout:           Duration,

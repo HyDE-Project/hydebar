@@ -14,7 +14,10 @@
 //! events it publishes reach the shared runtime by waking a task rather than by
 //! waiting for the shared reactor to come back around.
 
-use std::{sync::OnceLock, thread};
+use std::{
+    sync::{Mutex, OnceLock, PoisonError},
+    thread
+};
 
 use hydebar_proto::ports::hyprland::HyprlandError;
 use tokio::runtime::{Builder, Handle};
@@ -31,6 +34,12 @@ const LISTENER_THREAD_NAME: &str = "hydebar-hypr";
 
 /// Handle of the listener runtime, built the first time a listener starts.
 static LISTENER_RUNTIME: OnceLock<Handle> = OnceLock::new();
+
+/// Serializes the fallible build so racing first callers build exactly once.
+///
+/// The cell alone cannot: the build happens outside it, and the loser of a
+/// race would leak a whole second runtime with its threads.
+static BUILD_GATE: Mutex<()> = Mutex::new(());
 
 /// Builds the listener runtime and leaks it, returning its handle.
 ///
@@ -74,6 +83,12 @@ fn build() -> Result<Handle, HyprlandError> {
 /// Returns [`HyprlandError::Message`] when the runtime backing the listeners
 /// could not be started.
 pub fn handle() -> Result<&'static Handle, HyprlandError> {
+    if let Some(handle) = LISTENER_RUNTIME.get() {
+        return Ok(handle);
+    }
+
+    let _gate = BUILD_GATE.lock().unwrap_or_else(PoisonError::into_inner);
+
     if let Some(handle) = LISTENER_RUNTIME.get() {
         return Ok(handle);
     }
