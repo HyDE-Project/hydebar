@@ -31,20 +31,22 @@ pub fn start_blur_guard() {
     }
 
     std::thread::spawn(|| {
+        let client = crate::adapters::hyprland_client::HyprlandClient::new();
+        let mut reloads = client.config_reloads();
+
         loop {
-            let mut listener = hyprland::event_listener::EventListener::new();
-
-            listener.add_config_reloaded_handler(|| {
-                log::debug!("compositor reloaded, restating the blur rules");
-                hydebar_proto::compositor_look::CompositorLook::invalidate();
-                blur::request();
-            });
-
-            if let Err(err) = listener.start_listener() {
-                log::warn!("blur guard lost the compositor socket: {err}");
+            match reloads.blocking_recv() {
+                Ok(()) => {
+                    log::debug!("compositor reloaded, restating the blur rules");
+                    hydebar_proto::compositor_look::CompositorLook::invalidate();
+                    blur::request();
+                }
+                Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => {}
+                Err(tokio::sync::broadcast::error::RecvError::Closed) => {
+                    std::thread::sleep(RELOAD_TAIL);
+                    reloads = client.config_reloads();
+                }
             }
-
-            std::thread::sleep(RELOAD_TAIL);
         }
     });
 }

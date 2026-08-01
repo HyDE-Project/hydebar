@@ -9,16 +9,6 @@
 
 use std::time::Duration;
 
-use hydebar_proto::ports::hyprland::HyprlandError;
-use hyprland::event_listener::AsyncEventListener;
-use log::warn;
-use tokio::{
-    sync::mpsc,
-    time::{Instant, sleep}
-};
-
-use super::super::HyprlandClient;
-
 /// Longest a reconnect may be delayed, however many attempts failed before.
 const MAX_RESTART_DELAY: Duration = Duration::from_secs(30);
 
@@ -35,68 +25,6 @@ pub(crate) fn restart_delay(base: Duration, attempt: u32) -> Duration {
     let factor = 1_u32.checked_shl(attempt - 1).unwrap_or(u32::MAX);
 
     base.saturating_mul(factor).min(MAX_RESTART_DELAY)
-}
-
-/// Keeps a compositor listener connected until the consumer goes away.
-///
-/// `build` produces a freshly wired listener for every attempt; it receives the
-/// sender so the event handlers it installs can publish onto the stream.
-///
-/// A listener that stayed connected for at least `stability_window` counts as
-/// healthy, which resets the backoff: a compositor restart hours into a session
-/// should reconnect promptly rather than inherit the delay of an unrelated
-/// failure at startup.
-pub(crate) async fn supervise<T, B>(
-    operation: &'static str,
-    tx: mpsc::Sender<Result<T, HyprlandError>>,
-    base_delay: Duration,
-    stability_window: Duration,
-    build: B
-) where
-    B: Fn(&mpsc::Sender<Result<T, HyprlandError>>) -> AsyncEventListener
-{
-    let mut attempt = 0_u32;
-
-    loop {
-        let mut listener = build(&tx);
-        let started = Instant::now();
-
-        let outcome = tokio::select! {
-            biased;
-            () = tx.closed() => return,
-            result = listener.start_listener_async() => result
-        };
-
-        if started.elapsed() >= stability_window {
-            attempt = 0;
-        }
-
-        match outcome {
-            Ok(()) => {
-                warn!(
-                    target: "hydebar::hyprland",
-                    "listener connection closed, reconnecting (operation={operation})"
-                );
-            }
-            Err(err) => {
-                if tx
-                    .send(Err(HyprlandClient::backend_error(operation, err)))
-                    .await
-                    .is_err()
-                {
-                    return;
-                }
-            }
-        }
-
-        attempt = attempt.saturating_add(1);
-
-        tokio::select! {
-            biased;
-            () = tx.closed() => return,
-            () = sleep(restart_delay(base_delay, attempt)) => {}
-        }
-    }
 }
 
 #[cfg(test)]

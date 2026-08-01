@@ -20,10 +20,7 @@ use hyprland::{
 };
 
 pub use self::config::HyprlandClientConfig;
-use self::{
-    listeners::{spawn_keyboard_listener, spawn_window_listener, spawn_workspace_listener},
-    sync_ops::execute_with_retry
-};
+use self::{listeners::multiplex, sync_ops::execute_with_retry};
 
 const WORKSPACE_SNAPSHOT_OP: &str = "workspace_snapshot";
 const ACTIVE_WINDOW_OP: &str = "active_window";
@@ -83,40 +80,27 @@ impl HyprlandClient {
         execute_with_retry(&self.config, operation, func)
     }
 
-    fn spawn_window_listener(
-        &self
-    ) -> Result<HyprlandEventStream<HyprlandWindowEvent>, HyprlandError> {
-        spawn_window_listener(self.config.clone())
-    }
-
-    fn spawn_workspace_listener(
-        &self
-    ) -> Result<HyprlandEventStream<HyprlandWorkspaceEvent>, HyprlandError> {
-        spawn_workspace_listener(self.config.clone())
-    }
-
-    fn spawn_keyboard_listener(
-        &self
-    ) -> Result<HyprlandEventStream<HyprlandKeyboardEvent>, HyprlandError> {
-        spawn_keyboard_listener(self.clone(), self.config.clone())
+    /// A blocking tap of the compositor's configuration reloads.
+    pub fn config_reloads(&self) -> tokio::sync::broadcast::Receiver<()> {
+        multiplex::config_reloads(self, &self.config)
     }
 }
 
 impl HyprlandPort for HyprlandClient {
     fn window_events(&self) -> Result<HyprlandEventStream<HyprlandWindowEvent>, HyprlandError> {
-        self.spawn_window_listener()
+        Ok(multiplex::window_events(self, &self.config))
     }
 
     fn workspace_events(
         &self
     ) -> Result<HyprlandEventStream<HyprlandWorkspaceEvent>, HyprlandError> {
-        self.spawn_workspace_listener()
+        Ok(multiplex::workspace_events(self, &self.config))
     }
 
     fn keyboard_events(
         &self
     ) -> Result<HyprlandEventStream<HyprlandKeyboardEvent>, HyprlandError> {
-        self.spawn_keyboard_listener()
+        Ok(multiplex::keyboard_events(self, &self.config))
     }
 
     fn active_window(&self) -> Result<Option<HyprlandWindowInfo>, HyprlandError> {
