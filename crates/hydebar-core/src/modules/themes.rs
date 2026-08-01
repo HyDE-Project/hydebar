@@ -106,8 +106,6 @@ pub enum Message {
         /// Why the install failed, when it did.
         failure: Option<String>
     },
-    /// Mark the named installed theme for removal, pending one more press.
-    Condemn(String),
     /// Remove the named theme, previously condemned.
     Remove(String),
     /// Report that the removal of the named theme has ended.
@@ -205,8 +203,6 @@ pub struct Themes {
     author:          Option<String>,
     /// Theme an install is running for, while one is.
     installing:      Option<String>,
-    /// Theme whose removal waits for its confirming press, if one does.
-    condemned:       Option<String>,
     /// Theme an update is fetching, while one is; `None` name means all.
     #[expect(
         clippy::option_option,
@@ -243,7 +239,6 @@ impl Themes {
             catalogue:       Vec::new(),
             author:          None,
             installing:      None,
-            condemned:       None,
             updating:        None,
             list_layout:     false,
             spinner:         Spinner::default(),
@@ -374,7 +369,6 @@ impl Themes {
             &self.catalogue_index,
             self.author.as_deref(),
             self.installing.as_deref(),
-            self.condemned.as_deref(),
             self.updating.as_ref(),
             self.list_layout,
             self.spinner,
@@ -494,28 +488,7 @@ impl Themes {
 
                 return self.load_swatches();
             }
-            Message::Install(theme) => {
-                self.condemned = None;
-                return self.install(theme, config);
-            }
-            Message::Condemn(theme) => {
-                if self.switching.is_some() {
-                    report(config, "a theme switch is running, removal must wait");
-                } else if self.installing.is_some() {
-                    report(config, "a theme install is running, removal must wait");
-                } else if self.updating.is_some() {
-                    report(config, "a theme update is fetching, removal must wait");
-                } else if self.hyde.theme.as_deref() == Some(theme.as_str()) {
-                    report(
-                        config,
-                        "the theme in force cannot be removed, switch away first"
-                    );
-                } else if self.hyde.themes.contains(&theme) {
-                    self.condemned = Some(theme);
-                } else {
-                    report(config, "this theme is not installed");
-                }
-            }
+            Message::Install(theme) => return self.install(theme, config),
             Message::Remove(theme) => return self.remove(theme, config),
             Message::Removed {
                 theme,
@@ -621,19 +594,32 @@ impl Themes {
     /// Only a theme the removal was armed for goes, never the one the desktop
     /// is on, never during a switch or an install, and strictly the directory
     /// the installed list names — nothing about the path comes from outside.
-    fn remove(&mut self, theme: String, config: &Config) -> Task<Message> {
-        if self.condemned.as_deref() != Some(theme.as_str()) {
+    fn remove(&self, theme: String, config: &Config) -> Task<Message> {
+        if self.switching.is_some() {
+            report(config, "a theme switch is running, removal must wait");
             return Task::none();
         }
 
-        self.condemned = None;
+        if self.installing.is_some() {
+            report(config, "a theme install is running, removal must wait");
+            return Task::none();
+        }
 
-        if self.switching.is_some()
-            || self.installing.is_some()
-            || self.updating.is_some()
-            || self.hyde.theme.as_deref() == Some(theme.as_str())
-            || !self.hyde.themes.contains(&theme)
-        {
+        if self.updating.is_some() {
+            report(config, "a theme update is fetching, removal must wait");
+            return Task::none();
+        }
+
+        if self.hyde.theme.as_deref() == Some(theme.as_str()) {
+            report(
+                config,
+                "the theme in force cannot be removed, switch away first"
+            );
+            return Task::none();
+        }
+
+        if !self.hyde.themes.contains(&theme) {
+            report(config, "this theme is not installed");
             return Task::none();
         }
 

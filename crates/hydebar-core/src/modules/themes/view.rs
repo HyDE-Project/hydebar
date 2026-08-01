@@ -91,7 +91,6 @@ pub(super) fn view<'a>(
     catalogue_index: &HashMap<String, usize>,
     author: Option<&str>,
     installing: Option<&str>,
-    condemned: Option<&str>,
     updating: Option<&Option<String>>,
     list_layout: bool,
     spinner: Spinner,
@@ -120,7 +119,6 @@ pub(super) fn view<'a>(
             swatches,
             screenshots,
             switching,
-            condemned,
             updating,
             installing,
             catalogue,
@@ -382,7 +380,6 @@ fn themes<'a>(
     swatches: &HashMap<String, ThemeSwatch>,
     screenshots: &HashMap<String, std::path::PathBuf>,
     switching: Option<&str>,
-    condemned: Option<&str>,
     updating: Option<&Option<String>>,
     installing: Option<&str>,
     catalogue: &[super::gallery::GalleryTheme],
@@ -408,12 +405,9 @@ fn themes<'a>(
 
         for index in indices {
             let name = &state.themes[index];
-            let doomed = condemned == Some(name.as_str());
             let fetching = matches!(updating, Some(Some(one)) if one == name);
 
-            let chip_look = if doomed {
-                ThemeChip::Condemned
-            } else if fetching {
+            let chip_look = if fetching {
                 ThemeChip::Applying(spinner)
             } else if locked {
                 ThemeChip::Blocked
@@ -431,11 +425,7 @@ fn themes<'a>(
                 .map(chip_paint)
                 .or_else(|| entry.map(offer_paint));
 
-            let trash = if doomed {
-                Message::Remove(name.clone())
-            } else {
-                Message::Condemn(name.clone())
-            };
+            let trash = Message::Remove(name.clone());
 
             let chip = theme_chip(
                 name.clone(),
