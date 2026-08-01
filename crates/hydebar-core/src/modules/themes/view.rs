@@ -774,15 +774,18 @@ mod tests {
     }
 
     #[test]
-    fn no_chip_can_start_a_second_switch_while_one_runs() {
+    fn a_press_during_a_switch_is_heard_except_on_the_one_being_applied() {
         let state = state(&["Nord", "Mocha", "Latte"], Some("Nord"));
         let spinner = Spinner::default();
 
         for name in &state.themes {
-            assert!(
-                !chip_state(&state, Some("Mocha"), spinner, name).is_pressable(),
-                "{name}"
-            );
+            let pressable = chip_state(&state, Some("Mocha"), spinner, name).is_pressable();
+
+            if name == "Mocha" {
+                assert!(!pressable, "the running switch takes no second press");
+            } else {
+                assert!(pressable, "{name} must queue instead of going deaf");
+            }
         }
     }
 

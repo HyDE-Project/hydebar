@@ -295,8 +295,14 @@ impl ThemeChip {
     /// A chip that cannot start one carries no press handler at all, so the
     /// refusal is something the pointer meets rather than something the module
     /// has to log after the fact.
+    /// Whether the chip answers a press.
+    ///
+    /// A blocked chip stays pressable on purpose: a press mid-switch is
+    /// queued to run next rather than silently thrown away, so the module
+    /// has to hear about it. Only the chip already being applied stays deaf
+    /// — pressing it could mean nothing new.
     pub(crate) fn is_pressable(self) -> bool {
-        matches!(self, Self::Active | Self::Idle | Self::Condemned)
+        matches!(self, Self::Active | Self::Idle | Self::Condemned | Self::Blocked)
     }
 }
 
@@ -767,8 +773,8 @@ mod tests {
     }
 
     #[test]
-    fn a_theme_blocked_by_a_running_switch_takes_no_press() {
-        assert!(!ThemeChip::Blocked.is_pressable());
+    fn a_blocked_chip_still_hears_the_press_for_the_queue() {
+        assert!(ThemeChip::Blocked.is_pressable());
     }
 
     #[test]
