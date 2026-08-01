@@ -1,14 +1,5 @@
 use std::f32::consts::PI;
 
-/// Travelled share below which a closing menu stops drawing at all.
-///
-/// The fade spring spends its last stretch walking alphas nobody can call
-/// colour any more — yet a large dark panel blended over a bright wallpaper
-/// stays readable as a ghost all the way down. Below this share everything
-/// on the surface is faint enough that dropping it outright is invisible,
-/// and the ghost dies with the window instead of outliving it.
-const CLOSING_CUTOFF: f32 = 0.4;
-
 use hydebar_core::{
     HEIGHT,
     menu::{MenuLayout, MenuSize, MenuType, dismiss_area, menu_wrapper},
@@ -53,18 +44,12 @@ impl App {
     /// resting opacity and never animate themselves, which is what makes the
     /// box, text, icons, buttons and swatches all move as one instead of the
     /// background dying before its content.
-    /// The palette follows the cube of the travelled share on purpose. The
-    /// box behind the content fades with an extra factor — the configured
-    /// menu opacity — so on a linear palette the sliders and lists outlived
-    /// their own window and hung in the air over the desktop as afterimages.
-    /// Cubed, everything inside the window has left the screen while the
-    /// window itself is still settling into the bar.
     fn faded_menu<'a>(&self, menu: Element<'a, Message>, progress: f32) -> Element<'a, Message> {
         if progress < 1.0 {
             iced::widget::themer(
                 Some(hydebar_core::style::faded_theme(
                     &self.theme_cache,
-                    progress * progress * progress
+                    progress
                 )),
                 menu
             )
@@ -507,10 +492,7 @@ impl App {
                 let menu_opacity = self.config.appearance.menu.opacity;
                 let menu_progress = self.outputs.get_menu_progress(id);
 
-                let faded_out =
-                    self.outputs.menu_is_closing(id) && menu_progress < CLOSING_CUTOFF;
-
-                let menu = menu_info.filter(|_| !faded_out).and_then(|(menu_type, button_ui_ref)| {
+                let menu = menu_info.and_then(|(menu_type, button_ui_ref)| {
                     self.menu_page(menu_type, id, menu_opacity).map(
                         |(content, size, measured_height)| {
                             let layout = match measured_height {

@@ -9,6 +9,16 @@ use iced::{
 use super::kind::MenuType;
 use crate::{animation::Spring, config::AnimationConfig, position_button::ButtonUIRef};
 
+/// Opacity distance below which the fade counts as arrived.
+///
+/// The default spring precision is tuned for values whose last thousandths
+/// still matter. An opacity's do not — yet the spring walked them anyway,
+/// and for that whole asymptotic crawl a large dark panel stayed readable
+/// over a bright wallpaper as a ghost of the closed window. Settling at the
+/// first invisible alpha drops the surface the moment the eye is done with
+/// it, without touching the visible part of either fade.
+const SETTLE_PRECISION: f32 = 0.02;
+
 #[derive(Clone, Debug)]
 pub struct Menu {
     pub id:        Id,
@@ -34,7 +44,7 @@ impl Menu {
         Self {
             id,
             menu_info: None,
-            opacity: Spring::new(0.0),
+            opacity: Spring::new(0.0).with_precision(SETTLE_PRECISION),
             full_opacity: 0.0,
             closing: false,
             dismiss_armed: false
