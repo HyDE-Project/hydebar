@@ -159,7 +159,11 @@ fn place(
     custom: &BTreeSet<&str>,
     placed: &mut BTreeSet<ModuleName>
 ) -> Option<ModuleName> {
-    let module = module_for(name, custom)?;
+    let Some(module) = module_for(name, custom) else {
+        log::warn!("bar layout entry `{name}` has no counterpart here and is skipped");
+
+        return None;
+    };
 
     placed.insert(module.clone()).then_some(module)
 }

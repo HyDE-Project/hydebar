@@ -5,6 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+log.workspace = true
 hex_color.workspace = true
 iced.workspace = true
 masterror.workspace = true
