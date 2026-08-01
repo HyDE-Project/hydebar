@@ -107,10 +107,6 @@ mod module {
         ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
             None
         }
-
-        fn subscription(&self) -> Option<iced::Subscription<M>> {
-            None
-        }
     }
 
     impl Default for TrayModule {

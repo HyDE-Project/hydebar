@@ -13,12 +13,11 @@ use iced::{
 use log::error;
 
 use crate::{
-    ModuleContext,
     components::{
         icons::{IconTheme, Icons, icon, icon_raw},
         scale
     },
-    modules::{Module, ModuleError, OnModulePress},
+    modules::{Module, OnModulePress},
     utils::hyde_shell
 };
 
@@ -284,14 +283,6 @@ where
     type ViewData<'a> = &'a IconTheme;
     type RegistrationData<'a> = ();
 
-    fn register(
-        &mut self,
-        _ctx: &ModuleContext,
-        (): Self::RegistrationData<'_>
-    ) -> Result<(), ModuleError> {
-        Ok(())
-    }
-
     fn view(
         &self,
         icons: Self::ViewData<'_>
@@ -301,10 +292,6 @@ where
         }
 
         Some((icon(icons, Icons::BarLayout).into(), None))
-    }
-
-    fn subscription(&self) -> Option<iced::Subscription<M>> {
-        None
     }
 }
 

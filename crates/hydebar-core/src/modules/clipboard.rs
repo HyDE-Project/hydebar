@@ -1,10 +1,7 @@
 use iced::Element;
 
-use super::{Module, ModuleError, OnModulePress};
-use crate::{
-    ModuleContext,
-    components::icons::{IconTheme, Icons, icon}
-};
+use super::{Module, OnModulePress};
+use crate::components::icons::{IconTheme, Icons, icon};
 
 #[derive(Default, Debug, Clone)]
 pub struct Clipboard;
@@ -15,14 +12,6 @@ where
 {
     type ViewData<'a> = (&'a Option<String>, &'a IconTheme);
     type RegistrationData<'a> = ();
-
-    fn register(
-        &mut self,
-        _: &ModuleContext,
-        (): Self::RegistrationData<'_>
-    ) -> Result<(), ModuleError> {
-        Ok(())
-    }
 
     fn view(
         &self,
@@ -41,38 +30,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::num::NonZeroUsize;
-
     use super::*;
-    use crate::{components::icons::IconTheme, event_bus::EventBus};
-
-    #[test]
-    fn default_creates_instance() {
-        let clipboard = Clipboard;
-        assert!(matches!(clipboard, Clipboard));
-    }
-
-    #[test]
-    fn clone_creates_copy() {
-        let clipboard = Clipboard;
-        #[expect(
-            clippy::redundant_clone,
-            reason = "the test exercises the Clone derive"
-        )]
-        let cloned = clipboard.clone();
-        assert!(matches!(cloned, Clipboard));
-    }
-
-    #[test]
-    fn register_succeeds() {
-        let runtime = tokio::runtime::Runtime::new().expect("runtime");
-        let bus = EventBus::new(NonZeroUsize::new(4).expect("capacity"));
-        let ctx = ModuleContext::new(bus.sender(), runtime.handle().clone());
-        let mut clipboard = Clipboard;
-
-        let result = <Clipboard as Module<()>>::register(&mut clipboard, &ctx, ());
-        assert!(result.is_ok());
-    }
+    use crate::components::icons::IconTheme;
 
     #[test]
     fn view_returns_some_when_config_present() {

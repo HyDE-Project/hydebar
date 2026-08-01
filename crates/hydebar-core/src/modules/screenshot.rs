@@ -6,9 +6,8 @@ use iced::{
 };
 use log::{debug, error};
 
-use super::{Module, ModuleError, OnModulePress};
+use super::{Module, OnModulePress};
 use crate::{
-    ModuleContext,
     components::{
         icons::{IconTheme, Icons, icon},
         scale,
@@ -279,14 +278,6 @@ where
     type ViewData<'a> = &'a IconTheme;
     type RegistrationData<'a> = ();
 
-    fn register(
-        &mut self,
-        _: &ModuleContext,
-        (): Self::RegistrationData<'_>
-    ) -> Result<(), ModuleError> {
-        Ok(())
-    }
-
     /// Render camera icon with recording indicator.
     fn view(
         &self,
@@ -311,26 +302,11 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::num::NonZeroUsize;
-
     use super::*;
-    use crate::event_bus::EventBus;
 
     #[test]
     fn default_creates_not_recording() {
         let screenshot = Screenshot::default();
         assert!(!screenshot.is_recording);
-    }
-
-    #[test]
-    fn register_succeeds() {
-        let runtime = tokio::runtime::Runtime::new().expect("runtime");
-        let bus = EventBus::new(NonZeroUsize::new(4).expect("capacity"));
-        let ctx = ModuleContext::new(bus.sender(), runtime.handle().clone());
-        let mut screenshot = Screenshot::default();
-
-        let result =
-            <Screenshot as Module<ScreenshotMessage>>::register(&mut screenshot, &ctx, ());
-        assert!(result.is_ok());
     }
 }
