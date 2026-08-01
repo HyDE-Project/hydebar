@@ -119,9 +119,30 @@ impl Outputs {
 
             Task::batch(vec![destroy_task, destroy_fallback_task, task])
         } else {
+            let destroy_task = match self
+                .0
+                .iter()
+                .position(|(key, _, _)| key.as_deref() == Some(name))
+            {
+                Some(index) => {
+                    let old_output = self.0.swap_remove(index);
+
+                    match old_output.1 {
+                        Some(shell_info) => destroy_layer_surfaces(
+                            shell_info.id,
+                            shell_info.menu.id,
+                            shell_info.tooltip_id,
+                            shell_info.notifications_id
+                        ),
+                        _ => Task::none()
+                    }
+                }
+                _ => Task::none()
+            };
+
             self.0.push((Some(name.to_owned()), None, Some(wl_output)));
 
-            Task::none()
+            destroy_task
         }
     }
 
