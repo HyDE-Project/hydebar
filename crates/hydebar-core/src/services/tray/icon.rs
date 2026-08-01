@@ -89,10 +89,69 @@ pub(crate) fn icon_from_name(icon_name: &str) -> Option<TrayIcon> {
     }?;
 
     if icon_path.extension().is_some_and(|ext| ext == "svg") {
-        Some(TrayIcon::Svg(svg::Handle::from_path(icon_path)))
+        Some(rasterized_svg(&icon_path).unwrap_or_else(|| {
+            TrayIcon::Svg(svg::Handle::from_path(icon_path))
+        }))
     } else {
         Some(trimmed_raster(&icon_path))
     }
+}
+
+/// Side the vector icons are rasterised at, in pixels.
+///
+/// Comfortably above any bar the theme can ask for, so the renderer only
+/// ever scales down.
+const SVG_RASTER_SIDE: f32 = 96.0;
+
+/// A vector icon rendered to pixels and trimmed to its ink.
+///
+/// An SVG carries its padding inside its own view box, where no widget can
+/// reach it: two vector icons drawn into equal boxes still come out at
+/// whatever sizes their authors left around the ink. Rasterising with the
+/// same engine the renderer uses, then trimming like any pixmap, is what
+/// puts them in one row with everything else.
+fn rasterized_svg(path: &std::path::Path) -> Option<TrayIcon> {
+    let data = std::fs::read(path).ok()?;
+    let tree = resvg::usvg::Tree::from_data(&data, &resvg::usvg::Options::default()).ok()?;
+
+    let size = tree.size();
+    let scale = SVG_RASTER_SIDE / size.width().max(size.height()).max(1.0);
+    let width = (size.width() * scale).ceil() as u32;
+    let height = (size.height() * scale).ceil() as u32;
+
+    let mut pixmap = resvg::tiny_skia::Pixmap::new(width.max(1), height.max(1))?;
+    resvg::render(
+        &tree,
+        resvg::tiny_skia::Transform::from_scale(scale, scale),
+        &mut pixmap.as_mut()
+    );
+
+    let bytes = straight_alpha(pixmap.take());
+    let (width, height, bytes) = trim_transparent(pixmap_width(width), height.max(1), bytes);
+
+    Some(TrayIcon::Image(image::Handle::from_rgba(
+        width, height, bytes
+    )))
+}
+
+/// Width as the pixmap actually allocated it.
+fn pixmap_width(width: u32) -> u32 {
+    width.max(1)
+}
+
+/// Converts premultiplied RGBA to the straight alpha the renderer expects.
+fn straight_alpha(mut bytes: Vec<u8>) -> Vec<u8> {
+    for pixel in bytes.chunks_exact_mut(4) {
+        let alpha = pixel[3] as u16;
+
+        if alpha > 0 && alpha < 255 {
+            for channel in &mut pixel[..3] {
+                *channel = ((*channel as u16 * 255) / alpha).min(255) as u8;
+            }
+        }
+    }
+
+    bytes
 }
 
 /// A raster icon file, trimmed to its ink like a pixmap would be.

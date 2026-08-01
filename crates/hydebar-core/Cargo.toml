@@ -11,6 +11,7 @@ chrono.workspace = true
 dirs.workspace = true
 freedesktop-icons.workspace = true
 image.workspace = true
+resvg.workspace = true
 futures.workspace = true
 hex_color.workspace = true
 hydebar-proto = { path = "../hydebar-proto" }

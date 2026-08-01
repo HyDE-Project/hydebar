@@ -49,6 +49,7 @@ linicon-theme = "1"
 serde_json = "1"
 sha1_smol = "1"
 image = "0.25"
+resvg = { version = "0.45", default-features = false }
 regex = "1"
 serde_with = "3"
 tokio-stream = "0.1"
