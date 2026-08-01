@@ -281,9 +281,7 @@ where
     ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
         if self.loading {
             return Some((
-                crate::components::text::text(self.spinner.glyph())
-                    .size(scale::scaled(12.0))
-                    .into(),
+                crate::components::icons::icon_raw(self.spinner.glyph().to_owned()).into(),
                 None
             ));
         }
