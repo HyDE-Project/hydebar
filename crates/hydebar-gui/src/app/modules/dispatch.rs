@@ -1,8 +1,6 @@
 //! Per module dispatch of the view and subscription of a bar module.
 
-use hydebar_core::{
-    attention::PollSchedule, config::ModuleName, modules::OnModulePress
-};
+use hydebar_core::{attention::PollSchedule, config::ModuleName, modules::OnModulePress};
 use iced::{Element, Subscription, SurfaceId as Id};
 use log::error;
 

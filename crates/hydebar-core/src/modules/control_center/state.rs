@@ -10,11 +10,11 @@ use crate::{
 
 pub struct ControlCenter {
     pub(super) audio:           Option<AudioService>,
-    pub brightness:             Option<BrightnessService>,
+    pub(super) brightness:      Option<BrightnessService>,
     pub(super) network:         Option<NetworkService>,
     pub(super) bluetooth:       Option<BluetoothService>,
     pub(super) idle_inhibitor:  Option<IdleInhibitorManager>,
-    pub sub_menu:               Option<SubMenu>,
+    pub(super) sub_menu:        Option<SubMenu>,
     pub(super) upower:          Option<UPowerService>,
     pub(super) password_dialog: Option<(String, String)>,
     pub(super) sender:          Option<ModuleEventSender<Message>>,
@@ -47,6 +47,37 @@ impl std::fmt::Debug for ControlCenter {
 }
 
 impl ControlCenter {
+    /// Prepares the standalone audio window: it opens on the sink list.
+    pub const fn open_audio_menu(&mut self) {
+        self.sub_menu = Some(SubMenu::Sinks);
+    }
+
+    /// Prepares the standalone bluetooth window on its device list.
+    pub const fn open_bluetooth_menu(&mut self) {
+        self.sub_menu = Some(SubMenu::Bluetooth);
+    }
+
+    /// Folds whatever submenu a previous visit left open.
+    pub const fn close_submenu(&mut self) {
+        self.sub_menu = None;
+    }
+
+    /// Asks the backlight for a fresh reading as the window opens.
+    ///
+    /// The window shows a slider over a value that may have moved from a
+    /// keybinding since the last visit; opening is the moment to ask.
+    pub fn refresh_brightness(&mut self) -> iced::Task<Message> {
+        use crate::services::{Service, brightness::BrightnessCommand};
+
+        self.brightness
+            .as_mut()
+            .map_or_else(iced::Task::none, |brightness| {
+                brightness.command(BrightnessCommand::Refresh).map(|event| {
+                    Message::Brightness(super::BrightnessMessage::Event(Box::new(event)))
+                })
+            })
+    }
+
     /// Whether the shared idle inhibitor currently keeps the session awake.
     ///
     /// Returns `false` when the compositor refused the inhibitor protocol,

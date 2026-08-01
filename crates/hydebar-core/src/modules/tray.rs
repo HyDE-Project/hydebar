@@ -24,13 +24,13 @@ type CommandFactory =
 type TrayCommandFuture = Pin<Box<dyn Future<Output = ServiceEvent<TrayService>> + Send + 'static>>;
 
 pub struct TrayModule {
-    pub service:      Option<TrayService>,
-    pub submenus:     Vec<i32>,
-    sender:           Option<ModuleEventSender<TrayMessage>>,
-    runtime:          Option<Handle>,
-    listener_handles: Vec<JoinHandle<()>>,
-    listener_spawner: ListenerSpawner,
-    command_factory:  CommandFactory
+    pub service:         Option<TrayService>,
+    pub(crate) submenus: Vec<i32>,
+    sender:              Option<ModuleEventSender<TrayMessage>>,
+    runtime:             Option<Handle>,
+    listener_handles:    Vec<JoinHandle<()>>,
+    listener_spawner:    ListenerSpawner,
+    command_factory:     CommandFactory
 }
 
 impl std::fmt::Debug for TrayModule {
@@ -162,6 +162,11 @@ mod state {
     use crate::services::{ReadOnlyService, ServiceEvent, tray::TrayCommand};
 
     impl TrayModule {
+        /// Folds every open tray submenu, for a window opened afresh.
+        pub fn collapse_submenus(&mut self) {
+            self.submenus.clear();
+        }
+
         pub(super) fn abort_listener_handles(&mut self) {
             for handle in self.listener_handles.drain(..) {
                 handle.abort();

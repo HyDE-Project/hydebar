@@ -2,11 +2,7 @@
 
 use hydebar_core::{
     menu::MenuType,
-    modules::{
-        self,
-        control_center::{SubMenu, brightness::BrightnessMessage}
-    },
-    services::brightness::BrightnessCommand
+    modules::{self, control_center::SubMenu}
 };
 use iced::Task;
 
@@ -99,13 +95,13 @@ impl App {
                         self.updates.collapse();
                     }
                     MenuType::Tray(name) => {
-                        if let Some(_tray) = self
+                        if self
                             .tray
                             .service
                             .as_ref()
-                            .and_then(|t| t.iter().find(|t| &t.name == name))
+                            .is_some_and(|t| t.iter().any(|t| &t.name == name))
                         {
-                            self.tray.submenus.clear();
+                            self.tray.collapse_submenus();
                         }
                     }
                     MenuType::Wallpaper => {
@@ -120,14 +116,14 @@ impl App {
                         }
                     }
                     MenuType::Audio => {
-                        self.control_center.sub_menu = Some(SubMenu::Sinks);
+                        self.control_center.open_audio_menu();
                     }
                     MenuType::HydeMenu => {
                         cmd.push(self.hyde_menu.reload().map(Message::HydeMenu));
                     }
                     MenuType::Network => {
                         if self.outputs.open_menu() != Some(&MenuType::Network) {
-                            self.control_center.sub_menu = None;
+                            self.control_center.close_submenu();
                             self.control_center.update(
                                 modules::control_center::Message::ToggleSubMenu(SubMenu::Wifi),
                                 &self.config.control_center,
@@ -137,23 +133,15 @@ impl App {
                         }
                     }
                     MenuType::Bluetooth => {
-                        self.control_center.sub_menu = Some(SubMenu::Bluetooth);
+                        self.control_center.open_bluetooth_menu();
                     }
                     MenuType::ControlCenter => {
-                        self.control_center.sub_menu = None;
-
-                        if let Some(brightness) = self.control_center.brightness.as_mut() {
-                            use hydebar_core::services::Service;
-                            cmd.push(brightness.command(BrightnessCommand::Refresh).map(
-                                |event| {
-                                    Message::ControlCenter(
-                                        modules::control_center::Message::Brightness(
-                                            BrightnessMessage::Event(Box::new(event))
-                                        )
-                                    )
-                                }
-                            ));
-                        }
+                        self.control_center.close_submenu();
+                        cmd.push(
+                            self.control_center
+                                .refresh_brightness()
+                                .map(Message::ControlCenter)
+                        );
                     }
                     _ => {}
                 }
