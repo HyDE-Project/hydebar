@@ -130,6 +130,19 @@ where
         shell: &mut Shell<'_, Message>,
         viewport: &Rectangle
     ) {
+        let is_over = cursor.is_over(layout.bounds());
+
+        if matches!(
+            event,
+            Event::Mouse(mouse::Event::ButtonPressed(_))
+                | Event::Touch(touch::Event::FingerPressed { .. })
+        ) && is_over
+        {
+            let state = tree.state.downcast_mut::<State>();
+            state.pressed = true;
+            shell.publish(self.on_press.clone());
+        }
+
         self.content.as_widget_mut().update(
             &mut tree.children[0],
             event,
@@ -141,19 +154,9 @@ where
             viewport
         );
 
-        let is_over = cursor.is_over(layout.bounds());
         let state = tree.state.downcast_mut::<State>();
 
         match event {
-            Event::Mouse(mouse::Event::ButtonPressed(_))
-            | Event::Touch(touch::Event::FingerPressed {
-                ..
-            }) => {
-                if is_over {
-                    state.pressed = true;
-                    shell.publish(self.on_press.clone());
-                }
-            }
             Event::Mouse(mouse::Event::ButtonReleased(_))
             | Event::Touch(touch::Event::FingerLifted {
                 ..

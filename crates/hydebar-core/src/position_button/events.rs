@@ -50,10 +50,13 @@ pub(super) fn update<Message, Theme, Renderer>(
                 mouse::Button::Left | mouse::Button::Right | mouse::Button::Middle
             ) =>
         {
-            if button.handler(*pressed).is_some() && cursor.is_over(layout.bounds()) {
+            if let Some(handler) = button.handler(*pressed)
+                && cursor.is_over(layout.bounds())
+            {
                 let state = tree.state.downcast_mut::<State>();
 
                 *state.hold_mut(*pressed) = true;
+                publish(handler, layout, viewport, shell);
             }
         }
         Event::Touch(touch::Event::FingerPressed {
@@ -71,14 +74,10 @@ pub(super) fn update<Message, Theme, Renderer>(
                 mouse::Button::Left | mouse::Button::Right | mouse::Button::Middle
             ) =>
         {
-            if let Some(handler) = button.handler(*released) {
+            if button.handler(*released).is_some() {
                 let state = tree.state.downcast_mut::<State>();
 
-                let was_pressed = std::mem::take(state.hold_mut(*released));
-
-                if was_pressed && cursor.is_over(layout.bounds()) {
-                    publish(handler, layout, viewport, shell);
-                }
+                let _ = std::mem::take(state.hold_mut(*released));
             }
         }
         Event::Touch(touch::Event::FingerLifted {
