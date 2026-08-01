@@ -34,8 +34,52 @@ pub fn start_orphan_reaper() {
         .ok();
 }
 
-/// The children of this process that already exited, by scanning `/proc`.
+/// The children of this process that already exited.
+///
+/// The kernel lists a task's children in one file per thread; reading those
+/// costs a handful of syscalls where the old walk paid one stat per process
+/// on the machine, every period, forever. The walk remains as the fallback
+/// for a kernel built without that file.
 fn zombie_children() -> std::collections::HashSet<i32> {
+    match children_of_self() {
+        Some(children) => children
+            .into_iter()
+            .filter(|pid| {
+                std::fs::read_to_string(format!("/proc/{pid}/stat"))
+                    .ok()
+                    .and_then(|stat| {
+                        Some(stat.rsplit(')').next()?.split_whitespace().next()? == "Z")
+                    })
+                    .unwrap_or(false)
+            })
+            .collect(),
+        None => zombie_children_by_scan()
+    }
+}
+
+/// Every child pid the kernel lists for this process, across its threads.
+fn children_of_self() -> Option<std::collections::HashSet<i32>> {
+    let tasks = std::fs::read_dir("/proc/self/task").ok()?;
+    let mut children = std::collections::HashSet::new();
+    let mut listed = false;
+
+    for task in tasks.flatten() {
+        let Ok(list) = std::fs::read_to_string(task.path().join("children")) else {
+            continue;
+        };
+
+        listed = true;
+        children.extend(
+            list.split_whitespace()
+                .filter_map(|pid| pid.parse::<i32>().ok())
+        );
+    }
+
+    listed.then_some(children)
+}
+
+/// The children of this process that already exited, by scanning `/proc`.
+fn zombie_children_by_scan() -> std::collections::HashSet<i32> {
     let me = std::process::id() as i32;
     let mut zombies = std::collections::HashSet::new();
 
