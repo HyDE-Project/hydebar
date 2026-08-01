@@ -286,7 +286,13 @@ pub enum ThemeChip {
     /// A theme that cannot be pressed while another switch runs.
     Blocked,
     /// A theme whose removal waits for one confirming press.
-    Condemned
+    Condemned,
+    /// A card that answers no press of its own.
+    ///
+    /// The gallery wears it: applying and removing belong to installed
+    /// themes, installing belongs to the download button alone, so the
+    /// card body itself has nothing to say to a click.
+    Inert
 }
 
 impl ThemeChip {
@@ -545,7 +551,7 @@ fn card_colors(
             Some(_) => (base, text_colour, true),
             None => (palette.primary.base.color, palette.primary.base.text, false)
         },
-        ThemeChip::Idle => (base, text_colour, false),
+        ThemeChip::Idle | ThemeChip::Inert => (base, text_colour, false),
         ThemeChip::Applying(spinner) => match paint_colors {
             Some(_) => (base.scale_alpha(spinner.pulse()), text_colour, true),
             None => (

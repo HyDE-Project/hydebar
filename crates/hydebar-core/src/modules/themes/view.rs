@@ -257,19 +257,17 @@ fn offer<'a>(
                 .get(&canonical(name))
                 .map(|&index| &catalogue[index]);
 
-            let chip_state = if installing == Some(name.as_str()) {
+            let chip_look = if installing == Some(name.as_str()) {
                 ThemeChip::Applying(spinner)
-            } else if busy {
-                ThemeChip::Blocked
             } else {
-                ThemeChip::Idle
+                ThemeChip::Inert
             };
 
             row = row.push(theme_chip(
                 name.clone(),
                 authored_badge(entry, author),
                 Message::Install(name.clone()),
-                chip_state,
+                chip_look,
                 font_size,
                 opacity,
                 cell,
@@ -413,18 +411,16 @@ fn themes<'a>(
             let doomed = condemned == Some(name.as_str());
             let fetching = matches!(updating, Some(Some(one)) if one == name);
 
-            let (chip_state, press) = if doomed {
-                (ThemeChip::Condemned, Message::Remove(name.clone()))
+            let chip_look = if doomed {
+                ThemeChip::Condemned
             } else if fetching {
-                (ThemeChip::Applying(spinner), Message::Switch(name.clone()))
+                ThemeChip::Applying(spinner)
             } else if locked {
-                (ThemeChip::Blocked, Message::Switch(name.clone()))
+                ThemeChip::Blocked
             } else {
-                (
-                    chip_state(state, switching, spinner, name),
-                    Message::Switch(name.clone())
-                )
+                chip_state(state, switching, spinner, name)
             };
+            let press = Message::Switch(name.clone());
 
             let entry = catalogue_index
                 .get(&canonical(name))
@@ -445,7 +441,7 @@ fn themes<'a>(
                 name.clone(),
                 authored_badge(entry, author),
                 press,
-                chip_state,
+                chip_look,
                 font_size,
                 opacity,
                 cell,
@@ -462,9 +458,7 @@ fn themes<'a>(
                 list_layout
             );
 
-            row = row.push(
-                iced::widget::mouse_area(chip).on_right_press(Message::Condemn(name.clone()))
-            );
+            row = row.push(chip);
         }
 
         block = block.push(row);
