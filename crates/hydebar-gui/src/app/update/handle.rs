@@ -65,6 +65,9 @@ impl App {
             Message::OutputEvent(_)
             | Message::ScreenMeasured {
                 ..
+            }
+            | Message::RemeasureScreen {
+                ..
             } => self.update_outputs(message),
             other => self.update_modules(other)
         }

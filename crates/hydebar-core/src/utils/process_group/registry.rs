@@ -54,10 +54,10 @@ impl GroupRegistry {
 
     /// Reports whether the group led by `pid` is recorded.
     ///
-    /// Only the tests observe the registry this way; live code either records
-    /// or ends groups and never has to ask.
-    #[cfg(test)]
-    pub(super) fn contains(&self, pid: u32) -> bool {
+    /// The orphan reaper asks before waiting on a zombie: a recorded group
+    /// has a waiter of its own, and stealing its exit status would turn
+    /// that waiter's report into a phantom error.
+    pub(crate) fn contains(&self, pid: u32) -> bool {
         self.slots
             .iter()
             .any(|slot| slot.load(Ordering::Acquire) == pid)

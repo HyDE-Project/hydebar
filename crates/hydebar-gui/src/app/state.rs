@@ -183,6 +183,11 @@ pub enum Message {
     /// A compositor frame callback carrying the frame timestamp.
     Frame(Instant),
     BusFlushed(BusFlushOutcome),
+    /// A failed screen measurement asks itself again after a pause.
+    RemeasureScreen {
+        /// Screen the question is about.
+        name: String
+    },
     /// The compositor answered a screen geometry question asked off-thread.
     ScreenMeasured {
         /// Screen the question was about.

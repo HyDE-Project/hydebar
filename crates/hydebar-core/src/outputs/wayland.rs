@@ -200,7 +200,7 @@ pub fn create_layer_surfaces<Message: 'static>(
     configured_height: Option<f32>,
     layer: BarLayer
 ) -> LayerSurfaceCreation<Message> {
-    super::blur::request();
+    super::restate_blur();
 
     let (main_id, main_task) = new_layer_surface(main_settings(
         style,

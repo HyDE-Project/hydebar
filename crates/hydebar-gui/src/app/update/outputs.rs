@@ -37,11 +37,32 @@ impl App {
                 geometry
             } => {
                 let Some(geometry) = geometry else {
+                    if self.outputs.has_name(&name) {
+                        return Task::perform(
+                            async move {
+                                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+                                name
+                            },
+                            |name| Message::RemeasureScreen {
+                                name
+                            }
+                        );
+                    }
+
                     return Task::none();
                 };
 
                 if self.outputs.has_name(&name) && self.adopt_measured(geometry) {
                     self.refresh_appearance()
+                } else {
+                    Task::none()
+                }
+            }
+            Message::RemeasureScreen {
+                name
+            } => {
+                if self.outputs.has_name(&name) {
+                    measure_screen(name)
                 } else {
                     Task::none()
                 }

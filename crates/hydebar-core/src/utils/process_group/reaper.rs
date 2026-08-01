@@ -23,6 +23,12 @@ pub fn start_orphan_reaper() {
                 let dead = zombie_children();
 
                 for pid in dead.intersection(&seen) {
+                    if u32::try_from(*pid)
+                        .is_ok_and(|pid| super::registry::LIVE_GROUPS.contains(pid))
+                    {
+                        continue;
+                    }
+
                     unsafe {
                         libc::waitpid(*pid, std::ptr::null_mut(), libc::WNOHANG);
                     }
