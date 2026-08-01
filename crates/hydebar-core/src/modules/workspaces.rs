@@ -37,6 +37,7 @@ pub struct Workspace {
     pub monitor_id: Option<usize>, // index for color lookup; may be None
     pub monitor:    String,        // monitor name for fallback
     pub active:     bool,
+    pub urgent:     bool,
     pub windows:    u16
 }
 
@@ -90,6 +91,7 @@ fn map_snapshot_to_workspaces(
             active:     monitors
                 .iter()
                 .any(|m| m.special_workspace_id == Some(w.id)),
+            urgent:     false,
             windows:    w.window_count
         });
     }
@@ -110,6 +112,7 @@ fn map_snapshot_to_workspaces(
             monitor_id: w.monitor_id,
             monitor:    w.monitor_name.clone(),
             active:     shown,
+            urgent:     false,
             windows:    w.window_count
         });
     }
@@ -141,6 +144,7 @@ fn map_snapshot_to_workspaces(
             monitor_id: None,
             monitor: String::new(),
             active: false,
+            urgent: false,
             windows: 0
         });
     }
@@ -169,6 +173,8 @@ fn label_box_width(label: &str, glyph_advance: f32, min_width: f32) -> Length {
 pub struct Workspaces {
     hyprland:   Arc<dyn HyprlandPort>,
     workspaces: Vec<Workspace>,
+    /// Workspaces whose windows demanded attention and were not yet visited.
+    urgent_ids: std::collections::HashSet<i32>,
     sender:     Option<ModuleEventSender<Message>>,
     runtime:    Option<tokio::runtime::Handle>,
     task:       Option<JoinHandle<()>>
@@ -181,6 +187,7 @@ impl Workspaces {
         Self {
             hyprland,
             workspaces,
+            urgent_ids: std::collections::HashSet::new(),
             sender: None,
             runtime: None,
             task: None
@@ -224,6 +231,8 @@ impl Workspaces {
 #[derive(Debug, Clone)]
 pub enum Message {
     WorkspacesChanged(HyprlandWorkspaceSnapshot),
+    /// A window on the workspace demanded attention.
+    WorkspaceUrgent(i32),
     ChangeWorkspace(i32),
     ToggleSpecialWorkspace(i32)
 }
@@ -233,6 +242,31 @@ impl Workspaces {
         match message {
             Message::WorkspacesChanged(snapshot) => {
                 self.workspaces = map_snapshot_to_workspaces(&snapshot, config);
+                self.urgent_ids.retain(|id| {
+                    self.workspaces
+                        .iter()
+                        .any(|w| w.id == *id && !w.active)
+                });
+
+                for workspace in &mut self.workspaces {
+                    workspace.urgent = self.urgent_ids.contains(&workspace.id);
+                }
+            }
+            Message::WorkspaceUrgent(id) => {
+                let visible = self
+                    .workspaces
+                    .iter()
+                    .any(|w| w.id == id && w.active);
+
+                if !visible {
+                    self.urgent_ids.insert(id);
+
+                    if let Some(workspace) =
+                        self.workspaces.iter_mut().find(|w| w.id == id)
+                    {
+                        workspace.urgent = true;
+                    }
+                }
             }
             Message::ChangeWorkspace(id) => {
                 if id > 0 {
@@ -291,10 +325,21 @@ async fn publish_snapshot(port: &Arc<dyn HyprlandPort>, sender: &ModuleEventSend
 /// state as one per event, without the round-trips.
 async fn drain_burst(
     stream: &mut hydebar_proto::ports::hyprland::HyprlandEventStream<HyprlandWorkspaceEvent>
-) {
+) -> Vec<i32> {
     const SETTLE: Duration = Duration::from_millis(25);
 
-    while let Ok(Some(_)) = tokio::time::timeout(SETTLE, stream.next()).await {}
+    let mut urgent = Vec::new();
+
+    while let Ok(Some(event)) = tokio::time::timeout(SETTLE, stream.next()).await {
+        if let Ok(HyprlandWorkspaceEvent::Urgent {
+            workspace_id
+        }) = event
+        {
+            urgent.push(workspace_id);
+        }
+    }
+
+    urgent
 }
 
 impl<M> Module<M> for Workspaces
@@ -338,8 +383,27 @@ where
                                         | HyprlandWorkspaceEvent::WindowMoved
                                         | HyprlandWorkspaceEvent::ActiveMonitorChanged
                                     ) => {
-                                        drain_burst(&mut stream).await;
+                                        let urgent = drain_burst(&mut stream).await;
                                         publish_snapshot(&hyprland, &sender).await;
+
+                                        for id in urgent {
+                                            if let Err(err) =
+                                                sender.try_send(Message::WorkspaceUrgent(id))
+                                            {
+                                                error!(
+                                                    "failed to publish workspace urgency: {err}"
+                                                );
+                                            }
+                                        }
+                                    }
+                                    Ok(HyprlandWorkspaceEvent::Urgent {
+                                        workspace_id
+                                    }) => {
+                                        if let Err(err) = sender
+                                            .try_send(Message::WorkspaceUrgent(workspace_id))
+                                        {
+                                            error!("failed to publish workspace urgency: {err}");
+                                        }
                                     }
                                     Err(err) => {
                                         error!("workspace event stream error: {err}");
@@ -437,7 +501,9 @@ where
                                     .align_x(alignment::Horizontal::Center)
                                     .align_y(alignment::Vertical::Center)
                             )
-                            .style(workspace_button_style(empty, w_active, radius, color))
+                            .style(workspace_button_style(
+                                empty, w_active, w.urgent, radius, color
+                            ))
                             .padding([vertical_padding, side_padding])
                             .on_press(if w_id > 0 {
                                 Message::ChangeWorkspace(w_id)

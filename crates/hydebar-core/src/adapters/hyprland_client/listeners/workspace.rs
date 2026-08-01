@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use hydebar_proto::ports::hyprland::{HyprlandError, HyprlandEventStream, HyprlandWorkspaceEvent};
-use hyprland::event_listener::AsyncEventListener;
+use hyprland::{event_listener::AsyncEventListener, shared::HyprData};
 use log::warn;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
@@ -82,6 +82,36 @@ fn build_listener(tx: &WorkspaceSender) -> AsyncEventListener {
         add_active_monitor_changed_handler,
         HyprlandWorkspaceEvent::ActiveMonitorChanged
     );
+
+    listener.add_urgent_state_changed_handler({
+        let tx = tx.clone();
+        move |address| {
+            let tx = tx.clone();
+            Box::pin(async move {
+                let workspace_id = tokio::task::spawn_blocking(move || {
+                    hyprland::data::Clients::get().ok().and_then(|clients| {
+                        clients
+                            .into_iter()
+                            .find(|client| client.address == address)
+                            .map(|client| client.workspace.id)
+                    })
+                })
+                .await
+                .ok()
+                .flatten();
+
+                if let Some(workspace_id) = workspace_id {
+                    publish(
+                        &tx,
+                        HyprlandWorkspaceEvent::Urgent {
+                            workspace_id
+                        }
+                    )
+                    .await;
+                }
+            })
+        }
+    });
 
     listener
 }

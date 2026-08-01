@@ -252,7 +252,12 @@ pub enum HyprlandWorkspaceEvent {
     /// A window was moved between workspaces.
     WindowMoved,
     /// The active monitor changed.
-    ActiveMonitorChanged
+    ActiveMonitorChanged,
+    /// A window on the workspace demanded attention.
+    Urgent {
+        /// Workspace holding the demanding window.
+        workspace_id: i32
+    }
 }
 
 /// Keyboard related Hyprland events.

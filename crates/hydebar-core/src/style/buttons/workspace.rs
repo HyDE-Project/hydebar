@@ -55,12 +55,32 @@ fn indicator_colors(theme: &Theme, colors: Option<Option<AppearanceColor>>) -> I
 pub fn workspace_button_style(
     is_empty: bool,
     is_active: bool,
+    is_urgent: bool,
     radius: f32,
     colors: Option<Option<AppearanceColor>>
 ) -> impl Fn(&Theme, Status) -> button::Style {
     let is_muted = is_empty || !is_active;
 
     move |theme: &Theme, status: Status| {
+        if is_urgent && !is_active {
+            let danger = theme.extended_palette().danger;
+            let filled = match status {
+                Status::Hovered => danger.strong,
+                _ => danger.base
+            };
+
+            return button::Style {
+                background: Some(Background::Color(filled.color)),
+                border: Border {
+                    width:  0.0,
+                    color:  filled.color,
+                    radius: radius.into()
+                },
+                text_color: filled.text,
+                ..button::Style::default()
+            };
+        }
+
         let indicator = indicator_colors(theme, colors);
         let (bg_color, fg_color) = indicator.base;
 
