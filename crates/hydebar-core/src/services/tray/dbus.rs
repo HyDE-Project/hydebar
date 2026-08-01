@@ -25,11 +25,15 @@ impl StatusNotifierWatcher {
     /// Registers the watcher on the session bus and claims its well known
     /// name.
     ///
+    /// Returns the connection together with the handle of the task watching
+    /// bus-name ownership, so the caller owns the task's lifetime instead of
+    /// leaking one detached watcher per start.
+    ///
     /// # Errors
     ///
     /// Returns an error when the session bus cannot be reached, the watcher
     /// object cannot be registered, or the bus name request fails.
-    pub async fn start_server() -> AppResult<Connection> {
+    pub async fn start_server() -> AppResult<(Connection, tokio::task::JoinHandle<()>)> {
         let connection = zbus::connection::Connection::session()
             .await
             .map_err(|e| AppError::internal(format!("Failed to connect to session bus: {e}")))?;
@@ -69,7 +73,7 @@ impl StatusNotifierWatcher {
         }
 
         let internal_connection = connection.clone();
-        tokio::spawn(async move {
+        let watch = tokio::spawn(async move {
             let mut have_bus_name = false;
             let unique_name = internal_connection.unique_name().map(|x| x.as_ref());
             while let Some(evt) = name_owner_changed_stream.next().await {
@@ -109,7 +113,7 @@ impl StatusNotifierWatcher {
             }
         });
 
-        Ok(connection)
+        Ok((connection, watch))
     }
 }
 

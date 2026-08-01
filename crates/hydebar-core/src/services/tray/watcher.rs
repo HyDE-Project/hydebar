@@ -1,7 +1,7 @@
-use std::{future::Future, pin::Pin};
+use std::{future::Future, pin::Pin, time::Duration};
 
-use iced::futures::{Stream, StreamExt, stream::select_all, stream_select};
-use log::{debug, error, info};
+use iced::futures::{Stream, StreamExt, stream::SelectAll};
+use log::{debug, error, info, warn};
 use masterror::AppError;
 
 use super::{
@@ -12,6 +12,12 @@ use super::{
 use crate::services::ServiceEvent;
 
 pub type TrayEventStream = Pin<Box<dyn Stream<Item = TrayEvent> + Send + 'static>>;
+
+/// Longest a tray application may take to answer the item handshake.
+///
+/// One frozen application must cost the tray a skipped icon, not the whole
+/// listener parked on an unanswered call forever.
+const ITEM_BUILD_TIMEOUT: Duration = Duration::from_secs(5);
 
 #[derive(Debug)]
 pub enum TrayWatcherError {
@@ -40,6 +46,49 @@ impl std::error::Error for TrayWatcherError {
     }
 }
 
+/// The watcher's bus presence, owned for the life of the listener.
+///
+/// Dropping it aborts the bus-name watching task along with the listener,
+/// so a torn-down tray module leaves neither a task nor a claimed name
+/// behind — restarts replace the server instead of stacking one per retry.
+struct WatcherServer {
+    conn:  zbus::Connection,
+    watch: tokio::task::JoinHandle<()>
+}
+
+impl Drop for WatcherServer {
+    fn drop(&mut self) {
+        self.watch.abort();
+    }
+}
+
+/// Builds a registered item, giving up on one that will not answer.
+async fn build_item(conn: &zbus::Connection, name: String) -> Option<StatusNotifierItem> {
+    match tokio::time::timeout(
+        ITEM_BUILD_TIMEOUT,
+        StatusNotifierItem::new(conn, name.clone())
+    )
+    .await
+    {
+        Ok(Ok(item)) => Some(item),
+        Ok(Err(err)) => {
+            warn!("skipping tray item '{name}': {err}");
+            None
+        }
+        Err(_) => {
+            warn!("skipping tray item '{name}': no answer within {ITEM_BUILD_TIMEOUT:?}");
+            None
+        }
+    }
+}
+
+/// Reads the items currently registered, skipping the unresponsive ones.
+///
+/// # Errors
+///
+/// Returns an error when the watcher proxy cannot be created or the item
+/// listing cannot be read; a single item failing its handshake is skipped
+/// rather than failing the whole tray.
 pub async fn initialize_data(conn: &zbus::Connection) -> Result<TrayData, TrayWatcherError> {
     debug!("initializing tray data");
     let proxy = StatusNotifierWatcherProxy::new(conn).await.map_err(|err| {
@@ -59,10 +108,9 @@ pub async fn initialize_data(conn: &zbus::Connection) -> Result<TrayData, TrayWa
 
     let mut status_items = Vec::with_capacity(items.len());
     for item in items {
-        let item = StatusNotifierItem::new(conn, item)
-            .await
-            .map_err(TrayWatcherError::Initialization)?;
-        status_items.push(item);
+        if let Some(item) = build_item(conn, item).await {
+            status_items.push(item);
+        }
     }
 
     debug!("created items: {status_items:?}");
@@ -70,91 +118,19 @@ pub async fn initialize_data(conn: &zbus::Connection) -> Result<TrayData, TrayWa
     Ok(TrayData(status_items))
 }
 
-/// Merges registration, icon and menu signals into one tray event stream.
-///
-/// # Errors
-///
-/// Returns an error when the watcher proxy cannot be created or one of its
-/// signal subscriptions fails.
-#[expect(
-    clippy::too_many_lines,
-    reason = "one subscription per tray signal is wired into a single merged stream; splitting would scatter the wiring"
-)]
-#[expect(
-    clippy::needless_continue,
-    reason = "the continue lives inside the stream_select macro expansion"
-)]
-pub async fn events(conn: &zbus::Connection) -> Result<TrayEventStream, TrayWatcherError> {
-    let watcher = StatusNotifierWatcherProxy::new(conn).await.map_err(|err| {
-        TrayWatcherError::EventStream(AppError::internal(format!(
-            "Failed to create StatusNotifierWatcherProxy: {err}"
-        )))
-    })?;
+/// The property and menu streams of one registered item.
+fn item_event_streams(
+    item: &StatusNotifierItem
+) -> impl Future<Output = Vec<TrayEventStream>> + Send + 'static {
+    let name = item.name.clone();
+    let item_proxy = item.item_proxy.clone();
+    let menu_proxy = item.menu_proxy.clone();
 
-    let registered = watcher
-        .receive_status_notifier_item_registered()
-        .await
-        .map_err(|err| {
-            TrayWatcherError::EventStream(AppError::internal(format!(
-                "Failed to receive status notifier item registered: {err}"
-            )))
-        })?
-        .filter_map({
-            let conn = conn.clone();
-            move |event| {
-                let conn = conn.clone();
-                async move {
-                    debug!("registered {event:?}");
-                    match event.args() {
-                        Ok(args) => {
-                            let item =
-                                StatusNotifierItem::new(&conn, args.service.to_string()).await;
-                            item.map(TrayEvent::Registered).ok()
-                        }
-                        _ => None
-                    }
-                }
-            }
-        })
-        .boxed();
+    async move {
+        let mut streams: Vec<TrayEventStream> = Vec::with_capacity(3);
 
-    let unregistered = watcher
-        .receive_status_notifier_item_unregistered()
-        .await
-        .map_err(|err| {
-            TrayWatcherError::EventStream(AppError::internal(format!(
-                "Failed to receive status notifier item unregistered: {err}"
-            )))
-        })?
-        .filter_map(|event| async move {
-            debug!("unregistered {event:?}");
-            event
-                .args()
-                .ok()
-                .map(|args| TrayEvent::Unregistered(args.service.to_string()))
-        })
-        .boxed();
-
-    let items = watcher
-        .registered_status_notifier_items()
-        .await
-        .map_err(|err| {
-            TrayWatcherError::EventStream(AppError::internal(format!(
-                "Failed to get registered status notifier items: {err}"
-            )))
-        })?;
-
-    let mut icon_pixel_change = Vec::with_capacity(items.len());
-    let mut icon_name_change = Vec::with_capacity(items.len());
-    let mut menu_layout_change = Vec::with_capacity(items.len());
-
-    for name in items {
-        let item = StatusNotifierItem::new(conn, name.clone())
-            .await
-            .map_err(TrayWatcherError::EventStream)?;
-
-        let stream = item.item_proxy.receive_icon_pixmap_changed().await;
-        icon_pixel_change.push(
+        let stream = item_proxy.receive_icon_pixmap_changed().await;
+        streams.push(
             stream
                 .filter_map({
                     let name = name.clone();
@@ -172,8 +148,8 @@ pub async fn events(conn: &zbus::Connection) -> Result<TrayEventStream, TrayWatc
                 .boxed()
         );
 
-        let stream = item.item_proxy.receive_icon_name_changed().await;
-        icon_name_change.push(
+        let stream = item_proxy.receive_icon_name_changed().await;
+        streams.push(
             stream
                 .filter_map({
                     let name = name.clone();
@@ -193,12 +169,12 @@ pub async fn events(conn: &zbus::Connection) -> Result<TrayEventStream, TrayWatc
                 .boxed()
         );
 
-        if let Ok(layout_updated) = item.menu_proxy.receive_layout_updated().await {
-            menu_layout_change.push(
+        if let Ok(layout_updated) = menu_proxy.receive_layout_updated().await {
+            streams.push(
                 layout_updated
                     .filter_map({
                         let name = name.clone();
-                        let menu_proxy = item.menu_proxy.clone();
+                        let menu_proxy = menu_proxy.clone();
                         move |_| {
                             debug!("layout update event name {name}");
                             let name = name.clone();
@@ -217,16 +193,116 @@ pub async fn events(conn: &zbus::Connection) -> Result<TrayEventStream, TrayWatc
                     .boxed()
             );
         }
+
+        streams
+    }
+}
+
+/// Serves tray events from one bus connection until the bus lets go.
+///
+/// The registration signals are subscribed exactly once and per-item
+/// streams join the running merge as items register — nothing is torn
+/// down between registrations, so an item arriving while another is being
+/// built is never missed.
+async fn serve<F, Fut>(conn: &zbus::Connection, publisher: &mut F) -> TrayWatcherError
+where
+    F: FnMut(ServiceEvent<TrayService>) -> Fut + Send,
+    Fut: Future<Output = ()> + Send
+{
+    let watcher = match StatusNotifierWatcherProxy::new(conn).await {
+        Ok(watcher) => watcher,
+        Err(err) => {
+            return TrayWatcherError::EventStream(AppError::internal(format!(
+                "Failed to create StatusNotifierWatcherProxy: {err}"
+            )));
+        }
+    };
+
+    let mut registered = match watcher.receive_status_notifier_item_registered().await {
+        Ok(stream) => stream,
+        Err(err) => {
+            return TrayWatcherError::EventStream(AppError::internal(format!(
+                "Failed to receive status notifier item registered: {err}"
+            )));
+        }
+    };
+
+    let mut unregistered = match watcher.receive_status_notifier_item_unregistered().await {
+        Ok(stream) => stream,
+        Err(err) => {
+            return TrayWatcherError::EventStream(AppError::internal(format!(
+                "Failed to receive status notifier item unregistered: {err}"
+            )));
+        }
+    };
+
+    let data = match initialize_data(conn).await {
+        Ok(data) => data,
+        Err(err) => return err
+    };
+
+    let mut item_streams: SelectAll<TrayEventStream> = SelectAll::new();
+    for item in data.iter() {
+        for stream in item_event_streams(item).await {
+            item_streams.push(stream);
+        }
     }
 
-    Ok(stream_select!(
-        registered,
-        unregistered,
-        select_all(icon_pixel_change),
-        select_all(icon_name_change),
-        select_all(menu_layout_change)
-    )
-    .boxed())
+    info!("Tray service initialized");
+
+    publisher(ServiceEvent::Init(TrayService {
+        data,
+        _conn: conn.clone()
+    }))
+    .await;
+
+    loop {
+        tokio::select! {
+            signal = registered.next() => {
+                let Some(signal) = signal else {
+                    return TrayWatcherError::EventStream(AppError::internal(
+                        "the registration signal stream ended"
+                    ));
+                };
+
+                debug!("registered {signal:?}");
+
+                let Ok(args) = signal.args() else {
+                    continue;
+                };
+
+                let Some(item) = build_item(conn, args.service.to_string()).await else {
+                    continue;
+                };
+
+                for stream in item_event_streams(&item).await {
+                    item_streams.push(stream);
+                }
+
+                publisher(ServiceEvent::Update(TrayEvent::Registered(item))).await;
+            }
+            signal = unregistered.next() => {
+                let Some(signal) = signal else {
+                    return TrayWatcherError::EventStream(AppError::internal(
+                        "the unregistration signal stream ended"
+                    ));
+                };
+
+                debug!("unregistered {signal:?}");
+
+                if let Ok(args) = signal.args() {
+                    publisher(ServiceEvent::Update(TrayEvent::Unregistered(
+                        args.service.to_string()
+                    )))
+                    .await;
+                }
+            }
+            Some(event) = item_streams.next(), if !item_streams.is_empty() => {
+                debug!("tray data {event:?}");
+                publisher(ServiceEvent::Update(event)).await;
+            }
+        }
+    }
 }
 
 pub async fn start_listening<F, Fut>(mut publisher: F)
@@ -234,103 +310,50 @@ where
     F: FnMut(ServiceEvent<TrayService>) -> Fut + Send,
     Fut: Future<Output = ()> + Send
 {
-    let mut state = State::Init;
     let mut failures: u32 = 0;
-
-    loop {
-        state = drive_state(state, &mut publisher).await;
-
-        match &state {
-            State::Error => {
+    let server = loop {
+        match StatusNotifierWatcher::start_server().await {
+            Ok((conn, watch)) => {
+                break WatcherServer {
+                    conn,
+                    watch
+                };
+            }
+            Err(err) => {
+                error!("{}", TrayWatcherError::Connection(err));
                 failures = failures.saturating_add(1);
                 tokio::time::sleep(crate::services::reconnect_delay(failures)).await;
             }
-            State::Active(_) => failures = 0,
-            State::Init => {}
         }
+    };
+
+    let mut failures: u32 = 0;
+    loop {
+        let err = serve(&server.conn, &mut publisher).await;
+        error!("{err}");
+
+        failures = failures.saturating_add(1);
+        tokio::time::sleep(crate::services::reconnect_delay(failures)).await;
     }
-}
-
-enum State {
-    Init,
-    Active(zbus::Connection),
-    Error
-}
-
-async fn drive_state<F, Fut>(state: State, publisher: &mut F) -> State
-where
-    F: FnMut(ServiceEvent<TrayService>) -> Fut + Send,
-    Fut: Future<Output = ()> + Send
-{
-    match state {
-        State::Init => match StatusNotifierWatcher::start_server().await {
-            Ok(conn) => match initialize_data(&conn).await {
-                Ok(data) => {
-                    info!("Tray service initialized");
-
-                    publisher(ServiceEvent::Init(TrayService {
-                        data,
-                        _conn: conn.clone()
-                    }))
-                    .await;
-
-                    State::Active(conn)
-                }
-                Err(err) => transition_to_error(&err)
-            },
-            Err(err) => transition_to_error(&TrayWatcherError::Connection(err))
-        },
-        State::Active(conn) => {
-            info!("Listening for tray events");
-
-            match events(&conn).await {
-                Ok(mut stream) => {
-                    while let Some(event) = stream.next().await {
-                        debug!("tray data {event:?}");
-
-                        let reload_events = matches!(event, TrayEvent::Registered(_));
-
-                        publisher(ServiceEvent::Update(event)).await;
-
-                        if reload_events {
-                            break;
-                        }
-                    }
-
-                    State::Active(conn)
-                }
-                Err(err) => transition_to_error(&err)
-            }
-        }
-        State::Error => {
-            error!("Tray service error, retrying soon");
-
-            State::Init
-        }
-    }
-}
-
-fn transition_to_error(error: &TrayWatcherError) -> State {
-    error!("{error}");
-    State::Error
 }
 
 #[cfg(test)]
 mod tests {
     use masterror::AppError;
 
-    use super::{State, TrayWatcherError, transition_to_error};
-
-    #[test]
-    fn transition_sets_error_state() {
-        let state = transition_to_error(&TrayWatcherError::Connection(AppError::internal("boom")));
-        assert!(matches!(state, State::Error));
-    }
+    use super::TrayWatcherError;
 
     #[test]
     fn error_variants_have_context() {
         let error = TrayWatcherError::EventStream(AppError::internal("failure"));
         let message = format!("{error}");
         assert!(message.contains("failed to listen"));
+    }
+
+    #[test]
+    fn connection_errors_name_the_bus() {
+        let error = TrayWatcherError::Connection(AppError::internal("boom"));
+        let message = format!("{error}");
+        assert!(message.contains("failed to connect"));
     }
 }
