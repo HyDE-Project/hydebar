@@ -1,3 +1,4 @@
+pub mod archipelago;
 pub mod crossfade;
 pub mod flip;
 pub mod greeting;

@@ -7,10 +7,7 @@ use hydebar_core::{
     style::module_button_style,
     tooltip::{TooltipInfo, tooltip_anchor}
 };
-use iced::{
-    Alignment, Element, Length, SurfaceId as Id,
-    widget::{Row, container}
-};
+use iced::{Alignment, Element, Length, SurfaceId as Id, widget::container};
 
 use super::{ModuleActions, actions::attach_module_actions};
 use crate::app::state::{App, Message};
@@ -49,7 +46,7 @@ impl App {
     ///
     /// The surface rides along because the same module stands on every
     /// output's bar, and two outputs must not fight over one seat.
-    fn flip_key(module_name: &ModuleName, id: Id) -> u64 {
+    pub(super) fn flip_key(module_name: &ModuleName, id: Id) -> u64 {
         use std::hash::{Hash, Hasher};
 
         let mut hasher = std::collections::hash_map::DefaultHasher::new();
@@ -58,45 +55,11 @@ impl App {
         hasher.finish()
     }
 
-    /// Wraps a module so it glides to wherever its seat moves.
-    fn gliding<'a>(
-        &'a self,
-        module_name: &ModuleName,
-        id: Id,
-        module: Element<'a, Message>
-    ) -> Element<'a, Message> {
-        hydebar_core::components::flip::FlipAnchor::new(
-            Self::flip_key(module_name, id),
-            self.relayout.value().clamp(0.0, 1.0),
-            &self.flip,
-            module
-        )
-        .into()
-    }
-
-    pub(super) fn single_module_wrapper<'a>(
-        &'a self,
-        module_name: &'a ModuleName,
-        id: Id,
-        opacity: f32
-    ) -> Option<Element<'a, Message>> {
-        let module = self
-            .get_module_view(module_name, id, opacity)
-            .map(|(content, action)| (content, self.module_actions(module_name, action)));
-
-        module.map(|(content, actions)| {
-            let module = self.module_element(content, actions, module_name, id, false);
-            let module = self.with_tooltip(module_name, module, id);
-
-            self.gliding(module_name, id, module)
-        })
-    }
-
     /// Renders the pill of a single module, with or without its button.
     ///
     /// A `grouped` module is drawn inside the island of its group, which
     /// already paints the background and the rounded corners for it.
-    fn module_element<'a>(
+    pub(super) fn module_element<'a>(
         &'a self,
         content: Element<'a, Message>,
         actions: ModuleActions,
@@ -254,7 +217,7 @@ impl App {
     /// when the pointer actually enters or leaves, while the wrapper itself
     /// runs for every module on every frame — and a date formatted for a
     /// tooltip nobody hovers is a frame budget spent on nothing.
-    fn with_tooltip<'a>(
+    pub(super) fn with_tooltip<'a>(
         &'a self,
         module_name: &'a ModuleName,
         module: Element<'a, Message>,
@@ -272,68 +235,6 @@ impl App {
                 })
         })
         .into()
-    }
-
-    pub(super) fn group_module_wrapper<'a>(
-        &'a self,
-        group: &'a [ModuleName],
-        id: Id,
-        opacity: f32
-    ) -> Option<Element<'a, Message>> {
-        let modules = group
-            .iter()
-            .filter_map(|module| {
-                self.get_module_view(module, id, opacity)
-                    .map(|(content, action)| {
-                        (module, content, self.module_actions(module, action))
-                    })
-            })
-            .collect::<Vec<_>>();
-
-        if modules.is_empty() {
-            None
-        } else {
-            Some({
-                let group = Row::with_children(
-                    modules
-                        .into_iter()
-                        .map(|(module_name, content, actions)| {
-                            let module =
-                                self.module_element(content, actions, module_name, id, true);
-                            let module = self.with_tooltip(module_name, module, id);
-
-                            self.gliding(module_name, id, module)
-                        })
-                        .collect::<Vec<_>>()
-                )
-                .align_y(Alignment::Center);
-
-                match self.appearance().style {
-                    AppearanceStyle::Solid | AppearanceStyle::Gradient => group.into(),
-                    AppearanceStyle::Islands => container(group)
-                        .padding(self.appearance().island_padding())
-                        .height(Length::Fill)
-                        .align_y(Alignment::Center)
-                        .style(|theme| {
-                            let finish = hydebar_core::style::IslandFinish::of(self.appearance());
-
-                            container::Style {
-                                background: Some(
-                                    theme
-                                        .palette()
-                                        .background
-                                        .scale_alpha(self.appearance().opacity)
-                                        .into()
-                                ),
-                                border: finish.border(self.appearance().pill_radius()),
-                                shadow: finish.shadow(),
-                                ..container::Style::default()
-                            }
-                        })
-                        .into()
-                }
-            })
-        }
     }
 }
 

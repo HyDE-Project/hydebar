@@ -140,17 +140,37 @@ impl App {
         opacity: f32,
         island_offset: usize
     ) -> Element<'a, Message> {
-        let mut row = iced::widget::Row::new()
-            .height(iced::Length::Shrink)
-            .align_y(iced::Alignment::Center)
-            .spacing(self.appearance().island_gap());
+        use hydebar_core::components::archipelago::{Archipelago, PillPaint};
+        use hydebar_proto::config::AppearanceStyle;
+
+        let appearance = self.appearance();
+        let style = appearance.style;
+        let opacity_paint = appearance.opacity;
+        let finish = hydebar_core::style::IslandFinish::of(appearance);
+        let radius = appearance.pill_radius();
+
+        let mut strip = Archipelago::new(
+            appearance.island_gap(),
+            appearance.island_padding()[1],
+            self.relayout.value().clamp(0.0, 1.0),
+            &self.flip,
+            move |theme: &iced::Theme| match style {
+                AppearanceStyle::Islands => Some(PillPaint {
+                    background: theme.palette().background.scale_alpha(opacity_paint),
+                    border:     finish.border(radius),
+                    shadow:     finish.shadow()
+                }),
+                AppearanceStyle::Solid | AppearanceStyle::Gradient => None
+            }
+        );
 
         let total = self.island_count().max(1) as f32;
+        let mut island_index = 0usize;
 
         for (index, module_def) in modules_def.iter().enumerate() {
-            let island = match module_def {
-                ModuleDef::Single(module) => self.single_module_wrapper(module, id, opacity),
-                ModuleDef::Group(group) => self.group_module_wrapper(group, id, opacity)
+            let names: Vec<&hydebar_core::config::ModuleName> = match module_def {
+                ModuleDef::Single(module) => vec![module],
+                ModuleDef::Group(group) => group.iter().collect()
             };
 
             let ordinal = ((island_offset + index) as f32 + 0.5) / total;
@@ -160,12 +180,26 @@ impl App {
                 1.0 - ordinal
             };
 
-            if let Some(island) = island {
-                row = row.push(self.swept_island(island, position));
+            let mut seated = false;
+
+            for module_name in names {
+                if let Some((content, action)) = self.get_module_view(module_name, id, opacity) {
+                    let actions = self.module_actions(module_name, action);
+                    let element = self.module_element(content, actions, module_name, id, true);
+                    let element = self.with_tooltip(module_name, element, id);
+                    let element = self.swept_island(element, position);
+
+                    strip = strip.push(Self::flip_key(module_name, id), island_index, element);
+                    seated = true;
+                }
+            }
+
+            if seated {
+                island_index += 1;
             }
         }
 
-        row.into()
+        strip.into()
     }
 
     #[must_use]

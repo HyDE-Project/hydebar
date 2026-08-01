@@ -37,6 +37,17 @@ impl FlipMemo {
     pub fn depart(&mut self) {
         self.from = self.live.clone();
     }
+
+    /// Writes the seat `key` rests at on the current frame.
+    pub fn record(&mut self, key: u64, x: f32) {
+        self.live.insert(key, x);
+    }
+
+    /// The departure seats of the journey in flight.
+    #[must_use]
+    pub const fn from_map(&self) -> &HashMap<u64, f32> {
+        &self.from
+    }
 }
 
 /// Wraps one block so it journeys between its recorded seats.
