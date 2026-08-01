@@ -89,11 +89,26 @@ fn list_layouts(previous: &[LayoutEntry]) -> Vec<LayoutEntry> {
                 .filter_map(|entry| entry["name"].as_str())
                 .map(|name| LayoutEntry {
                     name:   name.to_owned(),
-                    active: active.as_deref() == Some(name)
+                    active: active
+                        .as_deref()
+                        .is_some_and(|active| names_match(name, active))
                 })
                 .collect()
         })
         .unwrap_or_default()
+}
+
+/// Whether a listed name and the recorded one speak of the same layout.
+///
+/// The roster lists `hyprdots/02` while the state records the bare `02`:
+/// the record keeps only the last path piece, so the comparison walks
+/// from the tail.
+fn names_match(listed: &str, recorded: &str) -> bool {
+    listed == recorded
+        || listed
+            .rsplit('/')
+            .next()
+            .is_some_and(|tail| tail == recorded)
 }
 
 /// The layout name the desktop's state records as in force.
@@ -144,39 +159,55 @@ impl BarLayout {
         )
     }
 
-    /// Renders the picker: the desktop's layouts as pressable rows.
+    /// Renders the picker: the desktop's layouts as pressable cards.
     #[must_use]
     pub fn menu_view<'a>(&self, font_size: f32) -> Element<'a, Message> {
-        let gap = scale::scaled(4.0);
-        let mut column = Column::new().spacing(gap).padding(scale::scaled(8.0));
+        let gap = scale::scaled(6.0);
+        let mut column = Column::new().spacing(gap).padding(scale::scaled(10.0));
 
         for entry in &self.entries {
-            let label =
-                crate::components::text::text(entry.name.clone()).size(scale::scaled(font_size));
+            let marker = if entry.active {
+                Icons::Point.default_glyph()
+            } else {
+                Icons::None.default_glyph()
+            };
 
-            let row = container(label)
-                .padding([scale::scaled(4.0), scale::scaled(10.0)])
+            let face = iced::widget::Row::new()
+                .push(icon_raw(marker.to_owned()))
+                .push(
+                    crate::components::text::text(entry.name.clone())
+                        .size(scale::scaled(font_size))
+                )
+                .spacing(scale::scaled(8.0))
+                .align_y(iced::Alignment::Center);
+
+            let card = container(face)
+                .padding([scale::scaled(6.0), scale::scaled(12.0)])
                 .width(iced::Length::Fill)
                 .style({
                     let active = entry.active;
                     move |theme: &iced::Theme| {
+                        let palette = theme.extended_palette();
+
                         if active {
                             container::Style {
-                                background: Some(
-                                    theme.extended_palette().primary.weak.color.into()
-                                ),
-                                text_color: Some(theme.extended_palette().primary.weak.text),
-                                border: iced::border::rounded(6),
+                                background: Some(palette.primary.weak.color.into()),
+                                text_color: Some(palette.primary.weak.text),
+                                border: iced::border::rounded(8),
                                 ..container::Style::default()
                             }
                         } else {
-                            container::Style::default()
+                            container::Style {
+                                background: Some(palette.background.weak.color.into()),
+                                border: iced::border::rounded(8),
+                                ..container::Style::default()
+                            }
                         }
                     }
                 });
 
             column = column
-                .push(iced::widget::mouse_area(row).on_press(Message::Pick(entry.name.clone())));
+                .push(iced::widget::mouse_area(card).on_press(Message::Pick(entry.name.clone())));
         }
 
         column.into()
