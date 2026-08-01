@@ -67,6 +67,16 @@ const SYSTEM_INFO_CONSUMERS: [ModuleName; 5] = [
     ModuleName::GpuTemp
 ];
 
+/// Whether the bar itself is the session's notification server.
+///
+/// The one exception to gating on layout placement: the bar serves the
+/// notification bus for its popups even when no bell entry is drawn, and
+/// hands the bus back the moment the configuration chooses a separate
+/// daemon.
+const fn notifications_hosted(config: &Config) -> bool {
+    config.notifications.source.owns_the_bus()
+}
+
 impl App {
     /// Registers the background work of every module the layout draws, and
     /// releases it for every module it does not.
@@ -190,7 +200,7 @@ impl App {
         );
         gate(
             "notifications",
-            self.config.notifications.source.owns_the_bus(),
+            notifications_hosted(&self.config),
             &mut self.notifications,
             ctx,
             ()
