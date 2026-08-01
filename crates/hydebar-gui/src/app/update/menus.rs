@@ -120,7 +120,7 @@ impl App {
                         self.control_center.sub_menu = Some(SubMenu::Sinks);
                     }
                     MenuType::HydeMenu => {
-                        self.hyde_menu.reload();
+                        cmd.push(self.hyde_menu.reload().map(Message::HydeMenu));
                     }
                     MenuType::Network => {
                         if self.outputs.open_menu() != Some(&MenuType::Network) {

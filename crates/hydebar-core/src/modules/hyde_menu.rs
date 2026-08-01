@@ -23,7 +23,16 @@ pub enum Message {
     /// Unfold or fold the submenu with this identifier.
     Toggle(String),
     /// Run the action with this identifier and close the menu.
-    Run(iced::SurfaceId, String)
+    Run(iced::SurfaceId, String),
+    /// The desktop's menu files, re-read off the drawing thread.
+    Loaded {
+        /// Glyph the bar entry shows, as the desktop's module states it.
+        glyph:   Option<String>,
+        /// Command per leaf identifier.
+        actions: std::collections::HashMap<String, String>,
+        /// The tree the desktop's menu file describes.
+        tree:    Vec<Entry>
+    }
 }
 
 /// One entry of the menu tree.
@@ -55,31 +64,45 @@ pub struct HydeMenu {
 }
 
 impl HydeMenu {
-    /// Re-reads the desktop's files, folding every branch.
+    /// Starts re-reading the desktop's files, folding every branch.
     ///
     /// Called when the menu opens, so an edited menu file is picked up
-    /// without restarting the bar; the two files are small.
-    pub fn reload(&mut self) {
+    /// without restarting the bar. The reads and the parse run on the
+    /// blocking pool: the files are small, but the opening animation must
+    /// not wait on the filesystem.
+    pub fn reload(&mut self) -> iced::Task<Message> {
         self.expanded.clear();
 
-        let Some(definition) = source::read_definition() else {
-            log::warn!("the desktop ships no menu definition, the menu stays empty");
-            return;
-        };
+        iced::Task::perform(
+            async {
+                tokio::task::spawn_blocking(|| {
+                    let Some(definition) = source::read_definition() else {
+                        log::warn!("the desktop ships no menu definition, the menu stays empty");
+                        return None;
+                    };
 
-        self.glyph = definition.glyph;
-        self.actions = definition.actions;
-        self.tree = definition
-            .menu_file
-            .as_deref()
-            .and_then(source::read_tree)
-            .unwrap_or_default();
+                    let tree = definition
+                        .menu_file
+                        .as_deref()
+                        .and_then(source::read_tree)
+                        .unwrap_or_default();
 
-        log::info!(
-            "desktop menu: {} entries, {} actions",
-            self.tree.len(),
-            self.actions.len()
-        );
+                    Some((definition.glyph, definition.actions, tree))
+                })
+                .await
+                .ok()
+                .flatten()
+            },
+            |loaded| {
+                let (glyph, actions, tree) = loaded.unwrap_or_default();
+
+                Message::Loaded {
+                    glyph,
+                    actions,
+                    tree
+                }
+            }
+        )
     }
 
     /// Applies what the user asked, reporting the command to run, if any.
@@ -89,6 +112,23 @@ impl HydeMenu {
                 if !self.expanded.remove(&id) {
                     self.expanded.insert(id);
                 }
+
+                None
+            }
+            Message::Loaded {
+                glyph,
+                actions,
+                tree
+            } => {
+                self.glyph = glyph;
+                self.actions = actions;
+                self.tree = tree;
+
+                log::info!(
+                    "desktop menu: {} entries, {} actions",
+                    self.tree.len(),
+                    self.actions.len()
+                );
 
                 None
             }
