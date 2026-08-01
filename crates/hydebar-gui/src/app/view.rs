@@ -44,13 +44,19 @@ impl App {
     /// resting opacity and never animate themselves, which is what makes the
     /// box, text, icons, buttons and swatches all move as one instead of the
     /// background dying before its content.
+    /// The content follows the box, not its own straight line. The box fades
+    /// at the travelled share times the configured window opacity; content on
+    /// a straight share stayed a factor brighter the whole way down and
+    /// outlived its own frame. Bending the share to meet the box's curve at
+    /// the closed end keeps the two dying together, while at the open end it
+    /// still reaches one and the resting window looks untouched.
     fn faded_menu<'a>(&self, menu: Element<'a, Message>, progress: f32) -> Element<'a, Message> {
         if progress < 1.0 {
+            let opacity = self.config.appearance.menu.opacity.clamp(0.0, 1.0);
+            let share = progress * (opacity + (1.0 - opacity) * progress);
+
             iced::widget::themer(
-                Some(hydebar_core::style::faded_theme(
-                    &self.theme_cache,
-                    progress
-                )),
+                Some(hydebar_core::style::faded_theme(&self.theme_cache, share)),
                 menu
             )
             .text_color(|theme: &Theme| theme.palette().text)
