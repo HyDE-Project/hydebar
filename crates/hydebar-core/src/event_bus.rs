@@ -8,13 +8,6 @@ use tokio::sync::Notify;
 
 use crate::modules;
 
-/// Time the receiver keeps collecting after the first wakeup.
-///
-/// Bursty producers such as the network backend publish several events in a
-/// row; batching them into a single UI update keeps the redraw rate below the
-/// refresh rate instead of repainting once per event.
-const COALESCE_WINDOW: std::time::Duration = std::time::Duration::from_millis(8);
-
 #[derive(Debug, Clone)]
 pub enum BusEvent {
     Redraw,
@@ -219,6 +212,13 @@ impl EventReceiver {
     ///
     /// The future stays parked while the bus is empty, so an idle shell issues
     /// no wakeups at all instead of draining the queue on a timer.
+    ///
+    /// The first event of a burst is delivered the moment it lands, without a
+    /// grace period: bursts are tamed at the queue itself — a snapshot
+    /// replaces its stale twin, a duplicate redraw folds into the tail — and
+    /// whatever arrives while a batch is being handled is picked up whole by
+    /// the next call. A collection window here would tax every user click
+    /// with latency to save work the queue already saves.
     pub async fn recv(&mut self) -> Vec<BusEvent> {
         loop {
             let delivered = self.inner.delivered.notified();
@@ -229,7 +229,6 @@ impl EventReceiver {
             }
 
             delivered.await;
-            tokio::time::sleep(COALESCE_WINDOW).await;
         }
     }
 }

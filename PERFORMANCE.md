@@ -45,8 +45,11 @@ machine.
   signals, the Hyprland event socket, file watches. Timers exist only for
   facts that have no event (temperatures, load, memory). The full decision
   record is in [docs/data-sources.md](docs/data-sources.md).
-- **Redraw coalescing.** The event bus batches bursts inside an ~8ms window,
-  so a noisy producer repaints the bar once, not once per event.
+- **Redraw coalescing.** The event queue coalesces at enqueue time — a
+  snapshot replaces its stale twin, a duplicate redraw folds into the tail —
+  so a noisy producer repaints the bar once, not once per event. The first
+  event of a burst is delivered without a grace window: a user click pays no
+  batching latency.
 - **Registration gating.** A module absent from the layout starts no
   background work at all (`crates/hydebar-gui/src/app/update/registration.rs`).
 - **Bounded runtime.** The tokio pool is pinned to 4 workers

@@ -30,7 +30,7 @@
 │  │ Event Bus (event_bus.rs)       │  │
 │  │  - BusEvent: Redraw,           │  │
 │  │    PopupToggle, Module(...)    │  │
-│  │  - coalesces bursts (~8ms)     │  │
+│  │  - coalesces at enqueue time   │  │
 │  └────────────────────────────────┘  │
 │  ┌────────────────────────────────┐  │
 │  │ Services (services/)           │  │
@@ -121,8 +121,10 @@ App drains the bus → re-render
 ```
 
 Background sources follow the same path: a service listener publishes a
-`ModuleEvent`, the bus coalesces bursts inside an ~8ms window, and the GUI
-repaints once instead of once per event.
+`ModuleEvent`, the queue coalesces at enqueue time — a snapshot replaces its
+stale twin, a duplicate redraw folds into the tail — and the GUI picks up
+whatever accumulated while it was busy as one batch. The first event of a
+burst is delivered immediately; no grace window taxes a user click.
 
 ## Benefits
 
