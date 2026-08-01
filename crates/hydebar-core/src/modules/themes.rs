@@ -375,7 +375,7 @@ impl Themes {
     pub fn update(&mut self, message: Message, config: &Config) -> Task<Message> {
         match message {
             Message::Switch(theme) => {
-                info!("theme chip pressed: `{theme}`");
+                log::warn!("DBG theme chip pressed: `{theme}`");
 
                 return self.switch(theme, config);
             }
@@ -640,9 +640,9 @@ impl Themes {
     fn switch(&mut self, theme: String, config: &Config) -> Task<Message> {
         self.refresh();
 
-        info!(
-            "deciding the switch to `{theme}` among {} installed",
-            self.hyde.themes.len()
+        log::warn!(
+            "DBG deciding `{theme}`: switching={:?} pending={:?}",
+            self.switching, self.pending
         );
 
         match decide_switch(&theme, self.switching.as_deref(), &self.hyde.themes) {
@@ -679,7 +679,7 @@ impl Themes {
             }
         };
 
-        info!("switching the desktop to the HyDE theme `{theme}`");
+        log::warn!("DBG switch starts: `{theme}`");
         self.begin(theme.clone());
 
         Task::perform(hyde_shell::run(command), move |failure| Message::Switched {
@@ -712,7 +712,7 @@ impl Themes {
                     &format!("the desktop refused to switch to `{theme}`")
                 );
             }
-            None => info!("the desktop finished switching to the HyDE theme `{theme}`")
+            None => log::warn!("DBG switched settled: `{theme}`")
         }
     }
 }

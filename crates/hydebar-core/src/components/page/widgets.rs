@@ -367,6 +367,8 @@ pub(crate) fn theme_chip<'a, M: Clone + 'static>(
         Some(row)
     };
 
+    let press = state.is_pressable().then_some(message);
+
     let content: Element<'a, M> = if horizontal {
         let mut name_row = Row::new()
             .spacing(DOT_GAP_EM * control * 0.5)
@@ -401,10 +403,6 @@ pub(crate) fn theme_chip<'a, M: Clone + 'static>(
                 ..button::Style::default()
             })
             .width(Length::Fill);
-
-        if state.is_pressable() {
-            pressable = pressable.on_press(message);
-        }
 
         let mut line = Row::new()
             .align_y(Alignment::Center)
@@ -472,10 +470,6 @@ pub(crate) fn theme_chip<'a, M: Clone + 'static>(
             })
             .width(Length::Fill);
 
-        if state.is_pressable() {
-            pressable = pressable.on_press(message);
-        }
-
         let mut column = Column::new()
             .push(pressable)
             .spacing(DOT_GAP_EM * control)
@@ -493,7 +487,7 @@ pub(crate) fn theme_chip<'a, M: Clone + 'static>(
         style::CHIP_PADDING_EM[1] * control
     ]);
 
-    card.style(move |theme: &Theme| {
+    let card = card.style(move |theme: &Theme| {
         let (background, text_color, ringed) = card_colors(theme, paint_colors, state);
 
         let mut border = Border::default().rounded(style::corner_radius(font_size));
@@ -509,8 +503,12 @@ pub(crate) fn theme_chip<'a, M: Clone + 'static>(
             border,
             ..container::Style::default()
         }
-    })
-    .into()
+    });
+
+    match press {
+        Some(message) => iced::widget::mouse_area(card).on_press(message).into(),
+        None => card.into()
+    }
 }
 
 /// Surface, ink and whether a ring is due, for a card in `state`.
