@@ -298,10 +298,13 @@ impl App {
             }
             Message::Shutdown(signal) => {
                 info!("shutting down on {signal:?}, removing every surface");
-                shutdown::exit_after_flush();
+                shutdown::exit_backstop();
 
-                self.outputs.destroy_all()
+                self.outputs
+                    .destroy_all()
+                    .chain(Task::done(Message::SurfacesRemoved))
             }
+            Message::SurfacesRemoved => shutdown::exit_now(),
             Message::ConfigDegraded(degradation) => {
                 warn!("Configuration degradation reported: {}", degradation.reason);
                 Task::none()

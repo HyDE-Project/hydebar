@@ -68,9 +68,11 @@ inside each section; a checked box means the fix has landed on `main`.
 - [x] **Listener runtime can be built twice.** A build gate serializes the
   fallible construction with a double check, so racing first callers build
   exactly one runtime.
-- [ ] **Exit is a fixed 200 ms timer.** `process::exit` fires whether or not
-  surface destruction reached the compositor (`app/shutdown.rs:35`). Exit on
-  a completion signal, timer as backstop.
+- [x] **Exit is a fixed 200 ms timer.** The process now exits on a
+  confirmation message chained behind the surface-destroy tasks; a two
+  second backstop covers a stalled runtime. Verified live: the successor
+  takes the lock right after the destroys complete, inside the takeover
+  window.
 - [x] **Bus overflow drops the newest events; poisoning ends the
   subscription for good.** Folded into the infallible-bus rework above: the
   newest event always lands, eviction prefers stale snapshots, poisoning

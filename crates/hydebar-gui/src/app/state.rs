@@ -185,6 +185,8 @@ pub enum Message {
     /// Handled by taking every surface off the screen before the runtime is
     /// stopped, so a bar that is being replaced leaves nothing behind.
     Shutdown(ShutdownSignal),
+    /// Every surface-removal request has been handed to the compositor.
+    SurfacesRemoved,
     ToggleMenu(MenuType, Id, ButtonUIRef),
     /// A module of the bar surface was entered or left by the pointer.
     ///
