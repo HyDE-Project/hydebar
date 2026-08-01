@@ -91,12 +91,6 @@ impl MprisPlayerService {
     where
         P: MprisEventPublisher
     {
-        #[cfg(all(test, feature = "enable-broken-tests"))]
-        if let Some(callback) = test_support::current_start_listening_override() {
-            let publisher = publisher as &mut dyn MprisEventPublisher;
-            return (callback)(state, publisher).await;
-        }
-
         Self::start_listening_internal(state, publisher).await
     }
 
@@ -228,11 +222,6 @@ impl MprisPlayerService {
         service: Option<Self>,
         command: MprisPlayerCommand
     ) -> Result<Vec<MprisPlayerData>, ModuleError> {
-        #[cfg(all(test, feature = "enable-broken-tests"))]
-        if let Some(callback) = test_support::current_execute_command_override() {
-            return (callback)(service, command).await;
-        }
-
         let service = service
             .ok_or_else(|| ModuleError::registration("MPRIS player service is not initialised"))?;
 
@@ -259,102 +248,3 @@ impl Service for MprisPlayerService {
 }
 
 // TODO: Fix broken tests
-#[cfg(all(test, feature = "enable-broken-tests"))]
-pub mod test_support {
-    use std::{
-        sync::{Arc, Mutex, OnceLock},
-        time::Duration
-    };
-
-    use super::*;
-
-    pub type StartListeningFuture =
-        Pin<Box<dyn Future<Output = Result<ListenerState, ModuleError>> + Send>>;
-    pub type StartListeningCallback = Arc<
-        dyn Fn(ListenerState, &mut dyn MprisEventPublisher) -> StartListeningFuture + Send + Sync
-    >;
-
-    pub type ExecuteCommandFuture =
-        Pin<Box<dyn Future<Output = Result<Vec<MprisPlayerData>, ModuleError>> + Send>>;
-    pub type ExecuteCommandCallback = Arc<
-        dyn Fn(Option<MprisPlayerService>, MprisPlayerCommand) -> ExecuteCommandFuture
-            + Send
-            + Sync
-    >;
-
-    static START_LISTENING_OVERRIDE: OnceLock<Mutex<Option<StartListeningCallback>>> =
-        OnceLock::new();
-    static EXECUTE_COMMAND_OVERRIDE: OnceLock<Mutex<Option<ExecuteCommandCallback>>> =
-        OnceLock::new();
-
-    fn start_listening_override() -> &'static Mutex<Option<StartListeningCallback>> {
-        START_LISTENING_OVERRIDE.get_or_init(|| Mutex::new(None))
-    }
-
-    fn execute_command_override() -> &'static Mutex<Option<ExecuteCommandCallback>> {
-        EXECUTE_COMMAND_OVERRIDE.get_or_init(|| Mutex::new(None))
-    }
-
-    pub fn install_start_listening_override(callback: StartListeningCallback) -> OverrideGuard {
-        *start_listening_override()
-            .lock()
-            .expect("start listening override mutex poisoned") = Some(callback);
-        OverrideGuard {
-            target: OverrideTarget::StartListening
-        }
-    }
-
-    pub fn install_execute_command_override(callback: ExecuteCommandCallback) -> OverrideGuard {
-        *execute_command_override()
-            .lock()
-            .expect("execute command override mutex poisoned") = Some(callback);
-        OverrideGuard {
-            target: OverrideTarget::ExecuteCommand
-        }
-    }
-
-    pub(crate) fn current_start_listening_override() -> Option<StartListeningCallback> {
-        start_listening_override()
-            .lock()
-            .expect("start listening override mutex poisoned")
-            .clone()
-    }
-
-    pub(crate) fn current_execute_command_override() -> Option<ExecuteCommandCallback> {
-        execute_command_override()
-            .lock()
-            .expect("execute command override mutex poisoned")
-            .clone()
-    }
-
-    pub struct OverrideGuard {
-        target: OverrideTarget
-    }
-
-    enum OverrideTarget {
-        StartListening,
-        ExecuteCommand
-    }
-
-    impl Drop for OverrideGuard {
-        fn drop(&mut self) {
-            match self.target {
-                OverrideTarget::StartListening => {
-                    *start_listening_override()
-                        .lock()
-                        .expect("start listening override mutex poisoned") = None;
-                }
-                OverrideTarget::ExecuteCommand => {
-                    *execute_command_override()
-                        .lock()
-                        .expect("execute command override mutex poisoned") = None;
-                }
-            }
-        }
-    }
-
-    pub async fn yield_once() {
-        tokio::task::yield_now().await;
-        tokio::time::sleep(Duration::from_millis(1)).await;
-    }
-}

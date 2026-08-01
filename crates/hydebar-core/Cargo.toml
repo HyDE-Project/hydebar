@@ -52,7 +52,6 @@ tempfile = "3"
 # Enable test utilities for integration testing
 test-utils = []
 # Enable tests that are currently broken and need fixing
-enable-broken-tests = []
 
 [lints]
 workspace = true

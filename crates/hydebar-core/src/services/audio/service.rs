@@ -26,6 +26,3 @@ pub struct AudioService {
 mod commands;
 mod listen;
 mod traits;
-
-#[cfg(all(test, feature = "enable-broken-tests"))]
-mod tests;

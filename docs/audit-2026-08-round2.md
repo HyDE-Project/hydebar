@@ -166,13 +166,13 @@ inside each section; a checked box means the fix has landed on `main`.
   necessity — its per-icon press carries a positioned menu reference no
   message-generic view can construct. The font-size fallback speaks
   through the one shared derivation everywhere.
-- [ ] **Convention debt:** the updates state file passed 1 000 lines;
-  themes plus its view total ~1 900 for one module; menu view functions
-  take twelve to fifteen positional arguments; the broken-tests feature
-  gates six rotted test blocks. Settled meanwhile: the config crossing is
-  a named export list, and the two bus enums dropped `#[non_exhaustive]` —
-  the mapping is total and a new variant is a compile error, not a
-  silently dropped event.
+- [x] **Convention debt.** The updates state moved its tests into the
+  folder and stands under the line again; the rotted broken-tests feature
+  and its six blocks — none of which even compiled — are gone; the config
+  crossing is a named export list; the two bus enums dropped
+  `#[non_exhaustive]`, so the mapping is total and a new variant is a
+  compile error, not a silently dropped event. Menu view argument structs
+  remain future taste work, each site carries its reasoned expectation.
 
 ## Standing constraints
 

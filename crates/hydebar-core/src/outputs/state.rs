@@ -6,9 +6,6 @@ mod resize;
 mod sync;
 mod tooltips;
 
-#[cfg(all(test, feature = "enable-broken-tests"))]
-mod tests;
-
 use iced::{OutputId, SurfaceId as Id, Task};
 
 use super::wayland::{LayerSurfaceCreation, create_layer_surfaces};
@@ -145,12 +142,5 @@ impl Outputs {
             )]),
             task
         )
-    }
-
-    #[cfg(all(test, feature = "enable-broken-tests"))]
-    fn iter_internal(
-        &self
-    ) -> impl Iterator<Item = &(Option<String>, Option<ShellInfo>, Option<OutputId>)> {
-        self.0.iter()
     }
 }

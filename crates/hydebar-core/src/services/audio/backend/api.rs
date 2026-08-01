@@ -75,19 +75,6 @@ impl BackendHandle {
         }
     }
 
-    #[cfg(all(test, feature = "enable-broken-tests"))]
-    pub(crate) const fn from_parts(
-        receiver: Receiver<BackendEvent>,
-        sender: Sender<BackendCommand>
-    ) -> Self {
-        Self {
-            receiver,
-            sender,
-            _listener: None,
-            _commander: None
-        }
-    }
-
     pub(crate) fn commander(&self) -> Sender<BackendCommand> {
         self.sender.clone()
     }
