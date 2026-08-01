@@ -130,7 +130,7 @@ mod tests {
 pub async fn run(command: String) -> Option<String> {
     let command: Arc<str> = Arc::from(command);
 
-    log::warn!("DBG desktop command runs: {command}");
+    log::info!("desktop command runs: {command}");
 
     launcher::run_detached(&command)
         .await
