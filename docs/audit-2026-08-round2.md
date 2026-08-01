@@ -95,10 +95,11 @@ inside each section; a checked box means the fix has landed on `main`.
   The offered list and a canonical catalogue index are restated only when
   the installed set or the catalogue moves; a frame now costs one small
   lookup per chip instead of thousands of normalised comparisons.
-- [ ] **The frame clock is a fixed 16 ms timer.** It beats against any
-  refresh rate that is not 62.5 Hz; every animation rides it
-  (`app/update/subscriptions.rs:120`). Drive it from the compositor's
-  redraw callback.
+- [ ] **The frame clock is a fixed 16 ms timer.** Blocked upstream: the
+  layer-shell fork synthesizes its redraw event only into the widget
+  update, never into the subscription stream, so the runtime's
+  frame subscription can never fire under it. Revisit when the fork
+  forwards window events to subscriptions.
 - [x] **The faded theme allocates a name, an arc and a full palette blend
   per surface per animated frame.** Fade shares snap to a sixty-fourth and
   every derived theme lands in one app-level memo cleared per frame — one
@@ -174,4 +175,6 @@ inside each section; a checked box means the fix has landed on `main`.
 
 Typed Hyprland IPC remains blocked by the upstream crate (monitor data
 lacks physical dimensions; the control colour type has no public
-constructor). Revisit on the next release.
+constructor), and the compositor-driven frame clock is blocked by the
+layer-shell fork (redraw events never reach subscriptions). Revisit both
+on their next releases.
