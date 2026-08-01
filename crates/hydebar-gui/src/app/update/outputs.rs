@@ -11,19 +11,13 @@ use super::super::state::{App, Message};
 
 /// Asks the compositor for the screen's geometry off the drawing thread.
 ///
-/// The question costs a process spawn and the compositor may answer slowly;
-/// the drawing thread must never stand waiting on it, so the answer comes
-/// back as a message of its own.
+/// The question travels the compositor's own socket and the compositor may
+/// answer slowly; the drawing thread must never stand waiting on it, so the
+/// answer comes back as a message of its own.
 fn measure_screen(name: String) -> Task<Message> {
     Task::perform(
         async move {
-            let answer = tokio::task::spawn_blocking({
-                let name = name.clone();
-                move || screen_geometry(&name)
-            })
-            .await
-            .ok()
-            .flatten();
+            let answer = screen_geometry(&name).await;
 
             (name, answer)
         },

@@ -137,12 +137,18 @@ static GEOMETRY_CACHE: std::sync::LazyLock<
 /// pixels and millimetres, or a scaled screen would be shrunk twice and a
 /// television never magnified.
 ///
-/// A fresh answer is served from the cache, and a stale one costs a process
-/// spawn — ask from the blocking pool, never from the thread that draws.
-/// The cache lock recovers from poisoning: it guards plain data that every
-/// operation leaves whole.
-#[must_use]
-pub fn screen_geometry(name: &str) -> Option<ScreenGeometry> {
+/// Longest the compositor gets to answer the geometry question.
+///
+/// The socket answers within a frame on a healthy compositor; a busy one
+/// must cost the bar a skipped measurement, not an unbounded wait.
+const GEOMETRY_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(2);
+
+/// Reads the geometry of the named screen, preferring the cached answer.
+///
+/// A stale answer is asked over the compositor's own socket, with no
+/// process spawned and no thread parked. The cache lock recovers from
+/// poisoning: it guards plain data that every operation leaves whole.
+pub async fn screen_geometry(name: &str) -> Option<ScreenGeometry> {
     let now = std::time::Instant::now();
 
     if let Some((asked, answer)) = GEOMETRY_CACHE
@@ -154,7 +160,7 @@ pub fn screen_geometry(name: &str) -> Option<ScreenGeometry> {
         return *answer;
     }
 
-    let answer = query_geometry(name);
+    let answer = query_geometry(name).await;
 
     GEOMETRY_CACHE
         .lock()
@@ -164,18 +170,38 @@ pub fn screen_geometry(name: &str) -> Option<ScreenGeometry> {
     answer
 }
 
-/// Asks the compositor outright.
-fn query_geometry(name: &str) -> Option<ScreenGeometry> {
-    let output = std::process::Command::new("hyprctl")
-        .args(["-j", "monitors"])
-        .output()
-        .ok()?;
+/// Asks the compositor outright, over its own request socket.
+async fn query_geometry(name: &str) -> Option<ScreenGeometry> {
+    let answer = tokio::time::timeout(GEOMETRY_TIMEOUT, compositor_answer("j/monitors"))
+        .await
+        .ok()??;
 
-    if !output.status.success() {
-        return None;
-    }
+    parse_geometry(&answer, name)
+}
 
-    parse_geometry(&String::from_utf8_lossy(&output.stdout), name)
+/// Sends one request to the compositor's control socket and reads the reply.
+///
+/// The command line tool the bar used to spawn here is nothing but this
+/// exchange wrapped in a process; speaking to the socket directly costs a
+/// connection instead of a fork.
+async fn compositor_answer(request: &str) -> Option<String> {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+    let signature = std::env::var_os("HYPRLAND_INSTANCE_SIGNATURE")?;
+    let runtime_dir = std::env::var_os("XDG_RUNTIME_DIR")?;
+
+    let socket = std::path::Path::new(&runtime_dir)
+        .join("hypr")
+        .join(&signature)
+        .join(".socket.sock");
+
+    let mut stream = tokio::net::UnixStream::connect(socket).await.ok()?;
+    stream.write_all(request.as_bytes()).await.ok()?;
+
+    let mut answer = String::new();
+    stream.read_to_string(&mut answer).await.ok()?;
+
+    Some(answer)
 }
 
 /// Picks the named screen out of the compositor answer.
