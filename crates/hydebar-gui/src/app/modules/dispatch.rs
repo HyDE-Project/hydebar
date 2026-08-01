@@ -166,6 +166,7 @@ impl App {
             ModuleName::Privacy => self.privacy.view(self.icons()),
             ModuleName::ControlCenter => self.control_center.view(self.icons()),
             ModuleName::Audio => self.control_center.audio_bar(self.icons()),
+            ModuleName::Brightness => self.control_center.brightness_bar(self.icons()),
             ModuleName::Network => self.control_center.network_bar(self.icons()),
             ModuleName::Bluetooth => self.control_center.bluetooth_bar(self.icons()),
             ModuleName::PowerProfile => self.control_center.power_profile_bar(self.icons()),
@@ -236,7 +237,8 @@ impl App {
             | ModuleName::Audio
             | ModuleName::Network
             | ModuleName::Bluetooth
-            | ModuleName::PowerProfile => self.control_center.subscription(),
+            | ModuleName::PowerProfile
+            | ModuleName::Brightness => self.control_center.subscription(),
             ModuleName::MediaPlayer => self.media_player.subscription(),
             ModuleName::Notifications => self.notifications.subscription(),
             ModuleName::Screenshot => self.screenshot.subscription()

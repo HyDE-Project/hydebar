@@ -221,6 +221,7 @@ fn builtin_for(name: &str) -> Option<ModuleName> {
         "hyprland/language" | "keyboard-state" => ModuleName::KeyboardLayout,
         "hyprland/submap" => ModuleName::KeyboardSubmap,
         "network" => ModuleName::Network,
+        "backlight" => ModuleName::Brightness,
         "bluetooth" => ModuleName::Bluetooth,
         "pulseaudio" | "wireplumber" => ModuleName::Audio,
         "battery" => ModuleName::Battery,

@@ -44,12 +44,13 @@ fn gate<M>(
 /// standalone `Audio`, `Network`, `Bluetooth` and `PowerProfile` readouts
 /// render from the same state as the full panel, and the battery indicator
 /// opens its menu. One of them on the bar is enough to justify the connections.
-const CONTROL_CENTER_CONSUMERS: [ModuleName; 7] = [
+const CONTROL_CENTER_CONSUMERS: [ModuleName; 8] = [
     ModuleName::ControlCenter,
     ModuleName::Audio,
     ModuleName::Network,
     ModuleName::Bluetooth,
     ModuleName::PowerProfile,
+    ModuleName::Brightness,
     ModuleName::Settings,
     ModuleName::Battery
 ];

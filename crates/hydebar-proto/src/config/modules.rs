@@ -56,6 +56,7 @@ pub enum ModuleName {
     Network,
     Bluetooth,
     PowerProfile,
+    Brightness,
     Settings,
     Themes,
     Wallpaper,
@@ -71,7 +72,7 @@ pub enum ModuleName {
 
 impl ModuleName {
     /// Every module the bar ships, in the order the editor lists them.
-    pub const BUILT_IN: [Self; 30] = [
+    pub const BUILT_IN: [Self; 31] = [
         Self::AppLauncher,
         Self::Updates,
         Self::Clipboard,
@@ -93,6 +94,7 @@ impl ModuleName {
         Self::Network,
         Self::Bluetooth,
         Self::PowerProfile,
+        Self::Brightness,
         Self::Settings,
         Self::Themes,
         Self::Wallpaper,
@@ -129,6 +131,7 @@ impl ModuleName {
             Self::Network => "Network",
             Self::Bluetooth => "Bluetooth",
             Self::PowerProfile => "PowerProfile",
+            Self::Brightness => "Brightness",
             Self::Settings => "Settings",
             Self::Themes => "Themes",
             Self::Wallpaper => "Wallpaper",
@@ -171,6 +174,7 @@ impl ModuleName {
             Self::Network => "Network",
             Self::Bluetooth => "Bluetooth",
             Self::PowerProfile => "Power profile",
+            Self::Brightness => "Brightness",
             Self::Settings => "Bar settings",
             Self::Themes => "Desktop themes",
             Self::Wallpaper => "Wallpaper",
