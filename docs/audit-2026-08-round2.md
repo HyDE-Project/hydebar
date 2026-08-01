@@ -20,16 +20,13 @@ inside each section; a checked box means the fix has landed on `main`.
 
 ## Concurrency and reliability
 
-- [ ] **Tray watcher task is detached and immortal.** The name-owner stream
-  task holds its own connection clone, never exits, and a new one is spawned
-  on every `State::Init` re-entry — each tray reconnect leaks a connection
-  still owning the watcher object (`services/tray/dbus.rs:68`,
-  `services/tray/watcher.rs:250`). Store and abort the handle with the
-  connection.
-- [ ] **Interface write guard held across signal emission.**
-  `interface.get_mut().await` stays alive while the unregistration signal is
-  emitted on the same connection — self-deadlock-shaped under backpressure
-  (`services/tray/dbus.rs:88`). Drop the guard before emitting.
+- [x] **Tray watcher task is detached and immortal.** The server now starts
+  once and lives in a wrapper whose drop aborts the name-watching task; a
+  torn-down tray module leaves neither a task nor a claimed name behind,
+  and retries reuse the one connection instead of stacking servers.
+- [x] **Interface write guard held across signal emission.** The guard is
+  dropped before the unregistration signal is emitted, so a slow peer can
+  no longer stall registrations behind the emission.
 - [x] **PulseAudio listener thread leaks on every re-registration.** A
   recurring heartbeat timer on the sound server's own loop wakes the parked
   listener every 300 ms; the loop checks whether its event channel is
@@ -52,13 +49,13 @@ inside each section; a checked box means the fix has landed on `main`.
   not up yet, interface registration, a holder that will not yield — ends
   one attempt instead of the whole daemon, and the desk reopens on the next
   knock.
-- [ ] **Tray rebuild window loses registrations.** Every registration tears
-  down and rebuilds all item streams; items arriving during the rebuild are
-  dropped, unregistrations missed (`services/tray/watcher.rs:270`).
-  Subscribe to the registration signals once, add items incrementally.
-- [ ] **No timeout on tray D-Bus calls.** One frozen tray application parks
-  the whole tray forever (`services/tray.rs:81`, `watcher.rs:64`). Wrap item
-  builds in a timeout and skip on expiry.
+- [x] **Tray rebuild window loses registrations.** The registration signals
+  are subscribed exactly once and per-item streams join the running merge
+  as items register; nothing is torn down between registrations, so a
+  login-time burst of tray applications loses nobody.
+- [x] **No timeout on tray D-Bus calls.** The item handshake is bounded at
+  five seconds; a frozen application costs the tray one skipped icon, and a
+  single broken item no longer fails the whole initialisation.
 - [x] **`hyprctl` runs synchronously on the drawing thread.** The geometry
   question is asked from the blocking pool and comes back as its own
   message; the drawing thread only adopts the answer. The cache lock now
