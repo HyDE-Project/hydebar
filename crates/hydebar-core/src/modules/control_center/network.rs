@@ -374,7 +374,7 @@ impl NetworkData {
                             )
                         });
 
-                        button(
+                        let row_button = button(
                             container(
                                 row!(
                                     icon(icons, if ac.public {
@@ -402,17 +402,22 @@ impl NetworkData {
                         )
                         .style(ghost_button_style(opacity))
                         .padding([scale::scaled(8.0), scale::scaled(8.0)])
-                        .on_press_maybe(if !is_active {
-                            Some(if is_known {
-                                NetworkMessage::SelectAccessPoint(ac.clone())
-                            } else {
-                                NetworkMessage::RequestWiFiPassword(id, ac.ssid.clone())
-                            })
+                        .width(Length::Fill);
+
+                    let press = (!is_active).then(|| {
+                        if is_known {
+                            NetworkMessage::SelectAccessPoint(ac.clone())
                         } else {
-                            None
-                        })
-                        .width(Length::Fill)
-                        .into()
+                            NetworkMessage::RequestWiFiPassword(id, ac.ssid.clone())
+                        }
+                    });
+
+                    match press {
+                        Some(message) => iced::widget::mouse_area(row_button)
+                            .on_press(message)
+                            .into(),
+                        None => row_button.into()
+                    }
                     })
                     .collect::<Vec<Element<NetworkMessage>>>(),
             )

@@ -353,15 +353,15 @@ pub(crate) fn theme_chip<'a, M: Clone + 'static>(
             .align_y(Alignment::Center);
 
         for (glyph, deed, enabled) in actions {
-            let mut deed_button = button(icon_raw_sized(glyph.to_owned(), Some(control * 0.9)))
+            let deed_button = button(icon_raw_sized(glyph.to_owned(), Some(control * 0.9)))
                 .padding(control * 0.15)
                 .style(crate::style::ghost_button_style(opacity));
 
-            if enabled {
-                deed_button = deed_button.on_press(deed);
-            }
-
-            row = row.push(deed_button);
+            row = row.push(if enabled {
+                Element::from(iced::widget::mouse_area(deed_button).on_press(deed))
+            } else {
+                deed_button.into()
+            });
         }
 
         Some(row)

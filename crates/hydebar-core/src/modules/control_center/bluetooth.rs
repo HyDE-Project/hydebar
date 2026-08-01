@@ -81,20 +81,20 @@ impl BluetoothData {
                                 d.battery.map(|battery| Self::battery_level(battery, icons))
                             )
                             .push(
-                                button(text(if d.connected {
-                                    "Disconnect"
-                                } else {
-                                    "Connect"
-                                }))
-                                .padding([scale::scaled(4.0), scale::scaled(12.0)])
-                                .style(ghost_button_style(opacity))
-                                .on_press(
-                                    Message::Bluetooth(if d.connected {
-                                        BluetoothMessage::DisconnectDevice(d.path.clone())
+                                iced::widget::mouse_area(
+                                    button(text(if d.connected {
+                                        "Disconnect"
                                     } else {
-                                        BluetoothMessage::ConnectDevice(d.path.clone())
-                                    })
+                                        "Connect"
+                                    }))
+                                    .padding([scale::scaled(4.0), scale::scaled(12.0)])
+                                    .style(ghost_button_style(opacity))
                                 )
+                                .on_press(Message::Bluetooth(if d.connected {
+                                    BluetoothMessage::DisconnectDevice(d.path.clone())
+                                } else {
+                                    BluetoothMessage::ConnectDevice(d.path.clone())
+                                }))
                             )
                             .spacing(scale::scaled(8.0))
                             .align_y(iced::Alignment::Center)
