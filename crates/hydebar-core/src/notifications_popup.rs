@@ -59,15 +59,23 @@ impl Popup {
     /// Builds the popup for `notification`, shown at `now`.
     ///
     /// An urgent notification stays longer: it is the one a person is most
-    /// likely to have missed while looking elsewhere.
+    /// likely to have missed while looking elsewhere. A sender that named
+    /// its own duration is obeyed; the protocol's zero means never expire,
+    /// answered with a day rather than a leak-prone forever.
     #[must_use]
     pub fn new(notification: &Notification, now: Instant) -> Self {
+        let life = match notification.expire_timeout {
+            0 => Duration::from_hours(24),
+            timeout if timeout > 0 => Duration::from_millis(timeout.unsigned_abs().into()),
+            _ => lifetime_for(&notification.urgency)
+        };
+
         Self {
-            id:      notification.id,
+            id: notification.id,
             summary: notification.summary.clone(),
-            body:    notification.body.clone(),
-            shown:   now,
-            life:    lifetime_for(&notification.urgency)
+            body: notification.body.clone(),
+            shown: now,
+            life
         }
     }
 

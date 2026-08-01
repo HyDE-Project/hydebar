@@ -130,14 +130,15 @@ mod tests {
 
     fn a_notification(summary: &str) -> Notification {
         Notification {
-            id:        0,
-            app_name:  "test-app".to_string(),
-            icon:      String::new(),
-            summary:   summary.to_string(),
-            body:      String::new(),
-            urgency:   Urgency::Normal,
-            timestamp: SystemTime::now(),
-            actions:   Vec::new()
+            id:             0,
+            app_name:       "test-app".to_string(),
+            icon:           String::new(),
+            summary:        summary.to_string(),
+            body:           String::new(),
+            urgency:        Urgency::Normal,
+            timestamp:      SystemTime::now(),
+            actions:        Vec::new(),
+            expire_timeout: -1
         }
     }
 

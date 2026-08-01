@@ -36,7 +36,9 @@ pub enum ScreenshotMessage {
 /// Screenshot and recording module.
 #[derive(Debug, Default)]
 pub struct Screenshot {
-    pub is_recording: bool
+    pub is_recording: bool,
+    /// Identifier of the recorder this bar started, while one runs.
+    recorder_pid:     Option<u32>
 }
 
 impl Screenshot {
@@ -130,11 +132,15 @@ impl Screenshot {
 
         match Command::new("wf-recorder").arg("-f").arg(&filename).spawn() {
             Ok(mut child) => {
-                std::thread::spawn(move || {
-                    let _ = child.wait();
-                });
+                self.recorder_pid = Some(child.id());
                 self.is_recording = true;
                 debug!("Recording started");
+
+                std::thread::spawn(move || match child.wait() {
+                    Ok(status) if status.success() => {}
+                    Ok(status) => error!("the recorder ended with {status}"),
+                    Err(err) => error!("waiting on the recorder failed: {err}")
+                });
             }
             Err(err) => error!("Failed to start recording: {err}")
         }
@@ -149,11 +155,14 @@ impl Screenshot {
 
         debug!("Stopping recording");
 
-        // Send SIGINT to wf-recorder to stop recording gracefully; waiting
-        // on a thread reaps the helper instead of leaving a zombie
-        match Command::new("pkill")
-            .arg("-SIGINT")
-            .arg("wf-recorder")
+        let Some(pid) = self.recorder_pid.take() else {
+            self.is_recording = false;
+            return;
+        };
+
+        match Command::new("kill")
+            .arg("-INT")
+            .arg(pid.to_string())
             .spawn()
         {
             Ok(mut child) => {

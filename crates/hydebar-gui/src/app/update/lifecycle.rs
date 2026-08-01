@@ -14,14 +14,15 @@ fn announcement(
     source: hydebar_proto::config::NotificationSource
 ) -> hydebar_core::services::notifications::Notification {
     hydebar_core::services::notifications::Notification {
-        id:        0,
-        app_name:  "hydebar".to_owned(),
-        icon:      String::new(),
-        summary:   "Notifications".to_owned(),
-        body:      format!("now shown by {}", source.label()),
-        urgency:   hydebar_core::services::notifications::Urgency::Normal,
-        timestamp: std::time::SystemTime::now(),
-        actions:   Vec::new()
+        id:             0,
+        app_name:       "hydebar".to_owned(),
+        icon:           String::new(),
+        summary:        "Notifications".to_owned(),
+        body:           format!("now shown by {}", source.label()),
+        urgency:        hydebar_core::services::notifications::Urgency::Normal,
+        timestamp:      std::time::SystemTime::now(),
+        actions:        Vec::new(),
+        expire_timeout: -1
     }
 }
 

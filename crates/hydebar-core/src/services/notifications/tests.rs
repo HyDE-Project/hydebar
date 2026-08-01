@@ -11,14 +11,15 @@ fn storage_max_capacity() {
     // Add MAX_NOTIFICATIONS + 10
     for i in 0..MAX_NOTIFICATIONS + 10 {
         let notif = Notification {
-            id:        0,
-            app_name:  format!("app{i}"),
-            icon:      String::new(),
-            summary:   format!("Summary {i}"),
-            body:      String::new(),
-            urgency:   Urgency::Normal,
-            timestamp: SystemTime::now(),
-            actions:   vec![]
+            id:             0,
+            app_name:       format!("app{i}"),
+            icon:           String::new(),
+            summary:        format!("Summary {i}"),
+            body:           String::new(),
+            urgency:        Urgency::Normal,
+            timestamp:      SystemTime::now(),
+            actions:        vec![],
+            expire_timeout: -1
         };
         storage.add(notif);
     }
@@ -40,14 +41,15 @@ fn dnd_blocks_normal_notifications() {
 fn remove_notification_by_id() {
     let mut storage = NotificationStorage::default();
     let notif = Notification {
-        id:        0,
-        app_name:  "test".to_string(),
-        icon:      String::new(),
-        summary:   "Test".to_string(),
-        body:      String::new(),
-        urgency:   Urgency::Normal,
-        timestamp: SystemTime::now(),
-        actions:   vec![]
+        id:             0,
+        app_name:       "test".to_string(),
+        icon:           String::new(),
+        summary:        "Test".to_string(),
+        body:           String::new(),
+        urgency:        Urgency::Normal,
+        timestamp:      SystemTime::now(),
+        actions:        vec![],
+        expire_timeout: -1
     };
 
     let id = storage.add(notif);
@@ -63,14 +65,15 @@ fn clear_all_notifications() {
 
     for i in 0..5 {
         let notif = Notification {
-            id:        0,
-            app_name:  format!("app{i}"),
-            icon:      String::new(),
-            summary:   format!("Summary {i}"),
-            body:      String::new(),
-            urgency:   Urgency::Normal,
-            timestamp: SystemTime::now(),
-            actions:   vec![]
+            id:             0,
+            app_name:       format!("app{i}"),
+            icon:           String::new(),
+            summary:        format!("Summary {i}"),
+            body:           String::new(),
+            urgency:        Urgency::Normal,
+            timestamp:      SystemTime::now(),
+            actions:        vec![],
+            expire_timeout: -1
         };
         storage.add(notif);
     }

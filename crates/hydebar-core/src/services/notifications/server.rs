@@ -118,7 +118,8 @@ impl NotificationsServer {
             body,
             urgency: urgency.clone(),
             timestamp: SystemTime::now(),
-            actions
+            actions,
+            expire_timeout
         };
 
         let mut storage = self.storage();

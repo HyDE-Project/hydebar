@@ -23,14 +23,17 @@ impl From<u8> for Urgency {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Notification {
-    pub id:        u32,
-    pub app_name:  String,
-    pub icon:      String,
-    pub summary:   String,
-    pub body:      String,
-    pub urgency:   Urgency,
-    pub timestamp: SystemTime,
-    pub actions:   Vec<String>
+    pub id:             u32,
+    pub app_name:       String,
+    pub icon:           String,
+    pub summary:        String,
+    pub body:           String,
+    pub urgency:        Urgency,
+    pub timestamp:      SystemTime,
+    pub actions:        Vec<String>,
+    /// Lifetime the sender asked for, milliseconds; zero means never
+    /// expire, negative leaves the choice to the bar.
+    pub expire_timeout: i32
 }
 
 #[derive(Debug, Clone)]
