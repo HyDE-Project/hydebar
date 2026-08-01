@@ -499,12 +499,19 @@ impl Themes {
                 return self.install(theme, config);
             }
             Message::Condemn(theme) => {
-                if self.switching.is_none()
-                    && self.installing.is_none()
-                    && self.hyde.theme.as_deref() != Some(theme.as_str())
-                    && self.hyde.themes.contains(&theme)
-                {
+                if self.switching.is_some() {
+                    report(config, "a theme switch is running, removal must wait");
+                } else if self.installing.is_some() {
+                    report(config, "a theme install is running, removal must wait");
+                } else if self.hyde.theme.as_deref() == Some(theme.as_str()) {
+                    report(
+                        config,
+                        "the theme in force cannot be removed, switch away first"
+                    );
+                } else if self.hyde.themes.contains(&theme) {
                     self.condemned = Some(theme);
+                } else {
+                    report(config, "this theme is not installed");
                 }
             }
             Message::Remove(theme) => return self.remove(theme, config),
