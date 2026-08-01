@@ -12,10 +12,16 @@ use tokio::runtime::Runtime;
 use super::{
     failures::{FAILURE_REPEAT, FailureLog},
     hyde_clone::clone_path_from,
-    schedule::MIN_INTERVAL,
+    schedule::{MIN_INTERVAL, check_interval},
     *
 };
-use crate::event_bus::EventBus;
+use crate::{
+    ModuleContext,
+    components::icons::IconTheme,
+    config::UpdatesModuleConfig,
+    event_bus::{EventBus, ModuleEvent},
+    modules::Module
+};
 
 fn context(runtime: &Runtime) -> (EventBus, ModuleContext) {
     let bus = EventBus::new(NonZeroUsize::new(16).expect("capacity"));
