@@ -31,6 +31,28 @@ impl BusEvent {
             (BusEvent::Redraw, BusEvent::Redraw) | (BusEvent::PopupToggle, BusEvent::PopupToggle)
         )
     }
+
+    /// Key identifying a whole-state message an older queued one yields to.
+    ///
+    /// The chattiest producers publish snapshots, not increments: a fresh
+    /// workspace list, a fresh title, a fresh metrics sample each carry the
+    /// whole truth, so a queue holding two of the same kind delivers stale
+    /// state first and wastes a repaint on it. Incremental messages — the
+    /// tray above all — have no key and are never replaced.
+    fn snapshot_key(&self) -> Option<u8> {
+        match self {
+            BusEvent::Module(ModuleEvent::Workspaces(
+                modules::workspaces::Message::WorkspacesChanged(_)
+            )) => Some(0),
+            BusEvent::Module(ModuleEvent::WindowTitle(
+                modules::window_title::Message::TitleChanged(_)
+            )) => Some(1),
+            BusEvent::Module(ModuleEvent::SystemInfo(
+                modules::system_info::Message::Sampled(_)
+            )) => Some(2),
+            _ => None
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -83,6 +105,18 @@ impl EventBusInner {
     /// the queue lock.
     fn enqueue(&self, event: BusEvent) -> Result<(), EventBusError> {
         let mut queue = self.queue.lock().map_err(|_| EventBusError::Poisoned)?;
+
+        if let Some(key) = event.snapshot_key()
+            && let Some(stale) = queue
+                .iter_mut()
+                .find(|queued| queued.snapshot_key() == Some(key))
+        {
+            *stale = event;
+            drop(queue);
+            self.delivered.notify_one();
+
+            return Ok(());
+        }
 
         if queue.len() >= self.capacity {
             return Err(EventBusError::QueueFull {
@@ -241,6 +275,38 @@ mod tests {
 
     fn bus() -> EventBus {
         EventBus::new(NonZeroUsize::new(16).expect("capacity is non zero"))
+    }
+
+    #[tokio::test]
+    async fn a_fresh_snapshot_replaces_its_stale_twin_in_place() {
+        let bus = bus();
+        let mut receiver = bus.receiver();
+
+        let snapshot = |active| {
+            BusEvent::Module(ModuleEvent::Workspaces(
+                crate::modules::workspaces::Message::WorkspacesChanged(
+                    hydebar_proto::ports::hyprland::HyprlandWorkspaceSnapshot {
+                        monitors:            Vec::new(),
+                        workspaces:          Vec::new(),
+                        active_workspace_id: Some(active)
+                    }
+                )
+            ))
+        };
+
+        bus.publish(snapshot(1)).expect("queue has room");
+        bus.publish(BusEvent::PopupToggle).expect("queue has room");
+        bus.publish(snapshot(2)).expect("queue has room");
+
+        let batch = receiver.recv().await.expect("bus is healthy");
+
+        assert_eq!(batch.len(), 2, "the stale snapshot must not survive");
+        assert!(matches!(
+            &batch[0],
+            BusEvent::Module(ModuleEvent::Workspaces(
+                crate::modules::workspaces::Message::WorkspacesChanged(snapshot)
+            )) if snapshot.active_workspace_id == Some(2)
+        ));
     }
 
     #[tokio::test]
