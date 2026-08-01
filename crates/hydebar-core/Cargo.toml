@@ -53,3 +53,6 @@ tempfile = "3"
 test-utils = []
 # Enable tests that are currently broken and need fixing
 enable-broken-tests = []
+
+[lints]
+workspace = true

@@ -24,6 +24,7 @@ pub enum UPowerMessage {
 }
 
 impl BatteryData {
+    #[must_use]
     pub fn indicator<Message: 'static>(&self, icons: &IconTheme) -> Element<'static, Message> {
         let icon_type = self.get_icon();
         let state = self.get_indicator_state();
@@ -44,6 +45,7 @@ impl BatteryData {
         .into()
     }
 
+    #[must_use]
     pub fn settings_indicator<'a, Message: 'static>(
         &self,
         icons: &IconTheme
@@ -86,13 +88,14 @@ impl BatteryData {
 }
 
 impl PowerProfile {
+    #[must_use]
     pub fn indicator<Message: 'static>(
         &self,
         icons: &IconTheme
     ) -> Option<Element<'static, Message>> {
         match self {
-            PowerProfile::Balanced => None,
-            PowerProfile::Performance => Some(
+            Self::Balanced => None,
+            Self::Performance => Some(
                 container(icon(icons, Icons::Performance))
                     .style(|theme: &Theme| container::Style {
                         text_color: Some(theme.palette().danger),
@@ -100,7 +103,7 @@ impl PowerProfile {
                     })
                     .into()
             ),
-            PowerProfile::PowerSaver => Some(
+            Self::PowerSaver => Some(
                 container(icon(icons, Icons::PowerSaver))
                     .style(|theme: &Theme| container::Style {
                         text_color: Some(theme.palette().success),
@@ -108,25 +111,28 @@ impl PowerProfile {
                     })
                     .into()
             ),
-            PowerProfile::Unknown => None
+            Self::Unknown => None
         }
     }
 
+    #[must_use]
     pub fn get_quick_setting_button(
         &self,
         opacity: f32,
         icons: &IconTheme
     ) -> Option<(Element<'_, Message>, Option<Element<'_, Message>>)> {
-        if !matches!(self, PowerProfile::Unknown) {
+        if matches!(self, Self::Unknown) {
+            None
+        } else {
             Some((
                 quick_setting_button(
                     icons,
                     (*self).into(),
                     match self {
-                        PowerProfile::Balanced => "Balanced",
-                        PowerProfile::Performance => "Performance",
-                        PowerProfile::PowerSaver => "Power Saver",
-                        PowerProfile::Unknown => ""
+                        Self::Balanced => "Balanced",
+                        Self::Performance => "Performance",
+                        Self::PowerSaver => "Power Saver",
+                        Self::Unknown => ""
                     }
                     .to_string(),
                     None,
@@ -137,8 +143,6 @@ impl PowerProfile {
                 ),
                 None
             ))
-        } else {
-            None
         }
     }
 }

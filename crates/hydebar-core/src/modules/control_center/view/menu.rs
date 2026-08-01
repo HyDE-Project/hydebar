@@ -75,8 +75,7 @@ impl ControlCenter {
             let (sink_slider, source_slider) = self
                 .audio
                 .as_ref()
-                .map(|a| a.audio_sliders(self.sub_menu, opacity, icons))
-                .unwrap_or((None, None));
+                .map_or((None, None), |a| a.audio_sliders(self.sub_menu, opacity, icons));
 
             let wifi_setting_button = self.network.as_ref().and_then(|n| {
                 n.get_wifi_quick_setting_button(

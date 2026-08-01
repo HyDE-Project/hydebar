@@ -46,6 +46,7 @@ impl ControlCenter {
     /// The entry answers the wheel as well: a notch up or down nudges
     /// the sink volume without the menu ever opening, the
     /// way the reference waybar module behaves.
+    #[must_use]
     pub fn audio_bar<M>(
         &self,
         icons: &IconTheme
@@ -66,6 +67,7 @@ impl ControlCenter {
     }
 
     /// Bar entry of the standalone network module, connection and VPN.
+    #[must_use]
     pub fn network_bar<M>(
         &self,
         icons: &IconTheme
@@ -95,6 +97,7 @@ impl ControlCenter {
     ///
     /// A machine without a bluetooth radio reports the state as
     /// unavailable and the module stays off the bar.
+    #[must_use]
     pub fn bluetooth_bar<M>(
         &self,
         icons: &IconTheme
@@ -113,6 +116,7 @@ impl ControlCenter {
     }
 
     /// Bar entry of the standalone power profile module.
+    #[must_use]
     pub fn power_profile_bar<M>(
         &self,
         icons: &IconTheme
@@ -133,6 +137,7 @@ impl ControlCenter {
 
     /// Menu of the standalone audio module: both sliders and their
     /// device lists.
+    #[must_use]
     pub fn audio_menu(
         &self,
         id: Id,
@@ -144,8 +149,7 @@ impl ControlCenter {
         let (sink_slider, source_slider) = self
             .audio
             .as_ref()
-            .map(|a| a.audio_sliders(self.sub_menu, opacity, icons))
-            .unwrap_or((None, None));
+            .map_or((None, None), |a| a.audio_sliders(self.sub_menu, opacity, icons));
 
         let (top_sink_slider, bottom_sink_slider) = match position {
             Position::Top => (sink_slider, None),
@@ -250,6 +254,7 @@ impl ControlCenter {
     }
 
     /// Menu of the standalone bluetooth module.
+    #[must_use]
     pub fn bluetooth_menu(
         &self,
         id: Id,

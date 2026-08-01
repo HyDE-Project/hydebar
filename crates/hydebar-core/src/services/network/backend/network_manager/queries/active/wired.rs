@@ -13,18 +13,18 @@ pub(super) async fn describe(
 ) -> AppResult<ActiveConnectionInfo> {
     let wired_device = WiredDeviceProxy::builder(conn)
         .path(device.inner().path())
-        .map_err(|e| AppError::internal(format!("Failed to set WiredDeviceProxy path: {}", e)))?
+        .map_err(|e| AppError::internal(format!("Failed to set WiredDeviceProxy path: {e}")))?
         .build()
         .await
-        .map_err(|e| AppError::internal(format!("Failed to build WiredDeviceProxy: {}", e)))?;
+        .map_err(|e| AppError::internal(format!("Failed to build WiredDeviceProxy: {e}")))?;
 
     Ok(ActiveConnectionInfo::Wired {
         name:  connection.id().await.map_err(|e| {
-            AppError::internal(format!("Failed to get wired connection ID: {}", e))
+            AppError::internal(format!("Failed to get wired connection ID: {e}"))
         })?,
         speed: wired_device
             .speed()
             .await
-            .map_err(|e| AppError::internal(format!("Failed to get wired device speed: {}", e)))?
+            .map_err(|e| AppError::internal(format!("Failed to get wired device speed: {e}")))?
     })
 }

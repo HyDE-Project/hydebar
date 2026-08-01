@@ -19,7 +19,7 @@ pub struct NotificationsServer {
 }
 
 impl NotificationsServer {
-    pub fn new(
+    pub const fn new(
         storage: std::sync::Arc<std::sync::Mutex<NotificationStorage>>,
         announce: UnboundedSender<NotificationEvent>
     ) -> Self {
@@ -50,7 +50,7 @@ impl NotificationsServer {
 #[interface(name = "org.freedesktop.Notifications")]
 impl NotificationsServer {
     /// Get server information
-    fn get_server_information(&self) -> (&str, &str, &str, &str) {
+    const fn get_server_information(&self) -> (&str, &str, &str, &str) {
         ("hydebar", "RAprogramm", "0.6.7", "1.2")
     }
 
@@ -78,23 +78,21 @@ impl NotificationsServer {
         expire_timeout: i32
     ) -> u32 {
         debug!(
-            "Notification: {} - {} (icon: {}, timeout: {})",
-            app_name, summary, app_icon, expire_timeout
+            "Notification: {app_name} - {summary} (icon: {app_icon}, timeout: {expire_timeout})"
         );
 
         // Parse urgency from hints
         let urgency = hints
             .get("urgency")
             .and_then(|v| v.downcast_ref::<u8>().ok())
-            .map(Urgency::from)
-            .unwrap_or(Urgency::Normal);
+            .map_or(Urgency::Normal, Urgency::from);
 
         let notification = Notification {
             id: 0, // Will be set by storage
-            app_name: app_name.clone(),
+            app_name,
             icon: app_icon,
             summary: summary.clone(),
-            body: body.clone(),
+            body,
             urgency: urgency.clone(),
             timestamp: SystemTime::now(),
             actions
@@ -104,7 +102,7 @@ impl NotificationsServer {
 
         // Check if should show (DND mode)
         if !storage.should_show(&urgency) {
-            debug!("Notification suppressed by DND: {}", summary);
+            debug!("Notification suppressed by DND: {summary}");
             return 0;
         }
 

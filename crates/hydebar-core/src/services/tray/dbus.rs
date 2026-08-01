@@ -25,33 +25,31 @@ impl StatusNotifierWatcher {
     pub async fn start_server() -> AppResult<Connection> {
         let connection = zbus::connection::Connection::session()
             .await
-            .map_err(|e| AppError::internal(format!("Failed to connect to session bus: {}", e)))?;
+            .map_err(|e| AppError::internal(format!("Failed to connect to session bus: {e}")))?;
         connection
             .object_server()
-            .at(OBJECT_PATH, StatusNotifierWatcher::default())
+            .at(OBJECT_PATH, Self::default())
             .await
             .map_err(|e| {
-                AppError::internal(format!("Failed to register StatusNotifierWatcher: {}", e))
+                AppError::internal(format!("Failed to register StatusNotifierWatcher: {e}"))
             })?;
         let interface = connection
             .object_server()
-            .interface::<_, StatusNotifierWatcher>(OBJECT_PATH)
+            .interface::<_, Self>(OBJECT_PATH)
             .await
             .map_err(|e| {
                 AppError::internal(format!(
-                    "Failed to get StatusNotifierWatcher interface: {}",
-                    e
+                    "Failed to get StatusNotifierWatcher interface: {e}"
                 ))
             })?;
 
         let dbus_proxy = DBusProxy::new(&connection)
             .await
-            .map_err(|e| AppError::internal(format!("Failed to create DBusProxy: {}", e)))?;
+            .map_err(|e| AppError::internal(format!("Failed to create DBusProxy: {e}")))?;
         let mut name_owner_changed_stream =
             dbus_proxy.receive_name_owner_changed().await.map_err(|e| {
                 AppError::internal(format!(
-                    "Failed to receive name owner changed signal: {}",
-                    e
+                    "Failed to receive name owner changed signal: {e}"
                 ))
             })?;
 
@@ -59,7 +57,7 @@ impl StatusNotifierWatcher {
         if dbus_proxy
             .request_name(NAME, flags)
             .await
-            .map_err(|e| AppError::internal(format!("Failed to request bus name: {}", e)))?
+            .map_err(|e| AppError::internal(format!("Failed to request bus name: {e}")))?
             == RequestNameReply::InQueue
         {
             warn!("Bus name '{NAME}' already owned");
@@ -98,7 +96,7 @@ impl StatusNotifierWatcher {
                         };
                         let service = interface.items.remove(idx).1;
 
-                        if let Err(err) = StatusNotifierWatcher::status_notifier_item_unregistered(
+                        if let Err(err) = Self::status_notifier_item_unregistered(
                             &emitter, &service
                         )
                         .await
@@ -146,7 +144,7 @@ impl StatusNotifierWatcher {
         self.items.push((sender.to_owned(), service));
     }
 
-    fn register_status_notifier_host(&mut self, _service: &str) {}
+    const fn register_status_notifier_host(&mut self, _service: &str) {}
 
     #[zbus(property)]
     fn registered_status_notifier_items(&self) -> Vec<String> {
@@ -154,12 +152,12 @@ impl StatusNotifierWatcher {
     }
 
     #[zbus(property)]
-    fn is_status_notifier_host_registered(&self) -> bool {
+    const fn is_status_notifier_host_registered(&self) -> bool {
         true
     }
 
     #[zbus(property)]
-    fn protocol_version(&self) -> i32 {
+    const fn protocol_version(&self) -> i32 {
         0
     }
 
@@ -203,7 +201,7 @@ pub trait StatusNotifierItem {
 
 #[derive(Clone, Debug, Type)]
 #[zvariant(signature = "(ia{sv}av)")]
-pub struct Layout(pub i32, pub LayoutProps, pub Vec<Layout>);
+pub struct Layout(pub i32, pub LayoutProps, pub Vec<Self>);
 
 impl<'a> serde::Deserialize<'a> for Layout {
     fn deserialize<D: serde::Deserializer<'a>>(

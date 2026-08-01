@@ -81,7 +81,7 @@ pub enum Message {
     SetOpacity(f32),
     /// Choose who draws the notification popups.
     SetNotificationSource(NotificationSource),
-    /// Follow the given branch of the HyDE clone.
+    /// Follow the given branch of the `HyDE` clone.
     SetHydeBranch(HydeBranch),
     /// Show another page of the window.
     SelectTab(Tab),
@@ -120,7 +120,7 @@ pub fn announce_source(source: NotificationSource, config: &Config) {
 
 impl Message {
     /// Dotted path of the configuration key this choice writes.
-    fn path(&self) -> &'static [&'static str] {
+    const fn path(&self) -> &'static [&'static str] {
         match self {
             Self::SetPosition(_) => &["position"],
             Self::SetLayer(_) => &["layer"],
@@ -289,19 +289,19 @@ impl Settings {
 
     /// Section the editor is showing.
     #[must_use]
-    pub fn section(&self) -> Section {
+    pub const fn section(&self) -> Section {
         self.section
     }
 
     /// Module the editor acts on, once one is picked.
     #[must_use]
-    pub fn selected(&self) -> Option<Slot> {
+    pub const fn selected(&self) -> Option<Slot> {
         self.selected
     }
 
     /// Page the window currently shows.
     #[must_use]
-    pub fn tab(&self) -> Tab {
+    pub const fn tab(&self) -> Tab {
         self.tab
     }
 

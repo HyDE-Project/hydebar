@@ -1,6 +1,6 @@
 use crate::config;
 
-pub(crate) fn is_output_requested(name: Option<&str>, outputs: &config::Outputs) -> bool {
+pub fn is_output_requested(name: Option<&str>, outputs: &config::Outputs) -> bool {
     match outputs {
         config::Outputs::All => true,
         config::Outputs::Active => false,

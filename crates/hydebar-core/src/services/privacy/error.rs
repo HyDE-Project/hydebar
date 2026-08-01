@@ -3,16 +3,16 @@ use std::sync::Arc;
 /// Error type emitted by the privacy service.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PrivacyError {
-    /// Failed to initialise the PipeWire main loop.
+    /// Failed to initialise the `PipeWire` main loop.
     PipewireMainloop { context: Arc<str> },
 
-    /// Failed to create the PipeWire context that owns the registry connection.
+    /// Failed to create the `PipeWire` context that owns the registry connection.
     PipewireContext { context: Arc<str> },
 
-    /// Failed to connect to the PipeWire core service.
+    /// Failed to connect to the `PipeWire` core service.
     PipewireCore { context: Arc<str> },
 
-    /// Failed to access the PipeWire registry.
+    /// Failed to access the `PipeWire` registry.
     PipewireRegistry { context: Arc<str> },
 
     /// Failed to initialise the inotify subsystem for webcam monitoring.
@@ -34,37 +34,37 @@ impl std::fmt::Display for PrivacyError {
             Self::PipewireMainloop {
                 context
             } => {
-                write!(f, "failed to initialise PipeWire main loop: {}", context)
+                write!(f, "failed to initialise PipeWire main loop: {context}")
             }
             Self::PipewireContext {
                 context
             } => {
-                write!(f, "failed to create PipeWire context: {}", context)
+                write!(f, "failed to create PipeWire context: {context}")
             }
             Self::PipewireCore {
                 context
             } => {
-                write!(f, "failed to connect to PipeWire core: {}", context)
+                write!(f, "failed to connect to PipeWire core: {context}")
             }
             Self::PipewireRegistry {
                 context
             } => {
-                write!(f, "failed to access PipeWire registry: {}", context)
+                write!(f, "failed to access PipeWire registry: {context}")
             }
             Self::InotifyInit {
                 context
             } => {
-                write!(f, "failed to initialise inotify: {}", context)
+                write!(f, "failed to initialise inotify: {context}")
             }
             Self::InotifyWatch {
                 context
             } => {
-                write!(f, "failed to watch webcam device: {}", context)
+                write!(f, "failed to watch webcam device: {context}")
             }
             Self::Channel {
                 context
             } => {
-                write!(f, "privacy service channel error: {}", context)
+                write!(f, "privacy service channel error: {context}")
             }
             Self::WebcamUnavailable => {
                 write!(f, "webcam device is unavailable")
@@ -80,28 +80,28 @@ impl PrivacyError {
         Arc::<str>::from(value.into())
     }
 
-    /// Create a new PipeWire main loop error with additional context.
+    /// Create a new `PipeWire` main loop error with additional context.
     pub fn pipewire_mainloop(context: impl Into<String>) -> Self {
         Self::PipewireMainloop {
             context: Self::arc_from(context)
         }
     }
 
-    /// Create a new PipeWire context error with additional context.
+    /// Create a new `PipeWire` context error with additional context.
     pub fn pipewire_context(context: impl Into<String>) -> Self {
         Self::PipewireContext {
             context: Self::arc_from(context)
         }
     }
 
-    /// Create a new PipeWire core connection error with additional context.
+    /// Create a new `PipeWire` core connection error with additional context.
     pub fn pipewire_core(context: impl Into<String>) -> Self {
         Self::PipewireCore {
             context: Self::arc_from(context)
         }
     }
 
-    /// Create a new PipeWire registry error with additional context.
+    /// Create a new `PipeWire` registry error with additional context.
     pub fn pipewire_registry(context: impl Into<String>) -> Self {
         Self::PipewireRegistry {
             context: Self::arc_from(context)
@@ -133,15 +133,15 @@ impl PrivacyError {
 impl From<std::io::Error> for PrivacyError {
     fn from(value: std::io::Error) -> Self {
         match value.kind() {
-            std::io::ErrorKind::NotFound => PrivacyError::WebcamUnavailable,
-            _ => PrivacyError::inotify_init(value.to_string())
+            std::io::ErrorKind::NotFound => Self::WebcamUnavailable,
+            _ => Self::inotify_init(value.to_string())
         }
     }
 }
 
 impl From<pipewire::Error> for PrivacyError {
     fn from(value: pipewire::Error) -> Self {
-        PrivacyError::pipewire_mainloop(value.to_string())
+        Self::pipewire_mainloop(value.to_string())
     }
 }
 

@@ -66,6 +66,7 @@ impl App {
             .into()
     }
 
+    #[must_use]
     pub fn get_module_at_index(
         &self,
         index: usize,
@@ -115,6 +116,7 @@ impl App {
     /// The offset threads the bar-wide island position through to the theme
     /// sweep, so a travelling palette crosses the sections as one front
     /// instead of restarting in each.
+    #[must_use]
     pub fn modules_section<'a>(
         &'a self,
         modules_def: &'a [ModuleDef],
@@ -150,6 +152,7 @@ impl App {
         row.into()
     }
 
+    #[must_use]
     pub fn modules_subscriptions(&self, modules_def: &[ModuleDef]) -> Vec<Subscription<Message>> {
         let mut subscriptions = Vec::new();
 

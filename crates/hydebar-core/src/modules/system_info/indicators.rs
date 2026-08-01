@@ -70,7 +70,7 @@ pub struct IndicatorStatus {
 impl IndicatorStatus {
     /// Reports whether the readout can be turned on at all.
     #[must_use]
-    pub fn is_available(&self) -> bool {
+    pub const fn is_available(&self) -> bool {
         self.unavailable.is_none()
     }
 }

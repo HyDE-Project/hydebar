@@ -78,7 +78,7 @@ impl Custom {
     /// to ask to tell a module that is merely silent from one that
     /// was never started.
     #[must_use]
-    pub fn is_listening(&self) -> bool {
+    pub const fn is_listening(&self) -> bool {
         self.registration.is_some()
     }
 
@@ -135,7 +135,7 @@ impl Custom {
 
         self.sender = Some(sender.clone());
         let module_name = Arc::clone(&registration.name);
-        let source = registration.source.clone();
+        let source = registration.source;
         let error_sender = sender.clone();
 
         self.listener_task = Some(ctx.runtime_handle().spawn(async move {

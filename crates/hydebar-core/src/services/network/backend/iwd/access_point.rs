@@ -14,7 +14,7 @@
 use zbus::proxy;
 #[proxy(interface = "net.connman.iwd.AccessPoint", assume_defaults = true)]
 pub trait AccessPoint {
-    /// GetOrderedNetworks method
+    /// `GetOrderedNetworks` method
     fn get_ordered_networks(
         &self
     ) -> zbus::Result<std::collections::HashMap<String, zbus::zvariant::OwnedValue>>;
@@ -25,7 +25,7 @@ pub trait AccessPoint {
     /// Start method
     fn start(&self, ssid: &str, psk: &str) -> zbus::Result<()>;
 
-    /// StartProfile method
+    /// `StartProfile` method
     fn start_profile(&self, ssid: &str) -> zbus::Result<()>;
 
     /// Stop method
@@ -35,7 +35,7 @@ pub trait AccessPoint {
     #[zbus(property)]
     fn frequency(&self) -> zbus::Result<u32>;
 
-    /// GroupCipher property
+    /// `GroupCipher` property
     #[zbus(property)]
     fn group_cipher(&self) -> zbus::Result<String>;
 
@@ -43,7 +43,7 @@ pub trait AccessPoint {
     #[zbus(property)]
     fn name(&self) -> zbus::Result<String>;
 
-    /// PairwiseCiphers property
+    /// `PairwiseCiphers` property
     #[zbus(property)]
     fn pairwise_ciphers(&self) -> zbus::Result<Vec<String>>;
 

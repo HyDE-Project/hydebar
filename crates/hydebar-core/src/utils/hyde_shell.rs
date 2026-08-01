@@ -1,18 +1,18 @@
-//! Commands the theme module drives the HyDE desktop with.
+//! Commands the theme module drives the `HyDE` desktop with.
 //!
-//! HyDE exposes every desktop action through the `hyde-shell` dispatcher, so
+//! `HyDE` exposes every desktop action through the `hyde-shell` dispatcher, so
 //! the bar asks for a change the same way the user's own keybindings do instead
-//! of writing HyDE's state files behind its back. That keeps the whole switch —
-//! wallpaper, colours, the other clients — in HyDE's hands, and it means the
-//! bar stays correct when HyDE changes how a switch is performed.
+//! of writing `HyDE`'s state files behind its back. That keeps the whole switch —
+//! wallpaper, colours, the other clients — in `HyDE`'s hands, and it means the
+//! bar stays correct when `HyDE` changes how a switch is performed.
 //!
 //! A theme switch is the one exception. It goes through the bar's own script
-//! (see [`theme_script`]), which runs the very same HyDE switch but leaves
+//! (see [`theme_script`]), which runs the very same `HyDE` switch but leaves
 //! waybar's wallbash template out of it, so the bar that replaced waybar does
 //! not pay for restyling and restarting it on every switch.
 //!
 //! The commands are built here, as plain strings, so the shape of an invocation
-//! can be checked without a HyDE install present.
+//! can be checked without a `HyDE` install present.
 //!
 //! Running them lives here too, in [`run`], because every caller wants the same
 //! thing out of a desktop command: to hear that it ended, and why it failed
@@ -122,7 +122,7 @@ mod tests {
 
 /// Runs a desktop command, reporting why it failed if it did.
 ///
-/// The command is run detached rather than with its output collected: a HyDE
+/// The command is run detached rather than with its output collected: a `HyDE`
 /// switch leaves background children behind that would keep a collected stream
 /// open long after the switch itself is over, and the bar has to hear that the
 /// switch ended when it ends. What the command printed goes to the bar's own

@@ -1,4 +1,4 @@
-//! Proxies for the NetworkManager settings interfaces.
+//! Proxies for the `NetworkManager` settings interfaces.
 
 use std::collections::HashMap;
 

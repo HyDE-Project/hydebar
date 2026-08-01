@@ -60,14 +60,14 @@ impl IconTheme {
 
     /// Returns the table rendering at `size` pixels.
     #[must_use]
-    pub fn with_size(mut self, size: f32) -> Self {
+    pub const fn with_size(mut self, size: f32) -> Self {
         self.size = Some(size);
         self
     }
 
     /// Size glyphs render at, when the table carries one.
     #[must_use]
-    pub fn size(&self) -> Option<f32> {
+    pub const fn size(&self) -> Option<f32> {
         self.size
     }
 

@@ -1,6 +1,6 @@
-//! Where the HyDE clone this machine was installed from stands.
+//! Where the `HyDE` clone this machine was installed from stands.
 
-/// Finds the HyDE clone this machine was installed from, if any.
+/// Finds the `HyDE` clone this machine was installed from, if any.
 ///
 /// The path is what `version.sh --cache` recorded in the state directory,
 /// with the conventional `~/HyDE` as the fallback; either way it only

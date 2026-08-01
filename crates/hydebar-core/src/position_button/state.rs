@@ -18,12 +18,12 @@ pub(super) struct State {
 
 impl State {
     /// Reports whether any mouse button is held down over the button.
-    pub(super) fn is_pressed(&self) -> bool {
+    pub(super) const fn is_pressed(&self) -> bool {
         self.is_pressed || self.is_right_pressed || self.is_middle_pressed
     }
 
     /// Borrows the flag tracking whether `button` is held down.
-    pub(super) fn hold_mut(&mut self, button: &mouse::Button) -> &mut bool {
+    pub(super) const fn hold_mut(&mut self, button: &mouse::Button) -> &mut bool {
         match button {
             mouse::Button::Right => &mut self.is_right_pressed,
             mouse::Button::Middle => &mut self.is_middle_pressed,
@@ -32,7 +32,7 @@ impl State {
     }
 
     /// Clears every held mouse button.
-    pub(super) fn release_all(&mut self) {
+    pub(super) const fn release_all(&mut self) {
         self.is_pressed = false;
         self.is_right_pressed = false;
         self.is_middle_pressed = false;
@@ -40,7 +40,7 @@ impl State {
 }
 
 /// Resolves the status a button paints itself with for the given cursor.
-pub(super) fn resolve_status(is_pressable: bool, is_mouse_over: bool, is_pressed: bool) -> Status {
+pub(super) const fn resolve_status(is_pressable: bool, is_mouse_over: bool, is_pressed: bool) -> Status {
     if !is_pressable {
         Status::Disabled
     } else if is_mouse_over {

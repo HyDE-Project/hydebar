@@ -1,6 +1,6 @@
-//! Watcher for the desktop theme published by the HyDE Project.
+//! Watcher for the desktop theme published by the `HyDE` Project.
 //!
-//! The bar reads its colours and font from the HyDE directories, which live
+//! The bar reads its colours and font from the `HyDE` directories, which live
 //! outside the bar configuration; the configuration watcher never sees them, so
 //! without this the bar kept its old palette until it was restarted.
 //!

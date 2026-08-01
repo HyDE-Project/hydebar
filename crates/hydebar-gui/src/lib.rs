@@ -12,6 +12,7 @@ pub use app::{App, Message};
 /// A level that does not parse falls back to `info` instead of failing: the
 /// same string arrives from a live configuration reload, where a panic would
 /// take the whole bar down over a typo in one key.
+#[must_use]
 pub fn get_log_spec(log_level: &str) -> LogSpecification {
     LogSpecification::env_or_parse(log_level).unwrap_or_else(|err| {
         log::warn!("unreadable log level `{log_level}`, staying on `info`: {err}");

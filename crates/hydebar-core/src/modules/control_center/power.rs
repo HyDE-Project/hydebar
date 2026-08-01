@@ -25,16 +25,16 @@ pub enum PowerMessage {
 impl PowerMessage {
     pub fn update(self) {
         match self {
-            PowerMessage::Suspend(cmd) => {
+            Self::Suspend(cmd) => {
                 utils::launcher::suspend(cmd);
             }
-            PowerMessage::Reboot(cmd) => {
+            Self::Reboot(cmd) => {
                 utils::launcher::reboot(cmd);
             }
-            PowerMessage::Shutdown(cmd) => {
+            Self::Shutdown(cmd) => {
                 utils::launcher::shutdown(cmd);
             }
-            PowerMessage::Logout(cmd) => {
+            Self::Logout(cmd) => {
                 utils::launcher::logout(cmd);
             }
         }

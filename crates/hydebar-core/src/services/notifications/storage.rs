@@ -60,15 +60,12 @@ impl NotificationStorage {
     pub fn replace(&mut self, id: u32, mut notification: Notification) {
         notification.id = id;
 
-        match self.notifications.iter_mut().find(|n| n.id == id) {
-            Some(existing) => *existing = notification,
-            None => {
-                if self.notifications.len() >= MAX_NOTIFICATIONS {
-                    self.notifications.pop_back();
-                }
-
-                self.notifications.push_front(notification);
+        if let Some(existing) = self.notifications.iter_mut().find(|n| n.id == id) { *existing = notification } else {
+            if self.notifications.len() >= MAX_NOTIFICATIONS {
+                self.notifications.pop_back();
             }
+
+            self.notifications.push_front(notification);
         }
     }
 
@@ -84,31 +81,36 @@ impl NotificationStorage {
         self.notifications.clear();
     }
 
-    pub fn get_all(&self) -> &VecDeque<Notification> {
+    #[must_use]
+    pub const fn get_all(&self) -> &VecDeque<Notification> {
         &self.notifications
     }
 
+    #[must_use]
     pub fn unread_count(&self) -> usize {
         self.notifications.len()
     }
 
-    pub fn set_dnd(&mut self, enabled: bool) {
+    pub const fn set_dnd(&mut self, enabled: bool) {
         self.do_not_disturb = enabled;
     }
 
-    pub fn is_dnd(&self) -> bool {
+    #[must_use]
+    pub const fn is_dnd(&self) -> bool {
         self.do_not_disturb
     }
 
-    pub fn set_sounds(&mut self, enabled: bool) {
+    pub const fn set_sounds(&mut self, enabled: bool) {
         self.sounds_enabled = enabled;
     }
 
-    pub fn sounds_enabled(&self) -> bool {
+    #[must_use]
+    pub const fn sounds_enabled(&self) -> bool {
         self.sounds_enabled
     }
 
-    pub fn should_show(&self, urgency: &Urgency) -> bool {
+    #[must_use]
+    pub const fn should_show(&self, urgency: &Urgency) -> bool {
         if self.do_not_disturb {
             // Critical notifications bypass DND
             matches!(urgency, Urgency::Critical)

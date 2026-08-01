@@ -29,8 +29,7 @@ impl ControlCenter {
         let idle_inhibited = self
             .idle_inhibitor
             .as_ref()
-            .map(|i| i.is_inhibited())
-            .unwrap_or(false);
+            .is_some_and(crate::services::idle_inhibitor::IdleInhibitorManager::is_inhibited);
         let power_profile_indicator = self
             .upower
             .as_ref()

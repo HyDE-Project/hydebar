@@ -35,6 +35,7 @@ impl Settings {
     /// `magnification` is the factor the bar is drawn at, so the pages can
     /// show the sizes as they are written in the file rather than
     /// as they render.
+    #[must_use]
     pub fn menu_view<'a>(
         &self,
         config: &'a Config,
@@ -113,7 +114,7 @@ impl Settings {
             Tab::Modules => modules::desired_width(config, font_size, self.section())
         };
 
-        header.max(tab_row).max(page) + metrics::ROW_SLACK_EM * font_size
+        metrics::ROW_SLACK_EM.mul_add(font_size, header.max(tab_row).max(page))
     }
 
     /// Height the current page needs.
@@ -129,7 +130,7 @@ impl Settings {
 
         crate::menu::MenuMetrics {
             width,
-            page_width: width - metrics::ROW_SLACK_EM * font_size,
+            page_width: metrics::ROW_SLACK_EM.mul_add(-font_size, width),
             height: self.content_height(config)
         }
     }
@@ -149,7 +150,7 @@ impl Settings {
             Tab::Modules => modules::desired_height(config, font_size, self.section())
         };
 
-        header + tabs + page + style::window_gap(font_size) * style::WINDOW_GAP_COUNT
+        style::window_gap(font_size).mul_add(style::WINDOW_GAP_COUNT, header + tabs + page)
     }
 }
 

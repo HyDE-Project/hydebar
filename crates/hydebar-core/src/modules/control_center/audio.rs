@@ -54,19 +54,21 @@ pub fn wheel_direction(delta: iced::mouse::ScrollDelta) -> i32 {
 }
 
 impl AudioData {
+    #[must_use]
     pub fn sink_indicator<Message: 'static>(
         &self,
         icons: &IconTheme
     ) -> Option<Element<'static, Message>> {
-        if !self.sinks.is_empty() {
+        if self.sinks.is_empty() {
+            None
+        } else {
             let icon_type = self.sinks.get_icon(&self.server_info.default_sink);
 
             Some(icon(icons, icon_type).into())
-        } else {
-            None
         }
     }
 
+    #[must_use]
     pub fn audio_sliders(
         &self,
         sub_menu: Option<SubMenu>,
@@ -124,6 +126,7 @@ impl AudioData {
         }
     }
 
+    #[must_use]
     pub fn sinks_submenu(
         &self,
         id: Id,
@@ -156,6 +159,7 @@ impl AudioData {
         )
     }
 
+    #[must_use]
     pub fn sources_submenu(
         &self,
         id: Id,

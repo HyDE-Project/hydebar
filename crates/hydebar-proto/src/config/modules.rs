@@ -69,72 +69,72 @@ pub enum ModuleName {
 
 impl ModuleName {
     /// Every module the bar ships, in the order the editor lists them.
-    pub const BUILT_IN: [ModuleName; 29] = [
-        ModuleName::AppLauncher,
-        ModuleName::Updates,
-        ModuleName::Clipboard,
-        ModuleName::Workspaces,
-        ModuleName::WindowTitle,
-        ModuleName::SystemInfo,
-        ModuleName::Cpu,
-        ModuleName::Memory,
-        ModuleName::CpuTemp,
-        ModuleName::GpuTemp,
-        ModuleName::KeyboardLayout,
-        ModuleName::KeyboardSubmap,
-        ModuleName::Tray,
-        ModuleName::Clock,
-        ModuleName::Battery,
-        ModuleName::Privacy,
-        ModuleName::ControlCenter,
-        ModuleName::Audio,
-        ModuleName::Network,
-        ModuleName::Bluetooth,
-        ModuleName::PowerProfile,
-        ModuleName::Settings,
-        ModuleName::Themes,
-        ModuleName::Wallpaper,
-        ModuleName::HydeMenu,
-        ModuleName::MediaPlayer,
-        ModuleName::Notifications,
-        ModuleName::Screenshot,
-        ModuleName::IdleInhibitor
+    pub const BUILT_IN: [Self; 29] = [
+        Self::AppLauncher,
+        Self::Updates,
+        Self::Clipboard,
+        Self::Workspaces,
+        Self::WindowTitle,
+        Self::SystemInfo,
+        Self::Cpu,
+        Self::Memory,
+        Self::CpuTemp,
+        Self::GpuTemp,
+        Self::KeyboardLayout,
+        Self::KeyboardSubmap,
+        Self::Tray,
+        Self::Clock,
+        Self::Battery,
+        Self::Privacy,
+        Self::ControlCenter,
+        Self::Audio,
+        Self::Network,
+        Self::Bluetooth,
+        Self::PowerProfile,
+        Self::Settings,
+        Self::Themes,
+        Self::Wallpaper,
+        Self::HydeMenu,
+        Self::MediaPlayer,
+        Self::Notifications,
+        Self::Screenshot,
+        Self::IdleInhibitor
     ];
 
     /// Name this module is written as in the configuration.
     #[must_use]
-    pub fn as_str(&self) -> &str {
+    pub const fn as_str(&self) -> &str {
         match self {
-            ModuleName::AppLauncher => "AppLauncher",
-            ModuleName::Updates => "Updates",
-            ModuleName::Clipboard => "Clipboard",
-            ModuleName::Workspaces => "Workspaces",
-            ModuleName::WindowTitle => "WindowTitle",
-            ModuleName::SystemInfo => "SystemInfo",
-            ModuleName::Cpu => "Cpu",
-            ModuleName::Memory => "Memory",
-            ModuleName::CpuTemp => "CpuTemp",
-            ModuleName::GpuTemp => "GpuTemp",
-            ModuleName::KeyboardLayout => "KeyboardLayout",
-            ModuleName::KeyboardSubmap => "KeyboardSubmap",
-            ModuleName::Tray => "Tray",
-            ModuleName::Clock => "Clock",
-            ModuleName::Battery => "Battery",
-            ModuleName::Privacy => "Privacy",
-            ModuleName::ControlCenter => "ControlCenter",
-            ModuleName::Audio => "Audio",
-            ModuleName::Network => "Network",
-            ModuleName::Bluetooth => "Bluetooth",
-            ModuleName::PowerProfile => "PowerProfile",
-            ModuleName::Settings => "Settings",
-            ModuleName::Themes => "Themes",
-            ModuleName::Wallpaper => "Wallpaper",
-            ModuleName::HydeMenu => "HydeMenu",
-            ModuleName::MediaPlayer => "MediaPlayer",
-            ModuleName::Notifications => "Notifications",
-            ModuleName::Screenshot => "Screenshot",
-            ModuleName::IdleInhibitor => "IdleInhibitor",
-            ModuleName::Custom(name) => name.as_str()
+            Self::AppLauncher => "AppLauncher",
+            Self::Updates => "Updates",
+            Self::Clipboard => "Clipboard",
+            Self::Workspaces => "Workspaces",
+            Self::WindowTitle => "WindowTitle",
+            Self::SystemInfo => "SystemInfo",
+            Self::Cpu => "Cpu",
+            Self::Memory => "Memory",
+            Self::CpuTemp => "CpuTemp",
+            Self::GpuTemp => "GpuTemp",
+            Self::KeyboardLayout => "KeyboardLayout",
+            Self::KeyboardSubmap => "KeyboardSubmap",
+            Self::Tray => "Tray",
+            Self::Clock => "Clock",
+            Self::Battery => "Battery",
+            Self::Privacy => "Privacy",
+            Self::ControlCenter => "ControlCenter",
+            Self::Audio => "Audio",
+            Self::Network => "Network",
+            Self::Bluetooth => "Bluetooth",
+            Self::PowerProfile => "PowerProfile",
+            Self::Settings => "Settings",
+            Self::Themes => "Themes",
+            Self::Wallpaper => "Wallpaper",
+            Self::HydeMenu => "HydeMenu",
+            Self::MediaPlayer => "MediaPlayer",
+            Self::Notifications => "Notifications",
+            Self::Screenshot => "Screenshot",
+            Self::IdleInhibitor => "IdleInhibitor",
+            Self::Custom(name) => name.as_str()
         }
     }
 
@@ -144,50 +144,50 @@ impl ModuleName {
     /// this is the spelling for surfaces a user looks at, such as the hint
     /// shown while the pointer rests on a module.
     #[must_use]
-    pub fn label(&self) -> &str {
+    pub const fn label(&self) -> &str {
         match self {
-            ModuleName::AppLauncher => "App launcher",
-            ModuleName::Updates => "Updates",
-            ModuleName::Clipboard => "Clipboard",
-            ModuleName::Workspaces => "Workspaces",
-            ModuleName::WindowTitle => "Window title",
-            ModuleName::SystemInfo => "System monitor",
-            ModuleName::Cpu => "Processor",
-            ModuleName::Memory => "Memory",
-            ModuleName::CpuTemp => "CPU temperature",
-            ModuleName::GpuTemp => "GPU temperature",
-            ModuleName::KeyboardLayout => "Keyboard layout",
-            ModuleName::KeyboardSubmap => "Keyboard submap",
-            ModuleName::Tray => "Tray",
-            ModuleName::Clock => "Clock",
-            ModuleName::Battery => "Battery",
-            ModuleName::Privacy => "Privacy",
-            ModuleName::ControlCenter => "Control centre",
-            ModuleName::Audio => "Audio",
-            ModuleName::Network => "Network",
-            ModuleName::Bluetooth => "Bluetooth",
-            ModuleName::PowerProfile => "Power profile",
-            ModuleName::Settings => "Bar settings",
-            ModuleName::Themes => "Desktop themes",
-            ModuleName::Wallpaper => "Wallpaper",
-            ModuleName::HydeMenu => "HyDE menu",
-            ModuleName::MediaPlayer => "Media player",
-            ModuleName::Notifications => "Notifications",
-            ModuleName::Screenshot => "Screenshot",
-            ModuleName::IdleInhibitor => "Idle inhibitor",
-            ModuleName::Custom(name) => name.as_str()
+            Self::AppLauncher => "App launcher",
+            Self::Updates => "Updates",
+            Self::Clipboard => "Clipboard",
+            Self::Workspaces => "Workspaces",
+            Self::WindowTitle => "Window title",
+            Self::SystemInfo => "System monitor",
+            Self::Cpu => "Processor",
+            Self::Memory => "Memory",
+            Self::CpuTemp => "CPU temperature",
+            Self::GpuTemp => "GPU temperature",
+            Self::KeyboardLayout => "Keyboard layout",
+            Self::KeyboardSubmap => "Keyboard submap",
+            Self::Tray => "Tray",
+            Self::Clock => "Clock",
+            Self::Battery => "Battery",
+            Self::Privacy => "Privacy",
+            Self::ControlCenter => "Control centre",
+            Self::Audio => "Audio",
+            Self::Network => "Network",
+            Self::Bluetooth => "Bluetooth",
+            Self::PowerProfile => "Power profile",
+            Self::Settings => "Bar settings",
+            Self::Themes => "Desktop themes",
+            Self::Wallpaper => "Wallpaper",
+            Self::HydeMenu => "HyDE menu",
+            Self::MediaPlayer => "Media player",
+            Self::Notifications => "Notifications",
+            Self::Screenshot => "Screenshot",
+            Self::IdleInhibitor => "Idle inhibitor",
+            Self::Custom(name) => name.as_str()
         }
     }
 }
 
 impl<'de> Deserialize<'de> for ModuleName {
-    fn deserialize<D>(deserializer: D) -> Result<ModuleName, D::Error>
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>
     {
         struct ModuleNameVisitor;
 
-        impl<'de> serde::de::Visitor<'de> for ModuleNameVisitor {
+        impl serde::de::Visitor<'_> for ModuleNameVisitor {
             type Value = ModuleName;
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -262,6 +262,7 @@ impl Modules {
     /// renders has no reader for what that work produces. Asking this
     /// before registration keeps an unused module from waking the runtime
     /// and repainting every surface on an otherwise idle bar.
+    #[must_use]
     pub fn hosts(&self, name: &ModuleName) -> bool {
         self.placed().any(|placed| placed == name)
     }
@@ -272,6 +273,7 @@ impl Modules {
     /// services feed the `Audio`, `Network`, `Bluetooth` and `PowerProfile`
     /// readouts alike, so the worker has to stay alive while at least one of
     /// them is on screen.
+    #[must_use]
     pub fn hosts_any(&self, names: &[ModuleName]) -> bool {
         self.placed().any(|placed| names.contains(placed))
     }

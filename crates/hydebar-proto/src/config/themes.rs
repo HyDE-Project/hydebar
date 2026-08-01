@@ -22,6 +22,7 @@ pub enum PresetTheme {
 }
 
 impl PresetTheme {
+    #[must_use]
     pub fn to_appearance(self) -> Appearance {
         match self {
             Self::CatppuccinMocha => catppuccin_mocha(),

@@ -26,14 +26,14 @@ impl Default for BatteryModuleConfig {
     }
 }
 
-fn default_show_percentage() -> bool {
+const fn default_show_percentage() -> bool {
     true
 }
 
-fn default_show_power_profile() -> bool {
+const fn default_show_power_profile() -> bool {
     true
 }
 
-fn default_open_settings_on_click() -> bool {
+const fn default_open_settings_on_click() -> bool {
     true
 }

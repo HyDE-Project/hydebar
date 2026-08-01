@@ -1,4 +1,4 @@
-//! Selection between the NetworkManager and iwd backends.
+//! Selection between the `NetworkManager` and iwd backends.
 
 use masterror::{AppError, AppResult};
 use zbus::zvariant::OwnedObjectPath;
@@ -15,7 +15,7 @@ pub(super) enum BackendChoice {
 }
 
 impl BackendChoice {
-    pub(super) fn with_connection(self, conn: zbus::Connection) -> BackendChoiceWithConnection {
+    pub(super) const fn with_connection(self, conn: zbus::Connection) -> BackendChoiceWithConnection {
         BackendChoiceWithConnection {
             choice: self,
             conn

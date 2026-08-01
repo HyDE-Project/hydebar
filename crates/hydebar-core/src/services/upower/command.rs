@@ -13,7 +13,7 @@ impl UPowerService {
 
         let powerprofiles = match PowerProfilesProxy::new(&conn)
             .await
-            .map_err(|e| AppError::internal(format!("Failed to create PowerProfilesProxy: {}", e)))
+            .map_err(|e| AppError::internal(format!("Failed to create PowerProfilesProxy: {e}")))
         {
             Ok(proxy) => proxy,
             Err(err) => {
@@ -30,8 +30,7 @@ impl UPowerService {
                         .await
                         .map_err(|e| {
                             AppError::internal(format!(
-                                "Failed to set power profile to performance: {}",
-                                e
+                                "Failed to set power profile to performance: {e}"
                             ))
                         })
                         .is_err()
@@ -46,8 +45,7 @@ impl UPowerService {
                         .await
                         .map_err(|e| {
                             AppError::internal(format!(
-                                "Failed to set power profile to power-saver: {}",
-                                e
+                                "Failed to set power profile to power-saver: {e}"
                             ))
                         })
                         .is_err()
@@ -62,8 +60,7 @@ impl UPowerService {
                         .await
                         .map_err(|e| {
                             AppError::internal(format!(
-                                "Failed to set power profile to balanced: {}",
-                                e
+                                "Failed to set power profile to balanced: {e}"
                             ))
                         })
                         .is_err()
@@ -91,7 +88,7 @@ impl Service for UPowerService {
         let service = self.clone();
 
         iced::Task::perform(
-            async move { UPowerService::run_command(service, command).await },
+            async move { Self::run_command(service, command).await },
             |event| event
         )
     }

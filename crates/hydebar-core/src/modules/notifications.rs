@@ -97,6 +97,7 @@ impl Notifications {
     }
 
     /// Render notification center menu popup.
+    #[must_use]
     pub fn menu_view(
         &self,
         _opacity: f32,
@@ -164,7 +165,7 @@ where
     fn register(
         &mut self,
         ctx: &ModuleContext,
-        _: Self::RegistrationData<'_>
+        (): Self::RegistrationData<'_>
     ) -> Result<(), ModuleError> {
         let sender = ctx.module_sender(ModuleEvent::Notifications);
         self.sender = Some(sender);

@@ -14,7 +14,7 @@ impl App {
         match event {
             BusEvent::Redraw => Some(Message::None),
             BusEvent::PopupToggle => Some(Message::CloseAllMenus),
-            BusEvent::Module(module) => App::message_from_module_event(module),
+            BusEvent::Module(module) => Self::message_from_module_event(module),
             _ => None
         }
     }

@@ -66,7 +66,7 @@ impl NetworkService {
         P: ServiceEventPublisher<Self> + Send
     {
         let details = super::super::link::read().await;
-        let _ = publisher
+        let () = publisher
             .send(ServiceEvent::Update(NetworkEvent::LinkDetails(details)))
             .await;
     }
@@ -94,7 +94,7 @@ impl NetworkService {
 
             if gate.admits(&event) {
                 let refresh_link = Self::moves_the_link(&event, &mut throttle);
-                let _ = publisher.send(ServiceEvent::Update(event)).await;
+                let () = publisher.send(ServiceEvent::Update(event)).await;
 
                 if refresh_link {
                     Self::publish_link_details(publisher).await;
@@ -155,8 +155,8 @@ impl NetworkService {
                         Ok((data, choice)) => {
                             info!("Network service initialized");
                             *gate = EventGate::new(&data);
-                            let _ = publisher
-                                .send(ServiceEvent::Init(NetworkService {
+                            let () = publisher
+                                .send(ServiceEvent::Init(Self {
                                     data,
                                     conn: conn.clone(),
                                     backend_choice: choice
@@ -172,7 +172,7 @@ impl NetworkService {
                                 error!("Failed to initialize network service: {err}");
                             }
                             let error = NetworkServiceError::from(err);
-                            let _ = publisher.send(ServiceEvent::Error(error)).await;
+                            let () = publisher.send(ServiceEvent::Error(error)).await;
                             State::Error
                         }
                     }
@@ -182,7 +182,7 @@ impl NetworkService {
                     let error = NetworkServiceError::new(format!(
                         "Failed to connect to system bus: {err}"
                     ));
-                    let _ = publisher.send(ServiceEvent::Error(error)).await;
+                    let () = publisher.send(ServiceEvent::Error(error)).await;
 
                     State::Error
                 }
@@ -197,7 +197,7 @@ impl NetworkService {
                             Err(e) => {
                                 error!("Failed to create NetworkDbus: {e}");
                                 let error = NetworkServiceError::from(e);
-                                let _ = publisher.send(ServiceEvent::Error(error)).await;
+                                let () = publisher.send(ServiceEvent::Error(error)).await;
                                 return State::Error;
                             }
                         };
@@ -212,7 +212,7 @@ impl NetworkService {
                                     Err(err) => {
                                         error!("Network event stream error: {err}");
                                         let error = NetworkServiceError::from(err);
-                                        let _ = publisher.send(ServiceEvent::Error(error)).await;
+                                        let () = publisher.send(ServiceEvent::Error(error)).await;
                                         State::Error
                                     }
                                 }
@@ -220,7 +220,7 @@ impl NetworkService {
                             Err(err) => {
                                 error!("Failed to listen for network events: {err}");
                                 let error = NetworkServiceError::from(err);
-                                let _ = publisher.send(ServiceEvent::Error(error)).await;
+                                let () = publisher.send(ServiceEvent::Error(error)).await;
 
                                 State::Error
                             }
@@ -232,7 +232,7 @@ impl NetworkService {
                             Err(err) => {
                                 error!("Failed to create IwdDbus: {err}");
                                 let error = NetworkServiceError::from(err);
-                                let _ = publisher.send(ServiceEvent::Error(error)).await;
+                                let () = publisher.send(ServiceEvent::Error(error)).await;
                                 return State::Error;
                             }
                         };
@@ -245,7 +245,7 @@ impl NetworkService {
                                         if gate.admits(&event) {
                                             let refresh_link =
                                                 Self::moves_the_link(&event, &mut throttle);
-                                            let _ =
+                                            let () =
                                                 publisher.send(ServiceEvent::Update(event)).await;
 
                                             if refresh_link {
@@ -262,7 +262,7 @@ impl NetworkService {
                             Err(err) => {
                                 error!("Failed to listen for network events: {err}");
                                 let error = NetworkServiceError::from(err);
-                                let _ = publisher.send(ServiceEvent::Error(error)).await;
+                                let () = publisher.send(ServiceEvent::Error(error)).await;
 
                                 State::Error
                             }
@@ -334,7 +334,7 @@ const RECONNECT_MAX_DELAY: Duration = Duration::from_secs(64);
 
 /// Pause before reconnecting after `failures` consecutive failed attempts.
 ///
-/// A machine running neither NetworkManager nor iwd fails the D-Bus connection
+/// A machine running neither `NetworkManager` nor iwd fails the D-Bus connection
 /// immediately, so a fixed one second retry becomes a permanent one hertz
 /// wakeup that logs an error every time. Doubling the delay up to a minute
 /// keeps a transient failure recovering within a second while an absent backend

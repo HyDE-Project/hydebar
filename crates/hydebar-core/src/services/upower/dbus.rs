@@ -57,7 +57,7 @@ impl Battery {
             }
         }
 
-        percentage / count as f64
+        percentage / f64::from(count)
     }
 
     pub async fn time_to_empty(&self) -> i64 {
@@ -96,14 +96,14 @@ impl UPowerDbus<'_> {
     pub async fn new(conn: &zbus::Connection) -> AppResult<Self> {
         let nm = UPowerProxy::new(conn)
             .await
-            .map_err(|e| AppError::internal(format!("Failed to create UPowerProxy: {}", e)))?;
+            .map_err(|e| AppError::internal(format!("Failed to create UPowerProxy: {e}")))?;
 
         Ok(Self(nm))
     }
 
     pub async fn get_battery_devices(&self) -> AppResult<Option<Battery>> {
         let devices = self.enumerate_devices().await.map_err(|e| {
-            AppError::internal(format!("Failed to enumerate UPower devices: {}", e))
+            AppError::internal(format!("Failed to enumerate UPower devices: {e}"))
         })?;
 
         let mut res = Vec::new();
@@ -111,40 +111,40 @@ impl UPowerDbus<'_> {
         for device in devices {
             let device = DeviceProxy::builder(self.inner().connection())
                 .path(device)
-                .map_err(|e| AppError::internal(format!("Failed to set DeviceProxy path: {}", e)))?
+                .map_err(|e| AppError::internal(format!("Failed to set DeviceProxy path: {e}")))?
                 .build()
                 .await
-                .map_err(|e| AppError::internal(format!("Failed to build DeviceProxy: {}", e)))?;
+                .map_err(|e| AppError::internal(format!("Failed to build DeviceProxy: {e}")))?;
 
             let device_type = device
                 .device_type()
                 .await
-                .map_err(|e| AppError::internal(format!("Failed to get device type: {}", e)))?;
+                .map_err(|e| AppError::internal(format!("Failed to get device type: {e}")))?;
             let power_supply = device
                 .power_supply()
                 .await
-                .map_err(|e| AppError::internal(format!("Failed to get power supply: {}", e)))?;
+                .map_err(|e| AppError::internal(format!("Failed to get power supply: {e}")))?;
 
             if device_type == 2 && power_supply {
                 res.push(device);
             }
         }
 
-        if !res.is_empty() {
-            Ok(Some(Battery(res)))
-        } else {
+        if res.is_empty() {
             Ok(None)
+        } else {
+            Ok(Some(Battery(res)))
         }
     }
 
     pub async fn get_device(&self, path: &ObjectPath<'static>) -> AppResult<DeviceProxy<'static>> {
         let device = DeviceProxy::builder(self.inner().connection())
             .path(path)
-            .map_err(|e| AppError::internal(format!("Failed to set DeviceProxy path: {}", e)))?
+            .map_err(|e| AppError::internal(format!("Failed to set DeviceProxy path: {e}")))?
             .build()
             .await
             .map_err(|e| {
-                AppError::internal(format!("Failed to build DeviceProxy for path: {}", e))
+                AppError::internal(format!("Failed to build DeviceProxy for path: {e}"))
             })?;
 
         Ok(device)

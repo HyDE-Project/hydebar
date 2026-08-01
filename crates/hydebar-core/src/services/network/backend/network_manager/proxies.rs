@@ -1,4 +1,4 @@
-//! Generated D-Bus proxies for the NetworkManager service.
+//! Generated D-Bus proxies for the `NetworkManager` service.
 
 mod device;
 mod manager;

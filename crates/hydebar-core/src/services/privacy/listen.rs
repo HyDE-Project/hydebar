@@ -62,7 +62,7 @@ impl PrivacyService {
                 let data = PrivacyData::new();
                 Self::emit_event(
                     publisher,
-                    ServiceEvent::Init(PrivacyService {
+                    ServiceEvent::Init(Self {
                         data
                     })
                 )
@@ -84,29 +84,23 @@ impl PrivacyService {
 
                 select! {
                     value = pipewire.recv().fuse() => {
-                        match value {
-                            Some(event) => {
-                                Self::emit_event(publisher, ServiceEvent::Update(event)).await?;
-                            }
-                            None => {
-                                error!("PipeWire listener exited unexpectedly");
-                                return Err(PrivacyError::channel(
-                                    "pipewire listener closed unexpectedly",
-                                ));
-                            }
+                        if let Some(event) = value {
+                            Self::emit_event(publisher, ServiceEvent::Update(event)).await?;
+                        } else {
+                            error!("PipeWire listener exited unexpectedly");
+                            return Err(PrivacyError::channel(
+                                "pipewire listener closed unexpectedly",
+                            ));
                         }
                     }
                     value = webcam_future => {
-                        match value {
-                            Some(event) => {
-                                Self::emit_event(publisher, ServiceEvent::Update(event)).await?;
-                            }
-                            None => {
-                                error!("Webcam listener exited unexpectedly");
-                                return Err(PrivacyError::channel(
-                                    "webcam listener closed unexpectedly",
-                                ));
-                            }
+                        if let Some(event) = value {
+                            Self::emit_event(publisher, ServiceEvent::Update(event)).await?;
+                        } else {
+                            error!("Webcam listener exited unexpectedly");
+                            return Err(PrivacyError::channel(
+                                "webcam listener closed unexpectedly",
+                            ));
                         }
                     }
                 };

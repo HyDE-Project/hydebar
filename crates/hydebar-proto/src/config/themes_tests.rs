@@ -168,11 +168,11 @@ fn deserialize_preset_theme_from_string() {
 
 #[test]
 fn deserialize_custom_appearance() {
-    let toml_content = r###"
+    let toml_content = r##"
         [appearance]
         opacity = 0.85
         background_color = "#1a1b26"
-    "###;
+    "##;
 
     #[derive(serde::Deserialize)]
     struct TestConfig {

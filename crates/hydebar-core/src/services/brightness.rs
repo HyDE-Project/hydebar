@@ -133,12 +133,12 @@ impl BrightnessService {
             State::Init => {
                 let (conn, device_path) = Self::init_service().await?;
                 let data = Self::initialize_data(&device_path).await?;
-                let service = BrightnessService {
+                let service = Self {
                     data,
                     device_path: device_path.clone(),
                     conn
                 };
-                let _ = publisher.send(ServiceEvent::Init(service)).await;
+                let () = publisher.send(ServiceEvent::Init(service)).await;
 
                 Ok(State::Active(device_path))
             }
@@ -164,7 +164,7 @@ impl BrightnessService {
 
                                 if new_value != current_value {
                                     current_value = new_value;
-                                    let _ = publisher
+                                    let () = publisher
                                         .send(ServiceEvent::Update(BrightnessEvent(new_value)))
                                         .await;
                                 }
@@ -234,7 +234,7 @@ impl BrightnessService {
                 }
                 Err(err) => {
                     error!("Brightness service failure: {err:?}");
-                    let _ = publisher.send(ServiceEvent::Error(err.clone())).await;
+                    let () = publisher.send(ServiceEvent::Error(err.clone())).await;
                     state = State::Error;
                 }
             }
@@ -281,7 +281,7 @@ impl ReadOnlyService for BrightnessService {
 
         Subscription::run_with(id, |&_id| {
             channel(100, async |mut output| {
-                BrightnessService::listen(&mut output).await;
+                Self::listen(&mut output).await;
             })
         })
     }
@@ -300,7 +300,7 @@ impl Service for BrightnessService {
         let service = self.clone();
 
         Task::perform(
-            async move { BrightnessService::run_command(service, command).await },
+            async move { Self::run_command(service, command).await },
             |event| event
         )
     }

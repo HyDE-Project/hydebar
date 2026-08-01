@@ -26,7 +26,7 @@ pub enum NotificationSource {
 
 impl NotificationSource {
     /// Every choice, in the order the settings window lists them.
-    pub const ALL: [NotificationSource; 3] = [Self::Builtin, Self::Compositor, Self::Daemon];
+    pub const ALL: [Self; 3] = [Self::Builtin, Self::Compositor, Self::Daemon];
 
     /// Whether the bar should claim the notification bus.
     ///

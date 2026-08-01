@@ -39,7 +39,8 @@ pub struct Menu {
 }
 
 impl Menu {
-    pub fn new(id: Id, output: Option<OutputId>) -> Self {
+    #[must_use]
+    pub const fn new(id: Id, output: Option<OutputId>) -> Self {
         Self {
             id,
             menu_info: None,
@@ -51,7 +52,8 @@ impl Menu {
     }
 
     /// Returns whether the menu is open as far as the user is concerned.
-    pub fn is_open(&self) -> bool {
+    #[must_use]
+    pub const fn is_open(&self) -> bool {
         self.menu_info.is_some()
     }
 
@@ -61,7 +63,7 @@ impl Menu {
     /// press completes without a module having claimed it, so a press that
     /// turns out to belong to another module switches the menu over instead of
     /// flashing the surface off and on again.
-    pub fn arm_dismissal(&mut self) {
+    pub const fn arm_dismissal(&mut self) {
         self.dismiss_armed = self.is_open();
     }
 
@@ -168,6 +170,7 @@ impl Menu {
         }
     }
 
+    #[must_use]
     pub fn request_keyboard<Message: 'static>(&self, menu_keyboard_focus: bool) -> Task<Message> {
         if menu_keyboard_focus {
             set_keyboard_interactivity(self.id, KeyboardInteractivity::OnDemand)
@@ -176,6 +179,7 @@ impl Menu {
         }
     }
 
+    #[must_use]
     pub fn release_keyboard<Message: 'static>(&self, menu_keyboard_focus: bool) -> Task<Message> {
         if menu_keyboard_focus {
             set_keyboard_interactivity(self.id, KeyboardInteractivity::None)
@@ -191,6 +195,7 @@ impl Menu {
     /// slides the window by the remainder, which is what makes a menu grow out
     /// of its module on the way in — and settle back into it on the way out,
     /// since a fading spring walks this share back down.
+    #[must_use]
     pub fn progress(&self) -> f32 {
         if self.full_opacity <= f32::EPSILON {
             1.0
@@ -201,7 +206,7 @@ impl Menu {
 
     /// Points the opacity spring at `target`, or jumps to it when animations
     /// are disabled.
-    fn aim_opacity(&mut self, target: f32, animation_config: &AnimationConfig) {
+    const fn aim_opacity(&mut self, target: f32, animation_config: &AnimationConfig) {
         if animation_config.enabled {
             self.opacity.set_response(Duration::from_millis(
                 animation_config.menu_fade_duration_ms
@@ -230,12 +235,14 @@ impl Menu {
     }
 
     /// Returns whether the menu has an unfinished opacity animation.
+    #[must_use]
     pub fn is_animating(&self) -> bool {
         self.opacity.is_animating()
     }
 
     /// Get the current animated opacity for rendering
-    pub fn get_opacity(&self) -> f32 {
+    #[must_use]
+    pub const fn get_opacity(&self) -> f32 {
         self.opacity.value()
     }
 }

@@ -40,7 +40,7 @@ const UPDATE_ALL_ROW_EM: f32 = 2.0;
 /// Theme chips a row is sized to hold.
 ///
 /// The menu has to name a width before it knows how the chips wrap, and
-/// this is the number that keeps a typical HyDE install to a handful of
+/// this is the number that keeps a typical `HyDE` install to a handful of
 /// rows without making the menu wider than it needs to be.
 const THEMES_PER_ROW: f32 = 3.0;
 
@@ -53,7 +53,7 @@ const GALLERY: &str = "Available";
 /// Label of the row naming what the desktop is on.
 const ACTIVE: &str = "Active";
 
-/// Shown in place of the theme name while HyDE has recorded none.
+/// Shown in place of the theme name while `HyDE` has recorded none.
 const UNKNOWN: &str = "unknown";
 
 /// Placed between the theme in force and the one being switched to.
@@ -352,7 +352,7 @@ mod badge_tests {
 /// as the surface and the lighter as the ink — a chip the other way round
 /// would be a swatch nobody can read.
 fn offer_paint(entry: &super::gallery::GalleryTheme) -> ChipPaint {
-    let luma = |color: iced::Color| 0.2126 * color.r + 0.7152 * color.g + 0.0722 * color.b;
+    let luma = |color: iced::Color| 0.0722f32.mul_add(color.b, 0.7152f32.mul_add(color.g, 0.2126 * color.r));
 
     let [first, second] = entry.colors;
     let (surface, ink) = if luma(first) <= luma(second) {
@@ -532,14 +532,14 @@ fn chip_paint(swatch: &ThemeSwatch) -> ChipPaint {
 }
 
 /// One palette colour, as the renderer spells it.
-fn colour(rgba: Rgba) -> iced::Color {
+const fn colour(rgba: Rgba) -> iced::Color {
     iced::Color::from_rgba8(rgba.r, rgba.g, rgba.b, rgba.a)
 }
 
 /// What the chip of `name` stands for, given what the desktop reports and
 /// what the bar is waiting on.
 ///
-/// The theme being applied wins over the theme in force, because HyDE
+/// The theme being applied wins over the theme in force, because `HyDE`
 /// reports the new name in its state file long before the switch is
 /// anywhere near done: a grid that only looked at the state file would
 /// light the new chip within a moment of the press and then sit
@@ -560,7 +560,7 @@ fn chip_state(
 
 /// Renders what the desktop is on, and what it is on its way to.
 ///
-/// The theme in force always comes from HyDE's own state file; a theme the
+/// The theme in force always comes from `HyDE`'s own state file; a theme the
 /// bar asked for is drawn beside it rather than in its place, because
 /// until the switch has finished the desktop is still on the old one
 /// and a menu that already named the new one would be reporting
@@ -609,8 +609,7 @@ fn theme_rows_in(
 /// counted in.
 #[must_use]
 pub(super) fn rows(state: &HydeState, font_size: f32, available_width: f32) -> f32 {
-    SECTION_COUNT * style::SECTION_TITLE_ROWS
-        + ACTIVE_ROWS
+    SECTION_COUNT.mul_add(style::SECTION_TITLE_ROWS, ACTIVE_ROWS)
         + theme_rows(state, font_size, available_width)
 }
 
@@ -663,7 +662,7 @@ pub(super) fn desired_width(
             .map(|name| chip_width(name, control))
             .fold(0.0_f32, f32::max);
 
-        widest * THEMES_PER_ROW + gap * (THEMES_PER_ROW - 1.0)
+        gap.mul_add(THEMES_PER_ROW - 1.0, widest * THEMES_PER_ROW)
     };
 
     active.max(grid)
@@ -692,8 +691,8 @@ pub(super) fn desired_height(
     let chip_rows =
         theme_rows_in(state, list_layout, font_size, available_width) + offered_rows;
     let control = style::control_size(font_size);
-    let actions = chip_rows * ACTIONS_ROW_EM * control + UPDATE_ALL_ROW_EM * control;
-    let dots = chip_rows * widgets::DOT_ROW_EM * control + actions;
+    let actions = UPDATE_ALL_ROW_EM.mul_add(control, chip_rows * ACTIONS_ROW_EM * control);
+    let dots = (chip_rows * widgets::DOT_ROW_EM).mul_add(control, actions);
 
     style::page_height(
         rows(state, font_size, available_width)

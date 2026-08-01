@@ -12,12 +12,12 @@ use super::super::{
 };
 use crate::services::network::ActiveConnectionInfo;
 
-impl<'a> NetworkDbus<'a> {
+impl NetworkDbus<'_> {
     pub async fn active_connections(&self) -> AppResult<Vec<OwnedObjectPath>> {
         self.0
             .active_connections()
             .await
-            .map_err(|e| AppError::internal(format!("Failed to get active connections: {}", e)))
+            .map_err(|e| AppError::internal(format!("Failed to get active connections: {e}")))
     }
 
     pub async fn active_connections_info(&self) -> AppResult<Vec<ActiveConnectionInfo>> {
@@ -28,12 +28,12 @@ impl<'a> NetworkDbus<'a> {
             let connection = ActiveConnectionProxy::builder(conn)
                 .path(&path)
                 .map_err(|e| {
-                    AppError::internal(format!("Failed to set ActiveConnectionProxy path: {}", e))
+                    AppError::internal(format!("Failed to set ActiveConnectionProxy path: {e}"))
                 })?
                 .build()
                 .await
                 .map_err(|e| {
-                    AppError::internal(format!("Failed to build ActiveConnectionProxy: {}", e))
+                    AppError::internal(format!("Failed to build ActiveConnectionProxy: {e}"))
                 })?;
 
             if connection.vpn().await.unwrap_or_default() {
@@ -45,14 +45,13 @@ impl<'a> NetworkDbus<'a> {
                 let device = DeviceProxy::builder(conn)
                     .path(device_path)
                     .map_err(|e| {
-                        AppError::internal(format!("Failed to set DeviceProxy path: {}", e))
+                        AppError::internal(format!("Failed to set DeviceProxy path: {e}"))
                     })?
                     .build()
                     .await
                     .map_err(|e| {
                         AppError::internal(format!(
-                            "Failed to build DeviceProxy for active connection: {}",
-                            e
+                            "Failed to build DeviceProxy for active connection: {e}"
                         ))
                     })?;
 
@@ -86,7 +85,7 @@ async fn vpn_info(
 ) -> AppResult<ActiveConnectionInfo> {
     Ok(ActiveConnectionInfo::Vpn {
         name:        connection.id().await.map_err(|e| {
-            AppError::internal(format!("Failed to get {kind} connection ID: {}", e))
+            AppError::internal(format!("Failed to get {kind} connection ID: {e}"))
         })?,
         object_path: connection.inner().path().to_owned().into()
     })

@@ -27,7 +27,7 @@ struct MediaPlayerPublisher {
 }
 
 impl MediaPlayerPublisher {
-    fn new(sender: ModuleEventSender<Message>) -> Self {
+    const fn new(sender: ModuleEventSender<Message>) -> Self {
         Self {
             sender
         }
@@ -150,7 +150,7 @@ mod module {
         fn register(
             &mut self,
             ctx: &ModuleContext,
-            _: Self::RegistrationData<'_>
+            (): Self::RegistrationData<'_>
         ) -> Result<(), ModuleError> {
             for task in self.tasks.drain(..) {
                 task.abort();
@@ -289,6 +289,7 @@ mod view {
     };
 
     impl MediaPlayer {
+        #[must_use]
         pub fn menu_view(
             &self,
             config: &MediaPlayerModuleConfig,

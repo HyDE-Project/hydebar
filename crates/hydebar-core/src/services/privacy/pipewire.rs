@@ -10,21 +10,21 @@ use crate::services::privacy::{ApplicationNode, Media, PrivacyError, PrivacyEven
 
 /// Events the consumer may fall behind before new ones are dropped.
 ///
-/// PipeWire announces state snapshots per node; a bar that missed some while
+/// `PipeWire` announces state snapshots per node; a bar that missed some while
 /// stalled re-learns the truth from the next ones, so dropping under
 /// pressure is bounded staleness — an unbounded queue was unbounded memory.
 const EVENT_CAPACITY: usize = 256;
 
-/// Provides access to privacy events published by PipeWire.
+/// Provides access to privacy events published by `PipeWire`.
 pub(crate) trait PipewireEventSource {
-    /// Future returned when subscribing to PipeWire notifications.
+    /// Future returned when subscribing to `PipeWire` notifications.
     type Future<'a>: Future<Output = Result<Receiver<PrivacyEvent>, PrivacyError>>
         + Send
         + 'a
     where
         Self: 'a;
 
-    /// Subscribe to PipeWire privacy notifications.
+    /// Subscribe to `PipeWire` privacy notifications.
     fn subscribe(&self) -> Self::Future<'_>;
 }
 
@@ -63,7 +63,7 @@ impl PipewireListener {
                         let listener = registry
                             .add_listener_local()
                             .global({
-                                let tx = tx.clone();
+                                let tx = tx;
                                 move |global| {
                                     if let Some(props) = global.props
                                         && let Some(media) =

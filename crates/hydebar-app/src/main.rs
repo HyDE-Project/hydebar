@@ -147,7 +147,7 @@ fn run(runtime_handle: Handle) -> Result<(), MainError> {
     let mut raw_config = raw_config;
 
     let magnification = if raw_config.appearance.auto_scale {
-        startup_scale::focused_screen().map_or(1.0, |screen| screen.magnification())
+        startup_scale::focused_screen().map_or(1.0, startup_scale::ScreenGeometry::magnification)
     } else {
         1.0
     };

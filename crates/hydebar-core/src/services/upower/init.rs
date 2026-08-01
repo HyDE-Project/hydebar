@@ -17,7 +17,7 @@ impl UPowerService {
     pub fn subscription_with_id(id: TypeId) -> Subscription<ServiceEvent<Self>> {
         Subscription::run_with(id, |&_id| {
             channel(100, async |mut output| {
-                UPowerService::listen(&mut output).await;
+                Self::listen(&mut output).await;
             })
         })
     }
@@ -28,8 +28,8 @@ impl UPowerService {
         Option<(BatteryData, Vec<ObjectPath<'static>>)>,
         PowerProfile
     )> {
-        let battery = UPowerService::initialize_battery_data(conn).await?;
-        let power_profile = UPowerService::initialize_power_profile_data(conn).await;
+        let battery = Self::initialize_battery_data(conn).await?;
+        let power_profile = Self::initialize_power_profile_data(conn).await;
 
         match (battery, power_profile) {
             (Some(battery), Ok(power_profile)) => Ok((
@@ -57,13 +57,13 @@ impl UPowerService {
         conn: &zbus::Connection
     ) -> AppResult<PowerProfile> {
         let powerprofiles = PowerProfilesProxy::new(conn).await.map_err(|e| {
-            AppError::internal(format!("Failed to create PowerProfilesProxy: {}", e))
+            AppError::internal(format!("Failed to create PowerProfilesProxy: {e}"))
         })?;
 
         let profile = powerprofiles
             .active_profile()
             .await
-            .map_err(|e| AppError::internal(format!("Failed to get active power profile: {}", e)))
+            .map_err(|e| AppError::internal(format!("Failed to get active power profile: {e}")))
             .map(PowerProfile::from)?;
 
         Ok(profile)

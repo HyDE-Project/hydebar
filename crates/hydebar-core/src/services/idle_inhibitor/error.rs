@@ -32,17 +32,17 @@ impl std::fmt::Display for IdleInhibitorError {
             Self::Connection {
                 context
             } => {
-                write!(f, "failed to connect to wayland compositor: {}", context)
+                write!(f, "failed to connect to wayland compositor: {context}")
             }
             Self::MissingGlobal {
                 global
             } => {
-                write!(f, "missing wayland global: {}", global)
+                write!(f, "missing wayland global: {global}")
             }
             Self::Dispatch {
                 context
             } => {
-                write!(f, "failed to dispatch wayland events: {}", context)
+                write!(f, "failed to dispatch wayland events: {context}")
             }
         }
     }
@@ -70,21 +70,24 @@ impl IdleInhibitorError {
     }
 
     /// Create an error describing a missing compositor global.
-    pub fn missing_compositor() -> Self {
+    #[must_use]
+    pub const fn missing_compositor() -> Self {
         Self::MissingGlobal {
             global: MissingGlobal::Compositor
         }
     }
 
     /// Create an error describing a missing idle inhibit manager global.
-    pub fn missing_idle_inhibit_manager() -> Self {
+    #[must_use]
+    pub const fn missing_idle_inhibit_manager() -> Self {
         Self::MissingGlobal {
             global: MissingGlobal::IdleInhibitManager
         }
     }
 
     /// Create an error describing a missing compositor surface global.
-    pub fn missing_surface() -> Self {
+    #[must_use]
+    pub const fn missing_surface() -> Self {
         Self::MissingGlobal {
             global: MissingGlobal::Surface
         }
@@ -93,13 +96,13 @@ impl IdleInhibitorError {
 
 impl From<ConnectError> for IdleInhibitorError {
     fn from(value: ConnectError) -> Self {
-        IdleInhibitorError::connection(value.to_string())
+        Self::connection(value.to_string())
     }
 }
 
 impl From<DispatchError> for IdleInhibitorError {
     fn from(value: DispatchError) -> Self {
-        IdleInhibitorError::dispatch(value.to_string())
+        Self::dispatch(value.to_string())
     }
 }
 
@@ -117,9 +120,9 @@ pub enum MissingGlobal {
 impl core::fmt::Display for MissingGlobal {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            MissingGlobal::Compositor => f.write_str("wl_compositor"),
-            MissingGlobal::Surface => f.write_str("wl_surface"),
-            MissingGlobal::IdleInhibitManager => f.write_str("zwp_idle_inhibit_manager_v1")
+            Self::Compositor => f.write_str("wl_compositor"),
+            Self::Surface => f.write_str("wl_surface"),
+            Self::IdleInhibitManager => f.write_str("zwp_idle_inhibit_manager_v1")
         }
     }
 }

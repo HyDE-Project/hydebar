@@ -5,7 +5,7 @@ use serde::Deserialize;
 /// Seconds between two scheduled update checks when none is configured.
 pub const DEFAULT_CHECK_INTERVAL: u64 = 3600;
 
-/// Upstream branch the HyDE clone is measured and updated against.
+/// Upstream branch the `HyDE` clone is measured and updated against.
 #[derive(Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum HydeBranch {
     /// The released line, the branch upstream documents installing from.
@@ -17,7 +17,7 @@ pub enum HydeBranch {
 
 impl HydeBranch {
     /// Every branch the bar offers, in the order they are listed.
-    pub const ALL: [HydeBranch; 2] = [HydeBranch::Master, HydeBranch::Dev];
+    pub const ALL: [Self; 2] = [Self::Master, Self::Dev];
 
     /// Name of the branch as git knows it.
     #[must_use]
@@ -55,7 +55,7 @@ pub struct UpdatesModuleConfig {
         alias = "check_interval_secs"
     )]
     pub check_interval: u64,
-    /// Branch the HyDE clone follows.
+    /// Branch the `HyDE` clone follows.
     #[serde(default, alias = "hyde-branch")]
     pub hyde_branch:    HydeBranch
 }
@@ -71,7 +71,7 @@ impl Default for UpdatesModuleConfig {
     }
 }
 
-fn default_check_interval() -> u64 {
+const fn default_check_interval() -> u64 {
     DEFAULT_CHECK_INTERVAL
 }
 

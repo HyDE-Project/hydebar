@@ -1,18 +1,18 @@
-//! The active HyDE bar layout, restated in this bar's modules.
+//! The active `HyDE` bar layout, restated in this bar's modules.
 //!
-//! HyDE arranges its session bar from interchangeable layout files: three
+//! `HyDE` arranges its session bar from interchangeable layout files: three
 //! position arrays whose entries are either module names or the names of pill
 //! groups declared beside them. The layout in force is recorded in `staterc`,
 //! and switching layouts is nothing but rewriting that record — which this
 //! bar already watches. Taking the seat therefore takes no new machinery:
 //! read the recorded layout, restate it in our modules, and let the existing
 //! reload apply it. The names inside the files, and the `WAYBAR_` spelling of
-//! the state keys, are the vocabulary of the bar HyDE shipped with before
+//! the state keys, are the vocabulary of the bar `HyDE` shipped with before
 //! this one; they are read as found and answered with our own modules.
 //!
 //! The restatement only answers for a configuration that wrote no module
 //! layout of its own. A hand-written `[modules]` section is the user's word
-//! and outranks whatever HyDE has on file, exactly as every other setting
+//! and outranks whatever `HyDE` has on file, exactly as every other setting
 //! does.
 
 use std::{collections::BTreeSet, fs, path::PathBuf};
@@ -44,7 +44,7 @@ pub fn load(custom_names: &[String]) -> Option<Modules> {
     HydeDirs::from_env().and_then(|dirs| load_from(&dirs, custom_names))
 }
 
-/// Reads the active layout from an explicit HyDE install.
+/// Reads the active layout from an explicit `HyDE` install.
 ///
 /// Returns [`None`] whenever any link of the chain is missing — no `staterc`,
 /// no readable layout, or a layout none of whose entries the bar can place —
@@ -60,7 +60,7 @@ pub fn load_from(dirs: &HydeDirs, custom_names: &[String]) -> Option<Modules> {
 /// Resolves the layout file `staterc` points at.
 ///
 /// The recorded path wins; when it is gone the recorded *name* is looked up
-/// under the shipped layouts, which is also what HyDE's own tooling falls
+/// under the shipped layouts, which is also what `HyDE`'s own tooling falls
 /// back to.
 fn layout_file(dirs: &HydeDirs, staterc: &str) -> Option<PathBuf> {
     if let Some(path) = shell_vars::value_of(staterc, LAYOUT_PATH_KEY) {
@@ -240,7 +240,7 @@ fn builtin_for_custom(tail: &str) -> Option<ModuleName> {
 
 /// States a configured module name the way a person would write it.
 ///
-/// The names HyDE ships its helper scripts under are terse identifiers; a
+/// The names `HyDE` ships its helper scripts under are terse identifiers; a
 /// hint reading `wbar` or `hyde-menu` looks like debugging output next to
 /// `Battery: 85%`. The names the scripts are known by get the label a person
 /// would use, and anything else is at least spelled like a word: first letter
@@ -286,6 +286,7 @@ pub fn display_label(name: &str) -> String {
 /// Layout files carry line and block comments and the odd trailing comma;
 /// both are removed outside of strings so the strict parser can take the
 /// rest.
+#[must_use]
 pub fn plain_json(source: &str) -> String {
     let without_comments = strip_comments(source);
 
@@ -380,7 +381,7 @@ fn strip_trailing_commas(source: &str) -> String {
 mod tests {
     use super::*;
 
-    /// The shape every HyDE layout ships: groups declared beside the position
+    /// The shape every `HyDE` layout ships: groups declared beside the position
     /// arrays that reference them, comments included.
     const LAYOUT: &str = r#"
     // vim:ft=jsonc

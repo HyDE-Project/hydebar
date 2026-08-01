@@ -41,19 +41,19 @@ impl DcolMode {
     /// asks for the mode, so an inverted palette has to report the opposite of
     /// what the file says or the two would disagree.
     #[must_use]
-    pub fn inverted(self) -> Self {
+    pub const fn inverted(self) -> Self {
         match self {
             Self::Dark => Self::Light,
             Self::Light => Self::Dark
         }
     }
 
-    /// The word HyDE writes this mode as.
+    /// The word `HyDE` writes this mode as.
     ///
-    /// A theme states its preference as `prefer-dark`, so the comparison HyDE
+    /// A theme states its preference as `prefer-dark`, so the comparison `HyDE`
     /// makes is a substring one against exactly this word.
     #[must_use]
-    pub fn word(self) -> &'static str {
+    pub const fn word(self) -> &'static str {
         match self {
             Self::Dark => "dark",
             Self::Light => "light"
@@ -63,7 +63,7 @@ impl DcolMode {
 
 /// The colours wallbash extracted from a wallpaper.
 ///
-/// This is the whole palette every HyDE consumer is coloured from, so the bar
+/// This is the whole palette every `HyDE` consumer is coloured from, so the bar
 /// reads it directly instead of waiting for a template to render a stylesheet
 /// for it.
 #[derive(Debug, Clone, PartialEq)]

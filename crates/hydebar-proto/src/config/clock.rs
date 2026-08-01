@@ -19,7 +19,8 @@ pub struct ClockModuleConfig {
 
 impl ClockModuleConfig {
     /// Reports whether a left click has another format to switch to.
-    pub fn has_alternatives(&self) -> bool {
+    #[must_use]
+    pub const fn has_alternatives(&self) -> bool {
         !self.format_alt.is_empty()
     }
 

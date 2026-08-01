@@ -38,6 +38,7 @@ pub enum IndicatorState {
     Danger
 }
 
+#[must_use]
 pub fn format_duration(duration: &Duration) -> String {
     let h = duration.as_secs() / 60 / 60;
     let m = duration.as_secs() / 60 % 60;
@@ -48,6 +49,7 @@ pub fn format_duration(duration: &Duration) -> String {
     }
 }
 
+#[must_use]
 pub fn truncate_text(value: &str, max_length: u32) -> String {
     let length = value.chars().count();
 

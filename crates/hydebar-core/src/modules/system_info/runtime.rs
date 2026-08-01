@@ -51,7 +51,7 @@ pub struct PollingTask {
 
 impl PollingTask {
     /// Create a new polling task manager with no active background work.
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             handle: None,
             poke:   None
@@ -172,7 +172,7 @@ impl PollingTask {
 
                 tokio::select! {
                     _ = ticker.tick() => {}
-                    _ = poked.notified() => {}
+                    () = poked.notified() => {}
                 }
             }
         });

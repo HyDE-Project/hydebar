@@ -119,7 +119,7 @@ impl IwdDbus<'_> {
                 "/com/hydebar/signalagent/{}",
                 Uuid::new_v4().as_simple()
             ))
-            .map_err(|e| AppError::internal(format!("Failed to create agent path: {}", e)))?;
+            .map_err(|e| AppError::internal(format!("Failed to create agent path: {e}")))?;
 
             let _server = self
                 .inner()
@@ -128,7 +128,7 @@ impl IwdDbus<'_> {
                 .at(&agent_path, agent)
                 .await
                 .map_err(|e| {
-                    AppError::internal(format!("Failed to register signal level agent: {}", e))
+                    AppError::internal(format!("Failed to register signal level agent: {e}"))
                 })?;
             // 6) turn receiver into a Stream
             signal_level_updates.push(
@@ -149,8 +149,7 @@ impl IwdDbus<'_> {
                 .await
                 .map_err(|e| {
                     AppError::internal(format!(
-                        "Failed to register signal level agent with station: {}",
-                        e
+                        "Failed to register signal level agent with station: {e}"
                     ))
                 })?;
             warn!("Registered signal level agent at {agent_path}");
@@ -250,7 +249,7 @@ impl IwdDbus<'_> {
 /// The agent is registered with three thresholds, so iwd answers with the
 /// index of the band the signal fell into — not a percentage. Rendering the
 /// index directly showed the weakest icon whatever the actual signal.
-fn strength_of_level(level: i16) -> u8 {
+const fn strength_of_level(level: i16) -> u8 {
     match level {
         0 => 100,
         1 => 75,

@@ -18,3 +18,6 @@ wayland-client.workspace = true
 [dev-dependencies]
 # Enable test utilities from hydebar-core
 hydebar-core = { path = "../hydebar-core", features = ["test-utils"] }
+
+[lints]
+workspace = true

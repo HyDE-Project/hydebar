@@ -5,7 +5,7 @@ use log::{debug, trace};
 
 use super::{TrayIcon, dbus::Icon};
 
-pub(crate) fn icon_from_pixmaps(pixmaps: Vec<Icon>) -> Option<TrayIcon> {
+pub fn icon_from_pixmaps(pixmaps: Vec<Icon>) -> Option<TrayIcon> {
     pixmaps
         .into_iter()
         .max_by_key(|icon| {
@@ -67,7 +67,7 @@ fn trim_transparent(width: u32, height: u32, bytes: Vec<u8>) -> (u32, u32, Vec<u
     (new_width, new_height, trimmed)
 }
 
-pub(crate) fn icon_from_name(icon_name: &str) -> Option<TrayIcon> {
+pub fn icon_from_name(icon_name: &str) -> Option<TrayIcon> {
     debug!("resolving icon from name {icon_name}");
 
     let theme = get_icon_theme();
@@ -142,11 +142,11 @@ fn pixmap_width(width: u32) -> u32 {
 /// Converts premultiplied RGBA to the straight alpha the renderer expects.
 fn straight_alpha(mut bytes: Vec<u8>) -> Vec<u8> {
     for pixel in bytes.chunks_exact_mut(4) {
-        let alpha = pixel[3] as u16;
+        let alpha = u16::from(pixel[3]);
 
         if alpha > 0 && alpha < 255 {
             for channel in &mut pixel[..3] {
-                *channel = ((*channel as u16 * 255) / alpha).min(255) as u8;
+                *channel = ((u16::from(*channel) * 255) / alpha).min(255) as u8;
             }
         }
     }

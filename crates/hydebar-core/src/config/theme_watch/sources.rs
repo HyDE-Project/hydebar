@@ -39,7 +39,7 @@ const BORDER_RADIUS_CSS: &str = "border-radius.css";
 /// A directory to watch together with the files inside it that matter.
 ///
 /// The watch is placed on the directory and never on a file. `wall.dcol` is a
-/// symlink HyDE replaces with `ln -fs`, and the stylesheets are written to a
+/// symlink `HyDE` replaces with `ln -fs`, and the stylesheets are written to a
 /// temporary file and moved into place; a watch bound to the old inode would
 /// keep reporting on a file nothing reads any more and would miss the switch
 /// entirely.
@@ -67,15 +67,15 @@ impl ThemeWatchTarget {
 /// following a directory the reader does not read.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ThemeRoots {
-    /// Where HyDE keeps the files the theme is assembled from.
+    /// Where `HyDE` keeps the files the theme is assembled from.
     pub dirs: HydeDirs
 }
 
 impl ThemeRoots {
-    /// Builds the roots from an explicit HyDE layout, which is what tests and
+    /// Builds the roots from an explicit `HyDE` layout, which is what tests and
     /// callers with their own layout need.
     #[must_use]
-    pub fn new(dirs: HydeDirs) -> Self {
+    pub const fn new(dirs: HydeDirs) -> Self {
         Self {
             dirs
         }
@@ -92,9 +92,9 @@ impl ThemeRoots {
 
     /// Lists the directories to watch and the files that matter inside them.
     ///
-    /// The HyDE directories come first because they are the source of truth;
+    /// The `HyDE` directories come first because they are the source of truth;
     /// the waybar directories are included only because the bar still falls
-    /// back to them on an install where HyDE answers for nothing, and a
+    /// back to them on an install where `HyDE` answers for nothing, and a
     /// fallback that changed without the bar noticing would be just as
     /// stale as no watch at all.
     #[must_use]

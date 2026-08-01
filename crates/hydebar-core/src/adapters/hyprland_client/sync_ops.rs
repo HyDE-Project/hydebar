@@ -7,7 +7,7 @@ use super::{config::HyprlandClientConfig, util::calculate_retry_delay};
 
 /// Execute a blocking Hyprland request in a worker thread and wait for it to
 /// complete within the provided timeout.
-pub(crate) fn execute_once<R, F>(
+pub fn execute_once<R, F>(
     operation: &'static str,
     timeout_dur: Duration,
     func: Arc<F>
@@ -42,7 +42,7 @@ where
 
 /// Execute a blocking Hyprland request with retry and backoff semantics derived
 /// from [`HyprlandClientConfig`].
-pub(crate) fn execute_with_retry<R, F>(
+pub fn execute_with_retry<R, F>(
     config: &HyprlandClientConfig,
     operation: &'static str,
     func: F

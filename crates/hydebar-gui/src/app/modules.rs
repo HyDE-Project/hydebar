@@ -29,7 +29,7 @@ impl ModuleActions {
     ///
     /// Inert modules render as plain indicators instead of unresponsive
     /// buttons.
-    fn is_inert(&self) -> bool {
+    const fn is_inert(&self) -> bool {
         self.left.is_none() && self.right.is_none() && self.middle.is_none()
     }
 }

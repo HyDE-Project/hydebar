@@ -29,6 +29,7 @@ pub struct ConfigImpact {
 
 impl ConfigImpact {
     /// Returns `true` if the given module is listed as affected by the update.
+    #[must_use]
     pub fn affects_module(&self, module: &ModuleName) -> bool {
         self.affected_modules.contains(module)
     }
@@ -78,20 +79,20 @@ impl std::fmt::Display for ConfigUpdateError {
                 path,
                 context
             } => {
-                write!(f, "failed to read config at {:?}: {}", path, context)
+                write!(f, "failed to read config at {path:?}: {context}")
             }
             Self::Parse {
                 path,
                 context
             } => {
-                write!(f, "failed to parse config at {:?}: {}", path, context)
+                write!(f, "failed to parse config at {path:?}: {context}")
             }
-            Self::Validation(err) => write!(f, "{}", err),
+            Self::Validation(err) => write!(f, "{err}"),
             Self::Removed => write!(f, "configuration file removed"),
             Self::State {
                 context
             } => {
-                write!(f, "failed to update configuration state: {}", context)
+                write!(f, "failed to update configuration state: {context}")
             }
         }
     }
@@ -114,6 +115,7 @@ impl From<ConfigValidationError> for ConfigUpdateError {
 
 impl ConfigUpdateError {
     /// Construct a read error with contextual information.
+    #[must_use]
     pub fn read(path: PathBuf, err: &std::io::Error) -> Self {
         Self::Read {
             path,
@@ -122,6 +124,7 @@ impl ConfigUpdateError {
     }
 
     /// Construct a parse error with contextual information.
+    #[must_use]
     pub fn parse(path: PathBuf, err: &toml::de::Error) -> Self {
         Self::Parse {
             path,
@@ -171,7 +174,8 @@ pub struct ConfigManager {
 
 impl ConfigManager {
     /// Creates a new manager seeded with the initial configuration.
-    pub fn new(initial: Config) -> Self {
+    #[must_use]
+    pub const fn new(initial: Config) -> Self {
         Self {
             state: RwLock::new(initial)
         }

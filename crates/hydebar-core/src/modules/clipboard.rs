@@ -19,7 +19,7 @@ where
     fn register(
         &mut self,
         _: &ModuleContext,
-        _: Self::RegistrationData<'_>
+        (): Self::RegistrationData<'_>
     ) -> Result<(), ModuleError> {
         Ok(())
     }

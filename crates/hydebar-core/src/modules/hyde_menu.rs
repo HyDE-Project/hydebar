@@ -1,6 +1,6 @@
-//! The HyDE menu: the desktop's own menu tree, drawn by the bar.
+//! The `HyDE` menu: the desktop's own menu tree, drawn by the bar.
 //!
-//! The reference waybar opens a GTK menu built from an XML file the HyDE
+//! The reference waybar opens a GTK menu built from an XML file the `HyDE`
 //! Project ships, and every item runs a command from the module's action
 //! table. This module reads the very same two files — nothing about the menu
 //! is stated here — and renders the tree in the bar's own window: submenus
@@ -37,11 +37,11 @@ pub enum Entry {
     Submenu {
         id:       String,
         label:    String,
-        children: Vec<Entry>
+        children: Vec<Self>
     }
 }
 
-/// The HyDE menu module.
+/// The `HyDE` menu module.
 #[derive(Debug, Default)]
 pub struct HydeMenu {
     /// The tree the desktop's menu file describes.
@@ -101,6 +101,7 @@ impl HydeMenu {
     }
 
     /// The menu tree as the window shows it.
+    #[must_use]
     pub fn menu_view(&self, id: iced::SurfaceId, opacity: f32) -> Element<'_, Message> {
         view::tree_view(&self.tree, &self.expanded, id, opacity)
     }
@@ -245,9 +246,7 @@ mod source {
 
         match std::env::var(name) {
             Ok(value) if !value.is_empty() => format!("{value}{rest}"),
-            _ => data_dir()
-                .map(|dir| format!("{}{rest}", dir.display()))
-                .unwrap_or_else(|| raw.to_owned())
+            _ => data_dir().map_or_else(|| raw.to_owned(), |dir| format!("{}{rest}", dir.display()))
         }
     }
 
@@ -329,7 +328,7 @@ mod source {
                         item.label.push_str(
                             &content
                                 .decode()
-                                .map(|value| value.into_owned())
+                                .map(std::borrow::Cow::into_owned)
                                 .unwrap_or_default()
                         );
                     }
@@ -478,13 +477,13 @@ mod view {
     }
 
     /// One row of the menu: label left, an optional chevron right.
-    fn row_button<'a>(
-        label: &'a str,
+    fn row_button(
+        label: &str,
         chevron: Option<Icons>,
         message: Message,
         opacity: f32,
         indent: f32
-    ) -> Element<'a, Message> {
+    ) -> Element<'_, Message> {
         let mut content = row![text(label).width(Length::Fill)].align_y(Alignment::Center);
 
         if let Some(glyph) = chevron {

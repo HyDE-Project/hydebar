@@ -26,15 +26,15 @@ pub enum Section {
 
 impl Section {
     /// Every section, in the order the editor lists them.
-    pub const ALL: [Section; 3] = [Section::Left, Section::Center, Section::Right];
+    pub const ALL: [Self; 3] = [Self::Left, Self::Center, Self::Right];
 
     /// Name shown above the row of this section.
     #[must_use]
     pub const fn label(self) -> &'static str {
         match self {
-            Section::Left => "Left",
-            Section::Center => "Center",
-            Section::Right => "Right"
+            Self::Left => "Left",
+            Self::Center => "Center",
+            Self::Right => "Right"
         }
     }
 
@@ -42,9 +42,9 @@ impl Section {
     #[must_use]
     pub const fn before(self) -> Option<Self> {
         match self {
-            Section::Left => None,
-            Section::Center => Some(Section::Left),
-            Section::Right => Some(Section::Center)
+            Self::Left => None,
+            Self::Center => Some(Self::Left),
+            Self::Right => Some(Self::Center)
         }
     }
 
@@ -52,19 +52,19 @@ impl Section {
     #[must_use]
     pub const fn after(self) -> Option<Self> {
         match self {
-            Section::Left => Some(Section::Center),
-            Section::Center => Some(Section::Right),
-            Section::Right => None
+            Self::Left => Some(Self::Center),
+            Self::Center => Some(Self::Right),
+            Self::Right => None
         }
     }
 
     /// Islands of this section.
     #[must_use]
-    pub fn islands(self, modules: &Modules) -> &Vec<ModuleDef> {
+    pub const fn islands(self, modules: &Modules) -> &Vec<ModuleDef> {
         match self {
-            Section::Left => &modules.left,
-            Section::Center => &modules.center,
-            Section::Right => &modules.right
+            Self::Left => &modules.left,
+            Self::Center => &modules.center,
+            Self::Right => &modules.right
         }
     }
 
@@ -79,9 +79,9 @@ impl Section {
         let islands = rebuild(entries);
 
         match self {
-            Section::Left => modules.left = islands,
-            Section::Center => modules.center = islands,
-            Section::Right => modules.right = islands
+            Self::Left => modules.left = islands,
+            Self::Center => modules.center = islands,
+            Self::Right => modules.right = islands
         }
     }
 }
@@ -120,7 +120,7 @@ pub enum LayoutEdit {
 impl LayoutEdit {
     /// Slot this edit acts on, if it acts on one.
     #[must_use]
-    pub fn slot(&self) -> Option<Slot> {
+    pub const fn slot(&self) -> Option<Slot> {
         match self {
             Self::MoveEarlier(slot)
             | Self::MoveLater(slot)

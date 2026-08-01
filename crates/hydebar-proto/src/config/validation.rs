@@ -18,15 +18,14 @@ impl std::fmt::Display for ConfigValidationError {
             Self::DuplicateCustomModule {
                 name
             } => {
-                write!(f, "duplicate custom module definition for '{}'", name)
+                write!(f, "duplicate custom module definition for '{name}'")
             }
             Self::MissingCustomModule {
                 name
             } => {
                 write!(
                     f,
-                    "custom module '{}' referenced in layout but not defined",
-                    name
+                    "custom module '{name}' referenced in layout but not defined"
                 )
             }
         }

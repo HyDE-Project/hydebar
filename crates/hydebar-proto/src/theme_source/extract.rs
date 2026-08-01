@@ -1,4 +1,4 @@
-//! Per-file extraction of the values the bar reads from the HyDE stylesheets.
+//! Per-file extraction of the values the bar reads from the `HyDE` stylesheets.
 
 use super::{
     color::parse_color,

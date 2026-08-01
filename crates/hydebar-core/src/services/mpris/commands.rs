@@ -6,7 +6,7 @@ use super::{data::MprisPlayerData, dbus::MprisPlayerProxy, ipc};
 use crate::modules::ModuleError;
 
 /// Helper that converts lower-level errors into [`ModuleError`] values.
-pub(crate) fn module_error(context: &str, err: impl Display) -> ModuleError {
+pub fn module_error(context: &str, err: impl Display) -> ModuleError {
     ModuleError::registration(format!("{context}: {err}"))
 }
 
@@ -31,7 +31,8 @@ pub struct MprisPlayerCommand {
 
 impl MprisPlayerCommand {
     /// Creates a new [`MprisPlayerCommand`] targeting `service_name`.
-    pub fn new(service_name: String, command: PlayerCommand) -> Self {
+    #[must_use]
+    pub const fn new(service_name: String, command: PlayerCommand) -> Self {
         Self {
             service_name,
             command
@@ -53,7 +54,7 @@ pub enum PlayerCommand {
 }
 
 /// Trait describing how player actions are executed for a proxy implementation.
-pub(crate) trait PlayerCommandExecutor {
+pub trait PlayerCommandExecutor {
     /// Executes a [`PlayerCommand`] against the underlying proxy.
     fn execute_command<'a>(
         &'a self,
@@ -91,7 +92,7 @@ impl PlayerCommandExecutor for MprisPlayerProxy<'static> {
 
 /// Executes `command` against the provided player `data`, refreshing the cached
 /// view of available players on success.
-pub(crate) async fn execute_player_command(
+pub async fn execute_player_command(
     conn: &Connection,
     data: &[MprisPlayerData],
     command: MprisPlayerCommand

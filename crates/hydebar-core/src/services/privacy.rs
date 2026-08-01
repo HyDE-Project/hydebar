@@ -48,9 +48,9 @@ pub(crate) enum State {
 /// Event emitted by the privacy service listeners.
 #[derive(Debug, Clone)]
 pub enum PrivacyEvent {
-    /// A new PipeWire node has been announced.
+    /// A new `PipeWire` node has been announced.
     AddNode(ApplicationNode),
-    /// A PipeWire node has been removed.
+    /// A `PipeWire` node has been removed.
     RemoveNode(u32),
     /// The webcam device has been opened by an application.
     WebcamOpen,

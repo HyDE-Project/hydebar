@@ -37,7 +37,7 @@ impl App {
     /// island of its group and only owns the box its own content needs: were it
     /// to fill the island it would paint its hover over the island padding and
     /// against the rounded corners the island draws.
-    fn module_height(grouped: bool) -> Length {
+    const fn module_height(grouped: bool) -> Length {
         if grouped {
             Length::Shrink
         } else {
@@ -167,9 +167,7 @@ impl App {
             ModuleName::Custom(name) => self.custom.get(name).map(|custom| {
                 Some(
                     custom
-                        .tooltip()
-                        .map(str::to_owned)
-                        .unwrap_or_else(|| hydebar_proto::bar_layout::display_label(name))
+                        .tooltip().map_or_else(|| hydebar_proto::bar_layout::display_label(name), str::to_owned)
                 )
             }),
             ModuleName::IdleInhibitor => Some(

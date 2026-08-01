@@ -227,7 +227,7 @@ impl App {
             }
         }
 
-        for (name, module) in self.custom.iter_mut() {
+        for (name, module) in &mut self.custom {
             if !self
                 .config
                 .custom_modules

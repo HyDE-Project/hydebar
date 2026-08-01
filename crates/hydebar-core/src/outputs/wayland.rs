@@ -12,7 +12,7 @@ use crate::{
 ///
 /// It is what compositor rules are attached to, the blur behind the bar above
 /// all, so it is stated once and read by everything that names it.
-pub(crate) const MAIN_NAMESPACE: &str = "hydebar-main-layer";
+pub const MAIN_NAMESPACE: &str = "hydebar-main-layer";
 
 /// Namespace of the surface the tooltips are drawn on.
 ///
@@ -39,7 +39,7 @@ const NOTIFICATIONS_NAMESPACE: &str = "hydebar-notifications-layer";
 /// Deliberately narrow and anchored to one corner rather than covering the
 /// screen: a full screen surface on a layer above the desktop swallows every
 /// click meant for the windows underneath it.
-pub(crate) const NOTIFICATIONS_WIDTH: u32 = 520;
+pub const NOTIFICATIONS_WIDTH: u32 = 520;
 
 /// Strips a surface of pointer input, leaving it a drawing and nothing else.
 ///
@@ -57,7 +57,7 @@ fn draw_only<Message: 'static>(id: Id) -> Task<Message> {
 }
 
 /// Maps the configured bar layer onto the compositor layer it is created on.
-fn surface_layer(layer: BarLayer) -> Layer {
+const fn surface_layer(layer: BarLayer) -> Layer {
     match layer {
         BarLayer::Background => Layer::Background,
         BarLayer::Bottom => Layer::Bottom,
@@ -66,7 +66,7 @@ fn surface_layer(layer: BarLayer) -> Layer {
     }
 }
 
-pub(crate) struct LayerSurfaceCreation<Message> {
+pub struct LayerSurfaceCreation<Message> {
     pub(crate) main_id:          Id,
     pub(crate) menu_id:          Id,
     pub(crate) tooltip_id:       Id,
@@ -80,7 +80,7 @@ pub(crate) struct LayerSurfaceCreation<Message> {
 /// `configured_height` is the height named by the configuration; left unset the
 /// built-in [`HEIGHT`] is used instead. Either way the solid and gradient
 /// styles trim the island margin and the result is scaled by `scale_factor`.
-pub(crate) fn layer_height(
+pub fn layer_height(
     style: AppearanceStyle,
     scale_factor: f64,
     configured_height: Option<f32>
@@ -96,7 +96,7 @@ pub(crate) fn layer_height(
 }
 
 /// Settings of the surface the bar itself is drawn on.
-pub(crate) fn main_settings(
+pub fn main_settings(
     style: AppearanceStyle,
     output: Option<OutputId>,
     position: Position,
@@ -131,7 +131,7 @@ pub(crate) fn main_settings(
 ///
 /// It keeps its pointer input on purpose: the menu is dismissed by pressing
 /// beside it, which only reaches the bar while the surface takes the press.
-pub(crate) fn menu_settings(output: Option<OutputId>) -> LayerShellSettings {
+pub fn menu_settings(output: Option<OutputId>) -> LayerShellSettings {
     LayerShellSettings {
         namespace: MENU_NAMESPACE.to_string(),
         size: Some((0, 0)),
@@ -146,7 +146,7 @@ pub(crate) fn menu_settings(output: Option<OutputId>) -> LayerShellSettings {
 /// Settings of the surface the tooltips are drawn on.
 ///
 /// Created input-free through [`draw_only`], stated as a follow-up task.
-pub(crate) fn tooltip_settings(output: Option<OutputId>) -> LayerShellSettings {
+pub fn tooltip_settings(output: Option<OutputId>) -> LayerShellSettings {
     LayerShellSettings {
         namespace: TOOLTIP_NAMESPACE.to_string(),
         size: Some((0, 0)),
@@ -166,7 +166,7 @@ pub(crate) fn tooltip_settings(output: Option<OutputId>) -> LayerShellSettings {
 /// surface that sat on the overlay from the start would end up below a menu
 /// raised there later. Rising only when there is something to show is what
 /// keeps the popups above whatever the bar raised before them.
-pub(crate) fn notifications_settings(
+pub fn notifications_settings(
     output: Option<OutputId>,
     position: Position
 ) -> LayerShellSettings {
@@ -189,7 +189,7 @@ pub(crate) fn notifications_settings(
 /// The blur is asked for first: the compositor reads its layer rules when a
 /// surface is mapped, so a rule stated afterwards would only reach the surface
 /// the next time the bar is started.
-pub(crate) fn create_layer_surfaces<Message: 'static>(
+pub fn create_layer_surfaces<Message: 'static>(
     style: AppearanceStyle,
     output: Option<OutputId>,
     position: Position,
@@ -230,7 +230,7 @@ pub(crate) fn create_layer_surfaces<Message: 'static>(
     }
 }
 
-pub(crate) fn destroy_layer_surfaces<Message: 'static>(
+pub fn destroy_layer_surfaces<Message: 'static>(
     main_id: Id,
     menu_id: Id,
     tooltip_id: Id,

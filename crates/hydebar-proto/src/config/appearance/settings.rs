@@ -41,7 +41,7 @@ pub struct Appearance {
     /// Height of the bar, in pixels.
     ///
     /// Left unset the bar keeps its built-in height. Set it to match another
-    /// bar, for example `38.0` for the height the HyDE waybar theme reserves.
+    /// bar, for example `38.0` for the height the `HyDE` waybar theme reserves.
     #[serde(default)]
     pub height:                   Option<f32>,
     /// Padding kept between the screen edge and the outermost island, in
@@ -53,10 +53,10 @@ pub struct Appearance {
     /// to a value of its own, whatever the compositor is configured with.
     #[serde(default)]
     pub side_padding:             Option<f32>,
-    /// Whether the appearance follows the theme published by the HyDE Project.
+    /// Whether the appearance follows the theme published by the `HyDE` Project.
     ///
     /// Enabled by default: every field the user did not set explicitly is taken
-    /// from the HyDE theme, so the bar changes along with the rest of the
+    /// from the `HyDE` theme, so the bar changes along with the rest of the
     /// desktop. Fields present in the configuration always win.
     #[serde(default = "default_follow_hyde")]
     pub follow_hyde:              bool,
@@ -155,11 +155,11 @@ impl Default for Appearance {
 }
 
 /// Automatic magnification is on unless the configuration turns it off.
-fn default_auto_scale() -> bool {
+const fn default_auto_scale() -> bool {
     true
 }
 
-fn default_follow_hyde() -> bool {
+const fn default_follow_hyde() -> bool {
     true
 }
 
@@ -180,15 +180,15 @@ where
     Ok(value)
 }
 
-pub(super) fn default_greeting() -> bool {
+pub(super) const fn default_greeting() -> bool {
     true
 }
 
-pub(super) fn default_bar_opacity() -> f32 {
+pub(super) const fn default_bar_opacity() -> f32 {
     0.0
 }
 
-fn default_scale_factor() -> f64 {
+const fn default_scale_factor() -> f64 {
     1.0
 }
 
@@ -209,7 +209,7 @@ where
     Ok(value)
 }
 
-pub(super) fn default_opacity() -> f32 {
+pub(super) const fn default_opacity() -> f32 {
     1.0
 }
 

@@ -1,6 +1,5 @@
-//! Connection profiles already stored by NetworkManager.
+//! Connection profiles already stored by `NetworkManager`.
 
-use std::ops::Deref;
 
 use log::warn;
 use masterror::{AppError, AppResult};
@@ -9,7 +8,7 @@ use zbus::zvariant::Value;
 use super::super::{NetworkDbus, NetworkSettingsDbus, proxies::ConnectionSettingsProxy};
 use crate::services::network::{AccessPoint, KnownConnection, Vpn};
 
-impl<'a> NetworkDbus<'a> {
+impl NetworkDbus<'_> {
     pub async fn known_connections_internal(
         &self,
         wireless_access_points: &[AccessPoint]
@@ -25,14 +24,13 @@ impl<'a> NetworkDbus<'a> {
                 .path(c.clone())
                 .map_err(|e| {
                     AppError::internal(format!(
-                        "Failed to set ConnectionSettingsProxy path: {}",
-                        e
+                        "Failed to set ConnectionSettingsProxy path: {e}"
                     ))
                 })?
                 .build()
                 .await
                 .map_err(|e| {
-                    AppError::internal(format!("Failed to build ConnectionSettingsProxy: {}", e))
+                    AppError::internal(format!("Failed to build ConnectionSettingsProxy: {e}"))
                 })?;
             let Ok(s) = cs.get_settings().await else {
                 warn!("Failed to get settings for connection {c}");
@@ -45,9 +43,9 @@ impl<'a> NetworkDbus<'a> {
                 let ssid =
                     s.get("connection")
                         .and_then(|c| c.get("id"))
-                        .map(|s| match s.deref() {
+                        .map(|s| match &**s {
                             Value::Str(v) => v.to_string(),
-                            _ => "".to_string()
+                            _ => String::new()
                         });
 
                 if let Some(cur_ssid) = ssid {
@@ -57,9 +55,9 @@ impl<'a> NetworkDbus<'a> {
                 let id = s
                     .get("connection")
                     .and_then(|c| c.get("id"))
-                    .map(|v| match v.deref() {
+                    .map(|v| match &**v {
                         Value::Str(v) => v.to_string(),
-                        _ => "".to_string()
+                        _ => String::new()
                     });
 
                 if let Some(id) = id {

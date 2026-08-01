@@ -1,8 +1,8 @@
 //! Parser for the variables a Hyprland fragment declares.
 //!
-//! A HyDE theme states the choices that are not colours — the bar font, the
+//! A `HyDE` theme states the choices that are not colours — the bar font, the
 //! GTK theme, the light/dark preference — as hyprlang variables inside
-//! `hypr.theme`: `$BAR_FONT = JetBrainsMono Nerd Font`. HyDE itself reads them
+//! `hypr.theme`: `$BAR_FONT = JetBrainsMono Nerd Font`. `HyDE` itself reads them
 //! with `hyq`, a whole config parser, but the bar only ever wants the right
 //! hand side of a handful of names, so a line scan is enough and costs no
 //! process.
@@ -20,7 +20,7 @@
 /// The last assignment wins, mirroring hyprlang: a fragment that re-declares a
 /// variable means the later line.
 #[must_use]
-pub(crate) fn value_of(source: &str, name: &str) -> Option<String> {
+pub fn value_of(source: &str, name: &str) -> Option<String> {
     let mut found = None;
 
     for line in source.lines() {
@@ -52,7 +52,7 @@ fn assignment(line: &str) -> Option<(&str, &str)> {
 }
 
 /// Whether `c` may appear in a hyprlang variable name.
-fn is_name_char(c: char) -> bool {
+const fn is_name_char(c: char) -> bool {
     c.is_ascii_alphanumeric() || c == '_'
 }
 

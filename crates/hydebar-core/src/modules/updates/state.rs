@@ -29,7 +29,7 @@ pub struct Update {
     pub(super) to:      String
 }
 
-/// What one look at the HyDE clone reported.
+/// What one look at the `HyDE` clone reported.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HydeSnapshot {
     /// Version the clone describes itself as.
@@ -55,21 +55,21 @@ pub enum Message {
     CheckNow,
     /// Apply the configured update command, narrating into the window.
     Update,
-    /// The HyDE clone was compared against upstream.
+    /// The `HyDE` clone was compared against upstream.
     HydeChecked(HydeSnapshot),
     ToggleHydeList,
-    /// Bring the HyDE clone up to date, narrating into the window.
+    /// Bring the `HyDE` clone up to date, narrating into the window.
     UpdateHyde,
-    /// The last lines the running HyDE update printed.
+    /// The last lines the running `HyDE` update printed.
     HydeUpdateLog(Vec<String>),
-    /// The HyDE update ended, well or badly.
+    /// The `HyDE` update ended, well or badly.
     HydeUpdateFinished {
         failed: bool
     }
 }
 
 #[derive(Debug, Default, Clone, Eq, PartialEq)]
-pub(crate) enum CheckState {
+pub enum CheckState {
     #[default]
     Checking,
     Ready,
@@ -142,7 +142,7 @@ impl Updates {
         }
     }
 
-    /// How many upstream commits the HyDE clone has not taken yet.
+    /// How many upstream commits the `HyDE` clone has not taken yet.
     fn hyde_pending(&self) -> usize {
         self.hyde
             .as_ref()
@@ -341,6 +341,7 @@ impl Updates {
     }
 
     /// Whether the count on the bar is still dissolving.
+    #[must_use]
     pub fn is_fading(&self) -> bool {
         self.shown_count.is_animating()
     }
@@ -411,6 +412,7 @@ impl Updates {
         }
     }
 
+    #[must_use]
     pub fn menu_view(&self, id: Id, opacity: f32, icons: &IconTheme) -> Element<'_, Message> {
         view::menu_view(self, id, opacity, icons)
     }
@@ -419,23 +421,23 @@ impl Updates {
         &self.updates
     }
 
-    pub(crate) fn is_updates_list_open(&self) -> bool {
+    pub(crate) const fn is_updates_list_open(&self) -> bool {
         self.is_updates_list_open
     }
 
-    pub(crate) fn state(&self) -> &CheckState {
+    pub(crate) const fn state(&self) -> &CheckState {
         &self.state
     }
 
-    pub(crate) fn hyde(&self) -> Option<&HydeSnapshot> {
+    pub(crate) const fn hyde(&self) -> Option<&HydeSnapshot> {
         self.hyde.as_ref()
     }
 
-    pub(crate) fn is_hyde_list_open(&self) -> bool {
+    pub(crate) const fn is_hyde_list_open(&self) -> bool {
         self.is_hyde_list_open
     }
 
-    pub(crate) fn is_hyde_updating(&self) -> bool {
+    pub(crate) const fn is_hyde_updating(&self) -> bool {
         self.hyde_updating
     }
 
@@ -443,7 +445,7 @@ impl Updates {
         &self.hyde_log
     }
 
-    pub(crate) fn is_applying(&self) -> bool {
+    pub(crate) const fn is_applying(&self) -> bool {
         self.applying
     }
 
@@ -451,7 +453,7 @@ impl Updates {
         &self.apply_log
     }
 
-    /// Branch the HyDE clone is measured against.
+    /// Branch the `HyDE` clone is measured against.
     pub(crate) fn hyde_branch_name(&self) -> &str {
         self.hyde_branch.as_deref().unwrap_or("master")
     }

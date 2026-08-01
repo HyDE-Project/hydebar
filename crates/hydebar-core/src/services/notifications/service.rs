@@ -26,6 +26,7 @@ pub struct NotificationsService {
 }
 
 impl NotificationsService {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             storage: Arc::new(std::sync::Mutex::new(NotificationStorage::default()))
@@ -43,10 +44,12 @@ impl NotificationsService {
             .unwrap_or_else(std::sync::PoisonError::into_inner)
     }
 
+    #[must_use]
     pub fn get_notifications(&self) -> Vec<Notification> {
         self.storage().get_all().iter().cloned().collect()
     }
 
+    #[must_use]
     pub fn unread_count(&self) -> usize {
         self.storage().unread_count()
     }
@@ -65,6 +68,7 @@ impl NotificationsService {
         storage.set_dnd(!current);
     }
 
+    #[must_use]
     pub fn is_dnd(&self) -> bool {
         self.storage().is_dnd()
     }
@@ -91,14 +95,14 @@ impl ReadOnlyService for NotificationsService {
     }
 
     fn subscribe() -> Subscription<ServiceEvent<Self>> {
-        let id = std::any::TypeId::of::<NotificationsService>();
+        let id = std::any::TypeId::of::<Self>();
         Subscription::run_with(id, |&_id| {
             stream::channel(
                 100,
                 |mut output: iced::futures::channel::mpsc::Sender<ServiceEvent<Self>>| async move {
                     // Initialize storage
                     let storage = Arc::new(std::sync::Mutex::new(NotificationStorage::default()));
-                    let service = NotificationsService {
+                    let service = Self {
                         storage: Arc::clone(&storage)
                     };
 

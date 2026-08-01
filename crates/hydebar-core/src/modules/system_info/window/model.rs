@@ -27,7 +27,7 @@ pub enum MeterLevel {
 /// diagnostic surface, and four fifths full is where a pool starts
 /// being worth a look whatever thresholds the bar indicators carry.
 #[must_use]
-pub fn meter_level(percent: u32) -> MeterLevel {
+pub const fn meter_level(percent: u32) -> MeterLevel {
     if percent >= 95 {
         MeterLevel::Critical
     } else if percent >= 80 {

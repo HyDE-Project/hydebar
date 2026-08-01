@@ -7,7 +7,7 @@
 //!
 //! Pressing the entry moves forward, the right button moves back, and the
 //! middle button opens the picker: a grid of the theme's wallpapers drawn
-//! from the square thumbnails HyDE already keeps in its cache, one press on
+//! from the square thumbnails `HyDE` already keeps in its cache, one press on
 //! a tile and the desktop wears it.
 
 use hydebar_proto::config::Config;
@@ -35,7 +35,7 @@ struct ListedWallpaper {
     path:     String,
     /// File name, the tile's caption.
     basename: String,
-    /// Square thumbnail HyDE keeps in its cache.
+    /// Square thumbnail `HyDE` keeps in its cache.
     sqre:     String
 }
 
@@ -59,7 +59,7 @@ pub struct WallpaperEntry {
 /// Reads the wallpapers of the theme in force from the desktop.
 ///
 /// A failure answers with an empty list and the picker says so; the desktop
-/// not being HyDE is not an error the bar can fix.
+/// not being `HyDE` is not an error the bar can fix.
 fn list_wallpapers() -> Vec<WallpaperEntry> {
     let Ok(output) = std::process::Command::new("hydectl")
         .args(["wallpaper", "list"])
@@ -105,9 +105,9 @@ fn list_wallpapers() -> Vec<WallpaperEntry> {
 /// Choice made in the wallpaper module.
 #[derive(Debug, Clone)]
 pub enum Message {
-    /// Ask HyDE for the next wallpaper of the theme in force.
+    /// Ask `HyDE` for the next wallpaper of the theme in force.
     Next,
-    /// Ask HyDE for the previous wallpaper of the theme in force.
+    /// Ask `HyDE` for the previous wallpaper of the theme in force.
     Previous,
     /// Report that the wallpaper change has ended.
     Changed {
@@ -151,6 +151,7 @@ impl Wallpaper {
     }
 
     /// Renders the picker: the theme's wallpapers as pressable tiles.
+    #[must_use]
     pub fn menu_view<'a>(&self, font_size: f32) -> Element<'a, Message> {
         if self.entries.is_empty() {
             return container(

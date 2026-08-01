@@ -113,7 +113,7 @@ impl App {
             }
             Message::OpenLauncher => {
                 if let Some(app_launcher_cmd) = self.config.app_launcher_cmd.as_ref() {
-                    utils::launcher::execute_command(app_launcher_cmd.to_string());
+                    utils::launcher::execute_command(app_launcher_cmd.clone());
                 }
                 Task::none()
             }
@@ -129,12 +129,12 @@ impl App {
                 match self.custom.get_mut(&name) {
                     Some(c) => c.update(message),
                     None => error!("Custom module '{name}' not found")
-                };
+                }
                 Task::none()
             }
             Message::OpenClipboard => {
                 if let Some(clipboard_cmd) = self.config.clipboard_cmd.as_ref() {
-                    utils::launcher::execute_command(clipboard_cmd.to_string());
+                    utils::launcher::execute_command(clipboard_cmd.clone());
                 }
                 Task::none()
             }

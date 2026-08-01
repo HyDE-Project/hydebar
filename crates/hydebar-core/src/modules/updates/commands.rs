@@ -124,7 +124,7 @@ fn classify(
     Ok(())
 }
 
-/// Asks the HyDE clone how far behind upstream it is.
+/// Asks the `HyDE` clone how far behind upstream it is.
 ///
 /// Only remote-tracking refs are touched: the fetch never rewrites the
 /// working tree, so a clone holding local work is read, not disturbed.
@@ -185,7 +185,7 @@ const LOG_FLUSH: std::time::Duration = std::time::Duration::from_millis(150);
 /// grace period after, unlike polkit's per-command prompting that turned a
 /// long install into a hail of dialogs.
 ///
-/// The question is asked by rofi where it exists: on a HyDE desktop rofi
+/// The question is asked by rofi where it exists: on a `HyDE` desktop rofi
 /// already wears the theme in force, where the GTK dialogs answer to
 /// nobody's palette. Zenity stays as the fallback.
 const ASKPASS: &str = concat!(
@@ -239,7 +239,7 @@ fn askpass_helper() -> Option<std::path::PathBuf> {
     write_askpass(&dir)
 }
 
-/// Brings the HyDE clone up to date the way upstream documents it,
+/// Brings the `HyDE` clone up to date the way upstream documents it,
 /// narrating into `publish`.
 ///
 /// No terminal opens: the output streams into the updates window instead,
@@ -384,7 +384,7 @@ fn shell_quote(value: &str) -> String {
 
 /// Applies the configured update command, narrating into `publish`.
 ///
-/// The command streams into the updates window like the HyDE update does;
+/// The command streams into the updates window like the `HyDE` update does;
 /// a command that opens its own terminal still works, it just has nothing
 /// to narrate.
 pub(super) async fn apply_updates<F>(command: &str, publish: F) -> Result<(), CommandError>

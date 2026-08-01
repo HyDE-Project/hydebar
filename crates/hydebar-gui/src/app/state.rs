@@ -225,61 +225,61 @@ pub enum Message {
 
 impl From<modules::control_center::Message> for Message {
     fn from(msg: modules::control_center::Message) -> Self {
-        Message::ControlCenter(msg)
+        Self::ControlCenter(msg)
     }
 }
 
 impl From<modules::settings::Message> for Message {
     fn from(msg: modules::settings::Message) -> Self {
-        Message::Settings(msg)
+        Self::Settings(msg)
     }
 }
 
 impl From<modules::themes::Message> for Message {
     fn from(msg: modules::themes::Message) -> Self {
-        Message::Themes(msg)
+        Self::Themes(msg)
     }
 }
 
 impl From<modules::system_info::Message> for Message {
     fn from(msg: modules::system_info::Message) -> Self {
-        Message::SystemInfo(msg)
+        Self::SystemInfo(msg)
     }
 }
 
 impl From<modules::updates::Message> for Message {
     fn from(msg: modules::updates::Message) -> Self {
-        Message::Updates(msg)
+        Self::Updates(msg)
     }
 }
 
 impl From<modules::workspaces::Message> for Message {
     fn from(msg: modules::workspaces::Message) -> Self {
-        Message::Workspaces(msg)
+        Self::Workspaces(msg)
     }
 }
 
 impl From<modules::notifications::NotificationsMessage> for Message {
     fn from(msg: modules::notifications::NotificationsMessage) -> Self {
-        Message::Notifications(msg)
+        Self::Notifications(msg)
     }
 }
 
 impl From<modules::screenshot::ScreenshotMessage> for Message {
     fn from(msg: modules::screenshot::ScreenshotMessage) -> Self {
-        Message::Screenshot(msg)
+        Self::Screenshot(msg)
     }
 }
 
 impl From<modules::clock::Message> for Message {
     fn from(msg: modules::clock::Message) -> Self {
-        Message::Clock(msg)
+        Self::Clock(msg)
     }
 }
 
 impl From<modules::hyde_menu::Message> for Message {
     fn from(msg: modules::hyde_menu::Message) -> Self {
-        Message::HydeMenu(msg)
+        Self::HydeMenu(msg)
     }
 }
 
@@ -300,7 +300,8 @@ impl App {
     /// While a config reload is blending this differs from the configured
     /// appearance: colours and opacities lag behind their targets until the
     /// transition settles.
-    pub fn appearance(&self) -> &Appearance {
+    #[must_use]
+    pub const fn appearance(&self) -> &Appearance {
         self.appearance_transition.current()
     }
 
@@ -333,6 +334,7 @@ impl App {
     ///
     /// The magnification the screen calls for is already folded into the
     /// configuration before the renderer starts, so nothing is added here.
+    #[must_use]
     pub fn scaled_appearance(&self) -> Appearance {
         self.config.appearance.clone()
     }
@@ -388,10 +390,12 @@ impl App {
     ///
     /// Rebuilt whenever the configuration changes so `[icons]` overrides take
     /// effect on a hot reload.
-    pub fn icons(&self) -> &IconTheme {
+    #[must_use]
+    pub const fn icons(&self) -> &IconTheme {
         &self.icons
     }
 
+    #[must_use]
     pub fn get_all_modules_count(&self) -> usize {
         let count_modules = |modules_def: &[ModuleDef]| -> usize {
             modules_def
@@ -429,7 +433,7 @@ impl App {
             .collect();
         let module_context = ModuleContext::new(event_sender, runtime_handle);
         let hyprland_clone = Arc::clone(&hyprland);
-        let mut app = App {
+        let mut app = Self {
             config_path: config_path.clone(),
             logger,
             _hyprland: hyprland,
@@ -467,7 +471,7 @@ impl App {
             notifications: Notifications::default(),
             screenshot: Screenshot::default(),
             idle_inhibitor: IdleInhibitor,
-            settings: Settings::new(config_path.clone()),
+            settings: Settings::new(config_path),
             themes: Themes::new(),
             wallpaper: Wallpaper::new(),
             notification_popups: Vec::new(),
@@ -552,7 +556,7 @@ mod tests {
         let config = Config::default();
         let path = PathBuf::new();
         let mock = Arc::new(MockHyprlandPort::default());
-        let mock_port: Arc<dyn HyprlandPort> = mock.clone();
+        let mock_port: Arc<dyn HyprlandPort> = mock;
 
         let config_manager = Arc::new(ConfigManager::new(config.clone()));
         let capacity = NonZeroUsize::new(16).expect("non-zero");

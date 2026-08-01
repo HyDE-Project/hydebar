@@ -186,66 +186,69 @@ pub struct SystemModuleConfig {
 
 impl SystemModuleConfig {
     /// Reports whether a left click has another readout to switch to.
-    pub fn has_alternatives(&self) -> bool {
+    #[must_use]
+    pub const fn has_alternatives(&self) -> bool {
         !self.memory.format_alt.is_empty()
     }
 
     /// Reports whether the panel decides which readouts to draw.
-    pub fn selects_indicators(&self) -> bool {
+    #[must_use]
+    pub const fn selects_indicators(&self) -> bool {
         self.indicators.is_empty()
     }
 
     /// Reports whether a readout was explicitly turned off.
+    #[must_use]
     pub fn hides(&self, indicator: &SystemIndicator) -> bool {
         self.hide.contains(indicator)
     }
 }
 
-fn default_cpu_warn_threshold() -> u32 {
+const fn default_cpu_warn_threshold() -> u32 {
     60
 }
 
-fn default_cpu_alert_threshold() -> u32 {
+const fn default_cpu_alert_threshold() -> u32 {
     80
 }
 
-fn default_mem_warn_threshold() -> u32 {
+const fn default_mem_warn_threshold() -> u32 {
     70
 }
 
-fn default_mem_alert_threshold() -> u32 {
+const fn default_mem_alert_threshold() -> u32 {
     85
 }
 
-fn default_temp_warn_threshold() -> i32 {
+const fn default_temp_warn_threshold() -> i32 {
     60
 }
 
-fn default_temp_alert_threshold() -> i32 {
+const fn default_temp_alert_threshold() -> i32 {
     80
 }
 
-fn default_gpu_warn_threshold() -> i32 {
+const fn default_gpu_warn_threshold() -> i32 {
     70
 }
 
-fn default_gpu_alert_threshold() -> i32 {
+const fn default_gpu_alert_threshold() -> i32 {
     85
 }
 
-fn default_gpu_usage_warn_threshold() -> u32 {
+const fn default_gpu_usage_warn_threshold() -> u32 {
     70
 }
 
-fn default_gpu_usage_alert_threshold() -> u32 {
+const fn default_gpu_usage_alert_threshold() -> u32 {
     90
 }
 
-fn default_disk_warn_threshold() -> u32 {
+const fn default_disk_warn_threshold() -> u32 {
     80
 }
 
-fn default_disk_alert_threshold() -> u32 {
+const fn default_disk_alert_threshold() -> u32 {
     90
 }
 

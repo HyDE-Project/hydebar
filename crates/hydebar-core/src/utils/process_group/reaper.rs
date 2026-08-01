@@ -1,7 +1,7 @@
 //! Burial of adopted children nobody is waiting for.
 
 /// How often the reaper looks for adopted children nobody buried.
-const REAP_PERIOD: std::time::Duration = std::time::Duration::from_secs(60);
+const REAP_PERIOD: std::time::Duration = std::time::Duration::from_mins(1);
 
 /// Buries the adopted children nobody is waiting for.
 ///

@@ -11,11 +11,11 @@ use super::{
 
 /// Prefix applied to all MPRIS-compliant player service names on the session
 /// bus.
-pub(crate) const MPRIS_PLAYER_SERVICE_PREFIX: &str = "org.mpris.MediaPlayer2.";
+pub const MPRIS_PLAYER_SERVICE_PREFIX: &str = "org.mpris.MediaPlayer2.";
 
 /// Stream item emitted by [`build_event_stream`].
 #[derive(Debug)]
-pub(crate) enum IpcEvent {
+pub enum IpcEvent {
     /// Indicates that the ownership of an MPRIS name changed.
     NameOwner,
     /// Metadata for `service` changed.
@@ -27,15 +27,15 @@ pub(crate) enum IpcEvent {
 }
 
 /// Combined event stream type returned by [`build_event_stream`].
-pub(crate) type EventStream = SelectAll<Pin<Box<dyn Stream<Item = IpcEvent> + Send>>>;
+pub type EventStream = SelectAll<Pin<Box<dyn Stream<Item = IpcEvent> + Send>>>;
 
 /// Returns `true` when `name` references an MPRIS player service.
-pub(crate) fn is_mpris_service(name: &str) -> bool {
+pub fn is_mpris_service(name: &str) -> bool {
     name.starts_with(MPRIS_PLAYER_SERVICE_PREFIX)
 }
 
 /// Fetches all available MPRIS players on the provided D-Bus `conn`.
-pub(crate) async fn collect_players(conn: &Connection) -> AppResult<Vec<MprisPlayerData>> {
+pub async fn collect_players(conn: &Connection) -> AppResult<Vec<MprisPlayerData>> {
     let names = list_mpris_service_names(conn).await?;
     Ok(fetch_players(conn, &names).await)
 }
@@ -43,11 +43,11 @@ pub(crate) async fn collect_players(conn: &Connection) -> AppResult<Vec<MprisPla
 async fn list_mpris_service_names(conn: &Connection) -> AppResult<Vec<String>> {
     let dbus = DBusProxy::new(conn)
         .await
-        .map_err(|e| AppError::internal(format!("Failed to create DBusProxy: {}", e)))?;
+        .map_err(|e| AppError::internal(format!("Failed to create DBusProxy: {e}")))?;
     let names = dbus
         .list_names()
         .await
-        .map_err(|e| AppError::internal(format!("failed to list D-Bus names: {}", e)))?
+        .map_err(|e| AppError::internal(format!("failed to list D-Bus names: {e}")))?
         .iter()
         .filter(|name| is_mpris_service(name))
         .map(ToString::to_string)
@@ -57,9 +57,9 @@ async fn list_mpris_service_names(conn: &Connection) -> AppResult<Vec<String>> {
 }
 
 /// Retrieves `MprisPlayerData` entries for each service in `names`.
-pub(crate) async fn fetch_players(conn: &Connection, names: &[String]) -> Vec<MprisPlayerData> {
+pub async fn fetch_players(conn: &Connection, names: &[String]) -> Vec<MprisPlayerData> {
     join_all(names.iter().map(|service| async {
-        match MprisPlayerProxy::new(conn, service.to_string()).await {
+        match MprisPlayerProxy::new(conn, service.clone()).await {
             Ok(proxy) => {
                 let metadata = proxy.metadata().await.map(MprisPlayerMetadata::from).ok();
                 let volume = proxy.volume().await.map(|value| value * 100.0).ok();
@@ -67,7 +67,7 @@ pub(crate) async fn fetch_players(conn: &Connection, names: &[String]) -> Vec<Mp
 
                 match state {
                     Ok(state) => Some(MprisPlayerData {
-                        service: service.to_string(),
+                        service: service.clone(),
                         metadata,
                         volume,
                         state,
@@ -86,10 +86,10 @@ pub(crate) async fn fetch_players(conn: &Connection, names: &[String]) -> Vec<Mp
 }
 
 /// Builds a stream that emits [`IpcEvent`] values for all active players.
-pub(crate) async fn build_event_stream(conn: &Connection) -> AppResult<EventStream> {
+pub async fn build_event_stream(conn: &Connection) -> AppResult<EventStream> {
     let dbus = DBusProxy::new(conn)
         .await
-        .map_err(|e| AppError::internal(format!("Failed to create DBusProxy: {}", e)))?;
+        .map_err(|e| AppError::internal(format!("Failed to create DBusProxy: {e}")))?;
     let data = collect_players(conn).await?;
     let mut combined = SelectAll::new();
 
@@ -97,7 +97,7 @@ pub(crate) async fn build_event_stream(conn: &Connection) -> AppResult<EventStre
         dbus.receive_name_owner_changed()
             .await
             .map_err(|e| {
-                AppError::internal(format!("Failed to receive name owner changed: {}", e))
+                AppError::internal(format!("Failed to receive name owner changed: {e}"))
             })?
             .filter_map(|signal| async move {
                 match signal.args() {

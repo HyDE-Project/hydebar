@@ -1,7 +1,7 @@
 //! Live indication of a desktop change the bar has asked for and cannot
 //! hurry.
 //!
-//! A HyDE theme switch rewrites the wallpaper, the palette and every
+//! A `HyDE` theme switch rewrites the wallpaper, the palette and every
 //! generated stylesheet, and takes seconds doing it. For all of those
 //! seconds the bar has nothing to report except that it is still
 //! waiting, and a page that reported it with a line of static text read
@@ -18,7 +18,7 @@
 //! Nothing here reads a clock. The frame is state the module owns and
 //! advances on a tick, so what the indicator shows is a pure function
 //! of how many ticks have been delivered, and both the cycle and the
-//! pulse can be checked without a frame clock, a compositor or a HyDE
+//! pulse can be checked without a frame clock, a compositor or a `HyDE`
 //! install.
 
 use std::time::Duration;
@@ -68,19 +68,19 @@ pub struct Spinner {
 impl Spinner {
     /// Number of frames one full cycle takes.
     #[must_use]
-    pub fn cycle() -> usize {
+    pub const fn cycle() -> usize {
         FRAMES.len()
     }
 
     /// Moves the indicator on by one frame, starting the cycle over at the
     /// end.
-    pub fn advance(&mut self) {
+    pub const fn advance(&mut self) {
         self.frame = (self.frame + 1) % FRAMES.len();
     }
 
     /// Glyph this frame draws.
     #[must_use]
-    pub fn glyph(self) -> &'static str {
+    pub const fn glyph(self) -> &'static str {
         FRAMES[self.frame % FRAMES.len()]
     }
 
@@ -95,7 +95,7 @@ impl Spinner {
         let position = self.frame as f32;
         let distance = (position - half).abs() / half;
 
-        MIN_PULSE + (1.0 - MIN_PULSE) * distance
+        (1.0 - MIN_PULSE).mul_add(distance, MIN_PULSE)
     }
 }
 

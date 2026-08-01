@@ -12,6 +12,7 @@ impl Outputs {
     /// ```ignore
     /// outputs.request_keyboard(surface_id, true);
     /// ```
+    #[must_use]
     pub fn request_keyboard<Message: 'static>(
         &self,
         id: Id,
@@ -35,6 +36,7 @@ impl Outputs {
     /// ```ignore
     /// outputs.release_keyboard(surface_id, false);
     /// ```
+    #[must_use]
     pub fn release_keyboard<Message: 'static>(
         &self,
         id: Id,
@@ -66,6 +68,7 @@ impl Outputs {
     }
 
     /// Returns the first main window Id if any outputs exist.
+    #[must_use]
     pub fn first_main_window_id(&self) -> Option<Id> {
         self.0
             .iter()

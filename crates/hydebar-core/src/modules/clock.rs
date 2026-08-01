@@ -28,6 +28,7 @@ pub struct ClockData {
 }
 
 impl ClockData {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             current_time: Local::now()
@@ -39,6 +40,7 @@ impl ClockData {
     }
 
     /// The time rendered through a `chrono` format string.
+    #[must_use]
     pub fn format(&self, format: &str) -> String {
         self.current_time.format(format).to_string()
     }
@@ -126,16 +128,19 @@ impl Default for Clock {
 }
 
 impl Clock {
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// The moment the clock last read.
-    pub fn data(&self) -> &ClockData {
+    #[must_use]
+    pub const fn data(&self) -> &ClockData {
         &self.data
     }
 
     /// Format string the active index selects.
+    #[must_use]
     pub fn active_format<'a>(&self, config: &'a ClockModuleConfig) -> &'a str {
         self.format.resolve(&config.format, &config.format_alt)
     }
@@ -153,7 +158,7 @@ impl Clock {
 
         if let Some(sender) = self.sender.clone() {
             let period = self.tick_interval;
-            let update_sender = sender.clone();
+            let update_sender = sender;
             let formats: Vec<String> = config.formats().map(str::to_owned).collect();
 
             self.task = Some(ctx.runtime_handle().spawn(async move {
@@ -215,6 +220,7 @@ impl Clock {
     }
 
     /// Whether the rendered time is still dissolving.
+    #[must_use]
     pub fn is_fading(&self) -> bool {
         self.shown.is_animating()
     }
@@ -230,7 +236,7 @@ impl Clock {
         if config.formats().any(Self::format_shows_seconds) {
             Duration::from_secs(1)
         } else {
-            Duration::from_secs(60)
+            Duration::from_mins(1)
         }
     }
 

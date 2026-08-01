@@ -69,6 +69,7 @@ pub(super) fn next_spawn_id() -> String {
 /// be reaped leaves shell loops that keep spawning helpers on a timer; picking
 /// them up here means a restart is enough to clean a machine up, and that the
 /// count of supervised processes does not grow from one run to the next.
+#[must_use]
 pub fn sweep_orphans() -> usize {
     let own = launch_id();
     let ended = terminate_marked(LAUNCH_PREFIX, |stamp| stamp != own);

@@ -2,7 +2,7 @@
 //!
 //! A list of theme names answers "which themes are there", not "what do they
 //! look like". The look is on disk already, in the theme's own files: every
-//! HyDE theme ships its terminal palette, and that palette *is* the theme's
+//! `HyDE` theme ships its terminal palette, and that palette *is* the theme's
 //! identity — its background, its text, and the signature hues its author
 //! chose. Colours extracted from the theme's wallpaper answer only when a
 //! theme ships no palette of its own: they are clusters squeezed out of a
@@ -63,7 +63,7 @@ pub struct ThemeSwatch {
 /// Reads the swatch of `theme`, if anything on disk answers for its colours.
 ///
 /// The theme's own terminal palette wins — it is the author's statement of
-/// what the theme looks like. The palettes HyDE keeps for it — one the theme
+/// what the theme looks like. The palettes `HyDE` keeps for it — one the theme
 /// pinned, else one extracted from its current wallpaper — answer otherwise.
 /// A theme with none of it has no swatch, and the caller paints its entry the
 /// way it paints everything.
@@ -140,7 +140,7 @@ fn swatch_of(source: &str) -> Option<ThemeSwatch> {
     })
 }
 
-/// The swatch from the palettes HyDE keeps for the theme.
+/// The swatch from the palettes `HyDE` keeps for the theme.
 fn extracted_swatch(dirs: &HydeDirs, theme: &str) -> Option<ThemeSwatch> {
     let palette = pinned_palette(dirs, theme).or_else(|| wallpaper_palette(dirs, theme))?;
 
@@ -162,7 +162,7 @@ fn pinned_palette(dirs: &HydeDirs, theme: &str) -> Option<DcolPalette> {
     DcolPalette::parse(&fs::read_to_string(dirs.theme_dcol(theme)).ok()?)
 }
 
-/// The palette HyDE extracted from the theme's current wallpaper.
+/// The palette `HyDE` extracted from the theme's current wallpaper.
 ///
 /// The cache is keyed by the digest of the image file, exactly as the scripts
 /// key it, so the bar finds the palette wherever the wallpaper file lives.

@@ -29,11 +29,11 @@ const WHEEL_VOLUME_STEP: i32 = 5;
 
 impl ControlCenter {
     pub(crate) fn runtime(&self) -> Option<Handle> {
-        self.runtime.as_ref().cloned()
+        self.runtime.clone()
     }
 
     pub(crate) fn sender(&self) -> Option<ModuleEventSender<Message>> {
-        self.sender.as_ref().cloned()
+        self.sender.clone()
     }
 
     /// Schedules the release of an activation that outlives `delay`.
@@ -136,13 +136,13 @@ impl ControlCenter {
                 }
                 AudioMessage::SinksMore(id) => {
                     if let Some(cmd) = &config.audio_sinks_more_cmd {
-                        crate::utils::launcher::execute_command(cmd.to_string());
+                        crate::utils::launcher::execute_command(cmd.clone());
                         let _ = outputs.close_menu::<Message>(id, main_config);
                     }
                 }
                 AudioMessage::SourcesMore(id) => {
                     if let Some(cmd) = &config.audio_sources_more_cmd {
-                        crate::utils::launcher::execute_command(cmd.to_string());
+                        crate::utils::launcher::execute_command(cmd.clone());
                         let _ = outputs.close_menu::<Message>(id, main_config);
                     }
                 }
@@ -214,13 +214,13 @@ impl ControlCenter {
                 }
                 NetworkMessage::WiFiMore(id) => {
                     if let Some(cmd) = &config.wifi_more_cmd {
-                        crate::utils::launcher::execute_command(cmd.to_string());
+                        crate::utils::launcher::execute_command(cmd.clone());
                         let _ = outputs.close_menu::<Message>(id, main_config);
                     }
                 }
                 NetworkMessage::VpnMore(id) => {
                     if let Some(cmd) = &config.vpn_more_cmd {
-                        crate::utils::launcher::execute_command(cmd.to_string());
+                        crate::utils::launcher::execute_command(cmd.clone());
                         let _ = outputs.close_menu::<Message>(id, main_config);
                     }
                 }
@@ -268,7 +268,7 @@ impl ControlCenter {
                 }
                 BluetoothMessage::More(id) => {
                     if let Some(cmd) = &config.bluetooth_more_cmd {
-                        crate::utils::launcher::execute_command(cmd.to_string());
+                        crate::utils::launcher::execute_command(cmd.clone());
                         let _ = outputs.close_menu::<Message>(id, main_config);
                     }
                 }
@@ -317,7 +317,7 @@ impl ControlCenter {
             }
             Message::Lock => {
                 if let Some(lock_cmd) = &config.lock_cmd {
-                    crate::utils::launcher::execute_command(lock_cmd.to_string());
+                    crate::utils::launcher::execute_command(lock_cmd.clone());
                 }
             }
             Message::Power(msg) => {
@@ -344,7 +344,7 @@ impl ControlCenter {
                                     // holding a
                                     // mutable reference across the async boundary.
                                     access_point,
-                                    Some(password.clone())
+                                    Some(password)
                                 )
                             ));
                         }

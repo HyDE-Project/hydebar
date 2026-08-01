@@ -70,7 +70,7 @@ pub struct GpuReadings {
 impl GpuReadings {
     /// Reports whether the device answered with anything worth drawing.
     #[must_use]
-    fn is_empty(&self) -> bool {
+    const fn is_empty(&self) -> bool {
         self.temperature.is_none() && self.utilisation.is_none()
     }
 }

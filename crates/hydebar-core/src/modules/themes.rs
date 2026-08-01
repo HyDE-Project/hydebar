@@ -1,19 +1,19 @@
 //! Bar module driving the desktop theme.
 //!
 //! Everything about the look of the desktop lives here: the installed themes,
-//! the one in force, the facts HyDE reports about the wallpaper, and the two
+//! the one in force, the facts `HyDE` reports about the wallpaper, and the two
 //! actions that change either — switching the theme and asking for the next
 //! wallpaper. The settings window is about the bar and holds none of it, so
 //! there is one surface to look at rather than two that have to agree.
 //!
 //! The themes belong to the [HyDE Project](https://github.com/HyDE-Project)
 //! rather than to the bar, so nothing chosen here is written into the bar's own
-//! configuration file: pressing a theme asks HyDE's own switcher to run, and
+//! configuration file: pressing a theme asks `HyDE`'s own switcher to run, and
 //! the desktop — the bar included — follows. What the module shows is read back
-//! from HyDE's state, so it reports the desktop as it is even when the change
+//! from `HyDE`'s state, so it reports the desktop as it is even when the change
 //! came from a keybinding rather than from here.
 //!
-//! This is also the one place that knows a switch is running. A HyDE switch
+//! This is also the one place that knows a switch is running. A `HyDE` switch
 //! rewrites the wallpaper, the palette and every generated stylesheet, and
 //! takes seconds doing it; the module holds that wait, refuses a second switch
 //! on top of it, and owns the indicator its menu and its bar entry draw.
@@ -57,16 +57,16 @@ const INDICATOR_GAP: f32 = 4.0;
 /// Choice made in the theme module.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Message {
-    /// Ask HyDE for the next theme in its own order.
+    /// Ask `HyDE` for the next theme in its own order.
     NextTheme,
-    /// Ask HyDE for the previous theme in its own order.
+    /// Ask `HyDE` for the previous theme in its own order.
     PreviousTheme,
     /// Report that a stepped switch has ended.
     Stepped {
         /// Why the desktop refused, if it did.
         failure: Option<String>
     },
-    /// Ask HyDE to switch the desktop to the named theme.
+    /// Ask `HyDE` to switch the desktop to the named theme.
     Switch(String),
     /// Report that the switch to the named theme has ended.
     ///
@@ -143,11 +143,11 @@ enum SwitchDecision {
 /// Decides what to do with a press on the chip of `theme`.
 ///
 /// Kept apart from the module state so both refusals can be stated once and
-/// checked without a HyDE install. They are refusals rather than best effort
-/// for the same reason: a HyDE switch rewrites the whole desktop over several
+/// checked without a `HyDE` install. They are refusals rather than best effort
+/// for the same reason: a `HyDE` switch rewrites the whole desktop over several
 /// seconds and is not reentrant, so a second one started on top of the first
 /// races it over the state file, the wallpaper cache and every generated
-/// stylesheet; and HyDE's own switcher answers a name it does not know by
+/// stylesheet; and `HyDE`'s own switcher answers a name it does not know by
 /// quietly keeping the current theme, which from the bar looks exactly like a
 /// press that did nothing.
 fn decide_switch(theme: &str, switching: Option<&str>, installed: &[String]) -> SwitchDecision {
@@ -162,7 +162,7 @@ fn decide_switch(theme: &str, switching: Option<&str>, installed: &[String]) -> 
     SwitchDecision::Start
 }
 
-/// Reads the swatch of every named theme from the HyDE install on disk.
+/// Reads the swatch of every named theme from the `HyDE` install on disk.
 fn read_swatches(themes: &[String]) -> HashMap<String, ThemeSwatch> {
     let Some(dirs) = HydeDirs::from_env() else {
         return HashMap::new();
@@ -264,7 +264,7 @@ impl Themes {
 
     /// Desktop state the module draws.
     #[must_use]
-    pub fn hyde(&self) -> &HydeState {
+    pub const fn hyde(&self) -> &HydeState {
         &self.hyde
     }
 
@@ -280,7 +280,7 @@ impl Themes {
     /// window alike, so every mark of one wait moves together rather than each
     /// surface keeping a clock of its own.
     #[must_use]
-    pub fn spinner(&self) -> Spinner {
+    pub const fn spinner(&self) -> Spinner {
         self.spinner
     }
 
@@ -289,7 +289,7 @@ impl Themes {
     /// The application asks for the tick that moves the indicator on only while
     /// this holds.
     #[must_use]
-    pub fn is_waiting(&self) -> bool {
+    pub const fn is_waiting(&self) -> bool {
         if self.installing.is_some() || self.updating.is_some() {
             return true;
         }
@@ -297,9 +297,9 @@ impl Themes {
         self.switching.is_some()
     }
 
-    /// Re-reads the desktop state HyDE publishes.
+    /// Re-reads the desktop state `HyDE` publishes.
     ///
-    /// Called whenever the bar reloads because a HyDE file changed, so a switch
+    /// Called whenever the bar reloads because a `HyDE` file changed, so a switch
     /// made from a keybinding — or one made here and finished since — reaches
     /// the module without its menu having to be closed and opened again.
     pub fn refresh(&mut self) {
@@ -342,7 +342,7 @@ impl Themes {
     pub fn window_metrics(&self, config: &Config) -> crate::menu::MenuMetrics {
         let font_size = config.appearance.font_size_px();
         let width = self.content_width(config);
-        let page_width = width - page::metrics::ROW_SLACK_EM * font_size;
+        let page_width = page::metrics::ROW_SLACK_EM.mul_add(-font_size, width);
 
         crate::menu::MenuMetrics {
             width,
@@ -366,8 +366,7 @@ impl Themes {
     pub fn content_width(&self, config: &Config) -> f32 {
         let font_size = config.appearance.font_size_px();
 
-        view::desired_width(&self.hyde, self.switching(), font_size)
-            + page::metrics::ROW_SLACK_EM * font_size
+        page::metrics::ROW_SLACK_EM.mul_add(font_size, view::desired_width(&self.hyde, self.switching(), font_size))
     }
 
     /// Height the menu needs.
@@ -494,19 +493,16 @@ impl Themes {
             } => {
                 self.installing = None;
 
-                match failure {
-                    Some(failure) => {
-                        report(
-                            config,
-                            &format!("installing the HyDE theme `{theme}` failed: {failure}")
-                        );
-                    }
-                    None => {
-                        info!("the HyDE theme `{theme}` is installed, switching to it");
-                        self.refresh();
+                if let Some(failure) = failure {
+                    report(
+                        config,
+                        &format!("installing the HyDE theme `{theme}` failed: {failure}")
+                    );
+                } else {
+                    info!("the HyDE theme `{theme}` is installed, switching to it");
+                    self.refresh();
 
-                        return Task::batch([self.load_swatches(), self.switch(theme, config)]);
-                    }
+                    return Task::batch([self.load_swatches(), self.switch(theme, config)]);
                 }
             }
         }
@@ -545,7 +541,7 @@ impl Themes {
 
         Task::perform(hyde_shell::run(command), move |failure| {
             Message::Installed {
-                theme: theme.clone(),
+                theme,
                 failure
             }
         })
@@ -587,7 +583,7 @@ impl Themes {
                     .map(|error| error.to_string())
             },
             move |failure| Message::Removed {
-                theme: theme.clone(),
+                theme,
                 failure
             }
         )
@@ -624,7 +620,7 @@ impl Themes {
     /// a stamp beside the catalogue cache, and a stale stamp starts the same
     /// fetch the button runs — silently, with the same one-writer guards.
     fn auto_update(&mut self) -> Task<Message> {
-        const STAMP_LIFE: std::time::Duration = std::time::Duration::from_secs(24 * 60 * 60);
+        const STAMP_LIFE: std::time::Duration = std::time::Duration::from_hours(24);
 
         let Some(stamp) = dirs::cache_dir().map(|dir| dir.join("hydebar/theme-update-stamp"))
         else {
@@ -655,6 +651,7 @@ impl Themes {
     /// of weeks, and re-reading it on every menu open would probe the
     /// capability binary and re-parse the index each time. The next bar start
     /// reads it fresh.
+    #[must_use]
     pub fn load_catalogue(&self) -> Task<Message> {
         if !self.catalogue.is_empty() {
             return Task::none();
@@ -671,7 +668,7 @@ impl Themes {
     /// Three things are settled before the desktop is disturbed, because each
     /// of them used to end in a module that claimed a switch nobody performed:
     /// a switch already under way is left alone, a theme that is not installed
-    /// is refused outright — HyDE's own switcher would silently keep the
+    /// is refused outright — `HyDE`'s own switcher would silently keep the
     /// current one — and a missing switch script is reported instead of being
     /// logged where nobody looks.
     fn switch(&mut self, theme: String, config: &Config) -> Task<Message> {
@@ -720,7 +717,7 @@ impl Themes {
         self.begin(theme.clone());
 
         Task::perform(hyde_shell::run(command), move |failure| Message::Switched {
-            theme: theme.clone(),
+            theme,
             failure
         })
     }
@@ -764,7 +761,7 @@ where
     /// Renders the bar entry, with the indicator of a running switch beside it.
     ///
     /// The indicator belongs on the bar and not only in the menu because the
-    /// menu is not where the user is looking: a HyDE switch repaints the whole
+    /// menu is not where the user is looking: a `HyDE` switch repaints the whole
     /// desktop, a menu open over it is dismissed or redrawn along with it, and
     /// the bar is the one surface that is certainly still on screen. The module
     /// icon stays where it was so the entry is still recognisable as the one

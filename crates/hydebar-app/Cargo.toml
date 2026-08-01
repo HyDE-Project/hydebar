@@ -16,3 +16,6 @@ libc.workspace = true
 log.workspace = true
 masterror.workspace = true
 tokio.workspace = true
+
+[lints]
+workspace = true

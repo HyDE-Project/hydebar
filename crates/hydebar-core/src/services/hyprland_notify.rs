@@ -32,11 +32,11 @@ impl Notice {
     #[must_use]
     pub const fn icon(self) -> i32 {
         match self {
-            Notice::Warning => 0,
-            Notice::Info => 1,
-            Notice::Hint => 2,
-            Notice::Error => 3,
-            Notice::Ok => 5
+            Self::Warning => 0,
+            Self::Info => 1,
+            Self::Hint => 2,
+            Self::Error => 3,
+            Self::Ok => 5
         }
     }
 }

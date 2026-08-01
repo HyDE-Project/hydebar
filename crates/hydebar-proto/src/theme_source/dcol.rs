@@ -1,6 +1,6 @@
-//! Reader for the wallbash palette HyDE generates from the wallpaper.
+//! Reader for the wallbash palette `HyDE` generates from the wallpaper.
 //!
-//! HyDE extracts four dominant colours from the wallpaper, derives a text
+//! `HyDE` extracts four dominant colours from the wallpaper, derives a text
 //! colour and a nine-step accent ramp for each, and writes the lot to
 //! `~/.cache/hyde/dcols/<hash>.dcol`, with `~/.cache/hyde/wall.dcol` pointing
 //! at the one in force. Every consumer on the desktop — the notification

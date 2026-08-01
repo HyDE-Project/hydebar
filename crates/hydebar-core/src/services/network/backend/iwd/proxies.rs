@@ -52,18 +52,17 @@ impl IwdDbus<'_> {
             .destination("net.connman.iwd")
             .map_err(|e| {
                 AppError::internal(format!(
-                    "Failed to set ObjectManagerProxy destination: {}",
-                    e
+                    "Failed to set ObjectManagerProxy destination: {e}"
                 ))
             })?
             .path("/")
             .map_err(|e| {
-                AppError::internal(format!("Failed to set ObjectManagerProxy path: {}", e))
+                AppError::internal(format!("Failed to set ObjectManagerProxy path: {e}"))
             })?
             .build()
             .await
             .map_err(|e| {
-                AppError::internal(format!("Failed to build ObjectManagerProxy for IWD: {}", e))
+                AppError::internal(format!("Failed to build ObjectManagerProxy for IWD: {e}"))
             })?;
 
         Ok(Self {
@@ -130,8 +129,7 @@ impl IwdDbus<'_> {
         for station in stations {
             let networks_proxies = station.get_ordered_networks().await.map_err(|e| {
                 AppError::internal(format!(
-                    "Failed to get ordered networks from station: {}",
-                    e
+                    "Failed to get ordered networks from station: {e}"
                 ))
             })?;
             for (path, strength) in networks_proxies {
@@ -139,18 +137,17 @@ impl IwdDbus<'_> {
                     .destination("net.connman.iwd")
                     .map_err(|e| {
                         AppError::internal(format!(
-                            "Failed to set NetworkProxy destination: {}",
-                            e
+                            "Failed to set NetworkProxy destination: {e}"
                         ))
                     })?
                     .path(path.clone())
                     .map_err(|e| {
-                        AppError::internal(format!("Failed to set NetworkProxy path: {}", e))
+                        AppError::internal(format!("Failed to set NetworkProxy path: {e}"))
                     })?
                     .build()
                     .await
                     .map_err(|e| {
-                        AppError::internal(format!("Failed to build NetworkProxy: {}", e))
+                        AppError::internal(format!("Failed to build NetworkProxy: {e}"))
                     })?;
                 networks.push((network, strength));
             }

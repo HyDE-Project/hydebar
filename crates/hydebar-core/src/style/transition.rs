@@ -56,7 +56,7 @@ impl AppearanceTransition {
 
     /// Returns the appearance to render this frame.
     #[must_use]
-    pub fn current(&self) -> &Appearance {
+    pub const fn current(&self) -> &Appearance {
         &self.current
     }
 
@@ -71,7 +71,7 @@ impl AppearanceTransition {
     /// Called before aiming at a new palette, so each theme rides in on its
     /// own signature; a retune landing mid-flight only changes how the rest of
     /// the travel moves.
-    pub fn restyle(&mut self, response: Duration, damping: f32) {
+    pub const fn restyle(&mut self, response: Duration, damping: f32) {
         self.progress.set_response(response);
         self.progress.set_damping_ratio(damping);
     }
@@ -79,7 +79,7 @@ impl AppearanceTransition {
     /// How far the blend has travelled, zero at the old appearance and one at
     /// the new.
     #[must_use]
-    pub fn progress(&self) -> f32 {
+    pub const fn progress(&self) -> f32 {
         self.progress.value().clamp(0.0, 1.0)
     }
 
@@ -207,11 +207,11 @@ fn blend_appearance(from: &Appearance, to: &Appearance, t: f32) -> Appearance {
 }
 
 fn blend_f32(from: f32, to: f32, t: f32) -> f32 {
-    from + (to - from) * t
+    (to - from).mul_add(t, from)
 }
 
 fn blend_u8(from: u8, to: u8, t: f32) -> u8 {
-    let blended = f32::from(from) + (f32::from(to) - f32::from(from)) * t;
+    let blended = (f32::from(to) - f32::from(from)).mul_add(t, f32::from(from));
 
     blended.round().clamp(0.0, 255.0) as u8
 }
@@ -248,7 +248,7 @@ fn blend_color(from: AppearanceColor, to: AppearanceColor, t: f32) -> Appearance
     }
 }
 
-fn parts(
+const fn parts(
     color: AppearanceColor
 ) -> (
     HexColor,

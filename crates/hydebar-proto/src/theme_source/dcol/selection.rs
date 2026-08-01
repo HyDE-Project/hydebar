@@ -1,6 +1,6 @@
 //! Which palette applies, and whether it is read backwards.
 //!
-//! HyDE does not simply use the colours of the current wallpaper. `staterc`
+//! `HyDE` does not simply use the colours of the current wallpaper. `staterc`
 //! carries an `enableWallDcol` switch that decides whether the wallpaper wins
 //! over a palette the theme ships, and whether the palette is mirrored so a
 //! dark theme keeps its dark surfaces under a light wallpaper. The bar has to
@@ -21,7 +21,7 @@ const DEFAULT_RECOLOUR: u8 = 0;
 /// Key the wallpaper recolouring switch is recorded under.
 pub(super) const RECOLOUR_KEY: &str = "enableWallDcol";
 
-/// How HyDE was told to recolour the desktop.
+/// How `HyDE` was told to recolour the desktop.
 ///
 /// Four settings rather than a flag, because two of them mean "recolour, but
 /// only when the wallpaper disagrees with the theme", which a boolean cannot
@@ -36,7 +36,7 @@ pub(super) enum Recolour {
     WallpaperForcedDark,
     /// `3` — the wallpaper palette is used, mirrored when it read dark.
     WallpaperForcedLight,
-    /// Anything else HyDE may grow: treated as plain wallpaper recolouring.
+    /// Anything else `HyDE` may grow: treated as plain wallpaper recolouring.
     Unknown
 }
 

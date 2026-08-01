@@ -89,7 +89,7 @@ pub struct CustomModuleDef {
     /// Real time signal offset refreshing the module on demand.
     ///
     /// `signal = 20` makes `pkill -RTMIN+20 hydebar` re-run the producing
-    /// command immediately, matching the Waybar contract HyDE scripts rely on.
+    /// command immediately, matching the Waybar contract `HyDE` scripts rely on.
     pub signal:     Option<u8>,
     /// Map of regex to icon.
     pub icons:      Option<HashMap<RegexCfg, String>>,

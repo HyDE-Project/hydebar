@@ -51,21 +51,20 @@ impl fmt::Display for HyprlandError {
                 operation,
                 timeout
             } => {
-                write!(f, "operation `{}` timed out after {:?}", operation, timeout)
+                write!(f, "operation `{operation}` timed out after {timeout:?}")
             }
             Self::Backend {
                 operation,
                 source
             } => {
-                write!(f, "operation `{}` failed: {}", operation, source)
+                write!(f, "operation `{operation}` failed: {source}")
             }
             Self::RuntimeUnavailable {
                 operation
             } => {
                 write!(
                     f,
-                    "operation `{}` unavailable because no async runtime is active",
-                    operation
+                    "operation `{operation}` unavailable because no async runtime is active"
                 )
             }
             Self::Unsupported {
@@ -73,15 +72,14 @@ impl fmt::Display for HyprlandError {
             } => {
                 write!(
                     f,
-                    "operation `{}` not supported by this Hyprland backend",
-                    operation
+                    "operation `{operation}` not supported by this Hyprland backend"
                 )
             }
             Self::Message {
                 operation,
                 message
             } => {
-                write!(f, "operation `{}` failed: {}", operation, message)
+                write!(f, "operation `{operation}` failed: {message}")
             }
         }
     }
@@ -100,6 +98,7 @@ impl Error for HyprlandError {
 
 impl HyprlandError {
     /// Helper for constructing [`HyprlandError::Unsupported`].
+    #[must_use]
     pub const fn unsupported(operation: &'static str) -> Self {
         Self::Unsupported {
             operation
@@ -107,6 +106,7 @@ impl HyprlandError {
     }
 
     /// Helper for constructing [`HyprlandError::RuntimeUnavailable`].
+    #[must_use]
     pub const fn runtime_unavailable(operation: &'static str) -> Self {
         Self::RuntimeUnavailable {
             operation

@@ -1,6 +1,6 @@
 //! Where the bar's theme switch script lives, and how it is found.
 //!
-//! The bar does not switch a HyDE theme through `hyde-shell` any more: the
+//! The bar does not switch a `HyDE` theme through `hyde-shell` any more: the
 //! stock switch regenerates waybar's stylesheet and restarts waybar, which
 //! costs a visible delay on every switch and makes no sense on a desktop that
 //! replaced waybar with this bar. The script shipped in `scripts/theme-switch`
@@ -73,7 +73,7 @@ impl std::error::Error for ScriptNotFound {}
 ///
 /// Returns [`ScriptNotFound`] when none of the searched locations holds an
 /// executable file.
-pub(crate) fn locate() -> Result<PathBuf, ScriptNotFound> {
+pub fn locate() -> Result<PathBuf, ScriptNotFound> {
     let executable = env::current_exe().ok();
     let candidates = candidates(
         env::var_os(OVERRIDE_VARIABLE)
@@ -158,8 +158,7 @@ fn is_executable_file(path: &Path) -> bool {
     use std::os::unix::fs::PermissionsExt;
 
     std::fs::metadata(path)
-        .map(|metadata| metadata.is_file() && metadata.permissions().mode() & 0o111 != 0)
-        .unwrap_or(false)
+        .is_ok_and(|metadata| metadata.is_file() && metadata.permissions().mode() & 0o111 != 0)
 }
 
 #[cfg(test)]

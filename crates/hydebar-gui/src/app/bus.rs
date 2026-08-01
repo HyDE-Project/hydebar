@@ -15,18 +15,18 @@ pub struct BusFlushOutcome {
 }
 
 impl BusFlushOutcome {
-    pub(super) fn with_events(events: Vec<BusEvent>, had_error: bool) -> Self {
+    pub(super) const fn with_events(events: Vec<BusEvent>, had_error: bool) -> Self {
         Self {
             events,
             had_error
         }
     }
 
-    pub(super) fn had_error(&self) -> bool {
+    pub(super) const fn had_error(&self) -> bool {
         self.had_error
     }
 
-    pub(super) fn is_empty(&self) -> bool {
+    pub(super) const fn is_empty(&self) -> bool {
         self.events.is_empty()
     }
 

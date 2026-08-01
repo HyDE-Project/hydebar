@@ -19,6 +19,6 @@ pub struct WindowTitleConfig {
     pub truncate_title_after_length: u32
 }
 
-fn default_truncate_title_after_length() -> u32 {
+const fn default_truncate_title_after_length() -> u32 {
     150
 }

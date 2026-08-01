@@ -24,6 +24,7 @@ use crate::{
 };
 
 /// Render the module menu displaying detailed system metrics.
+#[must_use]
 pub fn build_menu_view<'a>(
     data: &'a SystemInfoData,
     config: &SystemModuleConfig,

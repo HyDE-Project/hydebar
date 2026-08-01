@@ -8,22 +8,22 @@ use zbus::zvariant::OwnedObjectPath;
 use super::super::{DeviceType, NetworkDbus, proxies::DeviceProxy};
 use crate::services::network::AccessPoint;
 
-impl<'a> NetworkDbus<'a> {
+impl NetworkDbus<'_> {
     pub async fn wireless_devices(&self) -> AppResult<Vec<OwnedObjectPath>> {
         let conn = self.0.inner().connection();
         let devices = self
             .devices()
             .await
-            .map_err(|e| AppError::internal(format!("Failed to get devices: {}", e)))?;
+            .map_err(|e| AppError::internal(format!("Failed to get devices: {e}")))?;
 
         let mut wireless_devices = Vec::new();
         for path in devices {
             let device = DeviceProxy::builder(conn)
                 .path(&path)
-                .map_err(|e| AppError::internal(format!("Failed to set DeviceProxy path: {}", e)))?
+                .map_err(|e| AppError::internal(format!("Failed to set DeviceProxy path: {e}")))?
                 .build()
                 .await
-                .map_err(|e| AppError::internal(format!("Failed to build DeviceProxy: {}", e)))?;
+                .map_err(|e| AppError::internal(format!("Failed to build DeviceProxy: {e}")))?;
 
             if matches!(
                 device.device_type().await.map(DeviceType::from),

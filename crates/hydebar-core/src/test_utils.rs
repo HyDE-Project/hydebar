@@ -61,6 +61,7 @@ impl Default for MockHyprlandPort {
 }
 
 impl MockHyprlandPort {
+    #[must_use]
     pub fn with_active_window(title: &str, class: &str) -> Self {
         let port = Self::default();
         *port

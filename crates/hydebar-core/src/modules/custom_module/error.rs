@@ -22,36 +22,32 @@ impl std::fmt::Display for CustomCommandError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Spawn(err) => {
-                write!(f, "failed to spawn custom module listener process: {}", err)
+                write!(f, "failed to spawn custom module listener process: {err}")
             }
             Self::MissingStdout => write!(f, "custom module listener did not expose stdout"),
             Self::Read(err) => {
-                write!(f, "failed to read line from custom module output: {}", err)
+                write!(f, "failed to read line from custom module output: {err}")
             }
             Self::Parse(snippet, err) => {
                 write!(
                     f,
-                    "failed to parse custom module output: {} ({})",
-                    snippet, err
+                    "failed to parse custom module output: {snippet} ({err})"
                 )
             }
-            Self::Wait(err) => write!(f, "failed to wait for custom module process: {}", err),
+            Self::Wait(err) => write!(f, "failed to wait for custom module process: {err}"),
             Self::NonZeroExit {
                 status
             } => write!(
                 f,
-                "custom module process exited unsuccessfully ({:?})",
-                status
+                "custom module process exited unsuccessfully ({status:?})"
             ),
             Self::Signal(offset, err) => write!(
                 f,
-                "failed to listen for the custom module refresh signal SIGRTMIN+{}: {}",
-                offset, err
+                "failed to listen for the custom module refresh signal SIGRTMIN+{offset}: {err}"
             ),
             Self::UnsupportedSignal(offset) => write!(
                 f,
-                "custom module refresh signal SIGRTMIN+{} is outside the real time range",
-                offset
+                "custom module refresh signal SIGRTMIN+{offset} is outside the real time range"
             ),
             Self::ChannelClosed => write!(f, "custom module updates channel closed")
         }
@@ -124,8 +120,8 @@ pub(super) enum CustomListenerError {
 impl std::fmt::Display for CustomListenerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Command(err) => write!(f, "{}", err),
-            Self::Module(err) => write!(f, "{}", err)
+            Self::Command(err) => write!(f, "{err}"),
+            Self::Module(err) => write!(f, "{err}")
         }
     }
 }

@@ -146,8 +146,7 @@ impl Outputs {
         match self.0.iter().position(|(_, _, assigned_wl_output)| {
             assigned_wl_output
                 .as_ref()
-                .map(|assigned_wl_output| *assigned_wl_output == wl_output)
-                .unwrap_or_default()
+                .is_some_and(|assigned_wl_output| *assigned_wl_output == wl_output)
         }) {
             Some(index_to_remove) => {
                 debug!("Removing layer surface for output");
@@ -165,9 +164,11 @@ impl Outputs {
                     Task::none()
                 };
 
-                self.0.push((name.to_owned(), None, wl_output));
+                self.0.push((name, None, wl_output));
 
-                if !self.0.iter().any(|(_, shell_info, _)| shell_info.is_some()) {
+                if self.0.iter().any(|(_, shell_info, _)| shell_info.is_some()) {
+                    Task::batch(vec![destroy_task])
+                } else {
                     debug!("No outputs left, creating a fallback layer surface");
 
                     let LayerSurfaceCreation {
@@ -203,8 +204,6 @@ impl Outputs {
                     ));
 
                     Task::batch(vec![destroy_task, task])
-                } else {
-                    Task::batch(vec![destroy_task])
                 }
             }
             _ => Task::none()

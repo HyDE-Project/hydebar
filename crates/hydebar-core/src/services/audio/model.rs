@@ -4,7 +4,7 @@ use crate::components::icons::Icons;
 
 /// Describes a single audio device (sink or source).
 ///
-/// Each device carries metadata exported by PulseAudio that is consumed by the
+/// Each device carries metadata exported by `PulseAudio` that is consumed by the
 /// settings UI.
 #[derive(Debug, Clone)]
 pub struct Device {
@@ -37,12 +37,12 @@ pub enum DeviceType {
 impl DeviceType {
     /// Returns the icon that should be displayed for the device category.
     #[must_use]
-    pub fn get_icon(&self) -> Icons {
+    pub const fn get_icon(&self) -> Icons {
         match self {
-            DeviceType::Speaker => Icons::Speaker3,
-            DeviceType::Headphones => Icons::Headphones1,
-            DeviceType::Headset => Icons::Headset,
-            DeviceType::Hdmi => Icons::MonitorSpeaker
+            Self::Speaker => Icons::Speaker3,
+            Self::Headphones => Icons::Headphones1,
+            Self::Headset => Icons::Headset,
+            Self::Hdmi => Icons::MonitorSpeaker
         }
     }
 }
@@ -54,7 +54,7 @@ pub struct ServerInfo {
     pub default_source: String
 }
 
-/// Provides a view on common volume operations for PulseAudio channel volumes.
+/// Provides a view on common volume operations for `PulseAudio` channel volumes.
 pub trait Volume {
     /// Returns the normalized volume value in range `[0.0, 1.0]`.
     fn get_volume(&self) -> f64;
@@ -66,13 +66,13 @@ pub trait Volume {
 
 impl Volume for ChannelVolumes {
     fn get_volume(&self) -> f64 {
-        self.avg().0 as f64 / libpulse_binding::volume::Volume::NORMAL.0 as f64
+        f64::from(self.avg().0) / f64::from(libpulse_binding::volume::Volume::NORMAL.0)
     }
 
     fn scale_volume(&mut self, max: f64) -> Option<&mut ChannelVolumes> {
         let max = max.clamp(0.0, 1.0);
         self.scale(libpulse_binding::volume::Volume(
-            (libpulse_binding::volume::Volume::NORMAL.0 as f64 * max) as u32
+            (f64::from(libpulse_binding::volume::Volume::NORMAL.0) * max) as u32
         ))
     }
 }

@@ -29,7 +29,7 @@ struct Thresholds<V> {
 }
 
 impl<V> Thresholds<V> {
-    fn new(value: V, warn: V, alert: V) -> Self {
+    const fn new(value: V, warn: V, alert: V) -> Self {
         Self {
             value,
             warn,
@@ -52,12 +52,12 @@ fn indicator_label(prefix: Option<&str>, value: impl std::fmt::Display, unit: &s
 /// The divisor is binary, so the unit next to the number has to be the
 /// binary one: eight gibibytes shown as `8.0GB` overstated every
 /// readout by seven percent against the unit it named.
-pub(crate) fn gigabytes(bytes: u64) -> String {
+pub fn gigabytes(bytes: u64) -> String {
     format!("{:.1}", bytes as f64 / (1024.0 * 1024.0 * 1024.0))
 }
 
 /// A pool stated as the amount in use against the amount there is.
-pub(crate) fn used_of_total(used: u64, total: u64) -> String {
+pub fn used_of_total(used: u64, total: u64) -> String {
     format!("{} / {} GiB", gigabytes(used), gigabytes(total))
 }
 
@@ -105,7 +105,7 @@ where
 ///
 /// The placement is spelled out rather than abbreviated, so a machine with
 /// switchable graphics says which of its two devices the bar is watching.
-pub(crate) fn gpu_title(gpu: &GpuReadings) -> String {
+pub fn gpu_title(gpu: &GpuReadings) -> String {
     let placement = match gpu.placement {
         GpuPlacement::Integrated => "Integrated graphics",
         GpuPlacement::Discrete | GpuPlacement::Unknown => "Graphics"
@@ -121,7 +121,7 @@ pub(crate) fn gpu_title(gpu: &GpuReadings) -> String {
 ///
 /// An integrated device gets a glyph of its own instead of a text tag beside
 /// the number, so every readout on the bar is one icon and one value.
-fn gpu_icon(gpu: &GpuReadings) -> Icons {
+const fn gpu_icon(gpu: &GpuReadings) -> Icons {
     match gpu.placement {
         GpuPlacement::Integrated => Icons::IntegratedGpu,
         GpuPlacement::Discrete | GpuPlacement::Unknown => Icons::Gpu
@@ -133,7 +133,7 @@ fn gpu_icon(gpu: &GpuReadings) -> Icons {
 /// Above a thousand the rate reads in megabytes with one decimal: the
 /// integer division it replaced showed `1 MB/s` for anything up to
 /// `1999 KB/s`, understating a rate by up to half.
-pub(crate) fn format_speed(speed: u32) -> String {
+pub fn format_speed(speed: u32) -> String {
     if speed >= 1000 {
         format!("{:.1} MB/s", f64::from(speed) / 1000.0)
     } else {
@@ -147,6 +147,7 @@ pub(crate) fn format_speed(speed: u32) -> String {
 /// The standalone processor and memory modules draw single readouts out
 /// of the same sample the combined module renders, so the one spelling of
 /// every readout lives here and the thin entries cannot drift from it.
+#[must_use]
 pub fn single_indicator<M>(
     indicator: &SystemIndicator,
     data: &SystemInfoData,
@@ -292,6 +293,7 @@ where
 ///
 /// The gaps inside every indicator come from the themed font size carried
 /// by `appearance`, so the bar row keeps its proportions across themes.
+#[must_use]
 pub fn indicator_elements<M>(
     data: SystemInfoData,
     config: &SystemModuleConfig,
@@ -311,9 +313,11 @@ where
 }
 
 /// Construct the condensed indicator row shown in the module section.
+///
 /// A module declaring alternative readouts cycles them on the left button
 /// and moves the menu to the right button, the way waybar binds
 /// `format-alt`.
+#[must_use]
 pub fn build_indicator_view<M>(
     data: &SystemInfoData,
     config: &SystemModuleConfig,

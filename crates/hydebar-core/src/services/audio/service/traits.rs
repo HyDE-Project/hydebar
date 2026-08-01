@@ -40,7 +40,7 @@ impl ReadOnlyService for AudioService {
 
         Subscription::run_with(id, |&_id| {
             channel(100, |mut output| async move {
-                AudioService::listen(&mut output).await;
+                Self::listen(&mut output).await;
             })
         })
     }

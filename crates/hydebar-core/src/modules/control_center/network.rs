@@ -62,14 +62,17 @@ impl ActiveConnectionInfo {
         f32::round(f32::from(signal.min(100)) / 100. * 4.) as usize
     }
 
+    #[must_use]
     pub fn get_wifi_icon(signal: u8) -> Icons {
         WIFI_SIGNAL_ICONS[1 + Self::signal_bucket(signal)]
     }
 
+    #[must_use]
     pub fn get_wifi_lock_icon(signal: u8) -> Icons {
         WIFI_LOCK_SIGNAL_ICONS[Self::signal_bucket(signal)]
     }
 
+    #[must_use]
     pub fn get_icon(&self) -> Icons {
         match self {
             Self::WiFi {
@@ -84,7 +87,8 @@ impl ActiveConnectionInfo {
         }
     }
 
-    pub fn get_indicator_state(&self) -> IndicatorState {
+    #[must_use]
+    pub const fn get_indicator_state(&self) -> IndicatorState {
         match self {
             Self::WiFi {
                 strength: 0 | 1, ..
@@ -97,6 +101,7 @@ impl ActiveConnectionInfo {
 impl super::ControlCenter {
     /// One-look summary of the connection, for the pointer resting on the
     /// network module.
+    #[must_use]
     pub fn network_hint(&self) -> Option<String> {
         self.network
             .as_ref()
@@ -109,6 +114,7 @@ impl NetworkData {
     /// signal, the frequency, the interface, the addressing — every fact
     /// the bar holds, one per line — or the one word explaining why
     /// there is nothing to state.
+    #[must_use]
     pub fn connection_hint(&self) -> String {
         let mut lines = Vec::new();
         let mut vpns = Vec::new();
@@ -184,6 +190,7 @@ impl NetworkData {
         lines.join("\n")
     }
 
+    #[must_use]
     pub fn get_connection_indicator<Message: 'static>(
         &self,
         icons: &IconTheme
@@ -222,6 +229,7 @@ impl NetworkData {
         }
     }
 
+    #[must_use]
     pub fn get_vpn_indicator<Message: 'static>(
         &self,
         icons: &IconTheme
@@ -241,6 +249,7 @@ impl NetworkData {
             })
     }
 
+    #[must_use]
     pub fn get_wifi_quick_setting_button(
         &self,
         id: Id,
@@ -265,7 +274,7 @@ impl NetworkData {
                     active_connection.map_or_else(|| Icons::Wifi0, |(_, _, icon)| icon),
                     "Wi-Fi".to_string(),
                     active_connection
-                        .map(|(name, strength, _)| format!("{name} ({}%)", strength,)),
+                        .map(|(name, strength, _)| format!("{name} ({strength}%)")),
                     self.wifi_enabled,
                     Message::Network(NetworkMessage::ToggleWiFi),
                     self.wifi_enabled.then(|| {
@@ -296,6 +305,7 @@ impl NetworkData {
         }
     }
 
+    #[must_use]
     pub fn get_vpn_quick_setting_button(
         &self,
         id: Id,
@@ -331,6 +341,7 @@ impl NetworkData {
             })
     }
 
+    #[must_use]
     pub fn wifi_menu(
         &self,
         id: Id,
@@ -418,8 +429,7 @@ impl NetworkData {
                             .into(),
                         None => row_button.into()
                     }
-                    })
-                    .collect::<Vec<Element<NetworkMessage>>>(),
+                    }),
             )
             .spacing(scale::scaled(4.0))
         ))
@@ -445,6 +455,7 @@ impl NetworkData {
         }
     }
 
+    #[must_use]
     pub fn vpn_menu(
         &self,
         id: Id,
@@ -464,14 +475,13 @@ impl NetworkData {
                 );
 
                 row!(
-                    text(vpn.name.to_string()).width(Length::Fill),
+                    text(vpn.name.clone()).width(Length::Fill),
                     toggler(is_active)
                         .on_toggle(|_| { NetworkMessage::ToggleVpn(vpn.clone()) })
                         .width(Length::Shrink),
                 )
                 .into()
-            })
-            .collect::<Vec<Element<NetworkMessage>>>(),
+            }),
     )
     .width(Length::Fill)
     .spacing(scale::scaled(8.0));
@@ -493,6 +503,7 @@ impl NetworkData {
         }
     }
 
+    #[must_use]
     pub fn get_airplane_mode_quick_setting_button(
         &self,
         opacity: f32,

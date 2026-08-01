@@ -1,4 +1,4 @@
-//! Overlay of the theme published by the HyDE Project onto the appearance
+//! Overlay of the theme published by the `HyDE` Project onto the appearance
 //! configuration.
 
 use hex_color::HexColor;
@@ -14,13 +14,13 @@ use super::{
 use crate::theme_source::{HydeTheme, Rgba};
 
 impl Appearance {
-    /// Fills every field the user left at its default with the HyDE theme.
+    /// Fills every field the user left at its default with the `HyDE` theme.
     ///
     /// Explicit configuration always wins: a field is only overlaid when it
     /// still holds the value it would have without a configuration file. Values
     /// the theme does not provide are left untouched.
     ///
-    /// The alpha channel of the HyDE colors carries the transparency: the
+    /// The alpha channel of the `HyDE` colors carries the transparency: the
     /// module background feeds [`Appearance::opacity`] and the bar background
     /// feeds [`Appearance::bar_opacity`]. Every other color is translucent over
     /// the island it is painted on, so it is composited over the island
@@ -96,18 +96,18 @@ impl Appearance {
     }
 }
 
-/// Drops the alpha channel of a HyDE color, which the opacity fields carry
+/// Drops the alpha channel of a `HyDE` color, which the opacity fields carry
 /// instead.
-fn opaque_hex(color: Rgba) -> HexColor {
+const fn opaque_hex(color: Rgba) -> HexColor {
     HexColor::rgb(color.r, color.g, color.b)
 }
 
 /// Reads a palette entry back as a [`Color`].
-fn hex_to_color(color: HexColor) -> Color {
+const fn hex_to_color(color: HexColor) -> Color {
     Color::from_rgb8(color.r, color.g, color.b)
 }
 
-/// Composites a translucent HyDE color over the surface it is painted on.
+/// Composites a translucent `HyDE` color over the surface it is painted on.
 ///
 /// The stylesheets state their accents with an alpha channel: the focused
 /// workspace is `rgba(195,172,118,0.4)`, a muted tint of the island rather than
@@ -133,7 +133,7 @@ fn blend_hex(color: Rgba, backdrop: Color) -> HexColor {
 }
 
 /// Returns the text shade of a palette entry, if it declares one.
-fn text_hex(color: AppearanceColor) -> Option<HexColor> {
+const fn text_hex(color: AppearanceColor) -> Option<HexColor> {
     match color {
         AppearanceColor::Simple(_) => None,
         AppearanceColor::Complete {
@@ -199,7 +199,7 @@ mod tests {
         );
     }
 
-    /// Mirrors the colors the HyDE stylesheets ship, alpha channels included.
+    /// Mirrors the colors the `HyDE` stylesheets ship, alpha channels included.
     fn translucent_hyde_theme() -> HydeTheme {
         HydeTheme {
             module_background: Some(Rgba::rgba(27, 29, 28, 0.8)),

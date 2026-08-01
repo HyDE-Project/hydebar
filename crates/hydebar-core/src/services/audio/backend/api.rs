@@ -31,12 +31,12 @@ pub enum BackendEvent {
 pub type BackendFuture = Pin<Box<dyn Future<Output = AppResult<BackendHandle>> + Send>>;
 
 /// Abstraction over backend implementations to allow testing without
-/// PulseAudio.
+/// `PulseAudio`.
 pub trait AudioBackend: Send + Sync + Clone + 'static {
     fn spawn(&self) -> BackendFuture;
 }
 
-/// Default PulseAudio backend implementation.
+/// Default `PulseAudio` backend implementation.
 #[derive(Clone, Default)]
 pub struct PulseAudioBackend;
 
@@ -59,7 +59,7 @@ pub struct BackendHandle {
 }
 
 impl BackendHandle {
-    pub(super) fn new(
+    pub(super) const fn new(
         receiver: Receiver<BackendEvent>,
         sender: Sender<BackendCommand>,
         listener: JoinHandle<()>,

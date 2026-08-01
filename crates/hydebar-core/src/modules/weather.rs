@@ -12,7 +12,7 @@ use crate::{
     modules::{Module, ModuleError}
 };
 
-/// OpenWeatherMap API response structures
+/// `OpenWeatherMap` API response structures
 #[derive(Debug, Clone, Deserialize)]
 pub struct WeatherResponse {
     pub main:    MainWeather,
@@ -50,6 +50,7 @@ pub struct WeatherData {
 }
 
 impl WeatherData {
+    #[must_use]
     pub fn new(location: String, use_celsius: bool) -> Self {
         Self {
             temperature: String::from("--"),
@@ -63,8 +64,9 @@ impl WeatherData {
     }
 
     /// Builds a reading from an API response, converting the Kelvin
-    /// temperature OpenWeatherMap returns by default into the unit the
+    /// temperature `OpenWeatherMap` returns by default into the unit the
     /// configuration asked for.
+    #[must_use]
     pub fn from_response(response: WeatherResponse, location: String, use_celsius: bool) -> Self {
         let temp_kelvin = response.main.temp;
         let temperature = if use_celsius {
@@ -75,9 +77,7 @@ impl WeatherData {
 
         let description = response
             .weather
-            .first()
-            .map(|w| w.description.clone())
-            .unwrap_or_else(|| String::from("Unknown"));
+            .first().map_or_else(|| String::from("Unknown"), |w| w.description.clone());
 
         Self {
             temperature,
@@ -90,10 +90,12 @@ impl WeatherData {
         }
     }
 
+    #[must_use]
     pub fn display_temp(&self) -> &str {
         &self.temperature
     }
 
+    #[must_use]
     pub fn display_description(&self) -> &str {
         &self.description
     }
@@ -126,6 +128,7 @@ pub struct Weather {
 }
 
 impl Weather {
+    #[must_use]
     pub fn new(
         location: String,
         api_key: Option<String>,
@@ -145,7 +148,8 @@ impl Weather {
     }
 
     /// Get current weather data for rendering
-    pub fn data(&self) -> &WeatherData {
+    #[must_use]
+    pub const fn data(&self) -> &WeatherData {
         &self.data
     }
 
@@ -294,7 +298,7 @@ impl Weather {
         }
     }
 
-    /// Fetch weather data from OpenWeatherMap API
+    /// Fetch weather data from `OpenWeatherMap` API
     async fn fetch_weather(
         location: &str,
         api_key: &Option<String>
@@ -304,36 +308,34 @@ impl Weather {
             .ok_or_else(|| AppError::internal("Weather API key not configured in config.toml"))?;
 
         let url = format!(
-            "https://api.openweathermap.org/data/2.5/weather?q={}&appid={}",
-            location, api_key
+            "https://api.openweathermap.org/data/2.5/weather?q={location}&appid={api_key}"
         );
 
         let response = crate::utils::http_client().get(&url).send().await.map_err(|e| {
             if e.is_timeout() {
-                AppError::internal(format!("Weather API timeout for location '{}'", location))
+                AppError::internal(format!("Weather API timeout for location '{location}'"))
             } else if e.is_connect() {
                 AppError::internal("No internet connection - cannot fetch weather")
             } else {
-                AppError::internal(format!("Network error fetching weather: {}", e))
+                AppError::internal(format!("Network error fetching weather: {e}"))
             }
         })?;
 
         let status = response.status();
         if !status.is_success() {
             return Err(AppError::internal(match status.as_u16() {
-                401 => format!("Invalid weather API key ({})", status),
-                404 => format!("Location '{}' not found in weather database", location),
+                401 => format!("Invalid weather API key ({status})"),
+                404 => format!("Location '{location}' not found in weather database"),
                 429 => "Weather API rate limit exceeded - try again later".to_string(),
-                500..=599 => format!("Weather API server error ({})", status),
+                500..=599 => format!("Weather API server error ({status})"),
                 _ => format!(
-                    "Weather API returned error {} for location '{}'",
-                    status, location
+                    "Weather API returned error {status} for location '{location}'"
                 )
             }));
         }
 
         let weather = response.json::<WeatherResponse>().await.map_err(|e| {
-            AppError::internal(format!("Invalid weather data format from API: {}", e))
+            AppError::internal(format!("Invalid weather data format from API: {e}"))
         })?;
 
         Ok(weather)

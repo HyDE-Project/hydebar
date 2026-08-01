@@ -61,7 +61,7 @@ pub enum SettingValue {
     /// A flag.
     Flag(bool),
     /// A list, whose entries may be lists themselves.
-    List(Vec<SettingValue>)
+    List(Vec<Self>)
 }
 
 impl SettingValue {

@@ -1,19 +1,19 @@
-//! Where the HyDE Project keeps the files the bar reads.
+//! Where the `HyDE` Project keeps the files the bar reads.
 //!
-//! HyDE spreads itself over all four XDG roots: the installation and the themes
+//! `HyDE` spreads itself over all four XDG roots: the installation and the themes
 //! are configuration, the active selection is session state, the generated
 //! palettes are cache and the shipped fallbacks are shared data. Reading any
 //! one value therefore needs more than one root, and every reader used to
 //! resolve them again from the environment — which made it possible for two
-//! readers to disagree about where HyDE lives.
+//! readers to disagree about where `HyDE` lives.
 //!
 //! This module resolves them once and names every file the bar reads, so the
-//! layout of a HyDE install is stated in one place instead of being spelled out
+//! layout of a `HyDE` install is stated in one place instead of being spelled out
 //! again at each call site.
 
 use std::path::{Path, PathBuf};
 
-/// The four roots HyDE spreads its files across.
+/// The four roots `HyDE` spreads its files across.
 ///
 /// Held as one value rather than passed around separately so a caller cannot
 /// pair the configuration of one install with the state of another, which is
@@ -35,7 +35,7 @@ impl HydeDirs {
     /// Builds the roots explicitly, which is what tests and callers with their
     /// own layout need.
     #[must_use]
-    pub fn new(config: PathBuf, state: PathBuf, cache: PathBuf, data: PathBuf) -> Self {
+    pub const fn new(config: PathBuf, state: PathBuf, cache: PathBuf, data: PathBuf) -> Self {
         Self {
             config,
             state,
@@ -47,7 +47,7 @@ impl HydeDirs {
     /// Resolves the roots of the running session.
     ///
     /// Returns [`None`] when the environment names neither the XDG variables
-    /// nor a home directory: there is then no HyDE install to read and
+    /// nor a home directory: there is then no `HyDE` install to read and
     /// guessing a path would only produce misleading failures.
     #[must_use]
     pub fn from_env() -> Option<Self> {
@@ -59,30 +59,30 @@ impl HydeDirs {
         ))
     }
 
-    /// Whether HyDE is installed at all.
+    /// Whether `HyDE` is installed at all.
     ///
-    /// The bar has to tell "HyDE is here but has not written this value" from
-    /// "there is no HyDE": in the first case the documented HyDE default is the
-    /// right answer, in the second imposing HyDE's fonts and colours on a
+    /// The bar has to tell "`HyDE` is here but has not written this value" from
+    /// "there is no HyDE": in the first case the documented `HyDE` default is the
+    /// right answer, in the second imposing `HyDE`'s fonts and colours on a
     /// desktop that never asked for them would be wrong.
     #[must_use]
     pub fn is_installed(&self) -> bool {
         self.hyde_config_dir().is_dir() || self.hyde_state_dir().is_dir()
     }
 
-    /// Directory the HyDE installation lives in, `~/.config/hyde`.
+    /// Directory the `HyDE` installation lives in, `~/.config/hyde`.
     #[must_use]
     pub fn hyde_config_dir(&self) -> PathBuf {
         self.config.join("hyde")
     }
 
-    /// Directory HyDE records the live session in, `~/.local/state/hyde`.
+    /// Directory `HyDE` records the live session in, `~/.local/state/hyde`.
     #[must_use]
     pub fn hyde_state_dir(&self) -> PathBuf {
         self.state.join("hyde")
     }
 
-    /// Directory HyDE generates into, `~/.cache/hyde`.
+    /// Directory `HyDE` generates into, `~/.cache/hyde`.
     ///
     /// Named separately from the files inside it because the palette is a
     /// symlink that gets replaced, so a watcher has to follow this directory
@@ -92,7 +92,7 @@ impl HydeDirs {
         self.cache.join("hyde")
     }
 
-    /// The HyDE settings file, `~/.config/hyde/config.toml`.
+    /// The `HyDE` settings file, `~/.config/hyde/config.toml`.
     ///
     /// First link of every value chain: what the user wrote here outranks
     /// anything a theme or the session state says.
@@ -104,7 +104,7 @@ impl HydeDirs {
     /// The flat settings export, `~/.local/state/hyde/config`.
     ///
     /// The `hyde-config` daemon parses `config.toml` into `export KEY=value`
-    /// lines here, and HyDE's own tools read the settings from this export
+    /// lines here, and `HyDE`'s own tools read the settings from this export
     /// rather than from the TOML. The bar does the same: the TOML grew
     /// sections a shell-assignment parser cannot follow, while the export
     /// stays flat by construction.
@@ -164,14 +164,14 @@ impl HydeDirs {
     /// User override of the Hyprland variables,
     /// `~/.local/state/hyde/hyprland.conf`.
     ///
-    /// HyDE reads this after the theme's own fragment, so a variable set here
+    /// `HyDE` reads this after the theme's own fragment, so a variable set here
     /// wins over the theme.
     #[must_use]
     pub fn hyprland_override(&self) -> PathBuf {
         self.hyde_state_dir().join("hyprland.conf")
     }
 
-    /// Fallback values HyDE ships, `~/.local/share/hyde/env-theme`.
+    /// Fallback values `HyDE` ships, `~/.local/share/hyde/env-theme`.
     ///
     /// Last link of the font chain before the built-in default, and the only
     /// place a stock install states `BAR_FONT` at all.
@@ -180,9 +180,9 @@ impl HydeDirs {
         self.data.join("hyde").join("env-theme")
     }
 
-    /// Bar layouts HyDE ships, `~/.local/share/waybar/layouts`.
+    /// Bar layouts `HyDE` ships, `~/.local/share/waybar/layouts`.
     ///
-    /// The directory carries the name of the bar HyDE shipped with before this
+    /// The directory carries the name of the bar `HyDE` shipped with before this
     /// one; the path is read as found because that is where the layouts are.
     #[must_use]
     pub fn bar_layouts_dir(&self) -> PathBuf {

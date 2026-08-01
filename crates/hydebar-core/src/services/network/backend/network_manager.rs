@@ -1,4 +1,4 @@
-//! NetworkManager backed implementation of the network service.
+//! `NetworkManager` backed implementation of the network service.
 
 use std::{collections::HashMap, ops::Deref};
 
@@ -89,7 +89,7 @@ impl NetworkBackend for NetworkDbus<'_> {
         let nm = NetworkDbus::new(self.0.inner().connection()).await?;
         nm.set_wireless_enabled(!enable)
             .await
-            .map_err(|e| AppError::internal(format!("Failed to set wireless enabled: {}", e)))?;
+            .map_err(|e| AppError::internal(format!("Failed to set wireless enabled: {e}")))?;
 
         Ok(())
     }
@@ -104,18 +104,18 @@ impl NetworkBackend for NetworkDbus<'_> {
             let device = WirelessDeviceProxy::builder(self.0.inner().connection())
                 .path(device_path)
                 .map_err(|e| {
-                    AppError::internal(format!("Failed to set WirelessDeviceProxy path: {}", e))
+                    AppError::internal(format!("Failed to set WirelessDeviceProxy path: {e}"))
                 })?
                 .build()
                 .await
                 .map_err(|e| {
-                    AppError::internal(format!("Failed to build WirelessDeviceProxy: {}", e))
+                    AppError::internal(format!("Failed to build WirelessDeviceProxy: {e}"))
                 })?;
 
             device
                 .request_scan(HashMap::new())
                 .await
-                .map_err(|e| AppError::internal(format!("Failed to request WiFi scan: {}", e)))?;
+                .map_err(|e| AppError::internal(format!("Failed to request WiFi scan: {e}")))?;
         }
 
         Ok(())
@@ -124,7 +124,7 @@ impl NetworkBackend for NetworkDbus<'_> {
     async fn set_wifi_enabled(&self, enable: bool) -> AppResult<()> {
         self.set_wireless_enabled(enable)
             .await
-            .map_err(|e| AppError::internal(format!("Failed to set WiFi enabled state: {}", e)))?;
+            .map_err(|e| AppError::internal(format!("Failed to set WiFi enabled state: {e}")))?;
         Ok(())
     }
 
@@ -142,45 +142,43 @@ impl NetworkBackend for NetworkDbus<'_> {
                     .path(connection)
                     .map_err(|e| {
                         AppError::internal(format!(
-                            "Failed to set ConnectionSettingsProxy path: {}",
-                            e
+                            "Failed to set ConnectionSettingsProxy path: {e}"
                         ))
                     })?
                     .build()
                     .await
                     .map_err(|e| {
                         AppError::internal(format!(
-                            "Failed to build ConnectionSettingsProxy: {}",
-                            e
+                            "Failed to build ConnectionSettingsProxy: {e}"
                         ))
                     })?;
 
                 let mut s = connection.get_settings().await.map_err(|e| {
-                    AppError::internal(format!("Failed to get connection settings: {}", e))
+                    AppError::internal(format!("Failed to get connection settings: {e}"))
                 })?;
                 if let Some(wifi_settings) = s.get_mut("802-11-wireless-security") {
                     let new_password = zvariant::Value::from(password.clone())
                         .try_to_owned()
                         .map_err(|e| {
-                            AppError::internal(format!("Failed to convert password value: {}", e))
+                            AppError::internal(format!("Failed to convert password value: {e}"))
                         })?;
                     wifi_settings.insert("psk".to_string(), new_password);
                 }
 
                 connection.update(s).await.map_err(|e| {
-                    AppError::internal(format!("Failed to update connection settings: {}", e))
+                    AppError::internal(format!("Failed to update connection settings: {e}"))
                 })?;
             }
 
             self.activate_connection(
                 connection.clone(),
-                access_point.device_path.to_owned(),
+                access_point.device_path.clone(),
                 OwnedObjectPath::try_from("/").map_err(|e| {
-                    AppError::internal(format!("Failed to create object path: {}", e))
+                    AppError::internal(format!("Failed to create object path: {e}"))
                 })?
             )
             .await
-            .map_err(|e| AppError::internal(format!("Failed to activate connection: {}", e)))?;
+            .map_err(|e| AppError::internal(format!("Failed to activate connection: {e}")))?;
         } else {
             let name = access_point.ssid.clone();
             debug!("Create new wifi connection: {name}");
@@ -217,7 +215,7 @@ impl NetworkBackend for NetworkDbus<'_> {
             )
             .await
             .map_err(|e| {
-                AppError::internal(format!("Failed to add and activate connection: {}", e))
+                AppError::internal(format!("Failed to add and activate connection: {e}"))
             })?;
         }
 
@@ -238,12 +236,12 @@ impl NetworkBackend for NetworkDbus<'_> {
             )
             .await
             .map_err(|e| {
-                AppError::internal(format!("Failed to activate VPN connection: {}", e))
+                AppError::internal(format!("Failed to activate VPN connection: {e}"))
             })?;
         } else {
             debug!("Deactivating VPN: {connection:?}");
             self.deactivate_connection(connection).await.map_err(|e| {
-                AppError::internal(format!("Failed to deactivate VPN connection: {}", e))
+                AppError::internal(format!("Failed to deactivate VPN connection: {e}"))
             })?;
         }
 
@@ -266,10 +264,10 @@ impl<'a> Deref for NetworkDbus<'a> {
     }
 }
 
-impl<'a> NetworkDbus<'a> {
+impl NetworkDbus<'_> {
     pub async fn new(conn: &zbus::Connection) -> AppResult<Self> {
         let nm = NetworkManagerProxy::new(conn).await.map_err(|e| {
-            AppError::internal(format!("Failed to create NetworkManagerProxy: {}", e))
+            AppError::internal(format!("Failed to create NetworkManagerProxy: {e}"))
         })?;
 
         Ok(Self(nm))

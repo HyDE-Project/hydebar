@@ -45,7 +45,6 @@ impl App {
                     .menu_surfaces()
                     .into_iter()
                     .map(|(id, _)| iced::set_layer(id, iced::Layer::Overlay))
-                    .collect::<Vec<_>>()
             );
         }
 
@@ -58,7 +57,6 @@ impl App {
                     .into_iter()
                     .filter(|(_, open)| !open)
                     .map(|(id, _)| iced::set_layer(id, iced::Layer::Background))
-                    .collect::<Vec<_>>()
             );
         }
 
@@ -156,7 +154,7 @@ impl App {
                     let tasks: Vec<_> = outcome
                         .into_events()
                         .into_iter()
-                        .filter_map(App::message_from_bus_event)
+                        .filter_map(Self::message_from_bus_event)
                         .map(|msg| self.update(msg))
                         .collect();
 

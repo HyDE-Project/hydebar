@@ -12,7 +12,7 @@ use crate::config::AppearanceStyle;
 ///
 /// `radius` is the corner radius of the pill, in pixels; callers pass
 /// [`Appearance::pill_radius`](crate::config::Appearance::pill_radius) so the
-/// configured or HyDE provided value reaches the border.
+/// configured or `HyDE` provided value reaches the border.
 ///
 /// `hover` is how far the hover fade of this module has travelled, zero at
 /// rest and one fully lit. The background is blended from it rather than from
@@ -85,10 +85,10 @@ fn blend_background(rest: Option<Color>, lit: Color, t: f32) -> Option<Color> {
         None if t <= 0.0 => None,
         None => Some(lit.scale_alpha(t)),
         Some(rest) => Some(Color {
-            r: rest.r + (lit.r - rest.r) * t,
-            g: rest.g + (lit.g - rest.g) * t,
-            b: rest.b + (lit.b - rest.b) * t,
-            a: rest.a + (lit.a - rest.a) * t
+            r: (lit.r - rest.r).mul_add(t, rest.r),
+            g: (lit.g - rest.g).mul_add(t, rest.g),
+            b: (lit.b - rest.b).mul_add(t, rest.b),
+            a: (lit.a - rest.a).mul_add(t, rest.a)
         })
     }
 }

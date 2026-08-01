@@ -86,7 +86,7 @@ where
     fn register(
         &mut self,
         ctx: &ModuleContext,
-        _: Self::RegistrationData<'_>
+        (): Self::RegistrationData<'_>
     ) -> Result<(), ModuleError> {
         for task in self.tasks.drain(..) {
             task.abort();
@@ -131,8 +131,8 @@ where
     /// Disconnects the five hardware services once nothing on the bar
     /// shows them.
     ///
-    /// Audio, brightness, network, bluetooth and UPower each hold a
-    /// D-Bus or PulseAudio connection that reports on every
+    /// Audio, brightness, network, bluetooth and `UPower` each hold a
+    /// D-Bus or `PulseAudio` connection that reports on every
     /// volume step, every signal strength sample and every
     /// battery reading. Together they are the single
     /// largest idle cost the bar can carry, and a layout without any of

@@ -85,6 +85,7 @@ impl Outputs {
     }
 
     /// Returns the tooltip the output owning `id` is showing.
+    #[must_use]
     pub fn tooltip(&self, id: Id) -> Option<&TooltipInfo> {
         self.0
             .iter()

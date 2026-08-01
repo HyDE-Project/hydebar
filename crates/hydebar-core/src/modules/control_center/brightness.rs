@@ -22,6 +22,7 @@ pub enum BrightnessMessage {
 }
 
 impl BrightnessData {
+    #[must_use]
     pub fn brightness_slider(&self, icons: &IconTheme) -> Element<'_, Message> {
         row!(
             container(icon(icons, Icons::Brightness))

@@ -41,8 +41,8 @@ impl AudioService {
         match state {
             State::Init => match backend.spawn().await {
                 Ok(handle) => {
-                    let _ = publisher
-                        .send(ServiceEvent::Init(AudioService {
+                    let () = publisher
+                        .send(ServiceEvent::Init(Self {
                             data:      AudioData::default(),
                             commander: handle.commander()
                         }))
@@ -52,23 +52,23 @@ impl AudioService {
                 }
                 Err(err) => {
                     error!("Failed to initialise audio backend: {err}");
-                    let _ = publisher.send(ServiceEvent::Error(())).await;
+                    let () = publisher.send(ServiceEvent::Error(())).await;
                     State::Error
                 }
             },
             State::Active(mut handle) => match handle.recv().await {
                 Some(BackendEvent::Error(err)) => {
                     error!("Audio backend error: {err}");
-                    let _ = publisher.send(ServiceEvent::Error(())).await;
+                    let () = publisher.send(ServiceEvent::Error(())).await;
                     State::Error
                 }
                 Some(BackendEvent::Update(event)) => {
-                    let _ = publisher.send(ServiceEvent::Update(event)).await;
+                    let () = publisher.send(ServiceEvent::Update(event)).await;
                     State::Active(handle)
                 }
                 None => {
                     warn!("Audio backend closed event stream");
-                    let _ = publisher.send(ServiceEvent::Error(())).await;
+                    let () = publisher.send(ServiceEvent::Error(())).await;
                     State::Error
                 }
             },

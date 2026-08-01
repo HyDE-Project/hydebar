@@ -25,7 +25,7 @@ const DWELL: Duration = Duration::from_secs(1);
 const WARMTH: Duration = Duration::from_millis(300);
 
 /// What the shell must do for the machine, in its own vocabulary.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum HintCommand {
     /// Put this hint on the tooltip surface.
     Show {
@@ -89,7 +89,7 @@ impl Default for Hints {
 impl Hints {
     /// How far the tooltip currently is between absent and fully shown.
     #[must_use]
-    pub fn presence(&self) -> f32 {
+    pub const fn presence(&self) -> f32 {
         self.presence.value().clamp(0.0, 1.0)
     }
 

@@ -4,7 +4,7 @@
 //! it: the protocol has no such request. Hyprland blurs a surface only when a
 //! layer rule in its configuration names the namespace the surface was created
 //! with, so a bar that ships no rule of its own is at the mercy of whatever the
-//! desktop happens to have written down. The HyDE Project blurs the namespaces
+//! desktop happens to have written down. The `HyDE` Project blurs the namespaces
 //! of the programs it ships and nothing else, and its rules moved from
 //! `windowrules.conf` to a Lua configuration during the Hyprland 0.55
 //! migration, which drops any rule a user had added beside them.
@@ -169,7 +169,7 @@ fn try_spelling(command: &str, argument: &str) -> bool {
 /// Does nothing anywhere the compositor is not Hyprland, and nothing beyond
 /// wasting a moment where the desktop already states the same rule or has blur
 /// switched off altogether.
-pub(crate) fn request() {
+pub fn request() {
     if !on_hyprland() {
         return;
     }

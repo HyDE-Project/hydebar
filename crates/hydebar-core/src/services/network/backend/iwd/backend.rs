@@ -45,10 +45,10 @@ impl NetworkBackend for IwdDbus<'_> {
         let known_connections = nm.known_connections().await?;
         debug!("Known connections: {known_connections:?}");
 
-        let is_scanning = join_all(self.stations().await?.iter().map(|s| s.scanning()))
+        let is_scanning = join_all(self.stations().await?.iter().map(super::station::StationProxy::scanning))
             .await
             .into_iter()
-            .filter_map(|v| v.ok())
+            .filter_map(std::result::Result::ok)
             .any(|v| v);
 
         Ok(NetworkData {
@@ -82,12 +82,12 @@ impl NetworkBackend for IwdDbus<'_> {
             let ssid = n
                 .name()
                 .await
-                .map_err(|e| AppError::internal(format!("Failed to get network name: {}", e)))?;
+                .map_err(|e| AppError::internal(format!("Failed to get network name: {e}")))?;
             let path = n.inner().path().clone().into();
             let device_path = n
                 .device()
                 .await
-                .map_err(|e| AppError::internal(format!("Failed to get network device: {}", e)))?
+                .map_err(|e| AppError::internal(format!("Failed to get network device: {e}")))?
                 .clone();
             networks.push(KnownConnection::AccessPoint(AccessPoint {
                 ssid,
@@ -96,7 +96,7 @@ impl NetworkBackend for IwdDbus<'_> {
                 strength: super::queries::strength_from_rssi(s),
                 state: DeviceState::Unknown, // TODO:
                 public: n.type_().await.map_err(|e| {
-                    AppError::internal(format!("Failed to get network type: {}", e))
+                    AppError::internal(format!("Failed to get network type: {e}"))
                 })? == "open",
                 working: false // TODO:
             }));
@@ -107,7 +107,7 @@ impl NetworkBackend for IwdDbus<'_> {
     async fn scan_nearby_wifi(&self) -> AppResult<()> {
         for station in self.stations().await? {
             if station.scanning().await.map_err(|e| {
-                AppError::internal(format!("Failed to check scanning state: {}", e))
+                AppError::internal(format!("Failed to check scanning state: {e}"))
             })? {
                 debug!("Already scanning");
                 continue;
@@ -115,7 +115,7 @@ impl NetworkBackend for IwdDbus<'_> {
             station
                 .scan()
                 .await
-                .map_err(|e| AppError::internal(format!("Failed to start scan: {}", e)))?;
+                .map_err(|e| AppError::internal(format!("Failed to start scan: {e}")))?;
         }
         Ok(())
     }
@@ -123,10 +123,10 @@ impl NetworkBackend for IwdDbus<'_> {
     async fn set_wifi_enabled(&self, enabled: bool) -> AppResult<()> {
         AdapterProxy::new(self.inner().connection())
             .await
-            .map_err(|e| AppError::internal(format!("Failed to create AdapterProxy: {}", e)))?
+            .map_err(|e| AppError::internal(format!("Failed to create AdapterProxy: {e}")))?
             .set_powered(enabled)
             .await
-            .map_err(|e| AppError::internal(format!("Failed to set WiFi enabled state: {}", e)))?;
+            .map_err(|e| AppError::internal(format!("Failed to set WiFi enabled state: {e}")))?;
         Ok(())
     }
 
@@ -143,7 +143,7 @@ impl NetworkBackend for IwdDbus<'_> {
             let path = OwnedObjectPath::try_from("/hydebar/pwagent/main").unwrap();
 
             match agent_manager.unregister_agent(&path).await {
-                Ok(_) => info!("Successfully unregistered agent at {path}"),
+                Ok(()) => info!("Successfully unregistered agent at {path}"),
                 Err(e) => info!("Failed to unregister agent at {path}: {e}")
             }
 
@@ -160,32 +160,32 @@ impl NetworkBackend for IwdDbus<'_> {
                 .at(path.clone(), pw_agent)
                 .await
                 .map_err(|e| {
-                    AppError::internal(format!("Failed to register password agent: {}", e))
+                    AppError::internal(format!("Failed to register password agent: {e}"))
                 })?;
 
             agent_manager.register_agent(&path).await.map_err(|e| {
-                AppError::internal(format!("Failed to register agent with IWD: {}", e))
+                AppError::internal(format!("Failed to register agent with IWD: {e}"))
             })?;
 
             // Send the password to the agent channel
             tx.send(p).map_err(|e| {
-                AppError::internal(format!("Failed to send password to agent: {}", e))
+                AppError::internal(format!("Failed to send password to agent: {e}"))
             })?;
         }
 
         let net = NetworkProxy::builder(self.inner().connection())
             .destination("net.connman.iwd")
             .map_err(|e| {
-                AppError::internal(format!("Failed to set NetworkProxy destination: {}", e))
+                AppError::internal(format!("Failed to set NetworkProxy destination: {e}"))
             })?
             .path(ap.path.clone())
-            .map_err(|e| AppError::internal(format!("Failed to set NetworkProxy path: {}", e)))?
+            .map_err(|e| AppError::internal(format!("Failed to set NetworkProxy path: {e}")))?
             .build()
             .await
-            .map_err(|e| AppError::internal(format!("Failed to build NetworkProxy: {}", e)))?;
+            .map_err(|e| AppError::internal(format!("Failed to build NetworkProxy: {e}")))?;
         net.connect()
             .await
-            .map_err(|e| AppError::internal(format!("Failed to connect to network: {}", e)))?;
+            .map_err(|e| AppError::internal(format!("Failed to connect to network: {e}")))?;
         Ok(())
     }
 

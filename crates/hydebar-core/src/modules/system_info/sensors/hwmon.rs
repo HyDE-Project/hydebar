@@ -160,7 +160,7 @@ where
 }
 
 /// Folds a raw reading onto whole degrees Celsius.
-fn to_degrees(raw: i64) -> i32 {
+const fn to_degrees(raw: i64) -> i32 {
     if raw.abs() >= 1000 {
         (raw / 1000) as i32
     } else {

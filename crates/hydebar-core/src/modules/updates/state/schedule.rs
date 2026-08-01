@@ -18,7 +18,7 @@ use crate::{ModuleEventSender, config::UpdatesModuleConfig};
 /// configuration asking for one a second would be answered by the mirror
 /// rather than by the bar, so the floor is enforced here instead of
 /// trusting the file.
-pub(super) const MIN_INTERVAL: Duration = Duration::from_secs(60);
+pub(super) const MIN_INTERVAL: Duration = Duration::from_mins(1);
 
 /// Longest a single check may run before it is given up on.
 ///
@@ -26,7 +26,7 @@ pub(super) const MIN_INTERVAL: Duration = Duration::from_secs(60);
 /// as its own timeouts allow, and the schedule has only one runner:
 /// without a deadline of its own a single stuck check would silence the
 /// module until the bar restarts.
-const CHECK_TIMEOUT: Duration = Duration::from_secs(300);
+const CHECK_TIMEOUT: Duration = Duration::from_mins(5);
 
 /// The one task that ever runs the check command.
 ///
@@ -40,7 +40,7 @@ pub(super) struct Schedule {
     command:  Arc<str>,
     /// Time between the end of one check and the start of the next.
     interval: Duration,
-    /// HyDE branch the schedule compares the clone against.
+    /// `HyDE` branch the schedule compares the clone against.
     branch:   Arc<str>,
     /// Wake-up the manual button rings.
     wake:     Arc<Notify>,
@@ -114,7 +114,7 @@ impl Drop for Schedule {
 
 /// Runs the check command forever, once per interval and on request.
 ///
-/// A HyDE clone, when one is known, is compared against upstream on the
+/// A `HyDE` clone, when one is known, is compared against upstream on the
 /// same cadence and by the same single runner, so the two checks can
 /// never race each other over the network.
 async fn check_loop(
@@ -150,7 +150,7 @@ async fn check_loop(
     }
 }
 
-/// Compares the HyDE clone against upstream once.
+/// Compares the `HyDE` clone against upstream once.
 ///
 /// A failure keeps the last snapshot standing: an unreachable forge is no
 /// reason to tell the user their desktop stopped existing.

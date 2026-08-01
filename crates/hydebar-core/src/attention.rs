@@ -125,7 +125,7 @@ impl Attention {
 
     /// The module the user is looking at.
     #[must_use]
-    pub fn focus(&self) -> Option<&ModuleName> {
+    pub const fn focus(&self) -> Option<&ModuleName> {
         self.focus.as_ref()
     }
 

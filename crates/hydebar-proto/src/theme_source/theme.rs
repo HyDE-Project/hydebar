@@ -36,9 +36,9 @@ impl HydeTheme {
     /// Fills every field this snapshot leaves unset from `fallback`.
     ///
     /// Merging rather than replacing is what keeps the precedence honest: a
-    /// value already read from a HyDE directory is never displaced by one
+    /// value already read from a `HyDE` directory is never displaced by one
     /// guessed from a generated stylesheet.
-    fn fill_gaps_from(&mut self, fallback: HydeTheme) {
+    fn fill_gaps_from(&mut self, fallback: Self) {
         self.bar_background = self.bar_background.or(fallback.bar_background);
         self.module_background = self.module_background.or(fallback.module_background);
         self.text = self.text.or(fallback.text);
@@ -56,11 +56,11 @@ impl HydeTheme {
     }
 }
 
-/// Reads the desktop theme out of a HyDE install and the running compositor.
+/// Reads the desktop theme out of a `HyDE` install and the running compositor.
 ///
 /// Sources, in the order they are preferred:
 ///
-/// 1. the HyDE directories — `~/.cache/hyde` for the colours, `~/.config/hyde`
+/// 1. the `HyDE` directories — `~/.cache/hyde` for the colours, `~/.config/hyde`
 ///    and `~/.local/state/hyde` for the font;
 /// 2. the compositor, for the corner radius, because the bar should round its
 ///    islands exactly as the windows beside them are rounded;
@@ -99,7 +99,7 @@ pub fn load() -> HydeTheme {
     }
 }
 
-/// Fills the snapshot from the HyDE directories.
+/// Fills the snapshot from the `HyDE` directories.
 ///
 /// The colours are all-or-nothing: a palette that could not be read whole
 /// leaves every colour unset so the fallback can supply a consistent set,

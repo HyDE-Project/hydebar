@@ -56,13 +56,13 @@ impl std::fmt::Display for LauncherError {
                 command,
                 context
             } => {
-                write!(f, "failed to spawn `{}`: {}", command, context)
+                write!(f, "failed to spawn `{command}`: {context}")
             }
             Self::NonZeroExit {
                 command,
                 status
             } => {
-                write!(f, "command `{}` exited with status {}", command, status)
+                write!(f, "command `{command}` exited with status {status}")
             }
         }
     }
@@ -78,7 +78,7 @@ impl LauncherError {
         }
     }
 
-    fn exit_error(command: Arc<str>, status: ExitStatus) -> Self {
+    const fn exit_error(command: Arc<str>, status: ExitStatus) -> Self {
         Self::NonZeroExit {
             command,
             status

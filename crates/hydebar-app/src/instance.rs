@@ -35,7 +35,7 @@ use log::{debug, info, warn};
 const LOCK_FILE_NAME: &str = "instance.lock";
 
 /// How long a newcomer waits for the incumbent to release the lock.
-const TAKEOVER_TIMEOUT: Duration = Duration::from_millis(2000);
+const TAKEOVER_TIMEOUT: Duration = Duration::from_secs(2);
 
 /// How often the newcomer retries the lock while waiting.
 const TAKEOVER_POLL_INTERVAL: Duration = Duration::from_millis(25);
@@ -378,7 +378,7 @@ mod tests {
 
     #[test]
     fn an_unheld_lock_is_acquired() {
-        let _serial = SERIAL.lock().unwrap_or_else(|err| err.into_inner());
+        let _serial = SERIAL.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
         let dir = TempDir::new();
         let path = dir.lock_path();
 
@@ -391,7 +391,7 @@ mod tests {
 
     #[test]
     fn a_lock_held_by_a_live_process_is_detected() {
-        let _serial = SERIAL.lock().unwrap_or_else(|err| err.into_inner());
+        let _serial = SERIAL.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
         let dir = TempDir::new();
         let path = dir.lock_path();
 
@@ -412,7 +412,7 @@ mod tests {
 
     #[test]
     fn a_stale_lock_whose_process_is_gone_is_taken_over() {
-        let _serial = SERIAL.lock().unwrap_or_else(|err| err.into_inner());
+        let _serial = SERIAL.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
         let dir = TempDir::new();
         let path = dir.lock_path();
         let stale = dead_pid();
@@ -429,7 +429,7 @@ mod tests {
 
     #[test]
     fn the_takeover_signals_the_owner_and_waits_for_the_lock() {
-        let _serial = SERIAL.lock().unwrap_or_else(|err| err.into_inner());
+        let _serial = SERIAL.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
         let dir = TempDir::new();
         let path = dir.lock_path();
 
@@ -458,7 +458,7 @@ mod tests {
 
     #[test]
     fn an_owner_that_never_quits_aborts_the_takeover() {
-        let _serial = SERIAL.lock().unwrap_or_else(|err| err.into_inner());
+        let _serial = SERIAL.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
         let dir = TempDir::new();
         let path = dir.lock_path();
 
@@ -478,7 +478,7 @@ mod tests {
 
     #[test]
     fn releasing_the_lock_frees_the_slot() {
-        let _serial = SERIAL.lock().unwrap_or_else(|err| err.into_inner());
+        let _serial = SERIAL.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
         let dir = TempDir::new();
         let path = dir.lock_path();
 

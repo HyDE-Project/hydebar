@@ -80,13 +80,12 @@ impl App {
                 if let Some(action) = self.get_module_at_index(index, main_window_id) {
                     match action {
                         OnModulePress::Action(msg) => {
-                            info!("Activating module at index {} with action", index);
+                            info!("Activating module at index {index} with action");
                             return self.update(*msg);
                         }
                         OnModulePress::ToggleMenu(menu_type) => {
                             info!(
-                                "Activating module at index {} - opening menu {:?}",
-                                index, menu_type
+                                "Activating module at index {index} - opening menu {menu_type:?}"
                             );
 
                             let center_button_ref = ButtonUIRef {

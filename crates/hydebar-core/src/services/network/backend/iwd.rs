@@ -32,7 +32,7 @@ use zbus::fdo::ObjectManagerProxy;
 //info!("{:?}",n.inner().introspect().await?); => can use this to generate
 // proxy implementations
 
-/// Wrapper around the IWD D-Bus ObjectManager
+/// Wrapper around the IWD D-Bus `ObjectManager`
 pub struct IwdDbus<'a> {
     _inner: ObjectManagerProxy<'a>
 }

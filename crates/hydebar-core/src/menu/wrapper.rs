@@ -80,7 +80,7 @@ pub fn menu_wrapper<Message: Clone + 'static>(
     let padding = PADDING_EM * layout.font_size;
 
     let overflows = match (layout.content_height, layout.available_height) {
-        (Some(content), Some(room)) => content + padding * 2.0 > room,
+        (Some(content), Some(room)) => padding.mul_add(2.0, content) > room,
         _ => false
     };
 

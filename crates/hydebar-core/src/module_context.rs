@@ -34,7 +34,8 @@ impl ModuleContext {
     /// let context = ModuleContext::new(bus.sender(), runtime.handle().clone());
     /// # drop(context);
     /// ```
-    pub fn new(event_sender: EventSender, runtime_handle: Handle) -> Self {
+    #[must_use]
+    pub const fn new(event_sender: EventSender, runtime_handle: Handle) -> Self {
         Self {
             event_sender,
             runtime_handle
@@ -61,7 +62,8 @@ impl ModuleContext {
     /// let handle = context.runtime_handle();
     /// handle.spawn(async {});
     /// ```
-    pub fn runtime_handle(&self) -> &Handle {
+    #[must_use]
+    pub const fn runtime_handle(&self) -> &Handle {
         &self.runtime_handle
     }
 

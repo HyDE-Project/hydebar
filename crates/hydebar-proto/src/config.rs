@@ -145,7 +145,7 @@ fn default_log_level() -> String {
     "warn".to_owned()
 }
 
-fn default_menu_keyboard_focus() -> bool {
+const fn default_menu_keyboard_focus() -> bool {
     true
 }
 

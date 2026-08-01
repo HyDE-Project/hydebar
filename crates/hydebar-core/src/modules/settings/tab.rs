@@ -16,14 +16,14 @@ pub enum Tab {
 
 impl Tab {
     /// Every tab, in the order the window lists them.
-    pub const ALL: [Tab; 2] = [Tab::Appearance, Tab::Modules];
+    pub const ALL: [Self; 2] = [Self::Appearance, Self::Modules];
 
     /// Name shown on the tab.
     #[must_use]
     pub const fn label(self) -> &'static str {
         match self {
-            Tab::Appearance => "Appearance",
-            Tab::Modules => "Modules"
+            Self::Appearance => "Appearance",
+            Self::Modules => "Modules"
         }
     }
 }

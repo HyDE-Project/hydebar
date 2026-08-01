@@ -105,6 +105,7 @@ impl Outputs {
     /// assert!(!outputs.menu_is_open());
     /// # let _ = task;
     /// ```
+    #[must_use]
     pub fn new<Message: 'static>(
         style: AppearanceStyle,
         position: Position,

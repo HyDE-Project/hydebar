@@ -21,7 +21,7 @@ impl Default for Keybindings {
     }
 }
 
-fn default_enabled() -> bool {
+const fn default_enabled() -> bool {
     true
 }
 

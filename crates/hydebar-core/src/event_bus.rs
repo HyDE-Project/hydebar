@@ -25,10 +25,10 @@ pub enum BusEvent {
 }
 
 impl BusEvent {
-    fn is_coalescable_with(&self, other: &Self) -> bool {
+    const fn is_coalescable_with(&self, other: &Self) -> bool {
         matches!(
             (self, other),
-            (BusEvent::Redraw, BusEvent::Redraw) | (BusEvent::PopupToggle, BusEvent::PopupToggle)
+            (Self::Redraw, Self::Redraw) | (Self::PopupToggle, Self::PopupToggle)
         )
     }
 
@@ -39,15 +39,15 @@ impl BusEvent {
     /// whole truth, so a queue holding two of the same kind delivers stale
     /// state first and wastes a repaint on it. Incremental messages — the
     /// tray above all — have no key and are never replaced.
-    fn snapshot_key(&self) -> Option<u8> {
+    const fn snapshot_key(&self) -> Option<u8> {
         match self {
-            BusEvent::Module(ModuleEvent::Workspaces(
+            Self::Module(ModuleEvent::Workspaces(
                 modules::workspaces::Message::WorkspacesChanged(_)
             )) => Some(0),
-            BusEvent::Module(ModuleEvent::WindowTitle(
+            Self::Module(ModuleEvent::WindowTitle(
                 modules::window_title::Message::TitleChanged(_)
             )) => Some(1),
-            BusEvent::Module(ModuleEvent::SystemInfo(
+            Self::Module(ModuleEvent::SystemInfo(
                 modules::system_info::Message::Sampled(_)
             )) => Some(2),
             _ => None
@@ -151,7 +151,7 @@ impl EventBusInner {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EventBusError {
     QueueFull { capacity: usize },
     Poisoned
@@ -163,7 +163,7 @@ impl std::fmt::Display for EventBusError {
             Self::QueueFull {
                 capacity
             } => {
-                write!(f, "Event queue is full (capacity: {})", capacity)
+                write!(f, "Event queue is full (capacity: {capacity})")
             }
             Self::Poisoned => write!(f, "Event queue state is poisoned")
         }
@@ -177,8 +177,8 @@ impl From<EventBusError> for AppError {
         match err {
             EventBusError::QueueFull {
                 ..
-            } => AppError::internal(err.to_string()),
-            EventBusError::Poisoned => AppError::internal(err.to_string())
+            } => Self::internal(err.to_string()),
+            EventBusError::Poisoned => Self::internal(err.to_string())
         }
     }
 }
@@ -189,18 +189,21 @@ pub struct EventBus {
 }
 
 impl EventBus {
+    #[must_use]
     pub fn new(capacity: NonZeroUsize) -> Self {
         Self {
             inner: Arc::new(EventBusInner::new(capacity))
         }
     }
 
+    #[must_use]
     pub fn sender(&self) -> EventSender {
         EventSender {
             inner: Arc::clone(&self.inner)
         }
     }
 
+    #[must_use]
     pub fn receiver(&self) -> EventReceiver {
         EventReceiver {
             inner: Arc::clone(&self.inner)

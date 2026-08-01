@@ -80,7 +80,7 @@ impl Popup {
 
 /// How long a notification of `urgency` stays on screen.
 #[must_use]
-pub fn lifetime_for(urgency: &Urgency) -> Duration {
+pub const fn lifetime_for(urgency: &Urgency) -> Duration {
     match urgency {
         Urgency::Low => MIN_LIFETIME,
         Urgency::Normal => DEFAULT_LIFETIME,
@@ -94,7 +94,7 @@ pub fn lifetime_for(urgency: &Urgency) -> Duration {
 /// alone would sit on screen for ever; a clock is asked for exactly while
 /// something is on screen, which keeps an idle bar costing nothing.
 #[must_use]
-pub fn needs_expiry_clock(popups: &[Popup]) -> bool {
+pub const fn needs_expiry_clock(popups: &[Popup]) -> bool {
     !popups.is_empty()
 }
 
@@ -126,16 +126,17 @@ pub fn surface_height(popups: &[Popup], appearance: &Appearance) -> u32 {
         .map(|popup| {
             let lines = if popup.body.is_empty() { 1.0 } else { 2.2 };
 
-            lines * font_size * 1.4 + PADDING_EM * font_size * 2.0
+            (PADDING_EM * font_size).mul_add(2.0, lines * font_size * 1.4)
         })
         .sum();
 
-    let gaps = gap * (popups.len().saturating_sub(1)) as f32 + gap * 2.0;
+    let gaps = gap.mul_add(2.0, gap * (popups.len().saturating_sub(1)) as f32);
 
     (card + gaps).ceil().max(1.0) as u32
 }
 
 /// Renders the stack of popups for the surface they live on.
+#[must_use]
 pub fn view<'a, Message: 'a>(
     popups: &[Popup],
     appearance: &Appearance,

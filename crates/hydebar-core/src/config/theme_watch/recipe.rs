@@ -1,4 +1,4 @@
-//! Subscription recipe driving the HyDE theme watcher.
+//! Subscription recipe driving the `HyDE` theme watcher.
 
 use std::{
     any::TypeId,
@@ -35,7 +35,7 @@ const BATCH_SIZE: usize = 16;
 
 /// How long the watcher lets the desktop settle before it reads the theme.
 ///
-/// A HyDE switch is not one write but a chain of them spread over seconds: the
+/// A `HyDE` switch is not one write but a chain of them spread over seconds: the
 /// state file, the palette symlink, then every template the desktop renders
 /// from the new colours. Reading on the first of them would repaint the bar
 /// from a desktop that is half-way through changing, and reading on each of
@@ -66,7 +66,7 @@ impl Recipe for ThemeWatcher {
         self: Box<Self>,
         _input: subscription::EventStream
     ) -> iced::futures::stream::BoxStream<'static, Self::Output> {
-        let ThemeWatcher {
+        let Self {
             config_path,
             roots,
             targets,
@@ -157,7 +157,7 @@ impl Recipe for ThemeWatcher {
 
 /// Places a watch on every theme directory, reporting whether any took.
 ///
-/// A missing directory is not fatal: a session may have no HyDE cache yet while
+/// A missing directory is not fatal: a session may have no `HyDE` cache yet while
 /// its state file exists, and the theme is still worth following through the
 /// directories that do exist.
 fn add_watches(inotify: &Inotify, targets: &[ThemeWatchTarget]) -> bool {
@@ -187,7 +187,7 @@ fn add_watches(inotify: &Inotify, targets: &[ThemeWatchTarget]) -> bool {
     watched
 }
 
-/// Follows the HyDE theme and republishes the configuration when it changes.
+/// Follows the `HyDE` theme and republishes the configuration when it changes.
 ///
 /// The bar reads its palette from files the configuration watcher never sees,
 /// so without this a theme switch left the bar in the old colours until it was

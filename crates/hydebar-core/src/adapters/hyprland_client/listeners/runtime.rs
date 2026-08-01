@@ -73,7 +73,7 @@ fn build() -> Result<Handle, HyprlandError> {
 ///
 /// Returns [`HyprlandError::Message`] when the runtime backing the listeners
 /// could not be started.
-pub(crate) fn handle() -> Result<&'static Handle, HyprlandError> {
+pub fn handle() -> Result<&'static Handle, HyprlandError> {
     if let Some(handle) = LISTENER_RUNTIME.get() {
         return Ok(handle);
     }

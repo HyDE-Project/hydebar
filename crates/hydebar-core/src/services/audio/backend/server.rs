@@ -1,4 +1,4 @@
-//! Connection to the PulseAudio server.
+//! Connection to the `PulseAudio` server.
 
 use std::any::TypeId;
 
@@ -11,7 +11,7 @@ use masterror::{AppError, AppResult};
 
 use super::BackendHandle;
 
-/// Connection to the PulseAudio daemon owned by a single backend thread.
+/// Connection to the `PulseAudio` daemon owned by a single backend thread.
 ///
 /// Field order is load bearing: the introspector borrows the context and the
 /// context registers io events on the mainloop, so both must be torn down
@@ -36,7 +36,7 @@ impl PulseAudioServer {
             Proplist::new().ok_or_else(|| AppError::internal("create PulseAudio properties"))?;
         proplist
             .set_str(APPLICATION_NAME, name.as_str())
-            .map_err(|_| AppError::internal("failed to set application name"))?;
+            .map_err(|()| AppError::internal("failed to set application name"))?;
 
         let mut mainloop =
             Mainloop::new().ok_or_else(|| AppError::internal("create PulseAudio mainloop"))?;
@@ -46,7 +46,7 @@ impl PulseAudioServer {
 
         context
             .connect(None, FlagSet::NOFLAGS, None)
-            .map_err(|e| AppError::internal(format!("connect PulseAudio context: {}", e)))?;
+            .map_err(|e| AppError::internal(format!("connect PulseAudio context: {e}")))?;
 
         loop {
             match mainloop.iterate(true) {

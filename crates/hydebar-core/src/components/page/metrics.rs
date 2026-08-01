@@ -23,11 +23,11 @@ const GLYPH_ADVANCE_EM: f32 = 0.66;
 /// The estimate is deliberately a little generous: a row that asks for a few
 /// pixels too many is invisible, while a row that asks for too few pushes its
 /// label into the controls beside it.
-pub(crate) const ROW_SLACK_EM: f32 = 2.5;
+pub const ROW_SLACK_EM: f32 = 2.5;
 
 /// Width `label` takes when drawn at `font_size`.
 #[must_use]
-pub(crate) fn text_width(label: &str, font_size: f32) -> f32 {
+pub fn text_width(label: &str, font_size: f32) -> f32 {
     label.chars().count() as f32 * GLYPH_ADVANCE_EM * font_size
 }
 
@@ -36,8 +36,8 @@ pub(crate) fn text_width(label: &str, font_size: f32) -> f32 {
 /// `font_size` is the size the button's own label is drawn at, not the page
 /// text size, because the padding is stated in the button's own ems.
 #[must_use]
-pub(crate) fn button_width(label: &str, font_size: f32) -> f32 {
-    text_width(label, font_size) + 2.0 * style::BUTTON_PADDING_EM[1] * font_size
+pub fn button_width(label: &str, font_size: f32) -> f32 {
+    (2.0 * style::BUTTON_PADDING_EM[1]).mul_add(font_size, text_width(label, font_size))
 }
 
 /// Width a chip carrying `label` takes at `font_size`.
@@ -45,8 +45,8 @@ pub(crate) fn button_width(label: &str, font_size: f32) -> f32 {
 /// A chip is padded more tightly than a button, so measuring one as the other
 /// would fit fewer of them per row than the window actually draws.
 #[must_use]
-pub(crate) fn chip_width(label: &str, font_size: f32) -> f32 {
-    text_width(label, font_size) + 2.0 * style::CHIP_PADDING_EM[1] * font_size
+pub fn chip_width(label: &str, font_size: f32) -> f32 {
+    (2.0 * style::CHIP_PADDING_EM[1]).mul_add(font_size, text_width(label, font_size))
 }
 
 /// Width the live indicator adds in front of a reported value.
@@ -56,13 +56,13 @@ pub(crate) fn chip_width(label: &str, font_size: f32) -> f32 {
 /// show one so a window measured while nothing is running is still wide enough
 /// the moment something starts.
 #[must_use]
-pub(crate) fn indicator_width(font_size: f32) -> f32 {
+pub fn indicator_width(font_size: f32) -> f32 {
     style::icon_width(style::control_size(font_size)) + style::row_gap(font_size)
 }
 
 /// Width a row of buttons takes, gaps included.
 #[must_use]
-pub(crate) fn button_row_width<'a, I>(labels: I, font_size: f32, gap: f32) -> f32
+pub fn button_row_width<'a, I>(labels: I, font_size: f32, gap: f32) -> f32
 where
     I: IntoIterator<Item = &'a str>
 {
@@ -74,7 +74,7 @@ where
         count += 1.0;
     }
 
-    width + gap * (count - 1.0).max(0.0)
+    gap.mul_add((count - 1.0).max(0.0), width)
 }
 
 /// Width a settings row takes: the label column, one gap, then `controls`.
@@ -82,7 +82,7 @@ where
 /// Every page measures its rows through this one function, so a page cannot ask
 /// for a width its own row shape would not produce.
 #[must_use]
-pub(crate) fn row_width<'a, I>(controls: I, font_size: f32) -> f32
+pub fn row_width<'a, I>(controls: I, font_size: f32) -> f32
 where
     I: IntoIterator<Item = &'a str>
 {
@@ -100,7 +100,7 @@ where
 /// A reported value is plain text rather than a button, so it carries no
 /// padding of its own.
 #[must_use]
-pub(crate) fn status_row_width(value: &str, font_size: f32) -> f32 {
+pub fn status_row_width(value: &str, font_size: f32) -> f32 {
     style::label_width(font_size)
         + style::row_gap(font_size)
         + text_width(value, style::control_size(font_size))
@@ -114,7 +114,7 @@ pub(crate) fn status_row_width(value: &str, font_size: f32) -> f32 {
 /// such change, and a grid that rearranges under an open menu reads as
 /// breakage, not as a theme.
 #[must_use]
-pub(crate) fn chip_cell_width(labels: &[String], font_size: f32) -> f32 {
+pub fn chip_cell_width(labels: &[String], font_size: f32) -> f32 {
     let chip_font = style::control_size(font_size);
 
     labels
@@ -130,7 +130,7 @@ pub(crate) fn chip_cell_width(labels: &[String], font_size: f32) -> f32 {
 /// grouping depends on how many cells fit a row, never on which labels happen
 /// to share it.
 #[must_use]
-pub(crate) fn wrap_chips_into_rows(
+pub fn wrap_chips_into_rows(
     labels: &[String],
     available: f32,
     font_size: f32,

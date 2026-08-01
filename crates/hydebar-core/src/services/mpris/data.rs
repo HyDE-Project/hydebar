@@ -37,12 +37,12 @@ pub enum PlaybackStatus {
 }
 
 impl From<String> for PlaybackStatus {
-    fn from(playback_status: String) -> PlaybackStatus {
+    fn from(playback_status: String) -> Self {
         match playback_status.as_str() {
-            "Playing" => PlaybackStatus::Playing,
-            "Paused" => PlaybackStatus::Paused,
-            "Stopped" => PlaybackStatus::Stopped,
-            _ => PlaybackStatus::Playing
+            "Playing" => Self::Playing,
+            "Paused" => Self::Paused,
+            "Stopped" => Self::Stopped,
+            _ => Self::Playing
         }
     }
 }

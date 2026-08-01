@@ -126,12 +126,12 @@ where
     }
 
     /// Reports whether any mouse button carries a handler.
-    pub(super) fn is_pressable(&self) -> bool {
+    pub(super) const fn is_pressable(&self) -> bool {
         self.on_press.is_some() || self.on_right_press.is_some() || self.on_middle_press.is_some()
     }
 
     /// Borrows the handler the given mouse button carries, if any.
-    pub(super) fn handler(&self, button: &mouse::Button) -> Option<&OnPress<'a, Message>> {
+    pub(super) const fn handler(&self, button: &mouse::Button) -> Option<&OnPress<'a, Message>> {
         match button {
             mouse::Button::Right => self.on_right_press.as_ref(),
             mouse::Button::Middle => self.on_middle_press.as_ref(),
@@ -141,7 +141,7 @@ where
 
     /// Sets whether the contents of the [`Button`] should be clipped on
     /// overflow.
-    pub fn clip(mut self, clip: bool) -> Self {
+    pub const fn clip(mut self, clip: bool) -> Self {
         self.clip = clip;
         self
     }

@@ -13,8 +13,8 @@ use iced_core::Event;
 
 use super::{builder::Centerbox, draw, events, layout as centerbox_layout};
 
-impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
-    for Centerbox<'a, Message, Theme, Renderer>
+impl<Message, Theme, Renderer> Widget<Message, Theme, Renderer>
+    for Centerbox<'_, Message, Theme, Renderer>
 where
     Renderer: iced::advanced::Renderer
 {
@@ -23,7 +23,7 @@ where
     }
 
     fn diff(&self, tree: &mut Tree) {
-        tree.diff_children(&self.children)
+        tree.diff_children(&self.children);
     }
 
     fn size(&self) -> Size<Length> {

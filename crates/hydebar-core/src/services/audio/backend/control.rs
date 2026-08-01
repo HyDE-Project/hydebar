@@ -1,4 +1,4 @@
-//! Device control operations issued to the PulseAudio server.
+//! Device control operations issued to the `PulseAudio` server.
 
 use libpulse_binding::{
     callbacks::ListResult,
@@ -81,8 +81,7 @@ impl PulseAudioServer {
                 if data
                     .name
                     .as_ref()
-                    .map(|name| !name.contains("monitor"))
-                    .unwrap_or_default()
+                    .is_some_and(|name| !name.contains("monitor"))
                 {
                     debug!("Adding source data: {data:?}");
                     sources.push(data.into());

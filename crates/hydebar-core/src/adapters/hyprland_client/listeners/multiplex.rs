@@ -29,7 +29,7 @@ const FAN_OUT_CAPACITY: usize = 64;
 static MULTIPLEXER: OnceLock<Arc<Multiplexer>> = OnceLock::new();
 
 /// Broadcast taps of the one compositor connection.
-pub(crate) struct Multiplexer {
+pub struct Multiplexer {
     window:    broadcast::Sender<HyprlandWindowEvent>,
     workspace: broadcast::Sender<HyprlandWorkspaceEvent>,
     keyboard:  broadcast::Sender<HyprlandKeyboardEvent>,
@@ -63,7 +63,7 @@ fn multiplexer(client: &HyprlandClient, config: &Arc<HyprlandClientConfig>) -> A
 }
 
 /// Subscribes to the window events of the shared connection.
-pub(crate) fn window_events(
+pub fn window_events(
     client: &HyprlandClient,
     config: &Arc<HyprlandClientConfig>
 ) -> HyprlandEventStream<HyprlandWindowEvent> {
@@ -71,7 +71,7 @@ pub(crate) fn window_events(
 }
 
 /// Subscribes to the workspace events of the shared connection.
-pub(crate) fn workspace_events(
+pub fn workspace_events(
     client: &HyprlandClient,
     config: &Arc<HyprlandClientConfig>
 ) -> HyprlandEventStream<HyprlandWorkspaceEvent> {
@@ -79,7 +79,7 @@ pub(crate) fn workspace_events(
 }
 
 /// Subscribes to the keyboard events of the shared connection.
-pub(crate) fn keyboard_events(
+pub fn keyboard_events(
     client: &HyprlandClient,
     config: &Arc<HyprlandClientConfig>
 ) -> HyprlandEventStream<HyprlandKeyboardEvent> {
@@ -90,7 +90,7 @@ pub(crate) fn keyboard_events(
 ///
 /// The receiver supports blocking reads, so the blur guard can keep its plain
 /// thread while sharing the one connection with everything else.
-pub(crate) fn config_reloads(
+pub fn config_reloads(
     client: &HyprlandClient,
     config: &Arc<HyprlandClientConfig>
 ) -> broadcast::Receiver<()> {

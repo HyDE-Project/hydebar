@@ -11,7 +11,7 @@ use super::{
 };
 use crate::services::ServiceEvent;
 
-pub(crate) type TrayEventStream = Pin<Box<dyn Stream<Item = TrayEvent> + Send + 'static>>;
+pub type TrayEventStream = Pin<Box<dyn Stream<Item = TrayEvent> + Send + 'static>>;
 
 #[derive(Debug)]
 pub enum TrayWatcherError {
@@ -23,9 +23,9 @@ pub enum TrayWatcherError {
 impl std::fmt::Display for TrayWatcherError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Connection(err) => write!(f, "failed to connect to system bus: {}", err),
-            Self::Initialization(err) => write!(f, "failed to initialise tray service: {}", err),
-            Self::EventStream(err) => write!(f, "failed to listen for tray events: {}", err)
+            Self::Connection(err) => write!(f, "failed to connect to system bus: {err}"),
+            Self::Initialization(err) => write!(f, "failed to initialise tray service: {err}"),
+            Self::EventStream(err) => write!(f, "failed to listen for tray events: {err}")
         }
     }
 }
@@ -40,14 +40,13 @@ impl std::error::Error for TrayWatcherError {
     }
 }
 
-pub(crate) async fn initialize_data(
+pub async fn initialize_data(
     conn: &zbus::Connection
 ) -> Result<TrayData, TrayWatcherError> {
     debug!("initializing tray data");
     let proxy = StatusNotifierWatcherProxy::new(conn).await.map_err(|err| {
         TrayWatcherError::Initialization(AppError::internal(format!(
-            "Failed to create StatusNotifierWatcherProxy: {}",
-            err
+            "Failed to create StatusNotifierWatcherProxy: {err}"
         )))
     })?;
 
@@ -56,8 +55,7 @@ pub(crate) async fn initialize_data(
         .await
         .map_err(|err| {
             TrayWatcherError::Initialization(AppError::internal(format!(
-                "Failed to get registered status notifier items: {}",
-                err
+                "Failed to get registered status notifier items: {err}"
             )))
         })?;
 
@@ -74,11 +72,10 @@ pub(crate) async fn initialize_data(
     Ok(TrayData(status_items))
 }
 
-pub(crate) async fn events(conn: &zbus::Connection) -> Result<TrayEventStream, TrayWatcherError> {
+pub async fn events(conn: &zbus::Connection) -> Result<TrayEventStream, TrayWatcherError> {
     let watcher = StatusNotifierWatcherProxy::new(conn).await.map_err(|err| {
         TrayWatcherError::EventStream(AppError::internal(format!(
-            "Failed to create StatusNotifierWatcherProxy: {}",
-            err
+            "Failed to create StatusNotifierWatcherProxy: {err}"
         )))
     })?;
 
@@ -87,8 +84,7 @@ pub(crate) async fn events(conn: &zbus::Connection) -> Result<TrayEventStream, T
         .await
         .map_err(|err| {
             TrayWatcherError::EventStream(AppError::internal(format!(
-                "Failed to receive status notifier item registered: {}",
-                err
+                "Failed to receive status notifier item registered: {err}"
             )))
         })?
         .filter_map({
@@ -115,8 +111,7 @@ pub(crate) async fn events(conn: &zbus::Connection) -> Result<TrayEventStream, T
         .await
         .map_err(|err| {
             TrayWatcherError::EventStream(AppError::internal(format!(
-                "Failed to receive status notifier item unregistered: {}",
-                err
+                "Failed to receive status notifier item unregistered: {err}"
             )))
         })?
         .filter_map(|event| async move {
@@ -133,8 +128,7 @@ pub(crate) async fn events(conn: &zbus::Connection) -> Result<TrayEventStream, T
         .await
         .map_err(|err| {
             TrayWatcherError::EventStream(AppError::internal(format!(
-                "Failed to get registered status notifier items: {}",
-                err
+                "Failed to get registered status notifier items: {err}"
             )))
         })?;
 
@@ -143,7 +137,7 @@ pub(crate) async fn events(conn: &zbus::Connection) -> Result<TrayEventStream, T
     let mut menu_layout_change = Vec::with_capacity(items.len());
 
     for name in items {
-        let item = StatusNotifierItem::new(conn, name.to_string())
+        let item = StatusNotifierItem::new(conn, name.clone())
             .await
             .map_err(TrayWatcherError::EventStream)?;
 
@@ -159,7 +153,7 @@ pub(crate) async fn events(conn: &zbus::Connection) -> Result<TrayEventStream, T
                                 .await
                                 .ok()
                                 .and_then(icon::icon_from_pixmaps)
-                                .map(|icon| TrayEvent::IconChanged(name.to_owned(), icon))
+                                .map(|icon| TrayEvent::IconChanged(name.clone(), icon))
                         }
                     }
                 })
@@ -180,7 +174,7 @@ pub(crate) async fn events(conn: &zbus::Connection) -> Result<TrayEventStream, T
                                 .ok()
                                 .as_deref()
                                 .and_then(icon::icon_from_name)
-                                .map(|icon| TrayEvent::IconChanged(name.to_owned(), icon))
+                                .map(|icon| TrayEvent::IconChanged(name.clone(), icon))
                         }
                     }
                 })
@@ -203,7 +197,7 @@ pub(crate) async fn events(conn: &zbus::Connection) -> Result<TrayEventStream, T
                                     .await
                                     .ok()
                                     .map(|(_, layout)| {
-                                        TrayEvent::MenuLayoutChanged(name.to_owned(), layout)
+                                        TrayEvent::MenuLayoutChanged(name.clone(), layout)
                                     })
                             }
                         }
@@ -223,7 +217,7 @@ pub(crate) async fn events(conn: &zbus::Connection) -> Result<TrayEventStream, T
     .boxed())
 }
 
-pub(crate) async fn start_listening<F, Fut>(mut publisher: F)
+pub async fn start_listening<F, Fut>(mut publisher: F)
 where
     F: FnMut(ServiceEvent<TrayService>) -> Fut + Send,
     Fut: Future<Output = ()> + Send

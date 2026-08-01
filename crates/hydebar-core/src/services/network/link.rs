@@ -4,7 +4,7 @@
 //! wants what waybar shows — interface, address, gateway, netmask, frequency,
 //! signal in dBm. Those facts live with the routing table and the wireless
 //! stack, and reading them through `ip -j` and `iw` answers identically
-//! whether NetworkManager or iwd manages the link.
+//! whether `NetworkManager` or iwd manages the link.
 
 use serde::Deserialize;
 use tokio::process::Command;

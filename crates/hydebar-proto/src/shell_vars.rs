@@ -1,6 +1,6 @@
-//! Parser for the shell assignments HyDE keeps most of its settings in.
+//! Parser for the shell assignments `HyDE` keeps most of its settings in.
 //!
-//! Every HyDE file the bar reads — `~/.local/state/hyde/staterc`,
+//! Every `HyDE` file the bar reads — `~/.local/state/hyde/staterc`,
 //! `~/.config/hyde/config.toml`, `~/.local/share/hyde/env-theme` and the
 //! `~/.cache/hyde/*.dcol` palettes — is a flat list of `KEY="value"` lines that
 //! the scripts `source` rather than parse. One grammar therefore covers all of
@@ -14,9 +14,9 @@
 /// Value assigned to `key`, with its quotes removed.
 ///
 /// The last assignment wins, mirroring what sourcing the file in a shell would
-/// leave behind: HyDE appends rather than rewrites when it records a change.
+/// leave behind: `HyDE` appends rather than rewrites when it records a change.
 #[must_use]
-pub(crate) fn value_of(source: &str, key: &str) -> Option<String> {
+pub fn value_of(source: &str, key: &str) -> Option<String> {
     let mut found = None;
 
     for line in source.lines() {
@@ -34,11 +34,11 @@ pub(crate) fn value_of(source: &str, key: &str) -> Option<String> {
 
 /// Value assigned to `key`, read as a number.
 ///
-/// HyDE writes numbers as quoted strings (`enableWallDcol="1"`), so a caller
+/// `HyDE` writes numbers as quoted strings (`enableWallDcol="1"`), so a caller
 /// that needs the number would otherwise repeat the unquote-then-parse dance at
 /// every call site and get the "written by hand as `1 `" case subtly wrong.
 #[must_use]
-pub(crate) fn number<T: std::str::FromStr>(source: &str, key: &str) -> Option<T> {
+pub fn number<T: std::str::FromStr>(source: &str, key: &str) -> Option<T> {
     value_of(source, key).and_then(|value| value.trim().parse().ok())
 }
 
@@ -65,7 +65,7 @@ fn assignment(line: &str) -> Option<(&str, &str)> {
 ///
 /// Names are checked rather than assumed so a line such as `foo bar = baz` or a
 /// stray `case ... in` fragment is skipped instead of read as an assignment.
-fn is_name_char(c: char) -> bool {
+const fn is_name_char(c: char) -> bool {
     c.is_ascii_alphanumeric() || c == '_'
 }
 

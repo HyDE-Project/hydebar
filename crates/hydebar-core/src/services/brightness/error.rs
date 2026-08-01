@@ -11,7 +11,7 @@ pub enum BrightnessError {
     /// Parsing the brightness level from sysfs failed.
     Parse { context: Arc<str> },
 
-    /// DBus call to the system brightness controller failed.
+    /// `DBus` call to the system brightness controller failed.
     DBus { context: Arc<str> },
 
     /// No usable backlight device was detected on the system.
@@ -24,17 +24,17 @@ impl std::fmt::Display for BrightnessError {
             Self::Filesystem {
                 context
             } => {
-                write!(f, "failed to access backlight filesystem: {}", context)
+                write!(f, "failed to access backlight filesystem: {context}")
             }
             Self::Parse {
                 context
             } => {
-                write!(f, "failed to parse brightness value: {}", context)
+                write!(f, "failed to parse brightness value: {context}")
             }
             Self::DBus {
                 context
             } => {
-                write!(f, "failed to interact with system bus: {}", context)
+                write!(f, "failed to interact with system bus: {context}")
             }
             Self::MissingDevice => {
                 write!(f, "no backlight devices found")
@@ -64,7 +64,7 @@ impl BrightnessError {
         }
     }
 
-    /// Create a DBus error with contextual information.
+    /// Create a `DBus` error with contextual information.
     pub fn dbus(context: impl Into<String>) -> Self {
         Self::DBus {
             context: Self::arc_from(context)
@@ -74,19 +74,19 @@ impl BrightnessError {
 
 impl From<std::io::Error> for BrightnessError {
     fn from(value: std::io::Error) -> Self {
-        BrightnessError::filesystem(value.to_string())
+        Self::filesystem(value.to_string())
     }
 }
 
 impl From<std::num::ParseIntError> for BrightnessError {
     fn from(value: std::num::ParseIntError) -> Self {
-        BrightnessError::parse(value.to_string())
+        Self::parse(value.to_string())
     }
 }
 
 impl From<ZbusError> for BrightnessError {
     fn from(value: ZbusError) -> Self {
-        BrightnessError::dbus(value.to_string())
+        Self::dbus(value.to_string())
     }
 }
 

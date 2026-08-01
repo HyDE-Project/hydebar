@@ -24,7 +24,7 @@ pub(super) fn quick_settings_section<'a>(
 
     let mut before: Option<(Element<'a, Message>, Option<Element<'a, Message>>)> = None;
 
-    for (button, menu) in buttons.into_iter() {
+    for (button, menu) in buttons {
         match before.take() {
             Some((before_button, before_menu)) => {
                 section = section.push(
@@ -62,7 +62,7 @@ pub(super) fn quick_settings_section<'a>(
     section.into()
 }
 
-pub(crate) fn sub_menu_wrapper<Msg: 'static>(
+pub fn sub_menu_wrapper<Msg: 'static>(
     content: Element<Msg>,
     opacity: f32
 ) -> Element<Msg> {

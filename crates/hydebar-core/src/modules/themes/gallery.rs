@@ -6,7 +6,7 @@ use serde::Deserialize;
 const INDEX_URL: &str = "https://raw.githubusercontent.com/HyDE-Project/hyde-gallery/hyde-gallery/hyde-themes.json";
 
 /// How long a fetched catalogue serves before it is fetched again.
-const CACHE_LIFE: Duration = Duration::from_secs(24 * 60 * 60);
+const CACHE_LIFE: Duration = Duration::from_hours(24);
 
 /// One theme the gallery offers.
 #[derive(Debug, Clone, PartialEq)]
@@ -80,7 +80,7 @@ fn hex(value: &str) -> Option<iced::Color> {
     Some(iced::Color::from_rgb8(parsed.r, parsed.g, parsed.b))
 }
 
-/// Screenshots HyDE's local gallery database keeps, by canonical theme name.
+/// Screenshots `HyDE`'s local gallery database keeps, by canonical theme name.
 ///
 /// The database is written by the desktop's own gallery tooling — one
 /// directory per theme with a `screenshot.png` of the desktop wearing it —
@@ -129,8 +129,7 @@ async fn importer_present() -> bool {
         .stderr(std::process::Stdio::null())
         .status()
         .await
-        .map(|status| status.success())
-        .unwrap_or(false)
+        .is_ok_and(|status| status.success())
 }
 
 /// Reads the catalogue, from the cache while it is fresh.

@@ -3,7 +3,7 @@
 //! Wallbash hands every consumer the same 44 colours and lets a per-consumer
 //! template pick which of them means "background" and how transparent it is.
 //! The bar is one of those consumers, so the picks are restated here verbatim
-//! from the template HyDE ships for a bar
+//! from the template `HyDE` ships for a bar
 //! (`~/.local/share/wallbash/theme/waybar.dcol`). Copying the numbers rather
 //! than inventing new ones is deliberate: the bar has to look like the desktop
 //! it sits on, and the desktop is coloured from that template.
@@ -60,7 +60,7 @@ pub(in crate::theme_source) struct BarColors {
 impl BarColors {
     /// Picks the bar colours out of a wallbash palette.
     #[must_use]
-    pub(super) fn from_palette(palette: &DcolPalette) -> Self {
+    pub(super) const fn from_palette(palette: &DcolPalette) -> Self {
         Self {
             bar_background:    with_alpha(palette.primary[0], BAR_BACKGROUND_ALPHA),
             module_background: with_alpha(palette.primary[0], MODULE_BACKGROUND_ALPHA),
@@ -77,7 +77,7 @@ impl BarColors {
 ///
 /// A `.dcol` holds opaque channels only; the alpha lives in the template, which
 /// is why it is applied here and not while parsing.
-fn with_alpha(color: Rgba, alpha: f32) -> Rgba {
+const fn with_alpha(color: Rgba, alpha: f32) -> Rgba {
     Rgba::rgba(color.r, color.g, color.b, alpha)
 }
 

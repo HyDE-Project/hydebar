@@ -58,7 +58,7 @@ impl Screenshot {
         }
 
         let timestamp = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
-        let filename = screenshot_dir.join(format!("screenshot_{}.png", timestamp,));
+        let filename = screenshot_dir.join(format!("screenshot_{timestamp}.png"));
 
         std::thread::spawn(move || {
             let result = match action {
@@ -124,7 +124,7 @@ impl Screenshot {
         }
 
         let timestamp = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
-        let filename = video_dir.join(format!("recording_{}.mp4", timestamp,));
+        let filename = video_dir.join(format!("recording_{timestamp}.mp4"));
 
         debug!("Starting recording to: {}", filename.display());
 
@@ -183,6 +183,7 @@ impl Screenshot {
     }
 
     /// Render screenshot actions menu.
+    #[must_use]
     pub fn menu_view(&self, _opacity: f32, icons: &IconTheme) -> Element<'_, ScreenshotMessage> {
         let mut content = Column::new()
             .spacing(scale::scaled(8.0))
@@ -272,7 +273,7 @@ where
     fn register(
         &mut self,
         _: &ModuleContext,
-        _: Self::RegistrationData<'_>
+        (): Self::RegistrationData<'_>
     ) -> Result<(), ModuleError> {
         Ok(())
     }

@@ -80,11 +80,11 @@ impl App {
 }
 
 /// Binds the actions a module declared to its bar button.
-pub(super) fn attach_module_actions<'a>(
-    button: hydebar_core::position_button::PositionButton<'a, Message>,
+pub(super) fn attach_module_actions(
+    button: hydebar_core::position_button::PositionButton<'_, Message>,
     actions: ModuleActions,
     id: Id
-) -> hydebar_core::position_button::PositionButton<'a, Message> {
+) -> hydebar_core::position_button::PositionButton<'_, Message> {
     let button = match actions.left {
         Some(OnModulePress::Action(action)) => button.on_press(*action),
         Some(OnModulePress::ToggleMenu(menu_type)) => {
@@ -160,7 +160,7 @@ fn custom_module_right_action(definition: &CustomModuleDef) -> Option<OnModulePr
 ///
 /// It carries the surface the menu belongs to so the entry both runs its
 /// command and dismisses the menu.
-pub(crate) fn custom_menu_message(id: Id, entry: &CustomMenuEntry) -> Message {
+pub fn custom_menu_message(id: Id, entry: &CustomMenuEntry) -> Message {
     Message::CustomMenuAction(id, entry.command.trim().to_owned())
 }
 

@@ -97,7 +97,7 @@ impl KeyboardLayout {
         }
 
         let label = match config.labels.get(&self.active) {
-            Some(value) => value.to_string(),
+            Some(value) => value.clone(),
             None => self.active.clone()
         };
         self.shown.set(label, animated);
@@ -109,6 +109,7 @@ impl KeyboardLayout {
     }
 
     /// Whether the shown label is still dissolving.
+    #[must_use]
     pub fn is_fading(&self) -> bool {
         self.shown.is_animating()
     }
@@ -135,7 +136,7 @@ where
     fn register(
         &mut self,
         ctx: &ModuleContext,
-        _: Self::RegistrationData<'_>
+        (): Self::RegistrationData<'_>
     ) -> Result<(), ModuleError> {
         self.sender = Some(ctx.module_sender(ModuleEvent::KeyboardLayout));
 
@@ -199,12 +200,10 @@ where
         &self,
         config: Self::ViewData<'_>
     ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
-        if !self.multiple_layout {
-            None
-        } else {
+        if self.multiple_layout {
             let label = if self.shown.current().is_empty() {
                 let active = match config.labels.get(&self.active) {
-                    Some(value) => value.to_string(),
+                    Some(value) => value.clone(),
                     None => self.active.clone()
                 };
 
@@ -216,6 +215,8 @@ where
             Some((
                 label, None // Action handled in GUI layer
             ))
+        } else {
+            None
         }
     }
 }

@@ -14,6 +14,7 @@ use super::{
 use crate::{components::icons::IconTheme, menu::MenuType};
 
 /// Bar entry drawing the graphics temperature out of the shared sample.
+#[must_use]
 pub fn bar_view<M>(
     data: &SystemInfoData,
     config: &SystemModuleConfig,

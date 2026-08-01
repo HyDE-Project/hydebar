@@ -72,7 +72,7 @@ const SECTIONS: [(&str, &[(&str, &[&str])]); 3] = [
 /// list itself rather than written down here.
 const NOTIFICATIONS: &str = "Notifications";
 
-/// Label of the row the HyDE branch is picked on.
+/// Label of the row the `HyDE` branch is picked on.
 ///
 /// Kept out of [`SECTIONS`] like the notification row, and drawn only
 /// while the updates module is configured: the choice is stored in
@@ -250,7 +250,7 @@ pub(super) fn rows(auto_scale: bool, hyde_branch: bool) -> f32 {
     let scaled = if auto_scale { SCALED_ROWS } else { 0.0 };
     let branch = if hyde_branch { 1.0 } else { 0.0 };
 
-    SECTIONS.len() as f32 * style::SECTION_TITLE_ROWS + settings as f32 + 1.0 + branch
+    (SECTIONS.len() as f32).mul_add(style::SECTION_TITLE_ROWS, settings as f32) + 1.0 + branch
         - scaled
 }
 

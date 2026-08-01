@@ -31,7 +31,8 @@ pub struct Calendar {
 
 impl Calendar {
     /// Month and year currently in view.
-    pub fn state(&self) -> &CalendarState {
+    #[must_use]
+    pub const fn state(&self) -> &CalendarState {
         &self.state
     }
 
@@ -39,11 +40,13 @@ impl Calendar {
     ///
     /// Stated by the module so the box hugs the grid; a stock menu width
     /// leaves a blank margin beside a grid that cannot grow into it.
+    #[must_use]
     pub fn content_width(font_size: f32) -> f32 {
         metrics::content_width(font_size)
     }
 
     /// Height the menu content needs, from the same constants the view uses.
+    #[must_use]
     pub fn content_height() -> f32 {
         metrics::content_height()
     }
@@ -58,6 +61,7 @@ impl Calendar {
     }
 
     /// The month view: navigation, weekday header and the day grid.
+    #[must_use]
     pub fn menu_view(&self, icons: &IconTheme) -> Element<'_, Message> {
         view::month_view(&self.state, icons)
     }
@@ -87,6 +91,7 @@ mod month {
 
     impl CalendarState {
         /// The month that holds today.
+        #[must_use]
         pub fn current() -> Self {
             Self::default()
         }
@@ -109,16 +114,18 @@ mod month {
             })
         }
 
-        pub fn year(&self) -> i32 {
+        #[must_use]
+        pub const fn year(&self) -> i32 {
             self.year
         }
 
         /// Month in view, 1–12.
-        pub fn month(&self) -> u32 {
+        #[must_use]
+        pub const fn month(&self) -> u32 {
             self.month
         }
 
-        pub fn previous_month(&mut self) {
+        pub const fn previous_month(&mut self) {
             if self.month == 1 {
                 self.month = 12;
                 self.year -= 1;
@@ -127,7 +134,7 @@ mod month {
             }
         }
 
-        pub fn next_month(&mut self) {
+        pub const fn next_month(&mut self) {
             if self.month == 12 {
                 self.month = 1;
                 self.year += 1;
@@ -137,13 +144,14 @@ mod month {
         }
 
         /// English name of the month in view.
+        #[must_use]
         pub fn month_name(&self) -> &'static str {
             Month::try_from(self.month as u8)
-                .map(|month| month.name())
-                .unwrap_or("Unknown")
+                .map_or("Unknown", |month| month.name())
         }
 
         /// The grid of days this month shows.
+        #[must_use]
         pub fn generate_calendar(&self) -> CalendarData {
             CalendarData::generate(self.year, self.month)
         }
@@ -168,6 +176,7 @@ mod month {
 
     impl CalendarData {
         /// The grid for `year`/`month`, padded with the neighbouring months.
+        #[must_use]
         pub fn generate(year: i32, month: u32) -> Self {
             let today = Local::now().date_naive();
 
@@ -240,7 +249,7 @@ mod month {
     impl std::fmt::Display for CalendarError {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             match self {
-                CalendarError::InvalidMonth {
+                Self::InvalidMonth {
                     month
                 } => {
                     write!(f, "invalid month: {month}, must be in range 1-12")
@@ -293,20 +302,19 @@ mod metrics {
 
     /// Width of the day grid alone.
     pub(super) fn grid_width() -> f32 {
-        scale::scaled(7.0 * CELL + 6.0 * CELL_GAP)
+        scale::scaled(6.0f32.mul_add(CELL_GAP, 7.0 * CELL))
     }
 
     /// Width the menu box needs, box padding included.
     pub(super) fn content_width(font_size: f32) -> f32 {
-        scale::scaled(7.0 * CELL + 6.0 * CELL_GAP + 2.0 * OUTER_PADDING)
-            + 2.0 * crate::menu::MENU_PADDING_EM * font_size
+        (2.0 * crate::menu::MENU_PADDING_EM).mul_add(font_size, scale::scaled(2.0f32.mul_add(OUTER_PADDING, 6.0f32.mul_add(CELL_GAP, 7.0 * CELL))))
     }
 
     /// Height the menu content needs.
     pub(super) fn content_height() -> f32 {
         let header = scaled_line(TITLE_SIZE) + NAV_BUTTON_PADDING;
         let weekdays = scaled_line(WEEKDAY_SIZE);
-        let grid = scale::scaled(6.0 * CELL + 5.0 * CELL_GAP);
+        let grid = scale::scaled(5.0f32.mul_add(CELL_GAP, 6.0 * CELL));
         let rule = 1.0;
         let spacings = 3.0 * scale::scaled(SECTION_GAP);
         let padding = scale::scaled(2.0 * OUTER_PADDING);
@@ -368,7 +376,6 @@ mod view {
                         .align_x(Alignment::Center)
                         .into()
                 })
-                .collect::<Vec<_>>()
         )
         .spacing(scale::scaled(CELL_GAP));
 
@@ -377,7 +384,7 @@ mod view {
             .days
             .chunks(7)
             .map(|week| {
-                Row::with_children(week.iter().map(day_cell).collect::<Vec<_>>())
+                Row::with_children(week.iter().map(day_cell))
                     .spacing(scale::scaled(CELL_GAP))
                     .into()
             })

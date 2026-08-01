@@ -1,4 +1,4 @@
-//! Proxy for the NetworkManager root interface.
+//! Proxy for the `NetworkManager` root interface.
 
 use std::collections::HashMap;
 

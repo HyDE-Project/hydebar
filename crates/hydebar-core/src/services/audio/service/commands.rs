@@ -48,7 +48,7 @@ impl AudioService {
                     .find(|sink| sink.name == self.data.server_info.default_sink)
                     .and_then(|sink| {
                         sink.volume
-                            .scale_volume(volume as f64 / 100.0)
+                            .scale_volume(f64::from(volume) / 100.0)
                             .map(|volume| BackendCommand::SinkVolume(sink.name.clone(), *volume))
                     });
 
@@ -65,7 +65,7 @@ impl AudioService {
                     .and_then(|source| {
                         source
                             .volume
-                            .scale_volume(volume as f64 / 100.0)
+                            .scale_volume(f64::from(volume) / 100.0)
                             .map(|volume| {
                                 BackendCommand::SourceVolume(source.name.clone(), *volume)
                             })

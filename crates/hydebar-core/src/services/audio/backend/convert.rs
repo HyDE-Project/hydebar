@@ -1,4 +1,4 @@
-//! Conversion of PulseAudio structures into the service model.
+//! Conversion of `PulseAudio` structures into the service model.
 
 use libpulse_binding::{
     context::introspect::{SinkInfo, SourceInfo},
@@ -40,7 +40,9 @@ impl From<&SinkInfo<'_>> for Device {
                 .ports
                 .iter()
                 .filter_map(|port| {
-                    if port.available != PortAvailable::No {
+                    if port.available == PortAvailable::No {
+                        None
+                    } else {
                         Some(Port {
                             name:        port
                                 .name
@@ -60,8 +62,6 @@ impl From<&SinkInfo<'_>> for Device {
                             active:      value.active_port.as_ref().and_then(|p| p.name.as_ref())
                                 == port.name.as_ref()
                         })
-                    } else {
-                        None
                     }
                 })
                 .collect::<Vec<_>>()
@@ -87,7 +87,9 @@ impl From<&SourceInfo<'_>> for Device {
                 .ports
                 .iter()
                 .filter_map(|port| {
-                    if port.available != PortAvailable::No {
+                    if port.available == PortAvailable::No {
+                        None
+                    } else {
                         Some(Port {
                             name:        port
                                 .name
@@ -107,8 +109,6 @@ impl From<&SourceInfo<'_>> for Device {
                             active:      value.active_port.as_ref().and_then(|p| p.name.as_ref())
                                 == port.name.as_ref()
                         })
-                    } else {
-                        None
                     }
                 })
                 .collect::<Vec<_>>()

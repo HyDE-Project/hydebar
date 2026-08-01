@@ -17,7 +17,7 @@ const MAX_RESTART_DELAY: Duration = Duration::from_secs(30);
 /// The delay doubles per consecutive failure and then flattens at
 /// [`MAX_RESTART_DELAY`], so a compositor that never comes back costs one
 /// connection attempt every thirty seconds instead of a spin.
-pub(crate) fn restart_delay(base: Duration, attempt: u32) -> Duration {
+pub fn restart_delay(base: Duration, attempt: u32) -> Duration {
     if base.is_zero() || attempt == 0 {
         return Duration::ZERO;
     }

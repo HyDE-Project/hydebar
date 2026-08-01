@@ -14,7 +14,7 @@ use std::time::Duration;
 /// let delay = calculate_retry_delay(Duration::from_millis(100), 3);
 /// assert_eq!(delay, Duration::from_millis(300));
 /// ```
-pub(crate) fn calculate_retry_delay(base_backoff: Duration, attempt: u8) -> Duration {
+pub fn calculate_retry_delay(base_backoff: Duration, attempt: u8) -> Duration {
     if attempt == 0 {
         return Duration::ZERO;
     }

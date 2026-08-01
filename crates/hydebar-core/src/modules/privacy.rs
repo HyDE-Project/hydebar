@@ -76,7 +76,7 @@ where
     fn register(
         &mut self,
         ctx: &ModuleContext,
-        _: Self::RegistrationData<'_>
+        (): Self::RegistrationData<'_>
     ) -> Result<(), ModuleError> {
         for task in self.tasks.drain(..) {
             task.abort();
@@ -117,10 +117,10 @@ where
         Ok(())
     }
 
-    /// Stops watching PipeWire and the webcam nodes once the indicator leaves
+    /// Stops watching `PipeWire` and the webcam nodes once the indicator leaves
     /// the bar.
     ///
-    /// The listener keeps a PipeWire connection and an inotify watch alive; a
+    /// The listener keeps a `PipeWire` connection and an inotify watch alive; a
     /// layout that shows no privacy dot has no use for either.
     fn deregister(&mut self) {
         for task in self.tasks.drain(..) {
@@ -136,7 +136,9 @@ where
         icons: Self::ViewData<'_>
     ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
         if let Some(service) = self.service.as_ref() {
-            if !service.no_access() {
+            if service.no_access() {
+                None
+            } else {
                 Some((
                     container(
                         Row::new()
@@ -163,8 +165,6 @@ where
                     .into(),
                     None
                 ))
-            } else {
-                None
             }
         } else {
             None
@@ -177,7 +177,7 @@ struct ModulePublisher {
 }
 
 impl ModulePublisher {
-    fn new(sender: ModuleEventSender<PrivacyMessage>) -> Self {
+    const fn new(sender: ModuleEventSender<PrivacyMessage>) -> Self {
         Self {
             sender
         }

@@ -23,16 +23,16 @@ pub enum BatteryIcon {
 impl From<BatteryIcon> for Icons {
     fn from(icon: BatteryIcon) -> Self {
         match icon {
-            BatteryIcon::Charging(_) => Icons::BatteryCharging,
+            BatteryIcon::Charging(_) => Self::BatteryCharging,
             BatteryIcon::Discharging(capacity) => match capacity {
-                0..=20 => Icons::Battery0,
-                21..=40 => Icons::Battery1,
-                41..=60 => Icons::Battery2,
-                61..=80 => Icons::Battery3,
-                _ => Icons::Battery4
+                0..=20 => Self::Battery0,
+                21..=40 => Self::Battery1,
+                41..=60 => Self::Battery2,
+                61..=80 => Self::Battery3,
+                _ => Self::Battery4
             },
-            BatteryIcon::Full => Icons::Battery4,
-            BatteryIcon::Unknown => Icons::Battery0
+            BatteryIcon::Full => Self::Battery4,
+            BatteryIcon::Unknown => Self::Battery0
         }
     }
 }
@@ -50,10 +50,10 @@ pub enum PowerProfile {
 impl From<crate::services::upower::PowerProfile> for PowerProfile {
     fn from(profile: crate::services::upower::PowerProfile) -> Self {
         match profile {
-            crate::services::upower::PowerProfile::PowerSaver => PowerProfile::PowerSaver,
-            crate::services::upower::PowerProfile::Balanced => PowerProfile::Balanced,
-            crate::services::upower::PowerProfile::Performance => PowerProfile::Performance,
-            crate::services::upower::PowerProfile::Unknown => PowerProfile::Unknown
+            crate::services::upower::PowerProfile::PowerSaver => Self::PowerSaver,
+            crate::services::upower::PowerProfile::Balanced => Self::Balanced,
+            crate::services::upower::PowerProfile::Performance => Self::Performance,
+            crate::services::upower::PowerProfile::Unknown => Self::Unknown
         }
     }
 }
@@ -61,10 +61,10 @@ impl From<crate::services::upower::PowerProfile> for PowerProfile {
 impl From<PowerProfile> for Icons {
     fn from(profile: PowerProfile) -> Self {
         match profile {
-            PowerProfile::Performance => Icons::Performance,
-            PowerProfile::Balanced => Icons::Balanced,
-            PowerProfile::PowerSaver => Icons::PowerSaver,
-            PowerProfile::Unknown => Icons::Balanced
+            PowerProfile::Performance => Self::Performance,
+            PowerProfile::Balanced => Self::Balanced,
+            PowerProfile::PowerSaver => Self::PowerSaver,
+            PowerProfile::Unknown => Self::Balanced
         }
     }
 }
@@ -90,7 +90,8 @@ pub struct BatteryData {
 }
 
 impl BatteryData {
-    pub fn new(
+    #[must_use]
+    pub const fn new(
         capacity: u8,
         charging: bool,
         time_remaining: Option<Duration>,
@@ -150,12 +151,14 @@ pub struct Battery {
 }
 
 impl Battery {
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Returns current battery data if available
-    pub fn data(&self) -> Option<&BatteryData> {
+    #[must_use]
+    pub const fn data(&self) -> Option<&BatteryData> {
         self.data.as_ref()
     }
 
@@ -180,11 +183,13 @@ impl Battery {
     }
 
     /// Whether the shown percentage is still dissolving.
+    #[must_use]
     pub fn is_fading(&self) -> bool {
         self.shown.is_animating()
     }
 
     /// The percentage as the bar shows it, painted by the indicator state.
+    #[must_use]
     pub fn percent_element<M: 'static>(&self, size: f32) -> Element<'static, M> {
         use crate::components::crossfade::Role;
 
@@ -223,7 +228,7 @@ impl Battery {
                     }
                 }
             },
-            ServiceEvent::Error(_) => {
+            ServiceEvent::Error(()) => {
                 warn!("Failed to receive battery updates from UPower");
             }
         }

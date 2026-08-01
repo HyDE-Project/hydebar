@@ -14,48 +14,48 @@ pub enum DeviceType {
 }
 
 impl From<u32> for DeviceType {
-    fn from(device_type: u32) -> DeviceType {
+    fn from(device_type: u32) -> Self {
         match device_type {
-            1 => DeviceType::Ethernet,
-            2 => DeviceType::Wifi,
-            5 => DeviceType::Bluetooth,
-            14 => DeviceType::Generic,
-            16 => DeviceType::TunTap,
-            29 => DeviceType::WireGuard,
-            3..=32 => DeviceType::Other,
-            _ => DeviceType::Unknown
+            1 => Self::Ethernet,
+            2 => Self::Wifi,
+            5 => Self::Bluetooth,
+            14 => Self::Generic,
+            16 => Self::TunTap,
+            29 => Self::WireGuard,
+            3..=32 => Self::Other,
+            _ => Self::Unknown
         }
     }
 }
 
 impl From<u32> for ConnectivityState {
-    fn from(state: u32) -> ConnectivityState {
+    fn from(state: u32) -> Self {
         match state {
-            1 => ConnectivityState::None,
-            2 => ConnectivityState::Portal,
-            3 => ConnectivityState::Loss,
-            4 => ConnectivityState::Full,
-            _ => ConnectivityState::Unknown
+            1 => Self::None,
+            2 => Self::Portal,
+            3 => Self::Loss,
+            4 => Self::Full,
+            _ => Self::Unknown
         }
     }
 }
 
 impl From<String> for ConnectivityState {
-    fn from(state: String) -> ConnectivityState {
+    fn from(state: String) -> Self {
         match state.as_str() {
-            "inactive" | "disconnected" => ConnectivityState::None,
-            "portal" => ConnectivityState::Portal,
-            "failed" => ConnectivityState::Loss,
-            "connected" => ConnectivityState::Full,
-            _ => ConnectivityState::Unknown
+            "inactive" | "disconnected" => Self::None,
+            "portal" => Self::Portal,
+            "failed" => Self::Loss,
+            "connected" => Self::Full,
+            _ => Self::Unknown
         }
     }
 }
 
-impl From<Vec<ConnectivityState>> for ConnectivityState {
-    fn from(states: Vec<ConnectivityState>) -> ConnectivityState {
+impl From<Vec<Self>> for ConnectivityState {
+    fn from(states: Vec<Self>) -> Self {
         if states.is_empty() {
-            return ConnectivityState::Unknown;
+            return Self::Unknown;
         }
 
         let mut state = states[0];
@@ -84,19 +84,19 @@ impl From<ConnectivityState> for u32 {
 impl From<u32> for DeviceState {
     fn from(device_state: u32) -> Self {
         match device_state {
-            10 => DeviceState::Unmanaged,
-            20 => DeviceState::Unavailable,
-            30 => DeviceState::Disconnected,
-            40 => DeviceState::Prepare,
-            50 => DeviceState::Config,
-            60 => DeviceState::NeedAuth,
-            70 => DeviceState::IpConfig,
-            80 => DeviceState::IpCheck,
-            90 => DeviceState::Secondaries,
-            100 => DeviceState::Activated,
-            110 => DeviceState::Deactivating,
-            120 => DeviceState::Failed,
-            _ => DeviceState::Unknown
+            10 => Self::Unmanaged,
+            20 => Self::Unavailable,
+            30 => Self::Disconnected,
+            40 => Self::Prepare,
+            50 => Self::Config,
+            60 => Self::NeedAuth,
+            70 => Self::IpConfig,
+            80 => Self::IpCheck,
+            90 => Self::Secondaries,
+            100 => Self::Activated,
+            110 => Self::Deactivating,
+            120 => Self::Failed,
+            _ => Self::Unknown
         }
     }
 }

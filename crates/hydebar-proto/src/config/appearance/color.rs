@@ -23,10 +23,10 @@ pub enum AppearanceColor {
 impl AppearanceColor {
     /// Returns the base [`Color`] representation for the configured palette.
     #[must_use]
-    pub fn get_base(&self) -> Color {
+    pub const fn get_base(&self) -> Color {
         match self {
-            AppearanceColor::Simple(color) => Color::from_rgb8(color.r, color.g, color.b),
-            AppearanceColor::Complete {
+            Self::Simple(color) => Color::from_rgb8(color.r, color.g, color.b),
+            Self::Complete {
                 base, ..
             } => Color::from_rgb8(base.r, base.g, base.b)
         }
@@ -36,8 +36,8 @@ impl AppearanceColor {
     #[must_use]
     pub fn get_text(&self) -> Option<Color> {
         match self {
-            AppearanceColor::Simple(_) => None,
-            AppearanceColor::Complete {
+            Self::Simple(_) => None,
+            Self::Complete {
                 text, ..
             } => text.map(|color| Color::from_rgb8(color.r, color.g, color.b))
         }
@@ -47,16 +47,15 @@ impl AppearanceColor {
     #[must_use]
     pub fn get_weak_pair(&self, text_fallback: Color) -> Option<palette::Pair> {
         match self {
-            AppearanceColor::Simple(_) => None,
-            AppearanceColor::Complete {
+            Self::Simple(_) => None,
+            Self::Complete {
                 weak,
                 text,
                 ..
             } => weak.map(|color| {
                 palette::Pair::new(
                     Color::from_rgb8(color.r, color.g, color.b),
-                    text.map(|color| Color::from_rgb8(color.r, color.g, color.b))
-                        .unwrap_or(text_fallback)
+                    text.map_or(text_fallback, |color| Color::from_rgb8(color.r, color.g, color.b))
                 )
             })
         }
@@ -66,16 +65,15 @@ impl AppearanceColor {
     #[must_use]
     pub fn get_strong_pair(&self, text_fallback: Color) -> Option<palette::Pair> {
         match self {
-            AppearanceColor::Simple(_) => None,
-            AppearanceColor::Complete {
+            Self::Simple(_) => None,
+            Self::Complete {
                 strong,
                 text,
                 ..
             } => strong.map(|color| {
                 palette::Pair::new(
                     Color::from_rgb8(color.r, color.g, color.b),
-                    text.map(|color| Color::from_rgb8(color.r, color.g, color.b))
-                        .unwrap_or(text_fallback)
+                    text.map_or(text_fallback, |color| Color::from_rgb8(color.r, color.g, color.b))
                 )
             })
         }
@@ -84,7 +82,7 @@ impl AppearanceColor {
 
 static PRIMARY: HexColor = HexColor::rgb(250, 179, 135);
 
-pub(super) fn default_background_color() -> AppearanceColor {
+pub(super) const fn default_background_color() -> AppearanceColor {
     AppearanceColor::Complete {
         base:   HexColor::rgb(30, 30, 46),
         strong: Some(HexColor::rgb(69, 71, 90)),
@@ -102,7 +100,7 @@ pub(super) fn default_primary_color() -> AppearanceColor {
     }
 }
 
-pub(super) fn default_secondary_color() -> AppearanceColor {
+pub(super) const fn default_secondary_color() -> AppearanceColor {
     AppearanceColor::Complete {
         base:   HexColor::rgb(17, 17, 27),
         strong: Some(HexColor::rgb(24, 24, 37)),
@@ -111,11 +109,11 @@ pub(super) fn default_secondary_color() -> AppearanceColor {
     }
 }
 
-pub(super) fn default_success_color() -> AppearanceColor {
+pub(super) const fn default_success_color() -> AppearanceColor {
     AppearanceColor::Simple(HexColor::rgb(166, 227, 161))
 }
 
-pub(super) fn default_danger_color() -> AppearanceColor {
+pub(super) const fn default_danger_color() -> AppearanceColor {
     AppearanceColor::Complete {
         base:   HexColor::rgb(243, 139, 168),
         weak:   Some(HexColor::rgb(249, 226, 175)),
@@ -124,11 +122,11 @@ pub(super) fn default_danger_color() -> AppearanceColor {
     }
 }
 
-pub(super) fn default_warning_color() -> AppearanceColor {
+pub(super) const fn default_warning_color() -> AppearanceColor {
     AppearanceColor::Simple(HexColor::rgb(250, 179, 135))
 }
 
-pub(super) fn default_text_color() -> AppearanceColor {
+pub(super) const fn default_text_color() -> AppearanceColor {
     AppearanceColor::Simple(HexColor::rgb(205, 214, 244))
 }
 

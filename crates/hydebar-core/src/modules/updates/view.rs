@@ -73,7 +73,6 @@ fn log_block(lines: &[String]) -> Element<'_, Message> {
                         .width(Length::Fill)
                         .into()
                 })
-                .collect::<Vec<Element<'_, Message>>>()
         )
         .spacing(scale::scaled(2.0))
     )
@@ -81,7 +80,7 @@ fn log_block(lines: &[String]) -> Element<'_, Message> {
     .into()
 }
 
-/// What the bar knows about the HyDE installation itself.
+/// What the bar knows about the `HyDE` installation itself.
 ///
 /// Reads like the package block above it: a current clone is one quiet
 /// line naming the branch it follows, a stale one unfolds into the
@@ -150,7 +149,6 @@ fn hyde_section<'a>(
                                     .width(Length::Fill)
                                     .into()
                             })
-                            .collect::<Vec<Element<'_, Message>>>()
                     )
                     .padding(Padding::ZERO.right(16))
                     .spacing(scale::scaled(4.0))
@@ -232,7 +230,6 @@ fn build_updates_list<'a>(
                         .updates()
                         .iter()
                         .map(|update| build_update_entry(update))
-                        .collect::<Vec<Element<'_, Message>>>()
                 )
                 .padding(Padding::ZERO.right(16))
                 .spacing(scale::scaled(4.0))
@@ -264,11 +261,11 @@ fn build_update_entry(update: &super::state::Update) -> Element<'_, Message> {
 
 /// A full-width menu action; `message: None` draws it disabled, which is
 /// how one update keeps the other from starting beside it.
-fn action_button<'a>(
-    label: &'a str,
+fn action_button(
+    label: &str,
     message: Option<Message>,
     opacity: f32
-) -> iced::widget::Button<'a, Message> {
+) -> iced::widget::Button<'_, Message> {
     button(label)
         .style(ghost_button_style(opacity))
         .padding([scale::scaled(8.0), scale::scaled(8.0)])

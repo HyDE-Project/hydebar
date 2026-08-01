@@ -1,6 +1,6 @@
 //! Last-resort reader for the stylesheets a bar generator leaves behind.
 //!
-//! **This is not a source of truth and must never be preferred over the HyDE
+//! **This is not a source of truth and must never be preferred over the `HyDE`
 //! directories.** `~/.config/waybar/theme.css` is rendered from the very
 //! palette [`super::dcol`] reads, and `includes/global.css` and
 //! `includes/border-radius.css` are written by a generator that only runs while
@@ -8,9 +8,9 @@
 //! files freeze, and a reader that trusted them would keep painting the font
 //! and the corner radius of whatever theme was in force when it stopped.
 //!
-//! The files are therefore read only to fill in what a HyDE install did not
+//! The files are therefore read only to fill in what a `HyDE` install did not
 //! answer for — an install missing its cache, or a desktop with the stylesheets
-//! but no HyDE at all. Every value found here is a guess about a theme rather
+//! but no `HyDE` at all. Every value found here is a guess about a theme rather
 //! than a reading of it.
 
 use std::{fs, path::Path};

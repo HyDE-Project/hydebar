@@ -81,7 +81,7 @@ fn fade_extended(extended: &palette::Extended, share: f32) -> palette::Extended 
     }
 }
 
-/// Builds the HyDEbar [`Theme`] from the configured [`Appearance`].
+/// Builds the `HyDEbar` [`Theme`] from the configured [`Appearance`].
 ///
 /// # Parameters
 /// - `appearance`: The appearance configuration provided by the user.
@@ -165,9 +165,9 @@ fn build_extended_palette(appearance: &Appearance, palette: Palette) -> palette:
 ///
 /// The extended palette derives its hover and disabled shades towards or away
 /// from white depending on this answer; stating "dark" for every theme hands a
-/// light HyDE palette shades derived the wrong way round.
+/// light `HyDE` palette shades derived the wrong way round.
 fn palette_is_dark(background: Color) -> bool {
-    0.2126 * background.r + 0.7152 * background.g + 0.0722 * background.b < 0.5
+    0.0722f32.mul_add(background.b, 0.7152f32.mul_add(background.g, 0.2126 * background.r)) < 0.5
 }
 
 fn build_pair(
@@ -245,7 +245,7 @@ fn build_danger_pair(
 
 /// Returns a [`Color`] representing the menu backdrop opacity overlay.
 #[must_use]
-pub fn backdrop_color(backdrop: f32) -> Color {
+pub const fn backdrop_color(backdrop: f32) -> Color {
     Color::from_rgba(0.0, 0.0, 0.0, backdrop)
 }
 
@@ -255,7 +255,7 @@ pub fn darken_color(color: Color, darkening_alpha: f32) -> Color {
     let new_r = color.r * (1.0 - darkening_alpha);
     let new_g = color.g * (1.0 - darkening_alpha);
     let new_b = color.b * (1.0 - darkening_alpha);
-    let new_a = color.a + (1.0 - color.a) * darkening_alpha;
+    let new_a = (1.0 - color.a).mul_add(darkening_alpha, color.a);
 
     Color::from([new_r, new_g, new_b, new_a])
 }

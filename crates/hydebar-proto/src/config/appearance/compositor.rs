@@ -27,7 +27,7 @@ impl Appearance {
                 .map(|gap| unscaled_padding(gap, self.scale_factor));
         }
 
-        if let Some(false) = look.animations {
+        if look.animations == Some(false) {
             self.animations.enabled = false;
         }
 

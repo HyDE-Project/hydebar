@@ -38,7 +38,7 @@ fn estimated_width(text: &str, font_size: f32, horizontal_padding: f32) -> f32 {
         .max()
         .unwrap_or_default() as f32;
 
-    glyphs * font_size * GLYPH_ADVANCE_EM + horizontal_padding * 2.
+    horizontal_padding.mul_add(2., glyphs * font_size * GLYPH_ADVANCE_EM)
 }
 
 /// Places the left edge of the tooltip so it is centred under its module and
@@ -53,6 +53,7 @@ fn left_offset(anchor: &ButtonUIRef, width: f32, gap: f32) -> f32 {
 ///
 /// The surface starts where the bar ends, so the tooltip only has to add the
 /// themed gap on the side the bar sits on.
+#[must_use]
 pub fn tooltip_wrapper<'a, Message: 'a>(
     info: &TooltipInfo,
     bar_position: Position,

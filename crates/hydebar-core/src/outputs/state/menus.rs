@@ -17,12 +17,12 @@ impl Outputs {
     /// let (outputs, _task) = Outputs::new::<()>(config.appearance.style, config.position, &config);
     /// assert!(!outputs.menu_is_open());
     /// ```
+    #[must_use]
     pub fn menu_is_open(&self) -> bool {
         self.0.iter().any(|(_, shell_info, _)| {
             shell_info
                 .as_ref()
-                .map(|shell_info| shell_info.menu.is_open())
-                .unwrap_or_default()
+                .is_some_and(|shell_info| shell_info.menu.is_open())
         })
     }
 
@@ -30,6 +30,7 @@ impl Outputs {
     ///
     /// Only one menu is ever open at a time, so the first one found is the one
     /// the user is looking at.
+    #[must_use]
     pub fn open_menu(&self) -> Option<&MenuType> {
         self.0.iter().find_map(|(_, shell_info, _)| {
             shell_info
@@ -42,6 +43,7 @@ impl Outputs {
 
     /// Get the animated opacity for a menu window.
     /// How far the open animation of the menu on `id` has travelled.
+    #[must_use]
     pub fn get_menu_progress(&self, id: Id) -> f32 {
         self.0
             .iter()
@@ -62,6 +64,7 @@ impl Outputs {
     /// The greeting borrows these surfaces while the bar is born: they span
     /// the screen and are idle at that moment, and the caller must know which
     /// ones a menu actually owns before sending any of them back down.
+    #[must_use]
     pub fn menu_surfaces(&self) -> Vec<(Id, bool)> {
         self.0
             .iter()
@@ -96,12 +99,12 @@ impl Outputs {
     }
 
     /// Returns whether any menu still has an unfinished animation.
+    #[must_use]
     pub fn menu_is_animating(&self) -> bool {
         self.0.iter().any(|(_, shell_info, _)| {
             shell_info
                 .as_ref()
-                .map(|shell_info| shell_info.menu.is_animating())
-                .unwrap_or_default()
+                .is_some_and(|shell_info| shell_info.menu.is_animating())
         })
     }
 

@@ -190,7 +190,7 @@ const fn section_button_label(section: Section) -> &'static str {
 }
 
 /// Name of a section as the card spells it.
-fn section_name(section: Section) -> &'static str {
+const fn section_name(section: Section) -> &'static str {
     match section {
         Section::Left => "Left",
         Section::Center => "Center",
@@ -371,8 +371,7 @@ const ACTION_LABELS: [&str; 4] = [TO_LEFT, TO_RIGHT, MERGE, REMOVE];
 pub(super) fn rows(config: &Config, section: Section) -> f32 {
     let entries = section.entries(&config.modules);
 
-    SECTION_COUNT * style::SECTION_TITLE_ROWS
-        + TAB_ROWS
+    SECTION_COUNT.mul_add(style::SECTION_TITLE_ROWS, TAB_ROWS)
         + islands(&entries).len().max(1) as f32
         + CARD_ROWS
         + CATALOGUE_ROWS
@@ -403,9 +402,7 @@ pub(super) fn desired_width(config: &Config, font_size: f32, section: Section) -
                 .map(|index| chip_width(entries[index].module.as_str(), control))
                 .sum();
 
-            labelled_row_width(font_size)
-                + chips
-                + gap * (count - 1.0).max(0.0)
+            gap.mul_add((count - 1.0).max(0.0), labelled_row_width(font_size) + chips)
                 + style::card_overhead(font_size)
         })
         .fold(0.0_f32, f32::max);

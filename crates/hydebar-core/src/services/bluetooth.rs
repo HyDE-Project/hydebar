@@ -69,7 +69,7 @@ impl BluetoothService {
         let bluetooth = BluetoothDbus::new(conn).await?;
 
         let state = bluetooth.state().await?;
-        let rfkill_soft_block = BluetoothService::check_rfkill_soft_block().await?;
+        let rfkill_soft_block = Self::check_rfkill_soft_block().await?;
 
         let state = match state {
             BluetoothState::Unavailable => BluetoothState::Unavailable,
@@ -93,8 +93,7 @@ impl BluetoothService {
                 .receive_interfaces_added()
                 .await
                 .map_err(|e| AppError::internal(format!(
-                    "Failed to receive interfaces added: {}",
-                    e
+                    "Failed to receive interfaces added: {e}"
                 ),),)?
                 .map(|_| {}),
             bluetooth
@@ -102,8 +101,7 @@ impl BluetoothService {
                 .receive_interfaces_removed()
                 .await
                 .map_err(|e| AppError::internal(format!(
-                    "Failed to receive interfaces removed: {}",
-                    e
+                    "Failed to receive interfaces removed: {e}"
                 ),),)?
                 .map(|_| {}),
         )
@@ -112,7 +110,7 @@ impl BluetoothService {
         let combined = match bluetooth.adapter.as_ref() {
             Some(adapter) => {
                 let powered = adapter.receive_powered_changed().await.map(|_| {});
-                let rfkill = BluetoothService::listen_rfkill_soft_block_changes().await?;
+                let rfkill = Self::listen_rfkill_soft_block_changes().await?;
                 let devices = bluetooth.devices().await?;
 
                 let mut batteries = Vec::new();
@@ -120,12 +118,12 @@ impl BluetoothService {
                     let battery = BatteryProxy::builder(bluetooth.bluez.inner().connection())
                         .path(device.path.clone())
                         .map_err(|e| {
-                            AppError::internal(format!("Failed to set battery path: {}", e))
+                            AppError::internal(format!("Failed to set battery path: {e}"))
                         })?
                         .build()
                         .await
                         .map_err(|e| {
-                            AppError::internal(format!("Failed to build battery proxy: {}", e))
+                            AppError::internal(format!("Failed to build battery proxy: {e}"))
                         })?;
                     batteries.push(battery.receive_percentage_changed().await.map(|_| {}));
                 }
@@ -145,14 +143,14 @@ impl BluetoothService {
         match state {
             State::Init => match zbus::Connection::system().await {
                 Ok(conn) => {
-                    let data = BluetoothService::initialize_data(&conn).await;
+                    let data = Self::initialize_data(&conn).await;
 
                     match data {
                         Ok(data) => {
                             info!("Bluetooth service initialized");
 
-                            let _ = publisher
-                                .send(ServiceEvent::Init(BluetoothService {
+                            let () = publisher
+                                .send(ServiceEvent::Init(Self {
                                     data,
                                     conn: conn.clone()
                                 }))
@@ -176,11 +174,11 @@ impl BluetoothService {
             State::Active(conn) => {
                 info!("Listening for bluetooth events");
 
-                match BluetoothService::events(&conn).await {
+                match Self::events(&conn).await {
                     Ok(mut events) => {
                         while events.next().await.is_some() {
-                            if let Ok(data) = BluetoothService::initialize_data(&conn).await {
-                                let _ = publisher.send(ServiceEvent::Update(data)).await;
+                            if let Ok(data) = Self::initialize_data(&conn).await {
+                                let () = publisher.send(ServiceEvent::Update(data)).await;
                             }
                         }
 
@@ -209,7 +207,7 @@ impl BluetoothService {
             .await?;
 
         let output = String::from_utf8(output.stdout)
-            .map_err(|e| AppError::internal(format!("Failed to parse rfkill output: {}", e)))?;
+            .map_err(|e| AppError::internal(format!("Failed to parse rfkill output: {e}")))?;
 
         Ok(output.contains("Soft blocked: yes"))
     }
@@ -301,7 +299,7 @@ impl ReadOnlyService for BluetoothService {
 
         Subscription::run_with(id, |&_id| {
             channel(100, async |mut output| {
-                BluetoothService::listen(&mut output).await;
+                Self::listen(&mut output).await;
             })
         })
     }
@@ -315,7 +313,7 @@ impl Service for BluetoothService {
         let fallback = self.data.clone();
 
         Task::perform(
-            async move { BluetoothService::run_command(service, command).await },
+            async move { Self::run_command(service, command).await },
             move |maybe_event| {
                 maybe_event.unwrap_or_else(|| ServiceEvent::Update(fallback.clone()))
             }

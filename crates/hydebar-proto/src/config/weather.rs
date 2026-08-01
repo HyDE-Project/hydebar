@@ -29,10 +29,10 @@ fn default_weather_location() -> String {
     String::from("London")
 }
 
-fn default_use_celsius() -> bool {
+const fn default_use_celsius() -> bool {
     true
 }
 
-fn default_weather_update_interval() -> u64 {
+const fn default_weather_update_interval() -> u64 {
     30
 }

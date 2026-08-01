@@ -47,11 +47,13 @@ impl HyprlandClient {
     /// Construct a new [`HyprlandClient`] using
     /// [`HyprlandClientConfig::default`].
     #[allow(clippy::new_without_default)]
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Construct a [`HyprlandClient`] with the provided configuration.
+    #[must_use]
     pub fn with_config(config: HyprlandClientConfig) -> Self {
         Self {
             config: Arc::new(config)
@@ -81,6 +83,7 @@ impl HyprlandClient {
     }
 
     /// A blocking tap of the compositor's configuration reloads.
+    #[must_use]
     pub fn config_reloads(&self) -> tokio::sync::broadcast::Receiver<()> {
         multiplex::config_reloads(self, &self.config)
     }
@@ -106,7 +109,7 @@ impl HyprlandPort for HyprlandClient {
     fn active_window(&self) -> Result<Option<HyprlandWindowInfo>, HyprlandError> {
         self.execute_with_retry(ACTIVE_WINDOW_OP, || {
             Client::get_active()
-                .map_err(|err| HyprlandClient::backend_error(ACTIVE_WINDOW_OP, err))
+                .map_err(|err| Self::backend_error(ACTIVE_WINDOW_OP, err))
                 .map(|maybe_client| {
                     maybe_client.map(|client| HyprlandWindowInfo {
                         title: client.title,
@@ -119,11 +122,11 @@ impl HyprlandPort for HyprlandClient {
     fn workspace_snapshot(&self) -> Result<HyprlandWorkspaceSnapshot, HyprlandError> {
         self.execute_with_retry(WORKSPACE_SNAPSHOT_OP, || {
             let monitors = Monitors::get()
-                .map_err(|err| HyprlandClient::backend_error(WORKSPACE_SNAPSHOT_OP, err))?;
+                .map_err(|err| Self::backend_error(WORKSPACE_SNAPSHOT_OP, err))?;
             let workspaces = Workspaces::get()
-                .map_err(|err| HyprlandClient::backend_error(WORKSPACE_SNAPSHOT_OP, err))?;
+                .map_err(|err| Self::backend_error(WORKSPACE_SNAPSHOT_OP, err))?;
             let active = Workspace::get_active()
-                .map_err(|err| HyprlandClient::backend_error(WORKSPACE_SNAPSHOT_OP, err))?;
+                .map_err(|err| Self::backend_error(WORKSPACE_SNAPSHOT_OP, err))?;
 
             let monitors = monitors
                 .into_iter()
@@ -163,7 +166,7 @@ impl HyprlandPort for HyprlandClient {
             dispatch::dispatch_in_any_dialect(|dialect| {
                 dispatch::focus_workspace(dialect, &workspace)
             })
-            .map_err(|err| HyprlandClient::backend_error(CHANGE_WORKSPACE_OP, err))
+            .map_err(|err| Self::backend_error(CHANGE_WORKSPACE_OP, err))
         })
     }
 
@@ -180,14 +183,14 @@ impl HyprlandPort for HyprlandClient {
                         dispatch::toggle_special_workspace(dialect, &workspace_name)
                     })
                 })
-                .map_err(|err| HyprlandClient::backend_error(TOGGLE_SPECIAL_OP, err))
+                .map_err(|err| Self::backend_error(TOGGLE_SPECIAL_OP, err))
         })
     }
 
     fn keyboard_state(&self) -> Result<HyprlandKeyboardState, HyprlandError> {
         self.execute_with_retry(KEYBOARD_STATE_OP, || {
             let keyword = Keyword::get("input:kb_layout")
-                .map_err(|err| HyprlandClient::backend_error(KEYBOARD_STATE_OP, err))?;
+                .map_err(|err| Self::backend_error(KEYBOARD_STATE_OP, err))?;
             let has_multiple_layouts = keyword
                 .value
                 .to_string()
@@ -197,13 +200,11 @@ impl HyprlandPort for HyprlandClient {
                 > 1;
 
             let devices = Devices::get()
-                .map_err(|err| HyprlandClient::backend_error(KEYBOARD_STATE_OP, err))?;
+                .map_err(|err| Self::backend_error(KEYBOARD_STATE_OP, err))?;
             let active_layout = devices
                 .keyboards
                 .iter()
-                .find(|keyboard| keyboard.main)
-                .map(|keyboard| keyboard.active_keymap.to_string())
-                .unwrap_or_else(|| "unknown".to_string());
+                .find(|keyboard| keyboard.main).map_or_else(|| "unknown".to_string(), |keyboard| keyboard.active_keymap.clone());
 
             Ok(HyprlandKeyboardState {
                 active_layout,
@@ -216,7 +217,7 @@ impl HyprlandPort for HyprlandClient {
     fn switch_keyboard_layout(&self) -> Result<(), HyprlandError> {
         self.execute_with_retry(SWITCH_LAYOUT_OP, || {
             hyprland::ctl::switch_xkb_layout::call("all", SwitchXKBLayoutCmdTypes::Next)
-                .map_err(|err| HyprlandClient::backend_error(SWITCH_LAYOUT_OP, err))
+                .map_err(|err| Self::backend_error(SWITCH_LAYOUT_OP, err))
         })
     }
 }

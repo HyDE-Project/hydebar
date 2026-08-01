@@ -16,7 +16,8 @@ pub struct NetworkData {
 
 impl NetworkData {
     /// Create a new network metric snapshot with the provided parameters.
-    pub fn new(
+    #[must_use]
+    pub const fn new(
         ip: String,
         download_speed: u32,
         upload_speed: u32,
@@ -31,7 +32,8 @@ impl NetworkData {
     }
 
     /// Instant when the underlying network totals were observed.
-    pub fn last_check(&self) -> Instant {
+    #[must_use]
+    pub const fn last_check(&self) -> Instant {
         self.last_check
     }
 }
@@ -52,7 +54,7 @@ pub struct DiskData {
 }
 
 /// Aggregated system information consumed by the UI layer.
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct SystemInfoData {
     pub cpu_usage:         u32,
     /// Logical processors the load is averaged over; zero before the
@@ -107,6 +109,7 @@ impl SystemInfoData {
     /// than anything the bar draws, and it moves on every tick, so
     /// plain equality would never hold. Excluding it lets an idle
     /// machine skip the repaint the sample would otherwise force.
+    #[must_use]
     pub fn renders_same_as(&self, other: &Self) -> bool {
         let network_matches = match (self.network.as_ref(), other.network.as_ref()) {
             (Some(left), Some(right)) => {
@@ -175,7 +178,7 @@ impl NetworkSnapshot {
         })
     }
 
-    fn to_data(&self, previous: Option<&NetworkSnapshot>) -> NetworkData {
+    fn to_data(&self, previous: Option<&Self>) -> NetworkData {
         let elapsed = previous
             .map(|snapshot| self.timestamp.saturating_duration_since(snapshot.timestamp))
             .unwrap_or_default();
@@ -230,6 +233,7 @@ impl Default for SystemInfoSampler {
 
 impl SystemInfoSampler {
     /// Instantiate a sampler with refreshed sysinfo collections.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             system:       System::new_with_specifics(
@@ -256,7 +260,7 @@ impl SystemInfoSampler {
     /// a disk, an interface or a sensor, and a sampler that read them
     /// anyway would walk every mount and the whole hwmon tree a dozen
     /// times a minute for nobody.
-    pub fn only_cpu_and_memory(&mut self) {
+    pub const fn only_cpu_and_memory(&mut self) {
         self.full = false;
     }
 

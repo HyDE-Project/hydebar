@@ -78,7 +78,7 @@ impl ReadOnlyService for NetworkService {
 
         Subscription::run_with(id, |&_id| {
             channel(50, async |mut output| {
-                NetworkService::listen(&mut output).await;
+                Self::listen(&mut output).await;
             })
         })
     }

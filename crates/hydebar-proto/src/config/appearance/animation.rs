@@ -23,15 +23,15 @@ impl Default for AnimationConfig {
     }
 }
 
-fn default_animations_enabled() -> bool {
+const fn default_animations_enabled() -> bool {
     true
 }
 
-fn default_menu_fade_duration_ms() -> u64 {
+const fn default_menu_fade_duration_ms() -> u64 {
     200
 }
 
-fn default_hover_duration_ms() -> u64 {
+const fn default_hover_duration_ms() -> u64 {
     100
 }
 

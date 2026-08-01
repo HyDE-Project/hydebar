@@ -18,7 +18,7 @@ use super::{
 ///
 /// The groups are already gone by then, so this only decides how long a bar
 /// whose event loop stopped answering keeps its surfaces on screen.
-const HARD_EXIT_GRACE: Duration = Duration::from_millis(1000);
+const HARD_EXIT_GRACE: Duration = Duration::from_secs(1);
 
 /// Write end of the pipe a termination signal wakes the reaper thread through.
 ///

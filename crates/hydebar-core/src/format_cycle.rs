@@ -19,6 +19,7 @@ pub struct FormatCycle {
 
 impl FormatCycle {
     /// Creates a cursor resting on the primary format.
+    #[must_use]
     pub const fn new() -> Self {
         Self {
             index: 0
@@ -26,6 +27,7 @@ impl FormatCycle {
     }
 
     /// Index of the active format, primary format included.
+    #[must_use]
     pub const fn index(&self) -> usize {
         self.index
     }
@@ -33,7 +35,7 @@ impl FormatCycle {
     /// Advances to the next format, wrapping after the last alternative.
     ///
     /// A module without alternatives stays on its primary format.
-    pub fn advance<T>(&mut self, alternatives: &[T]) {
+    pub const fn advance<T>(&mut self, alternatives: &[T]) {
         self.index = match alternatives.len() {
             0 => 0,
             len => (self.index + 1) % (len + 1)

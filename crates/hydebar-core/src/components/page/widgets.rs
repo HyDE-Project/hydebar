@@ -29,7 +29,7 @@ const BLOCKED_ALPHA: f32 = 0.35;
 ///
 /// An `active` button is tinted with the accent colour, which is how the window
 /// shows the choice currently in force.
-pub(crate) fn choice_button<'a, M: Clone + 'a>(
+pub fn choice_button<'a, M: Clone + 'a>(
     label: impl text::IntoFragment<'a>,
     message: M,
     active: bool,
@@ -57,7 +57,7 @@ pub(crate) fn choice_button<'a, M: Clone + 'a>(
 }
 
 /// Renders a label followed by a row of mutually exclusive choices.
-pub(crate) fn choice_row<'a, T, M>(
+pub fn choice_row<'a, T, M>(
     label: &'a str,
     choices: Vec<(&'a str, T, bool)>,
     to_message: impl Fn(T) -> M + 'a,
@@ -94,7 +94,7 @@ where
 /// change it has asked the desktop for. It is drawn in front of the value
 /// rather than after it, so the row reads as "something is happening to this"
 /// from its first character.
-pub(crate) fn status_row<'a, M: 'a>(
+pub fn status_row<'a, M: 'a>(
     label: &'a str,
     value: String,
     indicator: Option<&'static str>,
@@ -114,7 +114,7 @@ pub(crate) fn status_row<'a, M: 'a>(
 }
 
 /// Renders a label with a value that steps down and up.
-pub(crate) fn stepper_row<'a, M: Clone + 'a>(
+pub fn stepper_row<'a, M: Clone + 'a>(
     label: &'a str,
     current: String,
     down: M,
@@ -149,7 +149,7 @@ pub(crate) fn stepper_row<'a, M: Clone + 'a>(
 /// take the same cell so the grid keeps its shape whatever the labels
 /// measure, while [`None`] leaves the chip the size of its own label for the
 /// rows that draw a picture of the bar.
-pub(crate) fn chip<'a, M: Clone + 'a>(
+pub fn chip<'a, M: Clone + 'a>(
     label: impl text::IntoFragment<'a>,
     message: M,
     picked: bool,
@@ -204,7 +204,7 @@ pub(crate) fn chip<'a, M: Clone + 'a>(
 /// palette under a text colour from another is exactly the unreadable pairing
 /// the swatch exists to avoid.
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) struct ChipPaint {
+pub struct ChipPaint {
     /// Surface of the chip.
     pub(crate) background: iced::Color,
     /// Text on that surface.
@@ -231,7 +231,7 @@ const DOT_GAP_EM: f32 = 0.35;
 /// The dot itself plus the spacing the column keeps above it; the menu height
 /// estimate reads this so a grid of painted chips is measured as tall as it
 /// draws.
-pub(crate) const DOT_ROW_EM: f32 = DOT_EM + DOT_GAP_EM;
+pub const DOT_ROW_EM: f32 = DOT_EM + DOT_GAP_EM;
 
 /// Share of the menu fade in force, read off the palette the widget is drawn
 /// with.
@@ -276,7 +276,7 @@ fn palette_dots<'a, M: 'a>(palette: Vec<iced::Color>, control: f32) -> Element<'
 /// can be switched to, the theme being applied, or a theme that cannot be
 /// pressed because another one is being applied.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum ThemeChip {
+pub enum ThemeChip {
     /// The theme the desktop is on.
     Active,
     /// A theme the desktop can be switched to.
@@ -301,7 +301,7 @@ impl ThemeChip {
     /// queued to run next rather than silently thrown away, so the module
     /// has to hear about it. Only the chip already being applied stays deaf
     /// — pressing it could mean nothing new.
-    pub(crate) fn is_pressable(self) -> bool {
+    pub(crate) const fn is_pressable(self) -> bool {
         matches!(self, Self::Active | Self::Idle | Self::Condemned | Self::Blocked)
     }
 }
@@ -317,7 +317,7 @@ impl ThemeChip {
 /// for — the grid becomes a palette of the themes themselves — and the theme
 /// in force is told apart by a ring of its own accent, since a fill can no
 /// longer mark it.
-pub(crate) fn theme_chip<'a, M: Clone + 'static>(
+pub fn theme_chip<'a, M: Clone + 'static>(
     label: String,
     badge: Option<&'static str>,
     message: M,
@@ -458,7 +458,7 @@ pub(crate) fn theme_chip<'a, M: Clone + 'static>(
 
                 column.into()
             }
-            None => name.into()
+            None => name
         };
 
         let pressable = button(container(body).width(Length::Fill))
@@ -597,7 +597,7 @@ fn busy_strip<'a, M: 'a>(spinner: Spinner, control: f32) -> Element<'a, M> {
 ///
 /// Drawn smaller than a value so it reads as an aside rather than as something
 /// the bar is reporting.
-pub(crate) fn note<'a, M: 'a>(
+pub fn note<'a, M: 'a>(
     label: impl text::IntoFragment<'a>,
     font_size: f32
 ) -> Element<'a, M> {
@@ -618,7 +618,7 @@ fn section_title<'a, M: 'a>(label: impl text::IntoFragment<'a>, font_size: f32) 
 ///
 /// A page is a stack of these and nothing else, which is what makes the three
 /// tabs read as one window.
-pub(crate) fn section<'a, M: 'a>(
+pub fn section<'a, M: 'a>(
     title: impl text::IntoFragment<'a>,
     content: Element<'a, M>,
     font_size: f32
@@ -635,7 +635,7 @@ pub(crate) fn section<'a, M: 'a>(
 ///
 /// Handed out ready-spaced and ready-padded so a page states what it holds and
 /// never how far apart it holds it.
-pub(crate) fn page<'a, M: 'a>(font_size: f32) -> Column<'a, M> {
+pub fn page<'a, M: 'a>(font_size: f32) -> Column<'a, M> {
     Column::new()
         .spacing(style::section_gap(font_size))
         .padding(style::page_padding(font_size))
@@ -643,7 +643,7 @@ pub(crate) fn page<'a, M: 'a>(font_size: f32) -> Column<'a, M> {
 }
 
 /// Starts the column the rows of one section are stacked in.
-pub(crate) fn rows<'a, M: 'a>(font_size: f32) -> Column<'a, M> {
+pub fn rows<'a, M: 'a>(font_size: f32) -> Column<'a, M> {
     Column::new()
         .spacing(style::page_gap(font_size))
         .width(Length::Fill)
@@ -653,14 +653,14 @@ pub(crate) fn rows<'a, M: 'a>(font_size: f32) -> Column<'a, M> {
 ///
 /// Chips sit closer together than rows do, in both directions, so a grid reads
 /// as one block rather than as a stack of unrelated rows.
-pub(crate) fn grid<'a, M: 'a>(font_size: f32) -> Column<'a, M> {
+pub fn grid<'a, M: 'a>(font_size: f32) -> Column<'a, M> {
     Column::new()
         .spacing(style::group_gap(font_size))
         .width(Length::Fill)
 }
 
 /// Starts the row the controls of one setting sit in.
-pub(crate) fn controls<'a, M: 'a>(font_size: f32) -> Row<'a, M> {
+pub fn controls<'a, M: 'a>(font_size: f32) -> Row<'a, M> {
     Row::new()
         .spacing(style::row_gap(font_size))
         .align_y(Alignment::Center)
@@ -668,7 +668,7 @@ pub(crate) fn controls<'a, M: 'a>(font_size: f32) -> Row<'a, M> {
 
 /// Starts the row items that belong together sit in, such as the chips of an
 /// island or the buttons of one action.
-pub(crate) fn group<'a, M: 'a>(font_size: f32) -> Row<'a, M> {
+pub fn group<'a, M: 'a>(font_size: f32) -> Row<'a, M> {
     Row::new()
         .spacing(style::group_gap(font_size))
         .align_y(Alignment::Center)
@@ -679,7 +679,7 @@ pub(crate) fn group<'a, M: 'a>(font_size: f32) -> Row<'a, M> {
 ///
 /// Shares the label column with every other row on every other tab, so the
 /// islands of the module page line up with the steppers of the appearance page.
-pub(crate) fn labelled_row<'a, M: 'a>(
+pub fn labelled_row<'a, M: 'a>(
     label: impl text::IntoFragment<'a>,
     content: Element<'a, M>,
     font_size: f32
@@ -698,7 +698,7 @@ pub(crate) fn labelled_row<'a, M: 'a>(
 }
 
 /// Renders a card the detail of a picked entry lives in.
-pub(crate) fn card<'a, M: 'a>(
+pub fn card<'a, M: 'a>(
     content: Element<'a, M>,
     font_size: f32,
     opacity: f32
@@ -725,7 +725,7 @@ pub(crate) fn card<'a, M: 'a>(
 ///
 /// The outline carries the same padding and the same corner as a card, so an
 /// island on the module page sits on the same grid as the card below it.
-pub(crate) fn outlined<'a, M: 'a>(
+pub fn outlined<'a, M: 'a>(
     content: Element<'a, M>,
     font_size: f32,
     opacity: f32

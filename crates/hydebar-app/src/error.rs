@@ -19,11 +19,11 @@ pub enum MainError {
 impl std::fmt::Display for MainError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Logger(err) => write!(f, "failed to initialize logger: {}", err),
-            Self::Config(err) => write!(f, "configuration error: {}", err),
-            Self::Iced(err) => write!(f, "iced runtime error: {}", err),
-            Self::Runtime(err) => write!(f, "failed to build the async runtime: {}", err),
-            Self::Instance(err) => write!(f, "single instance error: {}", err),
+            Self::Logger(err) => write!(f, "failed to initialize logger: {err}"),
+            Self::Config(err) => write!(f, "configuration error: {err}"),
+            Self::Iced(err) => write!(f, "iced runtime error: {err}"),
+            Self::Runtime(err) => write!(f, "failed to build the async runtime: {err}"),
+            Self::Instance(err) => write!(f, "single instance error: {err}"),
             Self::BusCapacity => write!(f, "invalid event bus capacity")
         }
     }

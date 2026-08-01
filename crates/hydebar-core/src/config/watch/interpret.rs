@@ -27,7 +27,7 @@ use crate::config::{ConfigManager, ConfigUpdateError};
 /// mask rules live on their own: a watcher following a whole set of files
 /// reuses the very same notion of "replaced" the single file watcher uses,
 /// instead of restating it and drifting away from it.
-pub(crate) fn classify_mask(mask: EventMask) -> Option<Event> {
+pub fn classify_mask(mask: EventMask) -> Option<Event> {
     let is_removed = mask.contains(EventMask::DELETE) || mask.contains(EventMask::MOVED_FROM);
 
     if is_removed && !mask.intersects(EventMask::CREATE | EventMask::MODIFY | EventMask::MOVED_TO)
@@ -49,7 +49,7 @@ pub(crate) fn classify_mask(mask: EventMask) -> Option<Event> {
 }
 
 /// Reports how an event on the watched directory affects `target_name`.
-pub(crate) fn interpret_event<E: WatchedEvent>(event: &E, target_name: &OsStr) -> Option<Event> {
+pub fn interpret_event<E: WatchedEvent>(event: &E, target_name: &OsStr) -> Option<Event> {
     let name = event.file_name()?;
 
     if name != target_name {
@@ -66,7 +66,7 @@ pub(crate) fn interpret_event<E: WatchedEvent>(event: &E, target_name: &OsStr) -
 /// files the desktop theme is spread across. Collapsing a batch into one call
 /// matters because a theme switch rewrites several files at once and the bar
 /// should repaint once, not once per file.
-pub(crate) async fn process_event_batches<S, E, Err, C, F, Fut>(
+pub async fn process_event_batches<S, E, Err, C, F, Fut>(
     mut stream: Pin<&mut S>,
     classify: C,
     mut handler: F
@@ -136,7 +136,7 @@ async fn load_candidate_off_thread(
 }
 
 /// Applies a watch event to the configuration and reports the outcome.
-pub(crate) async fn handle_watch_event(
+pub async fn handle_watch_event(
     output: &mut Sender<ConfigEvent>,
     path: &Path,
     event: Event,

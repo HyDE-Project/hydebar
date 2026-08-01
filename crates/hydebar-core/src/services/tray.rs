@@ -62,18 +62,17 @@ impl StatusNotifierItem {
             .destination(dest.to_owned())
             .map_err(|e| {
                 AppError::internal(format!(
-                    "Failed to set StatusNotifierItemProxy destination: {}",
-                    e
+                    "Failed to set StatusNotifierItemProxy destination: {e}"
                 ))
             })?
             .path(path.to_owned())
             .map_err(|e| {
-                AppError::internal(format!("Failed to set StatusNotifierItemProxy path: {}", e))
+                AppError::internal(format!("Failed to set StatusNotifierItemProxy path: {e}"))
             })?
             .build()
             .await
             .map_err(|e| {
-                AppError::internal(format!("Failed to build StatusNotifierItemProxy: {}", e))
+                AppError::internal(format!("Failed to build StatusNotifierItemProxy: {e}"))
             })?;
 
         debug!("item_proxy {item_proxy:?}");
@@ -96,22 +95,22 @@ impl StatusNotifierItem {
         let menu_path = item_proxy
             .menu()
             .await
-            .map_err(|e| AppError::internal(format!("Failed to get menu path: {}", e)))?;
+            .map_err(|e| AppError::internal(format!("Failed to get menu path: {e}")))?;
         let menu_proxy = dbus::DBusMenuProxy::builder(conn)
             .destination(dest.to_owned())
             .map_err(|e| {
-                AppError::internal(format!("Failed to set DBusMenuProxy destination: {}", e))
+                AppError::internal(format!("Failed to set DBusMenuProxy destination: {e}"))
             })?
-            .path(menu_path.to_owned())
-            .map_err(|e| AppError::internal(format!("Failed to set DBusMenuProxy path: {}", e)))?
+            .path(menu_path.clone())
+            .map_err(|e| AppError::internal(format!("Failed to set DBusMenuProxy path: {e}")))?
             .build()
             .await
-            .map_err(|e| AppError::internal(format!("Failed to build DBusMenuProxy: {}", e)))?;
+            .map_err(|e| AppError::internal(format!("Failed to build DBusMenuProxy: {e}")))?;
 
         let (_, menu) = menu_proxy
             .get_layout(0, -1, &[])
             .await
-            .map_err(|e| AppError::internal(format!("Failed to get menu layout: {}", e)))?;
+            .map_err(|e| AppError::internal(format!("Failed to get menu layout: {e}")))?;
 
         Ok(Self {
             name,
@@ -176,7 +175,7 @@ impl TrayService {
     ) -> AppResult<Layout> {
         let value = zbus::zvariant::Value::I32(32)
             .try_to_owned()
-            .map_err(|e| AppError::internal(format!("Failed to convert value to owned: {}", e)))?;
+            .map_err(|e| AppError::internal(format!("Failed to convert value to owned: {e}")))?;
         menu_proxy
             .event(
                 id,
@@ -185,16 +184,17 @@ impl TrayService {
                 chrono::offset::Local::now().timestamp_subsec_micros()
             )
             .await
-            .map_err(|e| AppError::internal(format!("Failed to trigger menu event: {}", e)))?;
+            .map_err(|e| AppError::internal(format!("Failed to trigger menu event: {e}")))?;
 
         let (_, layout) = menu_proxy
             .get_layout(0, -1, &[])
             .await
-            .map_err(|e| AppError::internal(format!("Failed to get menu layout: {}", e)))?;
+            .map_err(|e| AppError::internal(format!("Failed to get menu layout: {e}")))?;
 
         Ok(layout)
     }
 
+    #[must_use]
     pub fn prepare_command(&self, command: TrayCommand) -> Option<TrayCommandFuture> {
         match command {
             TrayCommand::MenuSelected(name, id) => {
@@ -204,7 +204,7 @@ impl TrayService {
 
                 Some(Box::pin(async move {
                     debug!("Click tray menu voice {tray_name} : {id}");
-                    match TrayService::menu_voice_selected(&proxy, id).await {
+                    match Self::menu_voice_selected(&proxy, id).await {
                         Ok(new_layout) => ServiceEvent::Update(TrayEvent::MenuLayoutChanged(
                             tray_name, new_layout
                         )),
@@ -276,8 +276,6 @@ impl Service for TrayService {
     type Command = TrayCommand;
 
     fn command(&mut self, command: Self::Command) -> Task<ServiceEvent<Self>> {
-        self.prepare_command(command)
-            .map(|future| Task::perform(future, |event| event))
-            .unwrap_or_else(Task::none)
+        self.prepare_command(command).map_or_else(Task::none, |future| Task::perform(future, |event| event))
     }
 }

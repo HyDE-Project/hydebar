@@ -170,6 +170,7 @@ impl Custom {
     /// drawn as an overlay next to the module without covering it.
     /// It is handed to the tooltip surface instead, which the
     /// compositor lays out beside the bar.
+    #[must_use]
     pub fn tooltip(&self) -> Option<&str> {
         match self.data.tooltip.as_deref() {
             Some(hint) if !hint.is_empty() && self.last_error.is_none() => Some(hint),

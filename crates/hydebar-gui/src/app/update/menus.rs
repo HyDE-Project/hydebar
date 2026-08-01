@@ -145,7 +145,7 @@ impl App {
                         }
                     }
                     _ => {}
-                };
+                }
                 cmd.push(
                     self.outputs
                         .toggle_menu(id, menu_type, button_ui_ref, &self.config)

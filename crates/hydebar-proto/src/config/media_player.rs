@@ -17,6 +17,6 @@ impl Default for MediaPlayerModuleConfig {
     }
 }
 
-fn default_media_player_max_title_length() -> u32 {
+const fn default_media_player_max_title_length() -> u32 {
     100
 }

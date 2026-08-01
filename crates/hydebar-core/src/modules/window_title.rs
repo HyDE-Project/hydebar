@@ -215,7 +215,7 @@ where
     fn register(
         &mut self,
         ctx: &ModuleContext,
-        _: Self::RegistrationData<'_>
+        (): Self::RegistrationData<'_>
     ) -> Result<(), ModuleError> {
         self.sender = Some(ctx.module_sender(ModuleEvent::WindowTitle));
 

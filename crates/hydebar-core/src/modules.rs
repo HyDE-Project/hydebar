@@ -42,7 +42,7 @@ pub enum OnModulePress<M> {
 }
 
 /// Module registration and operation errors
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ModuleError {
     EventBus(EventBusError),
     Registration { reason: Cow<'static, str> }
@@ -51,10 +51,10 @@ pub enum ModuleError {
 impl std::fmt::Display for ModuleError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::EventBus(err) => write!(f, "Module event bus interaction failed: {}", err),
+            Self::EventBus(err) => write!(f, "Module event bus interaction failed: {err}"),
             Self::Registration {
                 reason
-            } => write!(f, "Module registration failed: {}", reason)
+            } => write!(f, "Module registration failed: {reason}")
         }
     }
 }
@@ -70,10 +70,10 @@ impl From<EventBusError> for ModuleError {
 impl From<ModuleError> for AppError {
     fn from(err: ModuleError) -> Self {
         match err {
-            ModuleError::EventBus(_) => AppError::internal(err.to_string()),
+            ModuleError::EventBus(_) => Self::internal(err.to_string()),
             ModuleError::Registration {
                 ..
-            } => AppError::validation(err.to_string())
+            } => Self::validation(err.to_string())
         }
     }
 }

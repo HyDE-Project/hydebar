@@ -27,7 +27,7 @@ static DIALECT: AtomicU8 = AtomicU8::new(UNKNOWN);
 
 /// Syntax a dispatch command is written in.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Dialect {
+pub enum Dialect {
     /// `hl.dsp.focus{workspace=1}`, understood by a scripted compositor.
     Scripted,
     /// `workspace 1`, understood by a compositor from before the move.
@@ -81,7 +81,7 @@ fn scripted_monitor(monitor: &HyprlandMonitorSelector) -> String {
 }
 
 /// Command switching the session to `workspace`, in `dialect`.
-pub(crate) fn focus_workspace(dialect: Dialect, workspace: &HyprlandWorkspaceSelector) -> String {
+pub fn focus_workspace(dialect: Dialect, workspace: &HyprlandWorkspaceSelector) -> String {
     match dialect {
         Dialect::Scripted => format!(
             "hl.dsp.focus{{workspace={}}}",
@@ -95,7 +95,7 @@ pub(crate) fn focus_workspace(dialect: Dialect, workspace: &HyprlandWorkspaceSel
 }
 
 /// Command focusing `monitor`, in `dialect`.
-pub(crate) fn focus_monitor(dialect: Dialect, monitor: &HyprlandMonitorSelector) -> String {
+pub fn focus_monitor(dialect: Dialect, monitor: &HyprlandMonitorSelector) -> String {
     match dialect {
         Dialect::Scripted => format!("hl.dsp.focus{{monitor={}}}", scripted_monitor(monitor)),
         Dialect::Legacy => match monitor {
@@ -106,7 +106,7 @@ pub(crate) fn focus_monitor(dialect: Dialect, monitor: &HyprlandMonitorSelector)
 }
 
 /// Command toggling the special workspace `name`, in `dialect`.
-pub(crate) fn toggle_special_workspace(dialect: Dialect, name: &str) -> String {
+pub fn toggle_special_workspace(dialect: Dialect, name: &str) -> String {
     match dialect {
         Dialect::Scripted => format!("hl.dsp.workspace.toggle_special{{name=\"{name}\"}}"),
         Dialect::Legacy => format!("togglespecialworkspace {name}")
@@ -121,7 +121,7 @@ pub(crate) fn toggle_special_workspace(dialect: Dialect, name: &str) -> String {
 ///
 /// # Errors
 /// Returns the error of the last attempt when no dialect is accepted.
-pub(crate) fn dispatch_in_any_dialect<F>(build: F) -> Result<(), HyprError>
+pub fn dispatch_in_any_dialect<F>(build: F) -> Result<(), HyprError>
 where
     F: Fn(Dialect) -> String
 {

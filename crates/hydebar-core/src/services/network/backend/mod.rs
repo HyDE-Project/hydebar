@@ -4,7 +4,7 @@ pub mod iwd;
 pub mod network_manager;
 
 mod common;
-pub(crate) use common::*;
+pub use common::*;
 use masterror::AppResult;
 use zbus::zvariant::OwnedObjectPath;
 

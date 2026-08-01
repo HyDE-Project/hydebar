@@ -40,13 +40,13 @@ impl ReadOnlyService for PrivacyService {
                 let mut failures: u32 = 0;
 
                 loop {
-                    match PrivacyService::start_listening(state, &mut output).await {
+                    match Self::start_listening(state, &mut output).await {
                         Ok(next_state) => {
                             failures = 0;
                             state = next_state;
                         }
                         Err(error) => {
-                            if let Err(send_error) = PrivacyService::emit_event(
+                            if let Err(send_error) = Self::emit_event(
                                 &mut output,
                                 ServiceEvent::Error(error.clone())
                             )

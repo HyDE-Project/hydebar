@@ -53,7 +53,7 @@ pub struct UtilityMetrics {
 impl UtilityMetrics {
     /// Reports whether the utility answered with any usable number.
     #[must_use]
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         self.temperature.is_none()
             && self.utilisation.is_none()
             && self.memory_used.is_none()
@@ -172,7 +172,7 @@ impl Feed {
 
                     let mut waited = Duration::ZERO;
                     while waited < period && !stop.load(Ordering::Relaxed) {
-                        thread::sleep(STOP_CHECK.min(period - waited));
+                        thread::sleep(STOP_CHECK.min(period.checked_sub(waited).unwrap()));
                         waited += STOP_CHECK;
                     }
                 }
@@ -188,7 +188,7 @@ impl Feed {
 
     /// Vendor the feed reports on.
     #[must_use]
-    pub fn vendor(&self) -> GpuVendor {
+    pub const fn vendor(&self) -> GpuVendor {
         self.vendor
     }
 

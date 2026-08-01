@@ -28,6 +28,7 @@ pub enum BluetoothMessage {
 }
 
 impl BluetoothData {
+    #[must_use]
     pub fn get_quick_setting_button(
         &self,
         id: Id,
@@ -59,6 +60,7 @@ impl BluetoothData {
         ))
     }
 
+    #[must_use]
     pub fn bluetooth_menu(
         &self,
         id: Id,
@@ -76,7 +78,7 @@ impl BluetoothData {
                     .iter()
                     .map(|d| {
                         Row::new()
-                            .push(text(d.name.to_string()).width(Length::Fill))
+                            .push(text(d.name.clone()).width(Length::Fill))
                             .push_maybe(
                                 d.battery.map(|battery| Self::battery_level(battery, icons))
                             )
@@ -100,7 +102,6 @@ impl BluetoothData {
                             .align_y(iced::Alignment::Center)
                             .into()
                     })
-                    .collect::<Vec<Element<'_, Message>>>()
             )
             .spacing(scale::scaled(8.0))
             .width(Length::Fill)

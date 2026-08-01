@@ -1,4 +1,4 @@
-//! Event stream assembled from NetworkManager D-Bus signals.
+//! Event stream assembled from `NetworkManager` D-Bus signals.
 //!
 //! The list of nearby access points is deliberately absent from it. The daemon
 //! republishes `AccessPoints` whenever any neighbouring radio appears or fades,
@@ -37,7 +37,7 @@ impl<'a> NetworkDbus<'a> {
             .await
             .then(|signal| async move {
                 let value = signal.get().await.map_err(|e| {
-                    AppError::internal(format!("Failed to get wireless enabled state: {}", e))
+                    AppError::internal(format!("Failed to get wireless enabled state: {e}"))
                 })?;
 
                 debug!("WiFi enabled changed: {value}");
@@ -52,7 +52,7 @@ impl<'a> NetworkDbus<'a> {
             .await
             .then(|signal| async move {
                 let value = ConnectivityState::from(signal.get().await.map_err(|e| {
-                    AppError::internal(format!("Failed to get connectivity state: {}", e))
+                    AppError::internal(format!("Failed to get connectivity state: {e}"))
                 })?);
 
                 debug!("Connectivity changed: {value:?}");
@@ -94,7 +94,9 @@ impl<'a> NetworkDbus<'a> {
                     let devices = devices.clone();
                     async move {
                         let current_devices = backend.wireless_devices().await?;
-                        if current_devices != devices {
+                        if current_devices == devices {
+                            Ok(None)
+                        } else {
                             let wifi_present = backend.wifi_device_present().await?;
                             let wireless_access_points =
                                 backend.wireless_access_points().await?;
@@ -106,8 +108,6 @@ impl<'a> NetworkDbus<'a> {
                                 wifi_present,
                                 wireless_access_points,
                             }))
-                        } else {
-                            Ok(None)
                         }
                     }
                 }
@@ -119,13 +119,13 @@ impl<'a> NetworkDbus<'a> {
         let wireless_access_points = self.wireless_access_points().await?;
 
         let mut device_state_changes = Vec::with_capacity(wireless_access_points.len());
-        for access_point in wireless_access_points.iter() {
+        for access_point in &wireless_access_points {
             let device_proxy = DeviceProxy::builder(conn)
                 .path(access_point.device_path.clone())
-                .map_err(|e| AppError::internal(format!("Failed to set DeviceProxy path: {}", e)))?
+                .map_err(|e| AppError::internal(format!("Failed to set DeviceProxy path: {e}")))?
                 .build()
                 .await
-                .map_err(|e| AppError::internal(format!("Failed to build DeviceProxy: {}", e)))?;
+                .map_err(|e| AppError::internal(format!("Failed to build DeviceProxy: {e}")))?;
 
             let ssid = access_point.ssid.clone();
             device_state_changes.push(
@@ -140,8 +140,7 @@ impl<'a> NetworkDbus<'a> {
                                 let value =
                                     state.get().await.map(DeviceState::from).map_err(|e| {
                                         AppError::internal(format!(
-                                            "Failed to get device state: {}",
-                                            e
+                                            "Failed to get device state: {e}"
                                         ))
                                     })?;
                                 if value == DeviceState::NeedAuth {
@@ -169,12 +168,12 @@ impl<'a> NetworkDbus<'a> {
             let proxy = AccessPointProxy::builder(conn)
                 .path(access_point.path.clone())
                 .map_err(|e| {
-                    AppError::internal(format!("Failed to set AccessPointProxy path: {}", e))
+                    AppError::internal(format!("Failed to set AccessPointProxy path: {e}"))
                 })?
                 .build()
                 .await
                 .map_err(|e| {
-                    AppError::internal(format!("Failed to build AccessPointProxy: {}", e))
+                    AppError::internal(format!("Failed to build AccessPointProxy: {e}"))
                 })?;
 
             strength_changes_streams.push(
@@ -188,8 +187,7 @@ impl<'a> NetworkDbus<'a> {
                             async move {
                                 let value = signal.get().await.map_err(|e| {
                                     AppError::internal(format!(
-                                        "Failed to get signal strength: {}",
-                                        e
+                                        "Failed to get signal strength: {e}"
                                     ))
                                 })?;
                                 debug!("Strength changed value: {ssid}, {value}");

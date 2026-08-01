@@ -17,10 +17,10 @@ pub(super) async fn describe(
 ) -> AppResult<Option<ActiveConnectionInfo>> {
     let wireless_device = WirelessDeviceProxy::builder(conn)
         .path(device.inner().path())
-        .map_err(|e| AppError::internal(format!("Failed to set WirelessDeviceProxy path: {}", e)))?
+        .map_err(|e| AppError::internal(format!("Failed to set WirelessDeviceProxy path: {e}")))?
         .build()
         .await
-        .map_err(|e| AppError::internal(format!("Failed to build WirelessDeviceProxy: {}", e)))?;
+        .map_err(|e| AppError::internal(format!("Failed to build WirelessDeviceProxy: {e}")))?;
 
     let Ok(access_point) = wireless_device.active_access_point().await else {
         return Ok(None);
@@ -28,21 +28,21 @@ pub(super) async fn describe(
 
     let access_point = AccessPointProxy::builder(conn)
         .path(access_point)
-        .map_err(|e| AppError::internal(format!("Failed to set AccessPointProxy path: {}", e)))?
+        .map_err(|e| AppError::internal(format!("Failed to set AccessPointProxy path: {e}")))?
         .build()
         .await
-        .map_err(|e| AppError::internal(format!("Failed to build AccessPointProxy: {}", e)))?;
+        .map_err(|e| AppError::internal(format!("Failed to build AccessPointProxy: {e}")))?;
 
     let ssid = access_point
         .ssid()
         .await
-        .map_err(|e| AppError::internal(format!("Failed to get access point SSID: {}", e)))?;
+        .map_err(|e| AppError::internal(format!("Failed to get access point SSID: {e}")))?;
 
     Ok(Some(ActiveConnectionInfo::WiFi {
         id:       connection
             .id()
             .await
-            .map_err(|e| AppError::internal(format!("Failed to get WiFi connection ID: {}", e)))?,
+            .map_err(|e| AppError::internal(format!("Failed to get WiFi connection ID: {e}")))?,
         name:     String::from_utf8_lossy(&ssid).into_owned(),
         strength: access_point.strength().await.unwrap_or_default()
     }))

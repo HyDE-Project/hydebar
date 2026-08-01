@@ -65,6 +65,7 @@ impl KeyboardSubmap {
     }
 
     /// Whether the shown submap is still dissolving.
+    #[must_use]
     pub fn is_fading(&self) -> bool {
         self.shown.is_animating()
     }
@@ -85,7 +86,7 @@ where
     fn register(
         &mut self,
         ctx: &ModuleContext,
-        _: Self::RegistrationData<'_>
+        (): Self::RegistrationData<'_>
     ) -> Result<(), ModuleError> {
         self.sender = Some(ctx.module_sender(ModuleEvent::KeyboardSubmap));
 
@@ -140,7 +141,7 @@ where
 
     fn view(
         &self,
-        _: Self::ViewData<'_>
+        (): Self::ViewData<'_>
     ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
         if self.submap.is_empty() {
             None

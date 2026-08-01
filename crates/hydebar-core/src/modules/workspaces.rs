@@ -76,7 +76,7 @@ fn map_snapshot_to_workspaces(
     let (special, normal): (Vec<_>, Vec<_>) = workspaces.into_iter().partition(|w| w.id < 0);
 
     // Map special workspaces.
-    for w in special.iter() {
+    for w in &special {
         result.push(Workspace {
             id:         w.id,
             name:       w
@@ -99,7 +99,7 @@ fn map_snapshot_to_workspaces(
     let any_monitor_reports = monitors.iter().any(|m| m.active_workspace_id.is_some());
 
     // Map normal workspaces.
-    for w in normal.iter() {
+    for w in &normal {
         let shown = if any_monitor_reports {
             monitors.iter().any(|m| m.active_workspace_id == Some(w.id))
         } else {
@@ -527,7 +527,6 @@ where
                         }
                     })
                     .map(|elem: Element<'_, Message>| elem.map(M::from))
-                    .collect::<Vec<Element<'_, M>>>()
             )
             .spacing(appearance.spacing(WORKSPACE_GAP_EM))
             .into(),

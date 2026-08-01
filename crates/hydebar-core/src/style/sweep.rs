@@ -3,7 +3,7 @@
 //! Switching to a theme plays that theme's own entrance: the front picks its
 //! corner, its width, its pace and its damping from the theme it brings in, so
 //! arriving in a neon theme snaps and bounces while a warm retro palette rolls
-//! in slowly. The stock HyDE themes each carry a hand-tuned signature; any
+//! in slowly. The stock `HyDE` themes each carry a hand-tuned signature; any
 //! other theme derives a stable one from its own palette, so no theme ever
 //! falls back to somebody else's motion.
 
@@ -45,7 +45,7 @@ impl SweepStyle {
             .unwrap_or_else(|| Self::derived(theme, appearance))
     }
 
-    /// Hand-tuned signatures of the themes HyDE ships.
+    /// Hand-tuned signatures of the themes `HyDE` ships.
     fn stock(theme: &str) -> Option<Self> {
         let style = |from_left, spread, millis, damping| {
             Some(Self {
@@ -80,7 +80,7 @@ impl SweepStyle {
     /// name decides the corner, so the same theme always enters the same way.
     fn derived(theme: Option<&str>, appearance: &Appearance) -> Self {
         let background = appearance.background_color.get_base();
-        let luminance = 0.2126 * background.r + 0.7152 * background.g + 0.0722 * background.b;
+        let luminance = 0.0722f32.mul_add(background.b, 0.7152f32.mul_add(background.g, 0.2126 * background.r));
         let dark = luminance < 0.5;
 
         let primary = appearance.primary_color.get_base();

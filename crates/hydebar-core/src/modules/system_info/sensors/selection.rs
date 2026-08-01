@@ -102,7 +102,7 @@ pub struct GpuPick {
 /// a tile on a card from a block inside the processor, so an
 /// unknown placement is never presented as either one.
 #[must_use]
-pub fn placement(vendor: GpuVendor, facts: ChipFacts) -> GpuPlacement {
+pub const fn placement(vendor: GpuVendor, facts: ChipFacts) -> GpuPlacement {
     match vendor {
         GpuVendor::Nvidia => GpuPlacement::Discrete,
         GpuVendor::SystemOnChip => GpuPlacement::Integrated,

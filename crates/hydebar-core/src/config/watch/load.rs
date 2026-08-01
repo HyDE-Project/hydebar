@@ -16,7 +16,7 @@ use crate::config::{
 };
 
 /// Loads the configuration file with the theme the environment points at.
-pub(crate) fn load_candidate(
+pub fn load_candidate(
     path: &Path,
     manager: &ConfigManager
 ) -> Result<ConfigApplied, ConfigUpdateError> {
@@ -25,14 +25,14 @@ pub(crate) fn load_candidate(
     apply_candidate(config, manager)
 }
 
-/// Reloads the configuration while overlaying what HyDE answers for.
+/// Reloads the configuration while overlaying what `HyDE` answers for.
 ///
 /// The desktop theme and the bar layout are not part of the configuration
 /// file, so a switch of either has to re-run the very same load the file
 /// watcher runs. Taking them as closures is what lets the theme watcher
 /// overlay the directory it actually watches instead of whatever the
 /// environment happens to say.
-pub(crate) fn load_candidate_with<F, G>(
+pub fn load_candidate_with<F, G>(
     path: &Path,
     manager: &ConfigManager,
     theme: F,
@@ -73,7 +73,7 @@ fn convert_read_error(err: ConfigReadError) -> ConfigUpdateError {
 }
 
 /// Reports that the configuration could not be refreshed.
-pub(crate) async fn send_degradation(
+pub async fn send_degradation(
     output: &mut Sender<ConfigEvent>,
     manager: Arc<ConfigManager>,
     reason: ConfigUpdateError

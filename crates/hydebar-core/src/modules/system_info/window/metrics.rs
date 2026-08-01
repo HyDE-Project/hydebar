@@ -57,8 +57,7 @@ pub(super) fn column_width() -> f32 {
 
 /// Width the menu box needs, box padding included.
 pub fn content_width(font_size: f32) -> f32 {
-    scale::scaled(WIDTH + 2.0 * OUTER_PADDING)
-        + 2.0 * crate::menu::MENU_PADDING_EM * font_size
+    (2.0 * crate::menu::MENU_PADDING_EM).mul_add(font_size, scale::scaled(2.0f32.mul_add(OUTER_PADDING, WIDTH)))
 }
 
 fn row_height(row: &Row) -> f32 {

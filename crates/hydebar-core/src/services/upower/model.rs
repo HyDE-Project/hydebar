@@ -11,13 +11,14 @@ pub struct BatteryData {
 }
 
 impl BatteryData {
-    pub fn get_indicator_state(&self) -> IndicatorState {
+    #[must_use]
+    pub const fn get_indicator_state(&self) -> IndicatorState {
         match self {
-            BatteryData {
+            Self {
                 status: BatteryStatus::Charging(_),
                 ..
             } => IndicatorState::Success,
-            BatteryData {
+            Self {
                 status: BatteryStatus::Discharging(_),
                 capacity
             } if *capacity < 20 => IndicatorState::Danger,
@@ -25,25 +26,26 @@ impl BatteryData {
         }
     }
 
-    pub fn get_icon(&self) -> Icons {
+    #[must_use]
+    pub const fn get_icon(&self) -> Icons {
         match self {
-            BatteryData {
+            Self {
                 status: BatteryStatus::Charging(_),
                 ..
             } => Icons::BatteryCharging,
-            BatteryData {
+            Self {
                 status: BatteryStatus::Discharging(_),
                 capacity
             } if *capacity < 20 => Icons::Battery0,
-            BatteryData {
+            Self {
                 status: BatteryStatus::Discharging(_),
                 capacity
             } if *capacity < 40 => Icons::Battery1,
-            BatteryData {
+            Self {
                 status: BatteryStatus::Discharging(_),
                 capacity
             } if *capacity < 60 => Icons::Battery2,
-            BatteryData {
+            Self {
                 status: BatteryStatus::Discharging(_),
                 capacity
             } if *capacity < 80 => Icons::Battery3,
@@ -76,12 +78,12 @@ pub enum PowerProfile {
 }
 
 impl From<String> for PowerProfile {
-    fn from(power_profile: String) -> PowerProfile {
+    fn from(power_profile: String) -> Self {
         match power_profile.as_str() {
-            "balanced" => PowerProfile::Balanced,
-            "performance" => PowerProfile::Performance,
-            "power-saver" => PowerProfile::PowerSaver,
-            _ => PowerProfile::Unknown
+            "balanced" => Self::Balanced,
+            "performance" => Self::Performance,
+            "power-saver" => Self::PowerSaver,
+            _ => Self::Unknown
         }
     }
 }
@@ -89,10 +91,10 @@ impl From<String> for PowerProfile {
 impl From<PowerProfile> for Icons {
     fn from(profile: PowerProfile) -> Self {
         match profile {
-            PowerProfile::Balanced => Icons::Balanced,
-            PowerProfile::Performance => Icons::Performance,
-            PowerProfile::PowerSaver => Icons::PowerSaver,
-            PowerProfile::Unknown => Icons::None
+            PowerProfile::Balanced => Self::Balanced,
+            PowerProfile::Performance => Self::Performance,
+            PowerProfile::PowerSaver => Self::PowerSaver,
+            PowerProfile::Unknown => Self::None
         }
     }
 }

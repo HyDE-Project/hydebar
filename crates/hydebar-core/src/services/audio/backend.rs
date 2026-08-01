@@ -1,4 +1,4 @@
-//! PulseAudio backend for the audio service.
+//! `PulseAudio` backend for the audio service.
 
 mod api;
 mod control;

@@ -14,7 +14,7 @@ pub struct IslandFinish {
 impl IslandFinish {
     /// The finish the appearance adopted from the compositor.
     #[must_use]
-    pub fn of(appearance: &Appearance) -> Self {
+    pub const fn of(appearance: &Appearance) -> Self {
         Self {
             border: appearance.window_border,
             shadow: appearance.window_shadow
@@ -59,7 +59,7 @@ impl IslandFinish {
 }
 
 /// A compositor colour as the renderer spells it.
-fn rgba([r, g, b, a]: [f32; 4]) -> Color {
+const fn rgba([r, g, b, a]: [f32; 4]) -> Color {
     Color {
         r,
         g,

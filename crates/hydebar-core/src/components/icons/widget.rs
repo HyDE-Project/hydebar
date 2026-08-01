@@ -32,6 +32,7 @@ pub fn icon<'a>(theme: &IconTheme, icon: Icons) -> Text<'a> {
 }
 
 /// Renders an arbitrary glyph, at the themed size.
+#[must_use]
 pub fn icon_raw<'a>(glyph: String) -> Text<'a> {
     build(std::borrow::Cow::Owned(glyph), scale::base())
 }

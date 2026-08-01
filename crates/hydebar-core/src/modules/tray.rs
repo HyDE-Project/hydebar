@@ -74,7 +74,7 @@ mod module {
         fn register(
             &mut self,
             ctx: &ModuleContext,
-            _: Self::RegistrationData<'_>
+            (): Self::RegistrationData<'_>
         ) -> Result<(), ModuleError> {
             self.abort_listener_handles();
             self.sender = Some(ctx.module_sender(ModuleEvent::Tray));
@@ -214,7 +214,7 @@ mod state {
                             service.update(data);
                         }
                     }
-                    ServiceEvent::Error(_) => {
+                    ServiceEvent::Error(()) => {
                         error!("Tray service error occurred");
                     }
                 },
@@ -260,6 +260,7 @@ mod view {
     };
 
     impl TrayModule {
+        #[must_use]
         pub fn menu_view(
             &self,
             name: &'_ str,
@@ -297,12 +298,12 @@ mod view {
                     toggle_state: Some(state),
                     ..
                 } if toggle_type == "checkmark" => toggler(*state > 0)
-                    .label(label.replace("_", "").to_owned())
+                    .label(label.replace('_', ""))
                     .on_toggle({
                         let name = name.to_owned();
                         let id = layout.0;
 
-                        move |_| TrayMessage::MenuSelected(name.to_owned(), id)
+                        move |_| TrayMessage::MenuSelected(name.clone(), id)
                     })
                     .width(Length::Fill)
                     .into(),
@@ -315,7 +316,7 @@ mod view {
                     Column::new()
                         .push(
                             button(row!(
-                                text(label.replace("_", "").to_owned()).width(Length::Fill),
+                                text(label.replace('_', "")).width(Length::Fill),
                                 icon(
                                     icons,
                                     if is_open {
@@ -337,7 +338,6 @@ mod view {
                                         .2
                                         .iter()
                                         .map(|menu| self.menu_voice(name, menu, opacity, icons))
-                                        .collect::<Vec<_>>()
                                 )
                                 .padding(iced::Padding {
                                     top:    0.0,
@@ -354,7 +354,7 @@ mod view {
                 }
                 LayoutProps {
                     label: Some(label), ..
-                } => button(text(label.replace("_", "")))
+                } => button(text(label.replace('_', "")))
                     .style(ghost_button_style(opacity))
                     .on_press(TrayMessage::MenuSelected(name.to_owned(), layout.0))
                     .width(Length::Fill)

@@ -1,7 +1,7 @@
 //! Appearance configuration of the bar, split by concern.
 //!
 //! The palette lives in [`color`], the layout metrics derived from the themed
-//! font size in [`metrics`], the overlay of the HyDE Project theme in [`hyde`]
+//! font size in [`metrics`], the overlay of the `HyDE` Project theme in [`hyde`]
 //! and the configuration struct tying them together in [`settings`].
 
 mod animation;

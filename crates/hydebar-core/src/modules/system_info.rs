@@ -64,6 +64,7 @@ impl SystemInfo {
     }
 
     /// Memory readout the active index selects.
+    #[must_use]
     pub fn active_memory_format(&self, config: &SystemModuleConfig) -> MemoryFormat {
         *self
             .format
@@ -72,7 +73,8 @@ impl SystemInfo {
 
     /// Latest sample, for the thin bar entries and the hover hints that
     /// render from it.
-    pub fn data(&self) -> &SystemInfoData {
+    #[must_use]
+    pub const fn data(&self) -> &SystemInfoData {
         &self.data
     }
 
@@ -80,16 +82,19 @@ impl SystemInfo {
     ///
     /// Stated by the module so the box hugs its value columns; a stock menu
     /// width left a blank margin beside readouts that cannot grow into it.
+    #[must_use]
     pub fn content_width(font_size: f32) -> f32 {
         window::content_width(font_size)
     }
 
     /// Height the window needs for the readouts this machine reports.
+    #[must_use]
     pub fn content_height(&self, config: &SystemModuleConfig) -> f32 {
         window::content_height(&self.data, config)
     }
 
     /// Render the menu entry exposing detailed system information.
+    #[must_use]
     pub fn menu_view(
         &self,
         config: &SystemModuleConfig,
@@ -99,11 +104,13 @@ impl SystemInfo {
     }
 
     /// Render the window of the standalone processor entry.
+    #[must_use]
     pub fn cpu_menu_view(&self, icons: &IconTheme) -> Element<'_, Message> {
         window::build_section_window(window::model::processor_section(&self.data), icons)
     }
 
     /// Render the window of the standalone memory entry.
+    #[must_use]
     pub fn memory_menu_view(&self, icons: &IconTheme) -> Element<'_, Message> {
         window::build_section_window(
             window::model::scoped_section(&self.data, Icons::Mem),
@@ -112,11 +119,13 @@ impl SystemInfo {
     }
 
     /// Height the standalone processor window needs.
+    #[must_use]
     pub fn cpu_content_height(&self) -> f32 {
         window::section_window_height(window::model::processor_section(&self.data).as_ref())
     }
 
     /// Height the standalone memory window needs.
+    #[must_use]
     pub fn memory_content_height(&self) -> f32 {
         window::section_window_height(
             window::model::scoped_section(&self.data, Icons::Mem).as_ref()
@@ -124,11 +133,13 @@ impl SystemInfo {
     }
 
     /// Render the window of the standalone processor temperature entry.
+    #[must_use]
     pub fn cpu_temp_menu_view(&self, icons: &IconTheme) -> Element<'_, Message> {
         window::build_section_window(window::model::cpu_temperature_section(&self.data), icons)
     }
 
     /// Height the standalone processor temperature window needs.
+    #[must_use]
     pub fn cpu_temp_content_height(&self) -> f32 {
         window::section_window_height(
             window::model::cpu_temperature_section(&self.data).as_ref()
@@ -136,6 +147,7 @@ impl SystemInfo {
     }
 
     /// Render the window of the standalone graphics entry.
+    #[must_use]
     pub fn gpu_menu_view(&self, icons: &IconTheme) -> Element<'_, Message> {
         window::build_section_window(
             window::model::scoped_section(&self.data, Icons::Gpu),
@@ -144,6 +156,7 @@ impl SystemInfo {
     }
 
     /// Height the standalone graphics window needs.
+    #[must_use]
     pub fn gpu_content_height(&self) -> f32 {
         window::section_window_height(
             window::model::scoped_section(&self.data, Icons::Gpu).as_ref()

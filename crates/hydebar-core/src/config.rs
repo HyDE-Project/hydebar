@@ -47,7 +47,7 @@ impl std::fmt::Display for ConfigLoadError {
                 input,
                 source
             } => {
-                write!(f, "failed to expand config path '{}': {}", input, source)
+                write!(f, "failed to expand config path '{input}': {source}")
             }
             Self::Missing {
                 path
@@ -147,29 +147,26 @@ impl std::error::Error for ConfigReadError {
 }
 
 pub fn get_config(path: Option<PathBuf>) -> Result<(Config, PathBuf), ConfigLoadError> {
-    match path {
-        Some(path) => {
-            info!("Config path provided {path:?}");
-            let expanded = expand_path(path)?;
+    if let Some(path) = path {
+        info!("Config path provided {path:?}");
+        let expanded = expand_path(path)?;
 
-            if !expanded.exists() {
-                return Err(ConfigLoadError::Missing {
-                    path: expanded
-                });
-            }
-
-            let config = load_config_or_default(&expanded);
-
-            Ok((config, expanded))
+        if !expanded.exists() {
+            return Err(ConfigLoadError::Missing {
+                path: expanded
+            });
         }
-        None => {
-            let expanded = expand_path(PathBuf::from(DEFAULT_CONFIG_FILE_PATH))?;
-            ensure_parent_exists(&expanded)?;
 
-            let config = load_config_or_default(&expanded);
+        let config = load_config_or_default(&expanded);
 
-            Ok((config, expanded))
-        }
+        Ok((config, expanded))
+    } else {
+        let expanded = expand_path(PathBuf::from(DEFAULT_CONFIG_FILE_PATH))?;
+        ensure_parent_exists(&expanded)?;
+
+        let config = load_config_or_default(&expanded);
+
+        Ok((config, expanded))
     }
 }
 
@@ -205,10 +202,10 @@ pub(crate) fn read_config(path: &Path) -> Result<Config, ConfigReadError> {
     read_config_with(path, theme_source::load, bar_layout::load)
 }
 
-/// Reads the configuration and overlays what HyDE answers for.
+/// Reads the configuration and overlays what `HyDE` answers for.
 ///
 /// The theme and the layout are closures rather than values because reading
-/// them touches the disk and a configuration that opts out of following HyDE
+/// them touches the disk and a configuration that opts out of following `HyDE`
 /// must not pay for either. Injecting them also lets a watcher overlay the
 /// directory it is watching, which is the only way a test can observe a theme
 /// switch without mutating the environment of the whole process.
@@ -249,22 +246,22 @@ where
 ///
 /// Presence is what matters, not content: a hand-written `[modules]` section
 /// is manual control and pins the layout, however much it happens to coincide
-/// with anything HyDE has on file.
+/// with anything `HyDE` has on file.
 fn declares_modules(table: &toml::Table) -> bool {
     table.contains_key("modules")
 }
 
-/// Overlays the HyDE theme and bar layout onto a freshly parsed configuration.
+/// Overlays the `HyDE` theme and bar layout onto a freshly parsed configuration.
 ///
 /// The overlay runs *after* the file has been parsed and only fills what the
 /// user left unset, which is what fixes the precedence for good: what is
-/// written in `~/.config/hydebar/config.toml` wins, what HyDE says fills the
+/// written in `~/.config/hydebar/config.toml` wins, what `HyDE` says fills the
 /// rest, and the bar's own defaults answer for whatever is left. No theme or
 /// layout switch can undo a value the user wrote.
 ///
 /// Runs on every read, so a hot reload picks up a switch that happened while
 /// the bar was running. Opting out with `appearance.follow_hyde = false`
-/// skips reading HyDE entirely.
+/// skips reading `HyDE` entirely.
 fn follow_hyde<F, G>(mut config: Config, manual_layout: bool, theme: F, layout: G) -> Config
 where
     F: FnOnce() -> HydeTheme,

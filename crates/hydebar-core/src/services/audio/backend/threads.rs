@@ -1,4 +1,4 @@
-//! Listener and commander threads driving the PulseAudio mainloop.
+//! Listener and commander threads driving the `PulseAudio` mainloop.
 
 use std::{
     cell::RefCell,
@@ -185,7 +185,7 @@ impl PulseAudioServer {
                         let _ = from_server_tx.try_send(BackendEvent::Error(err.to_string()));
                     }
                 }
-            })
+            });
         });
 
         match ready_rx.recv().await {

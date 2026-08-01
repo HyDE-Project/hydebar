@@ -1,11 +1,11 @@
-//! The font HyDE means a bar to use.
+//! The font `HyDE` means a bar to use.
 //!
 //! The font is not part of the palette and is not written to any stylesheet the
-//! bar could read: HyDE resolves it on the fly, out of four files, each of
+//! bar could read: `HyDE` resolves it on the fly, out of four files, each of
 //! which may override the one below it. The chain is restated here so the bar
 //! can answer the same question without a bar generator having run first.
 //!
-//! Order, highest first, mirroring what HyDE itself does:
+//! Order, highest first, mirroring what `HyDE` itself does:
 //!
 //! 1. `~/.local/state/hyde/config` — the flat export the `hyde-config` daemon
 //!    writes out of `config.toml`; `~/.config/hyde/config.toml` itself is the
@@ -14,21 +14,21 @@
 //! 2. `~/.config/hyde/themes/<theme>/hypr.theme` — `$BAR_FONT`,
 //!    `$BAR_FONT_SIZE`
 //! 3. `~/.local/state/hyde/staterc` — `BAR_FONT`, `BAR_FONT_SIZE`
-//! 4. `~/.local/share/hyde/env-theme` — the values HyDE ships
-//! 5. the HyDE defaults, `JetBrainsMono Nerd Font` at `10`
+//! 4. `~/.local/share/hyde/env-theme` — the values `HyDE` ships
+//! 5. the `HyDE` defaults, `JetBrainsMono Nerd Font` at `10`
 //!
 //! The size is resolved slightly differently from the family, again mirroring
-//! HyDE: the session state outranks the theme, because a size is something the
+//! `HyDE`: the session state outranks the theme, because a size is something the
 //! user nudges for their screen while a family is something the theme picks.
 
 use std::fs;
 
 use crate::{hyde_dirs::HydeDirs, hypr_vars, shell_vars};
 
-/// Family HyDE falls back to when nothing names one.
+/// Family `HyDE` falls back to when nothing names one.
 const DEFAULT_FAMILY: &str = "JetBrainsMono Nerd Font";
 
-/// Size HyDE falls back to when nothing names one, in pixels.
+/// Size `HyDE` falls back to when nothing names one, in pixels.
 const DEFAULT_SIZE: f32 = 10.0;
 
 /// Key the family is stated under in `config.toml`.
@@ -46,7 +46,7 @@ const BAR_FONT_SIZE: &str = "BAR_FONT_SIZE";
 /// Key `staterc` records the active theme under.
 const THEME_KEY: &str = "HYDE_THEME";
 
-/// The font a HyDE install means the bar to render with.
+/// The font a `HyDE` install means the bar to render with.
 #[derive(Debug, Clone, PartialEq)]
 pub(super) struct BarFont {
     /// Family name, as a font backend would look it up.
@@ -55,10 +55,10 @@ pub(super) struct BarFont {
     pub size_px: f32
 }
 
-/// Resolves the bar font of a HyDE install.
+/// Resolves the bar font of a `HyDE` install.
 ///
-/// Always answers, because every link of the chain ends in a HyDE default; a
-/// caller that must not impose those defaults on a machine without HyDE should
+/// Always answers, because every link of the chain ends in a `HyDE` default; a
+/// caller that must not impose those defaults on a machine without `HyDE` should
 /// check [`HydeDirs::is_installed`] first.
 #[must_use]
 pub(super) fn read(dirs: &HydeDirs) -> BarFont {
@@ -139,7 +139,7 @@ mod tests {
 
     use super::*;
 
-    /// A HyDE install laid out in a temporary directory.
+    /// A `HyDE` install laid out in a temporary directory.
     struct Install {
         _root: tempfile::TempDir,
         dirs:  HydeDirs

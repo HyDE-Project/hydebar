@@ -118,7 +118,7 @@ impl MprisPlayerService {
                         info!("MPRIS player service initialized");
 
                         publisher
-                            .send(ServiceEvent::Init(MprisPlayerService {
+                            .send(ServiceEvent::Init(Self {
                                 data,
                                 conn: conn.clone()
                             }))
@@ -221,7 +221,7 @@ impl MprisPlayerService {
 
     /// Executes a command against the currently cached player list.
     pub(crate) async fn execute_command(
-        service: Option<MprisPlayerService>,
+        service: Option<Self>,
         command: MprisPlayerCommand
     ) -> Result<Vec<MprisPlayerData>, ModuleError> {
         #[cfg(all(test, feature = "enable-broken-tests"))]
@@ -244,7 +244,7 @@ impl Service for MprisPlayerService {
 
         Task::perform(
             async move {
-                match MprisPlayerService::execute_command(service, command).await {
+                match Self::execute_command(service, command).await {
                     Ok(data) => ServiceEvent::Update(MprisPlayerEvent::Refresh(data)),
                     Err(error) => ServiceEvent::Error(error)
                 }

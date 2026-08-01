@@ -37,10 +37,10 @@ impl Role {
     /// The colour this role names in `theme`.
     fn color(self, theme: &Theme) -> iced::Color {
         match self {
-            Role::Text => theme.palette().text,
-            Role::Success => theme.palette().success,
-            Role::Warning => theme.palette().warning,
-            Role::Danger => theme.palette().danger
+            Self::Text => theme.palette().text,
+            Self::Success => theme.palette().success,
+            Self::Warning => theme.palette().warning,
+            Self::Danger => theme.palette().danger
         }
     }
 }

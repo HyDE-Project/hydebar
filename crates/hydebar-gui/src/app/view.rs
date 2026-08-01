@@ -27,10 +27,12 @@ use super::{
 use crate::centerbox;
 
 impl App {
+    #[must_use]
     pub fn title(&self, _id: Id) -> String {
         String::from("hydebar")
     }
 
+    #[must_use]
     pub fn theme(&self, _id: Id) -> Theme {
         self.theme_cache.clone()
     }
@@ -53,7 +55,7 @@ impl App {
     fn faded_menu<'a>(&self, menu: Element<'a, Message>, progress: f32) -> Element<'a, Message> {
         if progress < 1.0 {
             let opacity = self.config.appearance.menu.opacity.clamp(0.0, 1.0);
-            let share = progress * (opacity + (1.0 - opacity) * progress);
+            let share = progress * (1.0 - opacity).mul_add(progress, opacity);
 
             iced::widget::themer(
                 Some(hydebar_core::style::faded_theme(&self.theme_cache, share)),
@@ -66,6 +68,7 @@ impl App {
         }
     }
 
+    #[must_use]
     pub fn style(&self, theme: &Theme) -> Style {
         Style {
             background_color: Color::TRANSPARENT,
@@ -73,7 +76,8 @@ impl App {
         }
     }
 
-    pub fn scale_factor(&self, _id: Id) -> f64 {
+    #[must_use]
+    pub const fn scale_factor(&self, _id: Id) -> f64 {
         self.appearance().scale_factor
     }
 
@@ -101,7 +105,7 @@ impl App {
         let bar = self.appearance().height.unwrap_or(HEIGHT as f32);
 
         self.screen_height
-            .map(|screen| screen - bar - self.appearance().font_size_px() * 6.0)
+            .map(|screen| self.appearance().font_size_px().mul_add(-6.0, screen - bar))
             .filter(|room| *room > 0.0)
     }
 
@@ -382,6 +386,7 @@ impl App {
         }
     }
 
+    #[must_use]
     pub fn view(&self, id: Id) -> Element<'_, Message> {
         match self.outputs.has(id) {
             Some(HasOutput::Main) => {

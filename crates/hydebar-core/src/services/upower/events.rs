@@ -1,4 +1,4 @@
-//! Event stream assembled from UPower D-Bus signals.
+//! Event stream assembled from `UPower` D-Bus signals.
 
 use iced::futures::{
     Stream, StreamExt,
@@ -37,7 +37,7 @@ impl UPowerService {
                     )
                     .filter_map({
                         let conn = conn.clone();
-                        move |_| {
+                        move |()| {
                             let conn = conn.clone();
                             async move {
                                 if let Some((data, _)) =
@@ -56,13 +56,12 @@ impl UPowerService {
 
             select_all(events).boxed()
         } else {
-            once(async {}).map(|_| UPowerEvent::NoBattery).boxed()
+            once(async {}).map(|()| UPowerEvent::NoBattery).boxed()
         };
 
         let powerprofiles = PowerProfilesProxy::new(conn).await.map_err(|e| {
             AppError::internal(format!(
-                "Failed to create PowerProfilesProxy for events: {}",
-                e
+                "Failed to create PowerProfilesProxy for events: {e}"
             ))
         })?;
         let power_profile_event =
@@ -88,11 +87,11 @@ impl UPowerService {
         match state {
             State::Init => match zbus::Connection::system()
                 .await
-                .map_err(|e| AppError::internal(format!("Failed to connect to system bus: {}", e)))
+                .map_err(|e| AppError::internal(format!("Failed to connect to system bus: {e}")))
             {
                 Ok(conn) => {
                     let (battery, battery_path, power_profile) =
-                        match UPowerService::initialize_data(&conn).await {
+                        match Self::initialize_data(&conn).await {
                             Ok((Some((battery_data, battery_path)), power_profile)) => {
                                 (Some(battery_data), Some(battery_path), power_profile)
                             }
@@ -104,12 +103,12 @@ impl UPowerService {
                             }
                         };
 
-                    let service = UPowerService {
+                    let service = Self {
                         battery,
                         power_profile,
                         conn: conn.clone()
                     };
-                    let _ = publisher.send(ServiceEvent::Init(service)).await;
+                    let () = publisher.send(ServiceEvent::Init(service)).await;
 
                     State::Active(conn, battery_path)
                 }
@@ -119,10 +118,10 @@ impl UPowerService {
                 }
             },
             State::Active(conn, battery_devices) => {
-                match UPowerService::events(&conn, &battery_devices).await {
+                match Self::events(&conn, &battery_devices).await {
                     Ok(mut events) => {
                         while let Some(event) = events.next().await {
-                            let _ = publisher.send(ServiceEvent::Update(event)).await;
+                            let () = publisher.send(ServiceEvent::Update(event)).await;
                         }
 
                         State::Active(conn, battery_devices)

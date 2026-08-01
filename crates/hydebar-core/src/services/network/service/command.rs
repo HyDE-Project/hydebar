@@ -45,6 +45,7 @@ impl NetworkService {
     /// The attended poll runs on its own task; handing it the whole service
     /// meant cloning every list the service holds two times a second, when
     /// all the read needs is the bus handle and the backend name.
+    #[must_use]
     pub fn access_point_probe(&self) -> AccessPointProbe {
         AccessPointProbe {
             conn:           self.conn.clone(),
@@ -124,7 +125,7 @@ impl Service for NetworkService {
         let service = self.clone();
 
         Task::perform(
-            async move { NetworkService::run_command(service, command).await },
+            async move { Self::run_command(service, command).await },
             |event| event
         )
     }

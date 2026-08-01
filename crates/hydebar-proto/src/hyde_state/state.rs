@@ -1,4 +1,4 @@
-//! The HyDE state snapshot and the entry points that read it from disk.
+//! The `HyDE` state snapshot and the entry points that read it from disk.
 
 use std::{
     fs,
@@ -17,20 +17,20 @@ const SHADER_KEY: &str = "HYPR_SHADER";
 /// Key the wallpaper recolouring switch is recorded under.
 const WALL_DCOL_KEY: &str = "enableWallDcol";
 
-/// Snapshot of the HyDE desktop as it stands right now.
+/// Snapshot of the `HyDE` desktop as it stands right now.
 ///
-/// Every field is independent, so a state file that HyDE has not written yet
+/// Every field is independent, so a state file that `HyDE` has not written yet
 /// leaves the rest of the snapshot usable.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct HydeState {
-    /// Theme currently in force, as HyDE names it.
+    /// Theme currently in force, as `HyDE` names it.
     ///
     /// This is the name the theme switcher expects back, so it is kept verbatim
     /// rather than normalised.
     pub theme:            Option<String>,
     /// Themes installed on this machine, in the order they are listed.
     pub themes:           Vec<String>,
-    /// Whether HyDE recolours the desktop from the wallpaper.
+    /// Whether `HyDE` recolours the desktop from the wallpaper.
     ///
     /// The bar shows this because it explains why the colours moved without
     /// anybody touching a theme. The switch is a mode number, not a flag: `0`
@@ -70,11 +70,11 @@ impl HydeState {
     }
 }
 
-/// Reads the HyDE state from `state_dir` and the themes from `config_dir`.
+/// Reads the `HyDE` state from `state_dir` and the themes from `config_dir`.
 ///
 /// `state_dir` is the XDG state root (typically `~/.local/state`) and
 /// `config_dir` the XDG configuration root (typically `~/.config`); the two are
-/// taken separately because HyDE splits its live state from its installation.
+/// taken separately because `HyDE` splits its live state from its installation.
 ///
 /// This function never fails: a missing file or directory only empties the
 /// fields it feeds.
@@ -86,7 +86,7 @@ pub fn load_from(state_dir: &Path, config_dir: &Path) -> HydeState {
     HydeState::parse(&source, installed)
 }
 
-/// Reads the HyDE state from the user's own directories.
+/// Reads the `HyDE` state from the user's own directories.
 ///
 /// The roots are resolved from `XDG_STATE_HOME` and `XDG_CONFIG_HOME`, falling
 /// back to the paths under `$HOME` that the specification names. When the

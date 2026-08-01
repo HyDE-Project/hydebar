@@ -1,4 +1,4 @@
-//! Reading the palette that is in force out of a HyDE install.
+//! Reading the palette that is in force out of a `HyDE` install.
 
 use std::fs;
 
@@ -20,7 +20,7 @@ const COLOR_SCHEME: &str = "COLOR_SCHEME";
 
 /// Reads the palette the desktop is currently coloured from.
 ///
-/// Everything comes out of the HyDE directories and nothing else:
+/// Everything comes out of the `HyDE` directories and nothing else:
 /// `~/.local/state/hyde/staterc` names the theme and the recolouring mode,
 /// `~/.cache/hyde/wall.dcol` carries the wallpaper colours and
 /// `~/.config/hyde/themes/<theme>/theme.dcol` the ones a theme ships. No
@@ -57,7 +57,7 @@ fn read_palette(dirs: &HydeDirs) -> Option<DcolPalette> {
 /// the recolouring switch says it wins.
 ///
 /// The wallpaper palette is read through `~/.cache/hyde/wall.dcol`, a symlink
-/// HyDE re-points on every wallpaper change, so following it is what makes the
+/// `HyDE` re-points on every wallpaper change, so following it is what makes the
 /// bar see the same colours the rest of the desktop was given.
 fn read_source(dirs: &HydeDirs, theme: Option<&str>, recolour: Recolour) -> Option<String> {
     if recolour.prefers_theme_palette()
@@ -72,8 +72,8 @@ fn read_source(dirs: &HydeDirs, theme: Option<&str>, recolour: Recolour) -> Opti
 
 /// Resolves the light/dark preference that is in force.
 ///
-/// Follows the order HyDE resolves a theme variable in: the user's own Hyprland
-/// override outranks the theme fragment, which outranks the values HyDE ships.
+/// Follows the order `HyDE` resolves a theme variable in: the user's own Hyprland
+/// override outranks the theme fragment, which outranks the values `HyDE` ships.
 /// Reading all three matters because the preference is what decides whether the
 /// palette is mirrored, and a wrong answer inverts the whole bar.
 fn color_scheme(dirs: &HydeDirs, theme: Option<&str>) -> Option<String> {
@@ -103,7 +103,7 @@ mod tests {
     };
     use crate::theme_source::color::Rgba;
 
-    /// A HyDE install laid out in a temporary directory.
+    /// A `HyDE` install laid out in a temporary directory.
     struct Install {
         _root: tempfile::TempDir,
         dirs:  HydeDirs

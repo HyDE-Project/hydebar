@@ -39,7 +39,7 @@ impl App {
         }
     }
 
-    /// Follows the desktop theme so a HyDE theme switch repaints the bar.
+    /// Follows the desktop theme so a `HyDE` theme switch repaints the bar.
     ///
     /// Kept separate from the configuration watcher because the theme lives in
     /// files the bar does not own, and because a configuration that pins its
@@ -55,7 +55,7 @@ impl App {
 
     /// Keeps the indicator of a running desktop change moving.
     ///
-    /// A HyDE theme switch takes seconds and the bar has nothing to do for any
+    /// A `HyDE` theme switch takes seconds and the bar has nothing to do for any
     /// of them, so nothing would otherwise make it redraw: the indicator would
     /// be drawn once on the press and then stand still, which is exactly what a
     /// hung bar looks like. The tick runs only while a switch is running, and

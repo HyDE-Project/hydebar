@@ -52,7 +52,7 @@ pub(super) fn interpret_theme_event<E: WatchedEvent>(
 /// simply contributes fewer values, and the bar should show that state rather
 /// than keep painting with the values of a theme that is gone.
 ///
-/// The compositor is asked again on every switch because a HyDE theme carries
+/// The compositor is asked again on every switch because a `HyDE` theme carries
 /// the window rounding the bar matches its islands to, and that rounding lands
 /// in the compositor rather than in any file the watcher sees.
 pub(super) async fn handle_theme_event(

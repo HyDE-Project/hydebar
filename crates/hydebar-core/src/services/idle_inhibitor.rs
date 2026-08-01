@@ -64,7 +64,8 @@ impl IdleInhibitorManager {
             .map_err(IdleInhibitorError::from)
     }
 
-    pub fn is_inhibited(&self) -> bool {
+    #[must_use]
+    pub const fn is_inhibited(&self) -> bool {
         self.data.idle_inhibitor_state.is_some()
     }
 
@@ -110,7 +111,7 @@ impl IdleInhibitorManager {
         Ok(())
     }
 
-    fn ensure_required_globals(&self) -> Result<(), IdleInhibitorError> {
+    const fn ensure_required_globals(&self) -> Result<(), IdleInhibitorError> {
         let state = IdleInhibitorInitState {
             has_compositor:   self.data.compositor.is_some(),
             has_surface:      self.data.surface.is_some(),
@@ -120,7 +121,7 @@ impl IdleInhibitorManager {
         Self::validate_init_state(state)
     }
 
-    fn validate_init_state(state: IdleInhibitorInitState) -> Result<(), IdleInhibitorError> {
+    const fn validate_init_state(state: IdleInhibitorInitState) -> Result<(), IdleInhibitorError> {
         if !state.has_compositor {
             return Err(IdleInhibitorError::missing_compositor());
         }
@@ -178,7 +179,7 @@ impl Dispatch<WlRegistry, ()> for IdleInhibitorManagerData {
                 {
                     debug!(target: "IdleInhibitor::WlRegistry::Event::Global", "Adding IdleInhibitManager with name {name} and version {version}");
                     state.idle_manager = Some((proxy.bind(name, version, handle, ()), name));
-                };
+                }
             }
             wl_registry::Event::GlobalRemove {
                 name

@@ -28,7 +28,7 @@ pub enum ServiceEvent<S: ReadOnlyService> {
 pub(crate) const RECONNECT_MIN_DELAY: std::time::Duration = std::time::Duration::from_millis(500);
 
 /// Largest pause a repeatedly failing service settles into.
-pub(crate) const RECONNECT_MAX_DELAY: std::time::Duration = std::time::Duration::from_secs(60);
+pub(crate) const RECONNECT_MAX_DELAY: std::time::Duration = std::time::Duration::from_mins(1);
 
 /// Delay before the next attempt after `failures` consecutive failures.
 ///

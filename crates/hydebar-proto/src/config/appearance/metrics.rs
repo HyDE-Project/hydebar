@@ -3,14 +3,14 @@
 
 use super::settings::Appearance;
 
-/// Corner radius used when neither the configuration nor the HyDE theme names
+/// Corner radius used when neither the configuration nor the `HyDE` theme names
 /// one, in pixels.
 ///
 /// Mirrors the `3pt` border radius of the reference waybar theme, which
 /// resolves to `4px` at the default `96dpi` scale.
 pub const DEFAULT_RADIUS: f32 = 4.0;
 
-/// Text size used when neither the configuration nor the HyDE theme names one,
+/// Text size used when neither the configuration nor the `HyDE` theme names one,
 /// in pixels.
 ///
 /// Mirrors the renderer default so a bar without a theme keeps the proportions
@@ -132,7 +132,7 @@ impl Appearance {
     /// Returns the text size the bar renders with, in pixels.
     ///
     /// Falls back to [`DEFAULT_FONT_SIZE`] whenever neither the configuration
-    /// nor the HyDE theme names one, which is exactly the size the renderer
+    /// nor the `HyDE` theme names one, which is exactly the size the renderer
     /// would pick on its own.
     #[must_use]
     pub fn font_size_px(&self) -> f32 {

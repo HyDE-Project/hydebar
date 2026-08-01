@@ -18,7 +18,7 @@ where
     Renderer: iced::advanced::Renderer
 {
     /// Creates an empty [`Centerbox`].
-    pub fn new(children: [iced_core::Element<'a, Message, Theme, Renderer>; 3]) -> Self {
+    pub const fn new(children: [iced_core::Element<'a, Message, Theme, Renderer>; 3]) -> Self {
         Centerbox {
             spacing: 0.0,
             padding: Padding::ZERO,
@@ -58,7 +58,7 @@ where
     }
 
     /// Sets the vertical alignment of the contents of the [`Centerbox`] .
-    pub fn align_items(mut self, align: Alignment) -> Self {
+    pub const fn align_items(mut self, align: Alignment) -> Self {
         self.align_items = align;
         self
     }

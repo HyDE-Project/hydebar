@@ -12,7 +12,7 @@ use log::debug;
 
 /// Geometry of the screen the bar will land on.
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub(crate) struct ScreenGeometry {
+pub struct ScreenGeometry {
     /// Resolution in physical pixels.
     pub(crate) pixels:   (f32, f32),
     /// Physical size in millimetres, zero when the screen does not report it.
@@ -32,7 +32,7 @@ impl ScreenGeometry {
 ///
 /// Returns nothing when the compositor cannot be reached or answers something
 /// unexpected, in which case the bar simply keeps the configured sizes.
-pub(crate) fn focused_screen() -> Option<ScreenGeometry> {
+pub fn focused_screen() -> Option<ScreenGeometry> {
     let output = Command::new("hyprctl")
         .args(["-j", "monitors"])
         .output()

@@ -35,7 +35,7 @@ impl Default for HyprlandClientConfig {
     fn default() -> Self {
         Self {
             request_timeout:           Duration::from_secs(2),
-            listener_stability_window: Duration::from_secs(60),
+            listener_stability_window: Duration::from_mins(1),
             retry_attempts:            3,
             retry_backoff:             Duration::from_millis(250)
         }

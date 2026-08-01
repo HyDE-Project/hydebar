@@ -3,7 +3,7 @@
 use crate::position_button::ButtonUIRef;
 
 /// Tooltip a module asks the tooltip surface to show.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TooltipInfo {
     /// Text to render.
     pub text:   String,

@@ -14,9 +14,9 @@ pub enum Urgency {
 impl From<u8> for Urgency {
     fn from(value: u8) -> Self {
         match value {
-            0 => Urgency::Low,
-            2 => Urgency::Critical,
-            _ => Urgency::Normal
+            0 => Self::Low,
+            2 => Self::Critical,
+            _ => Self::Normal
         }
     }
 }

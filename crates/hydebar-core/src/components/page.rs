@@ -18,6 +18,6 @@
 //! Everything is generic over the message a page publishes, so two menus with
 //! two unrelated message types are still drawn by the same code.
 
-pub(crate) mod metrics;
-pub(crate) mod style;
-pub(crate) mod widgets;
+pub mod metrics;
+pub mod style;
+pub mod widgets;

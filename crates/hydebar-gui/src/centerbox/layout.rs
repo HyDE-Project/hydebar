@@ -108,7 +108,7 @@ where
         ));
     } else {
         nodes[1].move_to_mut(Point::new(
-            (content_start + content_end) / 2.0,
+            f32::midpoint(content_start, content_end),
             centerbox.padding.top
         ));
     }

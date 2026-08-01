@@ -79,7 +79,7 @@ pub struct Spring {
 impl Spring {
     /// Creates a settled spring resting at `value`.
     #[must_use]
-    pub fn new(value: f32) -> Self {
+    pub const fn new(value: f32) -> Self {
         Self {
             value,
             velocity: 0.0,
@@ -94,7 +94,7 @@ impl Spring {
     ///
     /// Values below one millisecond are clamped to keep the integrator stable.
     #[must_use]
-    pub fn with_response(mut self, response: Duration) -> Self {
+    pub const fn with_response(mut self, response: Duration) -> Self {
         self.response = response.as_secs_f32().max(0.001);
         self
     }
@@ -104,7 +104,7 @@ impl Spring {
     /// `1.0` is critically damped and never overshoots. Lower values add
     /// bounce, higher values slow the approach down.
     #[must_use]
-    pub fn with_damping_ratio(mut self, damping_ratio: f32) -> Self {
+    pub const fn with_damping_ratio(mut self, damping_ratio: f32) -> Self {
         self.damping_ratio = damping_ratio.max(0.0);
         self
     }
@@ -114,26 +114,26 @@ impl Spring {
     /// Springs animating large ranges, such as pixel offsets, need a coarser
     /// threshold than the default tuned for normalized values.
     #[must_use]
-    pub fn with_precision(mut self, precision: f32) -> Self {
+    pub const fn with_precision(mut self, precision: f32) -> Self {
         self.precision = precision.max(f32::EPSILON);
         self
     }
 
     /// Returns the current value.
     #[must_use]
-    pub fn value(&self) -> f32 {
+    pub const fn value(&self) -> f32 {
         self.value
     }
 
     /// Returns the value the spring is travelling towards.
     #[must_use]
-    pub fn target(&self) -> f32 {
+    pub const fn target(&self) -> f32 {
         self.target
     }
 
     /// Returns the current velocity in units per second.
     #[must_use]
-    pub fn velocity(&self) -> f32 {
+    pub const fn velocity(&self) -> f32 {
         self.velocity
     }
 
@@ -148,7 +148,7 @@ impl Spring {
     ///
     /// Applied when the user edits the animation duration and the config is
     /// hot reloaded.
-    pub fn set_response(&mut self, response: Duration) {
+    pub const fn set_response(&mut self, response: Duration) {
         self.response = response.as_secs_f32().max(0.001);
     }
 
@@ -157,12 +157,12 @@ impl Spring {
     /// Applied when the motion changes character between travels — a theme
     /// whose entrance bounces retunes the same spring the previous theme rode
     /// in on.
-    pub fn set_damping_ratio(&mut self, damping_ratio: f32) {
+    pub const fn set_damping_ratio(&mut self, damping_ratio: f32) {
         self.damping_ratio = damping_ratio.max(0.0);
     }
 
     /// Points the spring at `target`, preserving the current velocity.
-    pub fn set_target(&mut self, target: f32) {
+    pub const fn set_target(&mut self, target: f32) {
         self.target = target;
     }
 
@@ -170,7 +170,7 @@ impl Spring {
     ///
     /// Used when animations are disabled or when a surface becomes visible and
     /// should not replay its entrance.
-    pub fn snap_to(&mut self, value: f32) {
+    pub const fn snap_to(&mut self, value: f32) {
         self.value = value;
         self.target = value;
         self.velocity = 0.0;
@@ -193,10 +193,10 @@ impl Spring {
 
         while remaining > 0.0 {
             let step = remaining.min(MAX_SUBSTEP);
-            let acceleration = -stiffness * (self.value - self.target) - damping * self.velocity;
+            let acceleration = (-stiffness).mul_add(self.value - self.target, -(damping * self.velocity));
 
             self.velocity += acceleration * step;
-            self.value += self.velocity * step;
+            self.value = self.velocity.mul_add(step, self.value);
             remaining -= step;
         }
 
@@ -209,7 +209,7 @@ impl Spring {
     }
 
     /// Snaps the value onto the target and clears residual velocity.
-    fn settle(&mut self) {
+    const fn settle(&mut self) {
         self.value = self.target;
         self.velocity = 0.0;
     }
