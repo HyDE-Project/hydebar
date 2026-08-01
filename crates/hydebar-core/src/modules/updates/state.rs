@@ -1,10 +1,10 @@
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
 
 use iced::{Element, SurfaceId as Id};
 use log::{debug, error, info, warn};
-use tokio::{runtime::Handle, sync::Notify, task::JoinHandle, time::sleep};
+use tokio::runtime::Handle;
 
-use super::{commands, commands::CheckFailure, view};
+use super::{commands, view};
 use crate::{
     ModuleContext, ModuleEventSender,
     components::icons::IconTheme,
@@ -15,29 +15,12 @@ use crate::{
     outputs::Outputs
 };
 
-/// Shortest interval a configuration is allowed to ask for.
-///
-/// Every check spawns a package manager that talks to a mirror. A
-/// configuration asking for one a second would be answered by the mirror
-/// rather than by the bar, so the floor is enforced here instead of
-/// trusting the file.
-const MIN_INTERVAL: Duration = Duration::from_secs(60);
+mod failures;
+mod hyde_clone;
+mod schedule;
 
-/// Longest a single check may run before it is given up on.
-///
-/// A package manager waiting on an unreachable mirror can hang for as long
-/// as its own timeouts allow, and the schedule has only one runner:
-/// without a deadline of its own a single stuck check would silence the
-/// module until the bar restarts.
-const CHECK_TIMEOUT: Duration = Duration::from_secs(300);
-
-/// Identical failures passed over between two log lines.
-///
-/// A mirror that is down stays down, and the check meets it once per
-/// interval. Writing the same line every time buries everything else in
-/// the journal, so the repetitions are counted and reported in one line
-/// instead.
-const FAILURE_REPEAT: u32 = 12;
+use hyde_clone::find_hyde_clone;
+use schedule::{Schedule, check_interval};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Update {
@@ -215,276 +198,6 @@ impl Clone for Updates {
         }
     }
 }
-
-/// The one task that ever runs the check command.
-///
-/// It outlives every configuration reload that leaves the check unchanged,
-/// and it is the only place a check is started from: the manual button
-/// wakes it rather than spawning a second runner, so two checks can
-/// never overlap and a reload can never leave a half-finished one
-/// behind.
-struct Schedule {
-    /// Check command this schedule was started for.
-    command:  Arc<str>,
-    /// Time between the end of one check and the start of the next.
-    interval: Duration,
-    /// HyDE branch the schedule compares the clone against.
-    branch:   Arc<str>,
-    /// Wake-up the manual button rings.
-    wake:     Arc<Notify>,
-    /// The running task, aborted when this schedule is dropped.
-    handle:   JoinHandle<()>
-}
-
-impl std::fmt::Debug for Schedule {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Schedule")
-            .field("command", &self.command)
-            .field("interval", &self.interval)
-            .finish()
-    }
-}
-
-impl Schedule {
-    /// Starts the check loop on `runtime`.
-    fn start(
-        runtime: &Handle,
-        sender: ModuleEventSender<Message>,
-        command: Arc<str>,
-        interval: Duration,
-        hyde_clone: Option<Arc<str>>,
-        branch: Arc<str>
-    ) -> Self {
-        let wake = Arc::new(Notify::new());
-        let loop_wake = Arc::clone(&wake);
-        let loop_command = Arc::clone(&command);
-        let loop_branch = Arc::clone(&branch);
-
-        let handle = runtime.spawn(check_loop(
-            sender,
-            loop_command,
-            interval,
-            loop_wake,
-            hyde_clone,
-            loop_branch
-        ));
-
-        Self {
-            command,
-            interval,
-            branch,
-            wake,
-            handle
-        }
-    }
-
-    /// Reports whether this schedule already does what is being asked for.
-    fn matches(&self, command: &str, interval: Duration, branch: &str) -> bool {
-        self.command.as_ref() == command
-            && self.interval == interval
-            && self.branch.as_ref() == branch
-    }
-
-    /// Asks for a check as soon as the runner is free.
-    ///
-    /// Repeated requests collapse into one, and a request arriving during a
-    /// check is answered once that check is done rather than beside it.
-    fn request_check(&self) {
-        self.wake.notify_one();
-    }
-}
-
-impl Drop for Schedule {
-    fn drop(&mut self) {
-        self.handle.abort();
-    }
-}
-
-/// Runs the check command forever, once per interval and on request.
-///
-/// A HyDE clone, when one is known, is compared against upstream on the
-/// same cadence and by the same single runner, so the two checks can
-/// never race each other over the network.
-async fn check_loop(
-    sender: ModuleEventSender<Message>,
-    command: Arc<str>,
-    interval: Duration,
-    wake: Arc<Notify>,
-    hyde_clone: Option<Arc<str>>,
-    branch: Arc<str>
-) {
-    let mut failures = FailureLog::default();
-    let mut hyde_failures = FailureLog::default();
-
-    loop {
-        let outcome = check_once(command.as_ref(), &mut failures).await;
-
-        if let Err(err) = sender.try_send(outcome) {
-            error!("failed to publish the updates check result: {err}");
-        }
-
-        if let Some(clone) = hyde_clone.as_deref()
-            && let Some(snapshot) =
-                check_hyde_once(clone, branch.as_ref(), &mut hyde_failures).await
-            && let Err(err) = sender.try_send(Message::HydeChecked(snapshot))
-        {
-            error!("failed to publish the hyde check result: {err}");
-        }
-
-        tokio::select! {
-            () = sleep(interval) => {}
-            () = wake.notified() => {}
-        }
-    }
-}
-
-/// Compares the HyDE clone against upstream once.
-///
-/// A failure keeps the last snapshot standing: an unreachable forge is no
-/// reason to tell the user their desktop stopped existing.
-async fn check_hyde_once(
-    clone: &str,
-    branch: &str,
-    failures: &mut FailureLog
-) -> Option<HydeSnapshot> {
-    match tokio::time::timeout(CHECK_TIMEOUT, commands::check_hyde(clone, branch)).await {
-        Ok(Ok((version, commits))) => {
-            failures.clear();
-
-            Some(HydeSnapshot {
-                version,
-                commits
-            })
-        }
-        Ok(Err(err)) => {
-            report(failures, format!("the hyde check failed: {err}"));
-
-            None
-        }
-        Err(_) => {
-            report(
-                failures,
-                format!("the hyde check did not finish within {CHECK_TIMEOUT:?}")
-            );
-
-            None
-        }
-    }
-}
-
-/// Finds the HyDE clone this machine was installed from, if any.
-///
-/// The path is what `version.sh --cache` recorded in the state directory,
-/// with the conventional `~/HyDE` as the fallback; either way it only
-/// counts when a git repository actually stands there.
-fn find_hyde_clone() -> Option<std::path::PathBuf> {
-    let recorded = dirs::state_dir()
-        .map(|state| state.join("hyde").join("version"))
-        .and_then(|version| std::fs::read_to_string(version).ok())
-        .and_then(|content| clone_path_from(&content));
-
-    recorded
-        .into_iter()
-        .chain(dirs::home_dir().map(|home| home.join("HyDE")))
-        .find(|path| path.join(".git").exists())
-}
-
-/// Reads `HYDE_CLONE_PATH` out of the cached version file.
-fn clone_path_from(content: &str) -> Option<std::path::PathBuf> {
-    content.lines().find_map(|line| {
-        line.strip_prefix("HYDE_CLONE_PATH=")
-            .map(|value| value.trim().trim_matches('\'').trim_matches('"'))
-            .filter(|value| !value.is_empty())
-            .map(std::path::PathBuf::from)
-    })
-}
-
-/// Runs the check command once and turns whatever happened into a message.
-///
-/// A failure never leaves the loop: the module reports what it can and the
-/// next interval tries again.
-async fn check_once(command: &str, failures: &mut FailureLog) -> Message {
-    match tokio::time::timeout(CHECK_TIMEOUT, commands::check_for_updates(command)).await {
-        Ok(Ok(updates)) => {
-            failures.clear();
-
-            Message::UpdatesCheckCompleted(updates)
-        }
-        Ok(Err(CheckFailure::Unavailable(err))) => {
-            report(failures, format!("the check command cannot be run: {err}"));
-
-            Message::UpdatesUnavailable
-        }
-        Ok(Err(CheckFailure::Transient(err))) => {
-            report(failures, format!("the check command failed: {err}"));
-
-            Message::CheckFailed
-        }
-        Err(_) => {
-            report(
-                failures,
-                format!("the check command did not finish within {CHECK_TIMEOUT:?}")
-            );
-
-            Message::CheckFailed
-        }
-    }
-}
-
-/// Writes a failure to the journal unless it is the same one all over
-/// again.
-fn report(failures: &mut FailureLog, reason: String) {
-    match failures.record(&reason) {
-        Some(1) => warn!("updates check failed: {reason}"),
-        Some(count) => warn!("updates check has failed {count} times in a row: {reason}"),
-        None => debug!("updates check failed again: {reason}")
-    }
-}
-
-/// Counter that keeps an unchanging failure out of the journal.
-#[derive(Debug, Default)]
-struct FailureLog {
-    /// The failure the run before this one reported.
-    last:    Option<String>,
-    /// How many times it has been reported in a row.
-    repeats: u32
-}
-
-impl FailureLog {
-    /// Records a failure, reporting the count when it deserves a log line.
-    ///
-    /// A failure that differs from the last one is always worth a line; an
-    /// identical one only every [`FAILURE_REPEAT`] occurrences, so a
-    /// lasting fault is visible without being the only thing in the
-    /// journal.
-    fn record(&mut self, reason: &str) -> Option<u32> {
-        if self.last.as_deref() == Some(reason) {
-            self.repeats += 1;
-
-            return self
-                .repeats
-                .is_multiple_of(FAILURE_REPEAT)
-                .then_some(self.repeats);
-        }
-
-        self.last = Some(reason.to_owned());
-        self.repeats = 1;
-
-        Some(1)
-    }
-
-    /// Forgets the last failure after a check that worked.
-    fn clear(&mut self) {
-        self.last = None;
-        self.repeats = 0;
-    }
-}
-
-/// Interval the configuration asks for, never below the floor.
-fn check_interval(config: &UpdatesModuleConfig) -> Duration {
-    Duration::from_secs(config.check_interval).max(MIN_INTERVAL)
-}
-
 impl Updates {
     pub fn update(
         &mut self,
@@ -856,12 +569,17 @@ mod tests {
         fs,
         num::NonZeroUsize,
         path::PathBuf,
-        time::{SystemTime, UNIX_EPOCH}
+        time::{Duration, SystemTime, UNIX_EPOCH}
     };
 
     use tokio::runtime::Runtime;
 
-    use super::*;
+    use super::{
+        *,
+        failures::{FAILURE_REPEAT, FailureLog},
+        hyde_clone::clone_path_from,
+        schedule::MIN_INTERVAL
+    };
     use crate::event_bus::EventBus;
 
     fn context(runtime: &Runtime) -> (EventBus, ModuleContext) {
