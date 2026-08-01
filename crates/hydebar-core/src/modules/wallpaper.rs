@@ -30,13 +30,30 @@ const PICKER_COLUMNS: usize = 3;
 
 /// One wallpaper as the desktop lists it.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
+struct ListedWallpaper {
+    /// Full path of the picture, what a set command takes.
+    path:     String,
+    /// File name, the tile's caption.
+    basename: String,
+    /// Square thumbnail HyDE keeps in its cache.
+    sqre:     String
+}
+
+/// Side the decoded thumbnails are scaled to, in pixels.
+const THUMB_SIDE: u32 = 256;
+
+/// One wallpaper ready to draw: path to set, pixels to show.
+///
+/// The thumbnail is decoded here rather than handed to the renderer as a
+/// path: the renderer stays silent about a file it cannot read, and a grid
+/// of invisible tiles is exactly the bug this replaced. Decoded pixels
+/// either exist or the tile is not offered.
+#[derive(Debug, Clone)]
 pub struct WallpaperEntry {
     /// Full path of the picture, what a set command takes.
-    pub path:     String,
-    /// File name, the tile's caption.
-    pub basename: String,
-    /// Square thumbnail HyDE keeps in its cache.
-    pub sqre:     String
+    pub path:  String,
+    /// Decoded square thumbnail.
+    thumbnail: iced::widget::image::Handle
 }
 
 /// Reads the wallpapers of the theme in force from the desktop.
@@ -55,11 +72,33 @@ fn list_wallpapers() -> Vec<WallpaperEntry> {
         return Vec::new();
     }
 
-    serde_json::from_slice(&output.stdout).unwrap_or_default()
+    let listed: Vec<ListedWallpaper> =
+        serde_json::from_slice(&output.stdout).unwrap_or_default();
+
+    listed
+        .into_iter()
+        .filter_map(|entry| {
+            let decoded = ::image::open(&entry.sqre)
+                .or_else(|_| ::image::open(&entry.path))
+                .ok()?
+                .thumbnail(THUMB_SIDE, THUMB_SIDE)
+                .into_rgba8();
+            let (width, height) = decoded.dimensions();
+
+            Some(WallpaperEntry {
+                path:      entry.path,
+                thumbnail: iced::widget::image::Handle::from_rgba(
+                    width,
+                    height,
+                    decoded.into_raw()
+                )
+            })
+        })
+        .collect()
 }
 
 /// Choice made in the wallpaper module.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum Message {
     /// Ask HyDE for the next wallpaper of the theme in force.
     Next,
@@ -125,12 +164,10 @@ impl Wallpaper {
             let mut row = Row::new().spacing(gap);
 
             for entry in band {
-                let thumb = iced::widget::image(iced::widget::image::Handle::from_path(
-                    &entry.sqre
-                ))
-                .width(Length::Fixed(tile))
-                .height(Length::Fixed(tile))
-                .content_fit(iced::ContentFit::Cover);
+                let thumb = iced::widget::image(entry.thumbnail.clone())
+                    .width(Length::Fixed(tile))
+                    .height(Length::Fixed(tile))
+                    .content_fit(iced::ContentFit::Cover);
 
                 row = row.push(
                     iced::widget::mouse_area(thumb).on_press(Message::Pick(entry.path.clone()))
