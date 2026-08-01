@@ -49,7 +49,9 @@ impl AudioBackend for PulseAudioBackend {
 /// Handle returned by [`AudioBackend::spawn`].
 ///
 /// Keeps the listener and commander thread handles alive for the lifetime
-/// of the backend. When dropped, the threads will be aborted.
+/// of the backend. Dropping the handle closes both channels; the commander
+/// exits on the closed command queue and the listener notices the closed
+/// event queue on its next heartbeat and disconnects from the server.
 #[derive(Debug)]
 pub struct BackendHandle {
     pub(crate) receiver: Receiver<BackendEvent>,

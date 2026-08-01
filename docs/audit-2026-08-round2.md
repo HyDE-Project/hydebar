@@ -30,11 +30,12 @@ inside each section; a checked box means the fix has landed on `main`.
   `interface.get_mut().await` stays alive while the unregistration signal is
   emitted on the same connection — self-deadlock-shaped under backpressure
   (`services/tray/dbus.rs:88`). Drop the guard before emitting.
-- [ ] **PulseAudio listener thread leaks on every re-registration.** Dropping
-  a `JoinHandle` detaches rather than aborts; the listener parks in
-  `mainloop.iterate(true)` forever, and the control center respawns the
-  service on every reload (`services/audio/backend/api.rs:52`,
-  `threads.rs:123`). Signal `mainloop.quit()` from a `Drop` and join.
+- [x] **PulseAudio listener thread leaks on every re-registration.** A
+  recurring heartbeat timer on the sound server's own loop wakes the parked
+  listener every 300 ms; the loop checks whether its event channel is
+  closed — which is exactly what dropping the handle does — and leaves,
+  disconnecting from the server. Verified live: three config reloads,
+  thread count and sound-server client count both flat.
 - [x] **A transient full queue permanently kills custom modules and the media
   player.** Solved at the root: the bus is now infallible — an overflowing
   queue first evicts its oldest replaceable snapshot (lossless, a fresher

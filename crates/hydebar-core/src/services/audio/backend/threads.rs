@@ -7,12 +7,24 @@ use std::{
 };
 
 use iced::futures::executor::block_on;
-use libpulse_binding::{context::subscribe::InterestMaskSet, mainloop::standard::IterateResult};
+use libpulse_binding::{
+    context::subscribe::InterestMaskSet,
+    mainloop::standard::{IterateResult, Mainloop},
+    time::{MicroSeconds, MonotonicTs}
+};
 use log::error;
 use masterror::{AppError, AppResult};
 use tokio::sync::mpsc::{Receiver, Sender};
 
 use super::{BackendCommand, BackendEvent, PulseAudioServer};
+
+/// How often the parked mainloop wakes to notice an abandoned bridge.
+///
+/// The listener blocks inside the `PulseAudio` poll with nothing to say on a
+/// quiet system; this recurring timer is its only guaranteed wakeup, letting
+/// the thread see a closed event channel and leave instead of outliving its
+/// dropped handle.
+const SHUTDOWN_POLL: MicroSeconds = MicroSeconds(300_000);
 
 impl PulseAudioServer {
     #[expect(
@@ -124,6 +136,14 @@ impl PulseAudioServer {
                         }
                     )));
 
+                    let heartbeat = server.context.rttime_new::<Mainloop, _>(
+                        &server.mainloop,
+                        MonotonicTs::now() + SHUTDOWN_POLL,
+                        |mut event| {
+                            event.restart_rt(MonotonicTs::now() + SHUTDOWN_POLL);
+                        }
+                    );
+
                     loop {
                         let data = server.mainloop.iterate(true);
                         if let IterateResult::Quit(_) | IterateResult::Err(_) = data {
@@ -132,7 +152,13 @@ impl PulseAudioServer {
                                 .try_send(BackendEvent::Error("PulseAudio mainloop error".into()));
                             break;
                         }
+
+                        if from_server_tx.is_closed() {
+                            break;
+                        }
                     }
+
+                    drop(heartbeat);
                 }
                 Err(err) => {
                     error!("Failed to start PulseAudio listener thread: {err}");
