@@ -78,9 +78,14 @@ fn list_wallpapers() -> Vec<WallpaperEntry> {
     listed
         .into_iter()
         .filter_map(|entry| {
-            let decoded = ::image::open(&entry.sqre)
-                .or_else(|_| ::image::open(&entry.path))
-                .ok()?
+            let decoded = std::fs::read(&entry.sqre)
+                .ok()
+                .and_then(|bytes| ::image::load_from_memory(&bytes).ok())
+                .or_else(|| {
+                    std::fs::read(&entry.path)
+                        .ok()
+                        .and_then(|bytes| ::image::load_from_memory(&bytes).ok())
+                })?
                 .thumbnail(THUMB_SIDE, THUMB_SIDE)
                 .into_rgba8();
             let (width, height) = decoded.dimensions();
