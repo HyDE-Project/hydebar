@@ -457,7 +457,7 @@ fn themes<'a>(
                         Message::Update(Some(name.clone())),
                         !busy
                     ),
-                    (Icons::Trash.default_glyph(), trash, !busy || doomed),
+                    (Icons::Trash.default_glyph(), trash, true),
                 ],
                 list_layout
             );

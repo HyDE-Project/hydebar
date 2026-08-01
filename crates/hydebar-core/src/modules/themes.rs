@@ -503,6 +503,8 @@ impl Themes {
                     report(config, "a theme switch is running, removal must wait");
                 } else if self.installing.is_some() {
                     report(config, "a theme install is running, removal must wait");
+                } else if self.updating.is_some() {
+                    report(config, "a theme update is fetching, removal must wait");
                 } else if self.hyde.theme.as_deref() == Some(theme.as_str()) {
                     report(
                         config,
@@ -628,6 +630,7 @@ impl Themes {
 
         if self.switching.is_some()
             || self.installing.is_some()
+            || self.updating.is_some()
             || self.hyde.theme.as_deref() == Some(theme.as_str())
             || !self.hyde.themes.contains(&theme)
         {
