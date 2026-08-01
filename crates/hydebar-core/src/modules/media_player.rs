@@ -16,10 +16,16 @@ use crate::{
 
 #[derive(Debug, Default)]
 pub struct MediaPlayer {
-    service: Option<MprisPlayerService>,
-    sender:  Option<ModuleEventSender<Message>>,
-    runtime: Option<Handle>,
-    tasks:   Vec<JoinHandle<()>>
+    service:   Option<MprisPlayerService>,
+    sender:    Option<ModuleEventSender<Message>>,
+    runtime:   Option<Handle>,
+    tasks:     Vec<JoinHandle<()>>,
+    /// The bar line for the leading player, rendered when the state moves.
+    ///
+    /// Composed once per service event instead of per frame: the join,
+    /// the format and the truncation ran on every repaint for a value
+    /// that only changes on a track or player change.
+    bar_title: Option<String>
 }
 
 struct MediaPlayerPublisher {
@@ -215,9 +221,13 @@ mod module {
                 _ => Some((
                     row![
                         icon(icons, Icons::MusicNote),
-                        text(Self::get_title(&s[0], config))
-                            .wrapping(iced::widget::text::Wrapping::WordOrGlyph)
-                            .size(scale::scaled(12.0))
+                        text(
+                            self.bar_title
+                                .clone()
+                                .unwrap_or_else(|| Self::get_title(&s[0], config))
+                        )
+                        .wrapping(iced::widget::text::Wrapping::WordOrGlyph)
+                        .size(scale::scaled(12.0))
                     ]
                     .align_y(Vertical::Center)
                     .spacing(scale::scaled(8.0))
@@ -237,24 +247,36 @@ mod state {
     use crate::services::{ReadOnlyService, ServiceEvent, mpris::PlayerCommand};
 
     impl MediaPlayer {
-        pub fn update(&mut self, message: Message) {
+        pub fn update(
+            &mut self,
+            message: Message,
+            config: &hydebar_proto::config::MediaPlayerModuleConfig
+        ) {
             match message {
                 Message::Prev(s) => self.handle_command(s, PlayerCommand::Prev),
                 Message::PlayPause(s) => self.handle_command(s, PlayerCommand::PlayPause),
                 Message::Next(s) => self.handle_command(s, PlayerCommand::Next),
                 Message::SetVolume(s, v) => self.handle_command(s, PlayerCommand::Volume(v)),
-                Message::Event(event) => match *event {
-                    ServiceEvent::Init(s) => {
-                        self.service = Some(s);
-                    }
-                    ServiceEvent::Update(d) => {
-                        if let Some(service) = self.service.as_mut() {
-                            service.update(d);
+                Message::Event(event) => {
+                    match *event {
+                        ServiceEvent::Init(s) => {
+                            self.service = Some(s);
+                        }
+                        ServiceEvent::Update(d) => {
+                            if let Some(service) = self.service.as_mut() {
+                                service.update(d);
+                            }
+                        }
+                        ServiceEvent::Error(error) => {
+                            error!("media player service error: {error}");
                         }
                     }
-                    ServiceEvent::Error(error) => {
-                        error!("media player service error: {error}");
-                    }
+
+                    self.bar_title = self
+                        .service
+                        .as_ref()
+                        .and_then(|s| s.first())
+                        .map(|d| Self::get_title(d, config));
                 }
             }
         }

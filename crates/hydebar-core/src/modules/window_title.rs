@@ -75,16 +75,22 @@ fn shown_title(value: &str, config: &WindowTitleConfig, attended: bool) -> Strin
 /// module the user is looking at shows what it has in full, and a title
 /// shortened on the way in could never be restored.
 pub struct WindowTitle {
-    hyprland: Arc<dyn HyprlandPort>,
-    value:    Option<String>,
-    sender:   Option<ModuleEventSender<Message>>,
-    task:     Option<JoinHandle<()>>
+    hyprland:  Arc<dyn HyprlandPort>,
+    value:     Option<String>,
+    /// The shortened spelling, cut once per focus change.
+    ///
+    /// Cut in the update rather than per frame: the title moves on focus
+    /// events, the bar repaints far more often than that.
+    shortened: Option<String>,
+    sender:    Option<ModuleEventSender<Message>>,
+    task:      Option<JoinHandle<()>>
 }
 
 impl std::fmt::Debug for WindowTitle {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("WindowTitle")
             .field("hyprland", &"<HyprlandPort>")
+            .field("shortened", &self.shortened)
             .field("value", &self.value)
             .field("sender", &self.sender)
             .field("task", &self.task)
@@ -100,10 +106,14 @@ pub enum Message {
 impl WindowTitle {
     pub fn new(hyprland: Arc<dyn HyprlandPort>, config: &WindowTitleConfig) -> Self {
         let init = get_window(hyprland.as_ref(), config);
+        let shortened = init
+            .as_deref()
+            .map(|value| truncate_text(value, config.truncate_title_after_length));
 
         Self {
             hyprland,
             value: init,
+            shortened,
             sender: None,
             task: None
         }
@@ -115,6 +125,10 @@ impl WindowTitle {
         match message {
             Message::TitleChanged(window) => {
                 self.value = window.map(|window| shown_field(window, config));
+                self.shortened = self
+                    .value
+                    .as_deref()
+                    .map(|value| truncate_text(value, config.truncate_title_after_length));
             }
         }
     }
@@ -200,7 +214,13 @@ where
         (config, attended): Self::ViewData<'_>
     ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
         self.value.as_ref().map(|value| {
-            let shown = shown_title(value, config, attended);
+            let shown = if attended {
+                value.clone()
+            } else {
+                self.shortened
+                    .clone()
+                    .unwrap_or_else(|| shown_title(value, config, attended))
+            };
 
             (
                 text(shown)

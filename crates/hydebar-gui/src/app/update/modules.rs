@@ -247,7 +247,7 @@ impl App {
                 self.wallpaper.update(msg, &config).map(Message::Wallpaper)
             }
             Message::MediaPlayer(msg) => {
-                self.media_player.update(msg);
+                self.media_player.update(msg, &self.config.media_player);
                 Task::none()
             }
             Message::ExpirePopups => {
