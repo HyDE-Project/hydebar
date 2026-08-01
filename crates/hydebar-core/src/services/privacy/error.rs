@@ -6,7 +6,8 @@ pub enum PrivacyError {
     /// Failed to initialise the `PipeWire` main loop.
     PipewireMainloop { context: Arc<str> },
 
-    /// Failed to create the `PipeWire` context that owns the registry connection.
+    /// Failed to create the `PipeWire` context that owns the registry
+    /// connection.
     PipewireContext { context: Arc<str> },
 
     /// Failed to connect to the `PipeWire` core service.

@@ -102,9 +102,10 @@ impl UPowerDbus<'_> {
     }
 
     pub async fn get_battery_devices(&self) -> AppResult<Option<Battery>> {
-        let devices = self.enumerate_devices().await.map_err(|e| {
-            AppError::internal(format!("Failed to enumerate UPower devices: {e}"))
-        })?;
+        let devices = self
+            .enumerate_devices()
+            .await
+            .map_err(|e| AppError::internal(format!("Failed to enumerate UPower devices: {e}")))?;
 
         let mut res = Vec::new();
 

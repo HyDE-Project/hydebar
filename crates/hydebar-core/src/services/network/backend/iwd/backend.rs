@@ -45,11 +45,16 @@ impl NetworkBackend for IwdDbus<'_> {
         let known_connections = nm.known_connections().await?;
         debug!("Known connections: {known_connections:?}");
 
-        let is_scanning = join_all(self.stations().await?.iter().map(super::station::StationProxy::scanning))
-            .await
-            .into_iter()
-            .filter_map(std::result::Result::ok)
-            .any(|v| v);
+        let is_scanning = join_all(
+            self.stations()
+                .await?
+                .iter()
+                .map(super::station::StationProxy::scanning)
+        )
+        .await
+        .into_iter()
+        .filter_map(std::result::Result::ok)
+        .any(|v| v);
 
         Ok(NetworkData {
             wifi_present,
@@ -95,9 +100,11 @@ impl NetworkBackend for IwdDbus<'_> {
                 device_path,
                 strength: super::queries::strength_from_rssi(s),
                 state: DeviceState::Unknown, // TODO:
-                public: n.type_().await.map_err(|e| {
-                    AppError::internal(format!("Failed to get network type: {e}"))
-                })? == "open",
+                public: n
+                    .type_()
+                    .await
+                    .map_err(|e| AppError::internal(format!("Failed to get network type: {e}")))?
+                    == "open",
                 working: false // TODO:
             }));
         }
@@ -106,9 +113,11 @@ impl NetworkBackend for IwdDbus<'_> {
 
     async fn scan_nearby_wifi(&self) -> AppResult<()> {
         for station in self.stations().await? {
-            if station.scanning().await.map_err(|e| {
-                AppError::internal(format!("Failed to check scanning state: {e}"))
-            })? {
+            if station
+                .scanning()
+                .await
+                .map_err(|e| AppError::internal(format!("Failed to check scanning state: {e}")))?
+            {
                 debug!("Already scanning");
                 continue;
             }

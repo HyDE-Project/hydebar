@@ -80,7 +80,10 @@ impl SweepStyle {
     /// name decides the corner, so the same theme always enters the same way.
     fn derived(theme: Option<&str>, appearance: &Appearance) -> Self {
         let background = appearance.background_color.get_base();
-        let luminance = 0.0722f32.mul_add(background.b, 0.7152f32.mul_add(background.g, 0.2126 * background.r));
+        let luminance = 0.0722f32.mul_add(
+            background.b,
+            0.7152f32.mul_add(background.g, 0.2126 * background.r)
+        );
         let dark = luminance < 0.5;
 
         let primary = appearance.primary_color.get_base();

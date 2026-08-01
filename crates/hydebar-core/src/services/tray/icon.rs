@@ -53,7 +53,9 @@ fn trim_transparent(width: u32, height: u32, bytes: Vec<u8>) -> (u32, u32, Vec<u
         }
     }
 
-    if min_x > max_x || min_y > max_y || (min_x == 0 && min_y == 0 && max_x == width - 1 && max_y == height - 1)
+    if min_x > max_x
+        || min_y > max_y
+        || (min_x == 0 && min_y == 0 && max_x == width - 1 && max_y == height - 1)
     {
         return (width, height, bytes);
     }
@@ -91,9 +93,10 @@ pub fn icon_from_name(icon_name: &str) -> Option<TrayIcon> {
     )?;
 
     if icon_path.extension().is_some_and(|ext| ext == "svg") {
-        Some(rasterized_svg(&icon_path).unwrap_or_else(|| {
-            TrayIcon::Svg(svg::Handle::from_path(icon_path))
-        }))
+        Some(
+            rasterized_svg(&icon_path)
+                .unwrap_or_else(|| TrayIcon::Svg(svg::Handle::from_path(icon_path)))
+        )
     } else {
         Some(trimmed_raster(&icon_path))
     }

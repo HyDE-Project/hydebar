@@ -35,18 +35,17 @@ inside each section; a checked box means the fix has landed on `main`.
   `mainloop.iterate(true)` forever, and the control center respawns the
   service on every reload (`services/audio/backend/api.rs:52`,
   `threads.rs:123`). Signal `mainloop.quit()` from a `Drop` and join.
-- [ ] **A transient full queue permanently kills custom modules and the media
-  player.** `QueueFull` propagates as a terminal error out of the custom
-  listener/poller and breaks the media-player supervisor loop
-  (`modules/custom_module/listener.rs:59`, `poller.rs:129`,
-  `modules/media_player.rs:176`). Warn and continue, as workspaces already
-  does.
-- [ ] **Four services wait the maximum 60 s before their first retry.**
-  bluetooth, brightness, upower and the tray watcher sleep
-  `RECONNECT_MAX_DELAY` instead of the graded `reconnect_delay(failures)` —
-  a bar started before the daemons stays blank a full minute at login
-  (`services/bluetooth.rs:198`, `services/brightness.rs:186`,
-  `services/upower/events.rs:138`, `services/tray/watcher.rs:292`).
+- [x] **A transient full queue permanently kills custom modules and the media
+  player.** Solved at the root: the bus is now infallible — an overflowing
+  queue first evicts its oldest replaceable snapshot (lossless, a fresher
+  one exists), then the oldest event, and a poisoned lock recovers because
+  the queue holds no cross-operation invariant. The queue-full error class
+  no longer exists, so no producer can die of it and the UI subscription
+  cannot terminate.
+- [x] **Four services wait the maximum 60 s before their first retry.**
+  bluetooth, brightness, upower and the tray watcher now count failures in
+  their driver loops and sleep the graded `reconnect_delay(failures)`, like
+  network and privacy always did.
 - [ ] **Notifications service never retries.** Six return paths end the
   daemon silently — after the bar may already have stopped the incumbent
   (`services/notifications/service.rs:116-234`). Wrap in the standard
@@ -72,10 +71,10 @@ inside each section; a checked box means the fix has landed on `main`.
 - [ ] **Exit is a fixed 200 ms timer.** `process::exit` fires whether or not
   surface destruction reached the compositor (`app/shutdown.rs:35`). Exit on
   a completion signal, timer as backstop.
-- [ ] **Bus overflow drops the newest events; poisoning ends the
-  subscription for good.** Only three message kinds coalesce; everything
-  else races a 64-slot cap, and one poisoned lock stops all module events
-  with a single log line (`event_bus.rs:121`, `app/bus.rs:66`).
+- [x] **Bus overflow drops the newest events; poisoning ends the
+  subscription for good.** Folded into the infallible-bus rework above: the
+  newest event always lands, eviction prefers stale snapshots, poisoning
+  recovers, and the subscription lives as long as the bar.
 
 ## Performance
 

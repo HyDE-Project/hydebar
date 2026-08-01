@@ -18,9 +18,7 @@ use crate::services::{
 
 #[derive(Default)]
 struct TestPipewireSource {
-    receiver: Mutex<
-        Option<Result<tokio::sync::mpsc::Receiver<PrivacyEvent>, PrivacyError>>
-    >
+    receiver: Mutex<Option<Result<tokio::sync::mpsc::Receiver<PrivacyEvent>, PrivacyError>>>
 }
 
 impl TestPipewireSource {
@@ -41,12 +39,8 @@ impl PipewireEventSource for TestPipewireSource {
     type Future<'a>
         = Pin<
         Box<
-            dyn Future<
-                    Output = Result<
-                        tokio::sync::mpsc::Receiver<PrivacyEvent>,
-                        PrivacyError
-                    >
-                > + Send
+            dyn Future<Output = Result<tokio::sync::mpsc::Receiver<PrivacyEvent>, PrivacyError>>
+                + Send
                 + 'a
         >
     >

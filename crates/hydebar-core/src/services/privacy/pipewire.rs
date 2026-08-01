@@ -18,9 +18,7 @@ const EVENT_CAPACITY: usize = 256;
 /// Provides access to privacy events published by `PipeWire`.
 pub(crate) trait PipewireEventSource {
     /// Future returned when subscribing to `PipeWire` notifications.
-    type Future<'a>: Future<Output = Result<Receiver<PrivacyEvent>, PrivacyError>>
-        + Send
-        + 'a
+    type Future<'a>: Future<Output = Result<Receiver<PrivacyEvent>, PrivacyError>> + Send + 'a
     where
         Self: 'a;
 
@@ -93,7 +91,9 @@ impl PipewireListener {
                                 }
                             })
                             .global_remove(move |id| {
-                                if let Err(error) = remove_tx.try_send(PrivacyEvent::RemoveNode(id)) {
+                                if let Err(error) =
+                                    remove_tx.try_send(PrivacyEvent::RemoveNode(id))
+                                {
                                     log::warn!("Failed to forward PipeWire remove event: {error}");
                                 }
                             })
@@ -149,11 +149,7 @@ impl PipewireListener {
 
 impl PipewireEventSource for PipewireListener {
     type Future<'a>
-        = Pin<
-        Box<
-            dyn Future<Output = Result<Receiver<PrivacyEvent>, PrivacyError>> + Send + 'a
-        >
-    >
+        = Pin<Box<dyn Future<Output = Result<Receiver<PrivacyEvent>, PrivacyError>> + Send + 'a>>
     where
         Self: 'a;
 

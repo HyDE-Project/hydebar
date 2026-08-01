@@ -43,9 +43,7 @@ impl NetworkSettingsDbus<'_> {
             let connection = ConnectionSettingsProxy::builder(self.inner().connection())
                 .path(connection)
                 .map_err(|e| {
-                    AppError::internal(format!(
-                        "Failed to set ConnectionSettingsProxy path: {e}"
-                    ))
+                    AppError::internal(format!("Failed to set ConnectionSettingsProxy path: {e}"))
                 })?
                 .build()
                 .await

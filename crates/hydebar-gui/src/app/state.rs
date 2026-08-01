@@ -60,7 +60,13 @@ pub struct App {
     pub(super) logger: LoggerHandle,
     /// Keeps the injected compositor adapter alive for the app's lifetime;
     /// the outputs facade is meant to adopt it in place of its own client.
-    #[cfg_attr(not(test), expect(dead_code, reason = "held until the outputs facade adopts the injected port"))]
+    #[cfg_attr(
+        not(test),
+        expect(
+            dead_code,
+            reason = "held until the outputs facade adopts the injected port"
+        )
+    )]
     pub(super) hyprland: Arc<dyn HyprlandPort>,
     pub(super) config_manager: Arc<ConfigManager>,
     pub(super) bus_receiver: EventReceiver,

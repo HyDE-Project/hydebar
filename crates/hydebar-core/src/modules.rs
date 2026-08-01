@@ -3,7 +3,7 @@ use std::borrow::Cow;
 
 use masterror::AppError;
 
-use crate::{attention::PollSchedule, event_bus::EventBusError, menu::MenuType};
+use crate::{attention::PollSchedule, menu::MenuType};
 
 pub mod app_launcher;
 pub mod battery;
@@ -44,14 +44,12 @@ pub enum OnModulePress<M> {
 /// Module registration and operation errors
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ModuleError {
-    EventBus(EventBusError),
     Registration { reason: Cow<'static, str> }
 }
 
 impl std::fmt::Display for ModuleError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::EventBus(err) => write!(f, "Module event bus interaction failed: {err}"),
             Self::Registration {
                 reason
             } => write!(f, "Module registration failed: {reason}")
@@ -61,16 +59,9 @@ impl std::fmt::Display for ModuleError {
 
 impl std::error::Error for ModuleError {}
 
-impl From<EventBusError> for ModuleError {
-    fn from(err: EventBusError) -> Self {
-        Self::EventBus(err)
-    }
-}
-
 impl From<ModuleError> for AppError {
     fn from(err: ModuleError) -> Self {
         match err {
-            ModuleError::EventBus(_) => Self::internal(err.to_string()),
             ModuleError::Registration {
                 ..
             } => Self::validation(err.to_string())

@@ -55,9 +55,7 @@ impl StatusNotifierWatcher {
             .map_err(|e| AppError::internal(format!("Failed to create DBusProxy: {e}")))?;
         let mut name_owner_changed_stream =
             dbus_proxy.receive_name_owner_changed().await.map_err(|e| {
-                AppError::internal(format!(
-                    "Failed to receive name owner changed signal: {e}"
-                ))
+                AppError::internal(format!("Failed to receive name owner changed signal: {e}"))
             })?;
 
         let flags = RequestNameFlags::AllowReplacement.into();
@@ -101,10 +99,8 @@ impl StatusNotifierWatcher {
                         let service = interface.items.remove(idx).1;
                         drop(interface);
 
-                        if let Err(err) = Self::status_notifier_item_unregistered(
-                            &emitter, &service
-                        )
-                        .await
+                        if let Err(err) =
+                            Self::status_notifier_item_unregistered(&emitter, &service).await
                         {
                             warn!("failed to announce a tray item removal: {err}");
                         }

@@ -2,8 +2,6 @@
 
 use std::sync::Arc;
 
-use crate::modules::ModuleError;
-
 /// Something that went wrong while running or reading a listener process.
 #[derive(Debug, Clone)]
 pub enum CustomCommandError {
@@ -107,15 +105,13 @@ pub(super) fn truncate_snippet(line: &str) -> String {
 /// Error raised by the listener task itself.
 #[derive(Debug, Clone)]
 pub(super) enum CustomListenerError {
-    Command(CustomCommandError),
-    Module(ModuleError)
+    Command(CustomCommandError)
 }
 
 impl std::fmt::Display for CustomListenerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Command(err) => write!(f, "{err}"),
-            Self::Module(err) => write!(f, "{err}")
+            Self::Command(err) => write!(f, "{err}")
         }
     }
 }
@@ -123,8 +119,7 @@ impl std::fmt::Display for CustomListenerError {
 impl std::error::Error for CustomListenerError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            Self::Command(err) => Some(err),
-            Self::Module(err) => Some(err)
+            Self::Command(err) => Some(err)
         }
     }
 }

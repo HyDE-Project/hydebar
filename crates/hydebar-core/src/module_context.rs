@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use tokio::runtime::Handle;
 
-use crate::event_bus::{BusEvent, EventBusError, EventSender, ModuleEvent};
+use crate::event_bus::{BusEvent, EventSender, ModuleEvent};
 
 /// Shared utilities exposed to individual modules when they need to interact
 /// with the core event loop.
@@ -69,10 +69,8 @@ impl ModuleContext {
 
     /// Request a redraw of the UI surface.
     ///
-    /// # Postconditions
-    ///
-    /// - Enqueues a [`BusEvent::Redraw`] if the bus has remaining capacity,
-    ///   otherwise returns [`EventBusError::QueueFull`].
+    /// Publishing never fails: an overflowing bus evicts its most
+    /// replaceable entry to make room, so the freshest state always lands.
     ///
     /// # Examples
     ///
@@ -82,24 +80,14 @@ impl ModuleContext {
     /// # let runtime = tokio::runtime::Runtime::new().expect("runtime");
     /// let bus = EventBus::new(NonZeroUsize::new(1).expect("capacity"));
     /// let context = ModuleContext::new(bus.sender(), runtime.handle().clone());
-    /// context.request_redraw().expect("queued");
+    /// context.request_redraw();
     /// ```
-    ///
-    /// # Errors
-    ///
-    /// Returns [`EventBusError::QueueFull`] when the bus is at capacity and
-    /// [`EventBusError::Poisoned`] when the queue lock was poisoned.
-    pub fn request_redraw(&self) -> Result<(), EventBusError> {
-        self.event_sender.try_send(BusEvent::Redraw)
+    pub fn request_redraw(&self) {
+        self.event_sender.send(BusEvent::Redraw);
     }
 
     /// Toggle the popup menu visibility.
     ///
-    /// # Postconditions
-    ///
-    /// - Enqueues a [`BusEvent::PopupToggle`] if the bus has capacity,
-    ///   otherwise returns [`EventBusError::QueueFull`].
-    ///
     /// # Examples
     ///
     /// ```
@@ -108,19 +96,14 @@ impl ModuleContext {
     /// # let runtime = tokio::runtime::Runtime::new().expect("runtime");
     /// let bus = EventBus::new(NonZeroUsize::new(1).expect("capacity"));
     /// let context = ModuleContext::new(bus.sender(), runtime.handle().clone());
-    /// context.toggle_popup().expect("queued");
+    /// context.toggle_popup();
     /// ```
-    ///
-    /// # Errors
-    ///
-    /// Returns [`EventBusError::QueueFull`] when the bus is at capacity and
-    /// [`EventBusError::Poisoned`] when the queue lock was poisoned.
-    pub fn toggle_popup(&self) -> Result<(), EventBusError> {
-        self.event_sender.try_send(BusEvent::PopupToggle)
+    pub fn toggle_popup(&self) {
+        self.event_sender.send(BusEvent::PopupToggle);
     }
 
-    fn publish_module_event(&self, event: ModuleEvent) -> Result<(), EventBusError> {
-        self.event_sender.try_send(BusEvent::Module(event))
+    fn publish_module_event(&self, event: ModuleEvent) {
+        self.event_sender.send(BusEvent::Module(event));
     }
 
     /// Build a type-safe module event sender from the provided conversion
@@ -142,9 +125,7 @@ impl ModuleContext {
     /// let bus = EventBus::new(NonZeroUsize::new(2).expect("capacity"));
     /// let context = ModuleContext::new(bus.sender(), runtime.handle().clone());
     /// let sender = context.module_sender(ModuleEvent::Updates);
-    /// sender
-    ///     .try_send(modules::updates::Message::CheckNow)
-    ///     .expect("queued");
+    /// sender.send(modules::updates::Message::CheckNow);
     /// ```
     pub fn module_sender<T, F>(&self, convert: F) -> ModuleEventSender<T>
     where
@@ -171,9 +152,7 @@ impl ModuleContext {
 /// let bus = EventBus::new(NonZeroUsize::new(4).expect("capacity"));
 /// let context = ModuleContext::new(bus.sender(), runtime.handle().clone());
 /// let sender = context.module_sender(ModuleEvent::Updates);
-/// sender
-///     .try_send(modules::updates::Message::CheckNow)
-///     .expect("queued");
+/// sender.send(modules::updates::Message::CheckNow);
 /// ```
 pub struct ModuleEventSender<T> {
     context: ModuleContext,
@@ -204,10 +183,8 @@ where
 {
     /// Convert the payload into a [`ModuleEvent`] and enqueue it on the bus.
     ///
-    /// # Postconditions
-    ///
-    /// - Returns [`Ok`] if the event is successfully queued, otherwise
-    ///   propagates [`EventBusError`] from the underlying [`EventSender`].
+    /// Publishing never fails: an overflowing bus evicts its most
+    /// replaceable entry to make room, so the freshest state always lands.
     ///
     /// # Examples
     ///
@@ -220,18 +197,11 @@ where
     /// let bus = EventBus::new(NonZeroUsize::new(4).expect("capacity"));
     /// let context = ModuleContext::new(bus.sender(), runtime.handle().clone());
     /// let sender = context.module_sender(ModuleEvent::Updates);
-    /// sender
-    ///     .try_send(modules::updates::Message::CheckNow)
-    ///     .expect("queued");
+    /// sender.send(modules::updates::Message::CheckNow);
     /// ```
-    ///
-    /// # Errors
-    ///
-    /// Returns [`EventBusError::QueueFull`] when the bus is at capacity and
-    /// [`EventBusError::Poisoned`] when the queue lock was poisoned.
-    pub fn try_send(&self, payload: T) -> Result<(), EventBusError> {
+    pub fn send(&self, payload: T) {
         let event = (self.convert)(payload);
-        self.context.publish_module_event(event)
+        self.context.publish_module_event(event);
     }
 }
 
@@ -255,9 +225,9 @@ mod tests {
         let mut receiver = bus.receiver();
         let context = ModuleContext::new(sender, runtime.handle().clone());
 
-        context.request_redraw().expect("redraw enqueued");
+        context.request_redraw();
 
-        let event = receiver.try_recv().expect("receive");
+        let event = receiver.try_recv();
         assert!(matches!(event, Some(BusEvent::Redraw)));
     }
 
@@ -269,9 +239,9 @@ mod tests {
         let mut receiver = bus.receiver();
         let context = ModuleContext::new(sender, runtime.handle().clone());
 
-        context.toggle_popup().expect("popup enqueued");
+        context.toggle_popup();
 
-        let event = receiver.try_recv().expect("receive");
+        let event = receiver.try_recv();
         assert!(matches!(event, Some(BusEvent::PopupToggle)));
     }
 
@@ -284,11 +254,9 @@ mod tests {
         let context = ModuleContext::new(sender, runtime.handle().clone());
 
         let updates_sender = context.module_sender(ModuleEvent::Updates);
-        updates_sender
-            .try_send(modules::updates::Message::CheckNow)
-            .expect("module enqueued");
+        updates_sender.send(modules::updates::Message::CheckNow);
 
-        let event = receiver.try_recv().expect("receive");
+        let event = receiver.try_recv();
         assert!(matches!(
             event,
             Some(BusEvent::Module(ModuleEvent::Updates(

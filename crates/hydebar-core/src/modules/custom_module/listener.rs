@@ -13,15 +13,13 @@ use super::{
     data::CustomListenData,
     error::{CustomCommandError, CustomListenerError, truncate_snippet}
 };
-use crate::{ModuleEventSender, modules::ModuleError, services::ServiceEvent};
+use crate::{ModuleEventSender, services::ServiceEvent};
 
 pub(super) fn send_event(
     sender: &ModuleEventSender<Message>,
     event: ServiceEvent<super::CustomCommandService>
-) -> Result<(), ModuleError> {
-    sender
-        .try_send(Message::Event(event))
-        .map_err(ModuleError::from)
+) {
+    sender.send(Message::Event(event));
 }
 
 /// Publishes every line the process prints, skipping repeats.
@@ -55,8 +53,7 @@ where
 
                 published = Some(event.clone());
 
-                send_event(sender, ServiceEvent::Update(event))
-                    .map_err(CustomListenerError::Module)?;
+                send_event(sender, ServiceEvent::Update(event));
             }
             Err(err) => {
                 published = None;
@@ -65,8 +62,7 @@ where
                 error!(
                     "Custom module '{module_name}' failed to parse JSON output: {parse_error:?}"
                 );
-                send_event(sender, ServiceEvent::Error(parse_error.clone()))
-                    .map_err(CustomListenerError::Module)?;
+                send_event(sender, ServiceEvent::Error(parse_error.clone()));
             }
         }
     }

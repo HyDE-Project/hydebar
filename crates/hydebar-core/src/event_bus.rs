@@ -4,7 +4,6 @@ use std::{
     sync::{Arc, Mutex}
 };
 
-use masterror::AppError;
 use tokio::sync::Notify;
 
 use crate::modules;
@@ -104,15 +103,27 @@ impl EventBusInner {
         }
     }
 
-    /// Appends `event` unless it coalesces with the queue tail.
+    /// Takes the queue lock, recovering it from a producer's panic.
     ///
-    /// # Errors
+    /// The queue holds no invariant spanning two operations — every push,
+    /// replace and drain leaves it whole — so the state behind a poisoned
+    /// lock is still consistent and abandoning the whole bus over one
+    /// producer's panic would trade a recoverable hiccup for a dead UI.
+    fn queue(&self) -> std::sync::MutexGuard<'_, VecDeque<BusEvent>> {
+        self.queue
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+
+    /// Appends `event`, replacing its stale twin or the oldest entry if full.
     ///
-    /// Returns [`EventBusError::QueueFull`] when the queue reached its capacity
-    /// and [`EventBusError::Poisoned`] when a producer panicked while holding
-    /// the queue lock.
-    fn enqueue(&self, event: BusEvent) -> Result<(), EventBusError> {
-        let mut queue = self.queue.lock().map_err(|_| EventBusError::Poisoned)?;
+    /// Publishing never fails: a snapshot overwrites the stale snapshot of
+    /// its kind in place, an overflowing queue first evicts the oldest
+    /// replaceable snapshot — dropping it is lossless, a fresher one exists —
+    /// and only then the oldest event of all. The bar keeps drawing the
+    /// latest truth instead of punishing producers for a stalled consumer.
+    fn enqueue(&self, event: BusEvent) {
+        let mut queue = self.queue();
 
         if let Some(key) = event.snapshot_key()
             && let Some(stale) = queue
@@ -123,66 +134,42 @@ impl EventBusInner {
             drop(queue);
             self.delivered.notify_one();
 
-            return Ok(());
-        }
-
-        if queue.len() >= self.capacity {
-            return Err(EventBusError::QueueFull {
-                capacity: self.capacity
-            });
+            return;
         }
 
         if let Some(last) = queue.back()
             && event.is_coalescable_with(last)
         {
-            return Ok(());
+            return;
+        }
+
+        if queue.len() >= self.capacity {
+            let evicted = queue
+                .iter()
+                .position(|queued| queued.snapshot_key().is_some())
+                .unwrap_or(0);
+
+            if let Some(dropped) = queue.remove(evicted) {
+                log::warn!(
+                    "event bus at capacity {}: evicted {}",
+                    self.capacity,
+                    match dropped.snapshot_key() {
+                        Some(_) => "a stale snapshot",
+                        None => "the oldest event"
+                    }
+                );
+            }
         }
 
         queue.push_back(event);
         drop(queue);
 
         self.delivered.notify_one();
-
-        Ok(())
     }
 
     /// Removes and returns every queued event.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`EventBusError::Poisoned`] when a producer panicked while
-    /// holding the queue lock.
-    fn drain(&self) -> Result<Vec<BusEvent>, EventBusError> {
-        let mut queue = self.queue.lock().map_err(|_| EventBusError::Poisoned)?;
-
-        Ok(queue.drain(..).collect())
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum EventBusError {
-    QueueFull { capacity: usize },
-    Poisoned
-}
-
-impl std::fmt::Display for EventBusError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::QueueFull {
-                capacity
-            } => {
-                write!(f, "Event queue is full (capacity: {capacity})")
-            }
-            Self::Poisoned => write!(f, "Event queue state is poisoned")
-        }
-    }
-}
-
-impl std::error::Error for EventBusError {}
-
-impl From<EventBusError> for AppError {
-    fn from(err: EventBusError) -> Self {
-        Self::internal(err.to_string())
+    fn drain(&self) -> Vec<BusEvent> {
+        self.queue().drain(..).collect()
     }
 }
 
@@ -214,23 +201,13 @@ impl EventBus {
     }
 
     /// Appends `event` unless it coalesces with the queue tail.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`EventBusError::QueueFull`] when the queue reached its
-    /// capacity and [`EventBusError::Poisoned`] when a producer panicked while
-    /// holding the queue lock.
-    pub fn publish(&self, event: BusEvent) -> Result<(), EventBusError> {
-        self.inner.enqueue(event)
+    pub fn publish(&self, event: BusEvent) {
+        self.inner.enqueue(event);
     }
 
     /// Removes and returns every queued event.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`EventBusError::Poisoned`] when a producer panicked while
-    /// holding the queue lock.
-    pub fn drain(&self) -> Result<Vec<BusEvent>, EventBusError> {
+    #[must_use]
+    pub fn drain(&self) -> Vec<BusEvent> {
         self.inner.drain()
     }
 }
@@ -242,14 +219,8 @@ pub struct EventSender {
 
 impl EventSender {
     /// Appends `event` unless it coalesces with the queue tail.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`EventBusError::QueueFull`] when the queue reached its
-    /// capacity and [`EventBusError::Poisoned`] when a producer panicked while
-    /// holding the queue lock.
-    pub fn try_send(&self, event: BusEvent) -> Result<(), EventBusError> {
-        self.inner.enqueue(event)
+    pub fn send(&self, event: BusEvent) {
+        self.inner.enqueue(event);
     }
 }
 
@@ -260,37 +231,21 @@ pub struct EventReceiver {
 
 impl EventReceiver {
     /// Removes and returns the front event, when one is queued.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`EventBusError::Poisoned`] when a producer panicked while
-    /// holding the queue lock.
-    pub fn try_recv(&mut self) -> Result<Option<BusEvent>, EventBusError> {
-        let mut queue = self
-            .inner
-            .queue
-            .lock()
-            .map_err(|_| EventBusError::Poisoned)?;
-
-        Ok(queue.pop_front())
+    pub fn try_recv(&mut self) -> Option<BusEvent> {
+        self.inner.queue().pop_front()
     }
 
     /// Waits until at least one event is queued and returns the whole batch.
     ///
     /// The future stays parked while the bus is empty, so an idle shell issues
     /// no wakeups at all instead of draining the queue on a timer.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`EventBusError::Poisoned`] when a producer panicked while
-    /// holding the queue lock.
-    pub async fn recv(&mut self) -> Result<Vec<BusEvent>, EventBusError> {
+    pub async fn recv(&mut self) -> Vec<BusEvent> {
         loop {
             let delivered = self.inner.delivered.notified();
 
-            let batch = self.inner.drain()?;
+            let batch = self.inner.drain();
             if !batch.is_empty() {
-                return Ok(batch);
+                return batch;
             }
 
             delivered.await;
@@ -326,11 +281,11 @@ mod tests {
             ))
         };
 
-        bus.publish(snapshot(1)).expect("queue has room");
-        bus.publish(BusEvent::PopupToggle).expect("queue has room");
-        bus.publish(snapshot(2)).expect("queue has room");
+        bus.publish(snapshot(1));
+        bus.publish(BusEvent::PopupToggle);
+        bus.publish(snapshot(2));
 
-        let batch = receiver.recv().await.expect("bus is healthy");
+        let batch = receiver.recv().await;
 
         assert_eq!(batch.len(), 2, "the stale snapshot must not survive");
         assert!(matches!(
@@ -345,9 +300,9 @@ mod tests {
     async fn recv_returns_pending_events_without_waiting() {
         let bus = bus();
         let mut receiver = bus.receiver();
-        bus.publish(BusEvent::Redraw).expect("queue has room");
+        bus.publish(BusEvent::Redraw);
 
-        let batch = receiver.recv().await.expect("bus is healthy");
+        let batch = receiver.recv().await;
 
         assert_eq!(batch.len(), 1);
     }
@@ -362,15 +317,12 @@ mod tests {
 
         assert!(!waiting.is_finished());
 
-        sender
-            .try_send(BusEvent::PopupToggle)
-            .expect("queue has room");
+        sender.send(BusEvent::PopupToggle);
 
         let batch = tokio::time::timeout(Duration::from_secs(1), waiting)
             .await
             .expect("receiver woke up")
-            .expect("task did not panic")
-            .expect("bus is healthy");
+            .expect("task did not panic");
 
         assert!(matches!(batch.as_slice(), [BusEvent::PopupToggle]));
     }
@@ -379,29 +331,63 @@ mod tests {
     async fn recv_drains_the_whole_batch() {
         let bus = bus();
         let mut receiver = bus.receiver();
-        bus.publish(BusEvent::Redraw).expect("queue has room");
-        bus.publish(BusEvent::PopupToggle).expect("queue has room");
+        bus.publish(BusEvent::Redraw);
+        bus.publish(BusEvent::PopupToggle);
 
-        let batch = receiver.recv().await.expect("bus is healthy");
+        let batch = receiver.recv().await;
 
         assert_eq!(batch.len(), 2);
-        assert!(bus.drain().expect("bus is healthy").is_empty());
+        assert!(bus.drain().is_empty());
+    }
+
+    fn workspace_snapshot(active: i32) -> BusEvent {
+        BusEvent::Module(ModuleEvent::Workspaces(
+            crate::modules::workspaces::Message::WorkspacesChanged(
+                hydebar_proto::ports::hyprland::HyprlandWorkspaceSnapshot {
+                    monitors:            Vec::new(),
+                    workspaces:          Vec::new(),
+                    active_workspace_id: Some(active)
+                }
+            )
+        ))
     }
 
     #[test]
-    fn publish_rejects_events_once_the_queue_is_full() {
+    fn a_full_queue_evicts_the_oldest_event_and_accepts_the_newest() {
         let bus = EventBus::new(NonZeroUsize::new(1).expect("capacity is non zero"));
-        bus.publish(BusEvent::Redraw).expect("queue has room");
+        bus.publish(BusEvent::Redraw);
 
-        let err = bus
-            .publish(BusEvent::PopupToggle)
-            .expect_err("queue is full");
+        bus.publish(BusEvent::PopupToggle);
 
-        assert_eq!(
-            err,
-            EventBusError::QueueFull {
-                capacity: 1
-            }
+        let queued = bus.drain();
+        assert!(
+            matches!(queued.as_slice(), [BusEvent::PopupToggle]),
+            "the newest event must survive an overflow"
+        );
+    }
+
+    #[test]
+    fn a_full_queue_prefers_evicting_a_stale_snapshot_over_a_one_off_event() {
+        let bus = EventBus::new(NonZeroUsize::new(2).expect("capacity is non zero"));
+
+        bus.publish(workspace_snapshot(1));
+        bus.publish(BusEvent::PopupToggle);
+
+        bus.publish(BusEvent::Module(ModuleEvent::Clock(
+            crate::modules::clock::Message::Update
+        )));
+
+        let queued = bus.drain();
+        assert_eq!(queued.len(), 2);
+        assert!(
+            matches!(
+                queued.as_slice(),
+                [
+                    BusEvent::PopupToggle,
+                    BusEvent::Module(ModuleEvent::Clock(crate::modules::clock::Message::Update))
+                ]
+            ),
+            "the one-off toggle must outlive the replaceable snapshot"
         );
     }
 }

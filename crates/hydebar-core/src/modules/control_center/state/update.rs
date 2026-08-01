@@ -1,6 +1,6 @@
 //! Handling of settings menu messages.
 
-use log::{info, warn};
+use log::info;
 use tokio::runtime::Handle;
 
 use super::super::{
@@ -50,9 +50,7 @@ impl ControlCenter {
         self.idle_release = Some(runtime.spawn(async move {
             tokio::time::sleep(delay).await;
 
-            if let Err(err) = sender.try_send(Message::ReleaseInhibitIdle) {
-                warn!("failed to release the idle inhibitor after its timeout: {err}");
-            }
+            sender.send(Message::ReleaseInhibitIdle);
         }));
     }
 

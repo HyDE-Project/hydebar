@@ -102,9 +102,7 @@ pub fn config_reloads(
 /// A subscriber that fell behind is told how much it missed and keeps
 /// reading: every consumer of these events re-reads the compositor state
 /// anyway, so a gap costs one refresh, not correctness.
-fn stream_from<T: Clone + Send + 'static>(
-    rx: broadcast::Receiver<T>
-) -> HyprlandEventStream<T> {
+fn stream_from<T: Clone + Send + 'static>(rx: broadcast::Receiver<T>) -> HyprlandEventStream<T> {
     Box::pin(iced::futures::stream::unfold(rx, |mut rx| async move {
         loop {
             match rx.recv().await {
@@ -204,7 +202,10 @@ fn build_listener(mux: &Arc<Multiplexer>, client: &HyprlandClient) -> AsyncEvent
     }
 
     forward_workspace!(add_workspace_added_handler, HyprlandWorkspaceEvent::Added);
-    forward_workspace!(add_workspace_deleted_handler, HyprlandWorkspaceEvent::Removed);
+    forward_workspace!(
+        add_workspace_deleted_handler,
+        HyprlandWorkspaceEvent::Removed
+    );
     forward_workspace!(add_workspace_moved_handler, HyprlandWorkspaceEvent::Moved);
     forward_workspace!(
         add_changed_special_handler,
@@ -215,8 +216,14 @@ fn build_listener(mux: &Arc<Multiplexer>, client: &HyprlandClient) -> AsyncEvent
         HyprlandWorkspaceEvent::SpecialRemoved
     );
     forward_workspace!(add_monitor_removed_handler, HyprlandWorkspaceEvent::Changed);
-    forward_workspace!(add_window_opened_handler, HyprlandWorkspaceEvent::WindowOpened);
-    forward_workspace!(add_window_moved_handler, HyprlandWorkspaceEvent::WindowMoved);
+    forward_workspace!(
+        add_window_opened_handler,
+        HyprlandWorkspaceEvent::WindowOpened
+    );
+    forward_workspace!(
+        add_window_moved_handler,
+        HyprlandWorkspaceEvent::WindowMoved
+    );
     forward_workspace!(
         add_active_monitor_changed_handler,
         HyprlandWorkspaceEvent::ActiveMonitorChanged

@@ -164,9 +164,7 @@ impl PollingTask {
                 {
                     published = Some(sample.clone());
 
-                    if let Err(err) = sender.try_send(Message::Sampled(sample)) {
-                        error!("failed to publish system info refresh: {err}");
-                    }
+                    sender.send(Message::Sampled(sample));
                 }
 
                 tokio::select! {
@@ -256,7 +254,7 @@ mod tests {
     /// yields, with a real nap now and then, lets that thread finish.
     async fn next_event(receiver: &mut crate::event_bus::EventReceiver) -> Option<BusEvent> {
         for spin in 0..10_000u32 {
-            if let Some(event) = receiver.try_recv().expect("bus read") {
+            if let Some(event) = receiver.try_recv() {
                 return Some(event);
             }
 
@@ -282,7 +280,7 @@ mod tests {
     ) -> Option<BusEvent> {
         for _ in 0..32u32 {
             for spin in 0..256u32 {
-                if let Some(event) = receiver.try_recv().expect("bus read") {
+                if let Some(event) = receiver.try_recv() {
                     return Some(event);
                 }
 
@@ -315,7 +313,7 @@ mod tests {
         );
         yield_now().await;
 
-        assert!(receiver.try_recv().expect("initial queue state").is_none());
+        assert!(receiver.try_recv().is_none());
 
         let event = next_event_advancing(&mut receiver, WARMUP / 2).await;
         expect_cpu_usage(event, 1);
@@ -364,12 +362,7 @@ mod tests {
             }
         }
 
-        assert!(
-            receiver
-                .try_recv()
-                .expect("queue state after steady samples")
-                .is_none()
-        );
+        assert!(receiver.try_recv().is_none());
     }
 
     #[tokio::test(start_paused = true)]
@@ -420,7 +413,7 @@ mod tests {
 
         let first = next_event_advancing(&mut receiver, WARMUP / 2).await;
         expect_cpu_usage(first, 1);
-        assert!(receiver.try_recv().expect("drain first refresh").is_none());
+        assert!(receiver.try_recv().is_none());
 
         polling.spawn_from(
             &ctx,
@@ -433,6 +426,6 @@ mod tests {
 
         let second = next_event_advancing(&mut receiver, WARMUP / 2).await;
         expect_cpu_usage(second, 101);
-        assert!(receiver.try_recv().expect("no duplicate refresh").is_none());
+        assert!(receiver.try_recv().is_none());
     }
 }

@@ -156,18 +156,12 @@ where
                             while let Some(event) = stream.next().await {
                                 match event {
                                     Ok(HyprlandKeyboardEvent::LayoutChanged(layout)) => {
-                                        if let Err(err) = sender
-                                            .try_send(Message::ActiveLayoutChanged(layout))
-                                        {
-                                            error!("failed to publish active layout update: {err}");
-                                        }
+                                        sender.send(Message::ActiveLayoutChanged(layout));
                                     }
-                                    Ok(HyprlandKeyboardEvent::LayoutConfigurationChanged(flag)) => {
-                                        if let Err(err) = sender
-                                            .try_send(Message::LayoutConfigChanged(flag))
-                                        {
-                                            error!("failed to publish layout configuration update: {err}");
-                                        }
+                                    Ok(HyprlandKeyboardEvent::LayoutConfigurationChanged(
+                                        flag
+                                    )) => {
+                                        sender.send(Message::LayoutConfigChanged(flag));
                                     }
                                     Ok(HyprlandKeyboardEvent::SubmapChanged(_)) => {}
                                     Err(err) => {

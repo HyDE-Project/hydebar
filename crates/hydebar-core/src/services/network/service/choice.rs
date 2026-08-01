@@ -15,7 +15,10 @@ pub(super) enum BackendChoice {
 }
 
 impl BackendChoice {
-    pub(super) const fn with_connection(self, conn: zbus::Connection) -> BackendChoiceWithConnection {
+    pub(super) const fn with_connection(
+        self,
+        conn: zbus::Connection
+    ) -> BackendChoiceWithConnection {
         BackendChoiceWithConnection {
             choice: self,
             conn

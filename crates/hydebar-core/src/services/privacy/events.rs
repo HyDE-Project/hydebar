@@ -46,11 +46,9 @@ impl ReadOnlyService for PrivacyService {
                             state = next_state;
                         }
                         Err(error) => {
-                            if let Err(send_error) = Self::emit_event(
-                                &mut output,
-                                ServiceEvent::Error(error.clone())
-                            )
-                            .await
+                            if let Err(send_error) =
+                                Self::emit_event(&mut output, ServiceEvent::Error(error.clone()))
+                                    .await
                             {
                                 warn!("Failed to emit privacy service error event: {send_error}");
                                 break;

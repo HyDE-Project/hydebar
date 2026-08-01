@@ -1,7 +1,7 @@
 //! Frame ticks, bus drains and configuration reloads.
 
 use iced::Task;
-use log::{debug, error, info, warn};
+use log::{debug, info, warn};
 
 use super::super::{
     shutdown,
@@ -148,10 +148,6 @@ impl App {
                 }
             }
             Message::BusFlushed(outcome) => {
-                if outcome.had_error() {
-                    error!("event bus reported a failure while delivering events");
-                }
-
                 if outcome.is_empty() {
                     Task::none()
                 } else {

@@ -1,6 +1,5 @@
 //! Connection profiles already stored by `NetworkManager`.
 
-
 use log::warn;
 use masterror::{AppError, AppResult};
 use zbus::zvariant::Value;
@@ -30,9 +29,7 @@ impl NetworkDbus<'_> {
             let cs = ConnectionSettingsProxy::builder(self.0.inner().connection())
                 .path(c.clone())
                 .map_err(|e| {
-                    AppError::internal(format!(
-                        "Failed to set ConnectionSettingsProxy path: {e}"
-                    ))
+                    AppError::internal(format!("Failed to set ConnectionSettingsProxy path: {e}"))
                 })?
                 .build()
                 .await
@@ -47,13 +44,13 @@ impl NetworkDbus<'_> {
             let wifi = s.get("802-11-wireless");
 
             if wifi.is_some() {
-                let ssid =
-                    s.get("connection")
-                        .and_then(|c| c.get("id"))
-                        .map(|s| match &**s {
-                            Value::Str(v) => v.to_string(),
-                            _ => String::new()
-                        });
+                let ssid = s
+                    .get("connection")
+                    .and_then(|c| c.get("id"))
+                    .map(|s| match &**s {
+                        Value::Str(v) => v.to_string(),
+                        _ => String::new()
+                    });
 
                 if let Some(cur_ssid) = ssid {
                     known_ssid.push(cur_ssid);

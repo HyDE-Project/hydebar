@@ -168,17 +168,9 @@ fn report_listener_outcome(
         Err(CustomListenerError::Command(error)) => {
             error!("Custom module '{module_name}' listener terminated with error: {error:?}");
 
-            if !matches!(error, CustomCommandError::ChannelClosed)
-                && let Err(send_error) = send_event(error_sender, ServiceEvent::Error(error))
-            {
-                error!(
-                    "Custom module '{module_name}' failed to publish error notification: \
-                 {send_error}"
-                );
+            if !matches!(error, CustomCommandError::ChannelClosed) {
+                send_event(error_sender, ServiceEvent::Error(error));
             }
-        }
-        Err(CustomListenerError::Module(error)) => {
-            error!("Custom module '{module_name}' failed to publish event: {error}");
         }
     }
 }

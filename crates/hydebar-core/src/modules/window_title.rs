@@ -31,9 +31,7 @@ async fn publish_active_window(
 
     match tokio::task::spawn_blocking(move || port.active_window()).await {
         Ok(Ok(window)) => {
-            if let Err(err) = sender.try_send(Message::TitleChanged(window)) {
-                error!("failed to publish window title update: {err}");
-            }
+            sender.send(Message::TitleChanged(window));
         }
         Ok(Err(err)) => error!("failed to retrieve active window: {err}"),
         Err(err) => error!("active window task failed: {err}")

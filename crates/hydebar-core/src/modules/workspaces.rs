@@ -323,9 +323,7 @@ async fn publish_snapshot(port: &Arc<dyn HyprlandPort>, sender: &ModuleEventSend
 
     match tokio::task::spawn_blocking(move || port.workspace_snapshot()).await {
         Ok(Ok(snapshot)) => {
-            if let Err(err) = sender.try_send(Message::WorkspacesChanged(snapshot)) {
-                error!("failed to publish workspace update: {err}");
-            }
+            sender.send(Message::WorkspacesChanged(snapshot));
         }
         Ok(Err(err)) => error!("failed to retrieve workspace snapshot: {err}"),
         Err(err) => error!("workspace snapshot task failed: {err}")
@@ -401,23 +399,13 @@ where
                                         publish_snapshot(&hyprland, &sender).await;
 
                                         for id in urgent {
-                                            if let Err(err) =
-                                                sender.try_send(Message::WorkspaceUrgent(id))
-                                            {
-                                                error!(
-                                                    "failed to publish workspace urgency: {err}"
-                                                );
-                                            }
+                                            sender.send(Message::WorkspaceUrgent(id));
                                         }
                                     }
                                     Ok(HyprlandWorkspaceEvent::Urgent {
                                         workspace_id
                                     }) => {
-                                        if let Err(err) =
-                                            sender.try_send(Message::WorkspaceUrgent(workspace_id))
-                                        {
-                                            error!("failed to publish workspace urgency: {err}");
-                                        }
+                                        sender.send(Message::WorkspaceUrgent(workspace_id));
                                     }
                                     Err(err) => {
                                         error!("workspace event stream error: {err}");

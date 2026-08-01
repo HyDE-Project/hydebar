@@ -4,8 +4,8 @@ use crate::components::icons::Icons;
 
 /// Describes a single audio device (sink or source).
 ///
-/// Each device carries metadata exported by `PulseAudio` that is consumed by the
-/// settings UI.
+/// Each device carries metadata exported by `PulseAudio` that is consumed by
+/// the settings UI.
 #[derive(Debug, Clone)]
 pub struct Device {
     pub name:        String,
@@ -54,7 +54,8 @@ pub struct ServerInfo {
     pub default_source: String
 }
 
-/// Provides a view on common volume operations for `PulseAudio` channel volumes.
+/// Provides a view on common volume operations for `PulseAudio` channel
+/// volumes.
 pub trait Volume {
     /// Returns the normalized volume value in range `[0.0, 1.0]`.
     fn get_volume(&self) -> f64;

@@ -154,9 +154,7 @@ impl NetworkBackend for NetworkDbus<'_> {
                     .build()
                     .await
                     .map_err(|e| {
-                        AppError::internal(format!(
-                            "Failed to build ConnectionSettingsProxy: {e}"
-                        ))
+                        AppError::internal(format!("Failed to build ConnectionSettingsProxy: {e}"))
                     })?;
 
                 let mut s = connection.get_settings().await.map_err(|e| {
@@ -241,9 +239,7 @@ impl NetworkBackend for NetworkDbus<'_> {
                 OwnedObjectPath::try_from("/").unwrap()
             )
             .await
-            .map_err(|e| {
-                AppError::internal(format!("Failed to activate VPN connection: {e}"))
-            })?;
+            .map_err(|e| AppError::internal(format!("Failed to activate VPN connection: {e}")))?;
         } else {
             debug!("Deactivating VPN: {connection:?}");
             self.deactivate_connection(connection).await.map_err(|e| {

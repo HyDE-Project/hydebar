@@ -19,9 +19,10 @@ pub(super) async fn describe(
         .map_err(|e| AppError::internal(format!("Failed to build WiredDeviceProxy: {e}")))?;
 
     Ok(ActiveConnectionInfo::Wired {
-        name:  connection.id().await.map_err(|e| {
-            AppError::internal(format!("Failed to get wired connection ID: {e}"))
-        })?,
+        name:  connection
+            .id()
+            .await
+            .map_err(|e| AppError::internal(format!("Failed to get wired connection ID: {e}")))?,
         speed: wired_device
             .speed()
             .await

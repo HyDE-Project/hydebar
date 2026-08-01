@@ -16,7 +16,10 @@ use super::{
 use crate::services::{ServiceEvent, ServiceEventPublisher};
 
 impl UPowerService {
-    #[expect(clippy::needless_continue, reason = "the continue lives inside the stream_select macro expansion")]
+    #[expect(
+        clippy::needless_continue,
+        reason = "the continue lives inside the stream_select macro expansion"
+    )]
     async fn events(
         conn: &zbus::Connection,
         battery_devices: Option<&Vec<ObjectPath<'static>>>

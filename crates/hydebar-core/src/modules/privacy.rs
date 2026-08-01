@@ -97,11 +97,8 @@ where
                         state = next_state;
                     }
                     Err(error) => {
-                        if let Err(err) = error_sender
-                            .try_send(PrivacyMessage::Event(ServiceEvent::Error(error.clone())))
-                        {
-                            warn!("failed to publish privacy service error: {err}");
-                        }
+                        error_sender
+                            .send(PrivacyMessage::Event(ServiceEvent::Error(error.clone())));
 
                         failures = failures.saturating_add(1);
                         tokio::time::sleep(crate::services::reconnect_delay(failures)).await;
@@ -189,13 +186,9 @@ impl PrivacyEventPublisher for ModulePublisher {
         Self: 'a;
 
     fn send(&mut self, event: ServiceEvent<PrivacyService>) -> Self::SendFuture<'_> {
-        ready(
-            self.sender
-                .try_send(PrivacyMessage::Event(event))
-                .map_err(|err| {
-                    PrivacyError::channel(format!("failed to publish privacy event: {err}"))
-                })
-        )
+        self.sender.send(PrivacyMessage::Event(event));
+
+        ready(Ok(()))
     }
 }
 
@@ -216,10 +209,7 @@ where
 #[allow(dead_code)]
 async fn recv_event(receiver: &mut crate::event_bus::EventReceiver) -> BusEvent {
     loop {
-        if let Some(event) = receiver
-            .try_recv()
-            .expect("event bus receiver should not be poisoned")
-        {
+        if let Some(event) = receiver.try_recv() {
             return event;
         }
 

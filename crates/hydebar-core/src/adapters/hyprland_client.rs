@@ -121,8 +121,8 @@ impl HyprlandPort for HyprlandClient {
 
     fn workspace_snapshot(&self) -> Result<HyprlandWorkspaceSnapshot, HyprlandError> {
         self.execute_with_retry(WORKSPACE_SNAPSHOT_OP, || {
-            let monitors = Monitors::get()
-                .map_err(|err| Self::backend_error(WORKSPACE_SNAPSHOT_OP, err))?;
+            let monitors =
+                Monitors::get().map_err(|err| Self::backend_error(WORKSPACE_SNAPSHOT_OP, err))?;
             let workspaces = Workspaces::get()
                 .map_err(|err| Self::backend_error(WORKSPACE_SNAPSHOT_OP, err))?;
             let active = Workspace::get_active()
@@ -199,12 +199,16 @@ impl HyprlandPort for HyprlandClient {
                 .count()
                 > 1;
 
-            let devices = Devices::get()
-                .map_err(|err| Self::backend_error(KEYBOARD_STATE_OP, err))?;
+            let devices =
+                Devices::get().map_err(|err| Self::backend_error(KEYBOARD_STATE_OP, err))?;
             let active_layout = devices
                 .keyboards
                 .iter()
-                .find(|keyboard| keyboard.main).map_or_else(|| "unknown".to_string(), |keyboard| keyboard.active_keymap.clone());
+                .find(|keyboard| keyboard.main)
+                .map_or_else(
+                    || "unknown".to_string(),
+                    |keyboard| keyboard.active_keymap.clone()
+                );
 
             Ok(HyprlandKeyboardState {
                 active_layout,

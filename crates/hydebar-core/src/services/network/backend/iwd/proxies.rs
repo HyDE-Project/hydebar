@@ -56,9 +56,7 @@ impl IwdDbus<'_> {
         let manager = ObjectManagerProxy::builder(conn)
             .destination("net.connman.iwd")
             .map_err(|e| {
-                AppError::internal(format!(
-                    "Failed to set ObjectManagerProxy destination: {e}"
-                ))
+                AppError::internal(format!("Failed to set ObjectManagerProxy destination: {e}"))
             })?
             .path("/")
             .map_err(|e| {
@@ -161,12 +159,7 @@ impl IwdDbus<'_> {
         // It might be associated with a Device or Station. This function assumes they
         // might appear. If this doesn't work as expected, the logic might need
         // refinement based on IWD's structure.
-        list_proxies!(
-            &self.inner,
-            "net.connman.iwd.AccessPoint",
-            AccessPointProxy
-        )
-        .await
+        list_proxies!(&self.inner, "net.connman.iwd.AccessPoint", AccessPointProxy).await
     }
 
     /// Lists every network visible from a station together with its signal
@@ -182,17 +175,13 @@ impl IwdDbus<'_> {
 
         for station in stations {
             let networks_proxies = station.get_ordered_networks().await.map_err(|e| {
-                AppError::internal(format!(
-                    "Failed to get ordered networks from station: {e}"
-                ))
+                AppError::internal(format!("Failed to get ordered networks from station: {e}"))
             })?;
             for (path, strength) in networks_proxies {
                 let network = NetworkProxy::builder(self.inner().connection())
                     .destination("net.connman.iwd")
                     .map_err(|e| {
-                        AppError::internal(format!(
-                            "Failed to set NetworkProxy destination: {e}"
-                        ))
+                        AppError::internal(format!("Failed to set NetworkProxy destination: {e}"))
                     })?
                     .path(path.clone())
                     .map_err(|e| {

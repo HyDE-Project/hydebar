@@ -93,9 +93,7 @@ pub async fn build_event_stream(conn: &Connection) -> AppResult<EventStream> {
     combined.push(Box::pin(
         dbus.receive_name_owner_changed()
             .await
-            .map_err(|e| {
-                AppError::internal(format!("Failed to receive name owner changed: {e}"))
-            })?
+            .map_err(|e| AppError::internal(format!("Failed to receive name owner changed: {e}")))?
             .filter_map(|signal| async move {
                 match signal.args() {
                     Ok(args) if is_mpris_service(&args.name) => Some(IpcEvent::NameOwner),

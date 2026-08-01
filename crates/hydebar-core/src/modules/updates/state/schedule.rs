@@ -2,7 +2,6 @@
 
 use std::{sync::Arc, time::Duration};
 
-use log::error;
 use tokio::{runtime::Handle, sync::Notify, task::JoinHandle, time::sleep};
 
 use super::{
@@ -134,16 +133,13 @@ async fn check_loop(
     loop {
         let outcome = check_once(command.as_ref(), &mut failures).await;
 
-        if let Err(err) = sender.try_send(outcome) {
-            error!("failed to publish the updates check result: {err}");
-        }
+        sender.send(outcome);
 
         if let Some(clone) = hyde_clone.as_deref()
             && let Some(snapshot) =
                 check_hyde_once(clone, branch.as_ref(), &mut hyde_failures).await
-            && let Err(err) = sender.try_send(Message::HydeChecked(snapshot))
         {
-            error!("failed to publish the hyde check result: {err}");
+            sender.send(Message::HydeChecked(snapshot));
         }
 
         tokio::select! {

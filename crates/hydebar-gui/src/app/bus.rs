@@ -6,24 +6,18 @@ use iced::{
     futures::stream::{BoxStream, StreamExt, unfold}
 };
 use iced_futures::subscription::{self, Recipe, from_recipe};
-use log::error;
 
+/// A batch of events drained from the bus in one wakeup.
 #[derive(Debug, Clone)]
 pub struct BusFlushOutcome {
-    events:    Vec<BusEvent>,
-    had_error: bool
+    events: Vec<BusEvent>
 }
 
 impl BusFlushOutcome {
-    pub(super) const fn with_events(events: Vec<BusEvent>, had_error: bool) -> Self {
+    pub(super) const fn with_events(events: Vec<BusEvent>) -> Self {
         Self {
-            events,
-            had_error
+            events
         }
-    }
-
-    pub(super) const fn had_error(&self) -> bool {
-        self.had_error
     }
 
     pub(super) const fn is_empty(&self) -> bool {
@@ -38,7 +32,8 @@ impl BusFlushOutcome {
 /// Subscription delivering module events as soon as a producer publishes them.
 ///
 /// The stream parks on the bus instead of draining it on a timer, so an idle
-/// shell performs no wakeups until a source has something to report.
+/// shell performs no wakeups until a source has something to report. The bus
+/// itself is infallible, so the subscription lives as long as the bar does.
 pub(super) fn subscription(receiver: EventReceiver) -> Subscription<BusFlushOutcome> {
     from_recipe(BusWatcher {
         receiver
@@ -60,16 +55,10 @@ impl Recipe for BusWatcher {
         self: Box<Self>,
         _input: subscription::EventStream
     ) -> BoxStream<'static, Self::Output> {
-        unfold(Some(self.receiver), |state| async move {
-            let mut receiver = state?;
+        unfold(self.receiver, |mut receiver| async move {
+            let events = receiver.recv().await;
 
-            match receiver.recv().await {
-                Ok(events) => Some((BusFlushOutcome::with_events(events, false), Some(receiver))),
-                Err(err) => {
-                    error!("event bus is unusable, stopping the subscription: {err}");
-                    Some((BusFlushOutcome::with_events(Vec::new(), true), None))
-                }
-            }
+            Some((BusFlushOutcome::with_events(events), receiver))
         })
         .boxed()
     }

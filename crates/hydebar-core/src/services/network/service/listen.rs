@@ -84,12 +84,7 @@ impl NetworkService {
 
         while let Some(event) = events.next().await {
             let event = event?;
-            let exit_loop = matches!(
-                event,
-                NetworkEvent::WirelessDevice {
-                    ..
-                }
-            );
+            let exit_loop = matches!(event, NetworkEvent::WirelessDevice { .. });
 
             if gate.admits(&event) {
                 let refresh_link = Self::moves_the_link(&event, &mut throttle);
@@ -337,11 +332,11 @@ const RECONNECT_MAX_DELAY: Duration = Duration::from_secs(64);
 
 /// Pause before reconnecting after `failures` consecutive failed attempts.
 ///
-/// A machine running neither `NetworkManager` nor iwd fails the D-Bus connection
-/// immediately, so a fixed one second retry becomes a permanent one hertz
-/// wakeup that logs an error every time. Doubling the delay up to a minute
-/// keeps a transient failure recovering within a second while an absent backend
-/// settles into a cost the idle bar does not notice.
+/// A machine running neither `NetworkManager` nor iwd fails the D-Bus
+/// connection immediately, so a fixed one second retry becomes a permanent one
+/// hertz wakeup that logs an error every time. Doubling the delay up to a
+/// minute keeps a transient failure recovering within a second while an absent
+/// backend settles into a cost the idle bar does not notice.
 fn reconnect_delay(failures: u32) -> Duration {
     let shift = failures.saturating_sub(1).min(u32::BITS - 1);
 

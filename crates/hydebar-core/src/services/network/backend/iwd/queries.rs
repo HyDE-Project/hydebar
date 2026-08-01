@@ -131,19 +131,19 @@ impl IwdDbus<'_> {
         {
             let nets = self.reachable_networks().await?;
             for (net, s) in nets {
-                let ssid = net.name().await.map_err(|e| {
-                    AppError::internal(format!("Failed to get network name: {e}"))
-                })?;
-                let public = net.type_().await.map_err(|e| {
-                    AppError::internal(format!("Failed to get network type: {e}"))
-                })? == "open";
+                let ssid = net
+                    .name()
+                    .await
+                    .map_err(|e| AppError::internal(format!("Failed to get network name: {e}")))?;
+                let public =
+                    net.type_().await.map_err(|e| {
+                        AppError::internal(format!("Failed to get network type: {e}"))
+                    })? == "open";
                 let path = net.inner().path().clone().into();
                 let device_path = net
                     .device()
                     .await
-                    .map_err(|e| {
-                        AppError::internal(format!("Failed to get network device: {e}"))
-                    })?
+                    .map_err(|e| AppError::internal(format!("Failed to get network device: {e}")))?
                     .clone();
                 aps.push(AccessPoint {
                     ssid,

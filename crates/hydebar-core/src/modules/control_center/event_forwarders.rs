@@ -7,8 +7,6 @@
 
 use std::future::{Ready, ready};
 
-use log::warn;
-
 use super::{
     audio::AudioMessage, bluetooth::BluetoothMessage, brightness::BrightnessMessage,
     network::NetworkMessage, state::Message, upower::UPowerMessage
@@ -25,20 +23,14 @@ use crate::{
 /// Forwards the events of one service, wrapped into the module's message.
 pub(super) struct EventForwarder<S: ReadOnlyService> {
     sender: ModuleEventSender<Message>,
-    wrap:   fn(ServiceEvent<S>) -> Message,
-    label:  &'static str
+    wrap:   fn(ServiceEvent<S>) -> Message
 }
 
 impl<S: ReadOnlyService> EventForwarder<S> {
-    fn new(
-        sender: ModuleEventSender<Message>,
-        wrap: fn(ServiceEvent<S>) -> Message,
-        label: &'static str
-    ) -> Self {
+    fn new(sender: ModuleEventSender<Message>, wrap: fn(ServiceEvent<S>) -> Message) -> Self {
         Self {
             sender,
-            wrap,
-            label
+            wrap
         }
     }
 }
@@ -50,9 +42,7 @@ impl<S: ReadOnlyService> ServiceEventPublisher<S> for EventForwarder<S> {
         Self: 'a;
 
     fn send(&mut self, event: ServiceEvent<S>) -> Self::SendFuture<'_> {
-        if let Err(err) = self.sender.try_send((self.wrap)(event)) {
-            warn!("failed to publish {} event: {err}", self.label);
-        }
+        self.sender.send((self.wrap)(event));
 
         ready(())
     }
@@ -60,55 +50,45 @@ impl<S: ReadOnlyService> ServiceEventPublisher<S> for EventForwarder<S> {
 
 /// The forwarder of the audio service.
 pub(super) fn audio_forwarder(sender: ModuleEventSender<Message>) -> EventForwarder<AudioService> {
-    EventForwarder::new(
-        sender,
-        |event| Message::Audio(AudioMessage::Event(Box::new(event))),
-        "audio"
-    )
+    EventForwarder::new(sender, |event| {
+        Message::Audio(AudioMessage::Event(Box::new(event)))
+    })
 }
 
 /// The forwarder of the brightness service.
 pub(super) fn brightness_forwarder(
     sender: ModuleEventSender<Message>
 ) -> EventForwarder<BrightnessService> {
-    EventForwarder::new(
-        sender,
-        |event| Message::Brightness(BrightnessMessage::Event(Box::new(event))),
-        "brightness"
-    )
+    EventForwarder::new(sender, |event| {
+        Message::Brightness(BrightnessMessage::Event(Box::new(event)))
+    })
 }
 
 /// The forwarder of the network service.
 pub(super) fn network_forwarder(
     sender: ModuleEventSender<Message>
 ) -> EventForwarder<NetworkService> {
-    EventForwarder::new(
-        sender,
-        |event| Message::Network(NetworkMessage::Event(Box::new(event))),
-        "network"
-    )
+    EventForwarder::new(sender, |event| {
+        Message::Network(NetworkMessage::Event(Box::new(event)))
+    })
 }
 
 /// The forwarder of the bluetooth service.
 pub(super) fn bluetooth_forwarder(
     sender: ModuleEventSender<Message>
 ) -> EventForwarder<BluetoothService> {
-    EventForwarder::new(
-        sender,
-        |event| Message::Bluetooth(BluetoothMessage::Event(Box::new(event))),
-        "bluetooth"
-    )
+    EventForwarder::new(sender, |event| {
+        Message::Bluetooth(BluetoothMessage::Event(Box::new(event)))
+    })
 }
 
 /// The forwarder of the power service.
 pub(super) fn upower_forwarder(
     sender: ModuleEventSender<Message>
 ) -> EventForwarder<UPowerService> {
-    EventForwarder::new(
-        sender,
-        |event| Message::UPower(UPowerMessage::Event(Box::new(event))),
-        "upower"
-    )
+    EventForwarder::new(sender, |event| {
+        Message::UPower(UPowerMessage::Event(Box::new(event)))
+    })
 }
 
 #[cfg(test)]
@@ -141,7 +121,7 @@ mod tests {
 
         drop(forwarder.send(ServiceEvent::Error(())));
 
-        let event = receiver.try_recv().expect("event queued");
+        let event = receiver.try_recv();
         match event {
             Some(BusEvent::Module(ModuleEvent::ControlCenter(Message::Audio(
                 AudioMessage::Event(event)
@@ -160,7 +140,7 @@ mod tests {
         let error = crate::services::network::NetworkServiceError::new("failure");
         drop(forwarder.send(ServiceEvent::Error(error.clone())));
 
-        let event = receiver.try_recv().expect("event queued");
+        let event = receiver.try_recv();
         match event {
             Some(BusEvent::Module(ModuleEvent::ControlCenter(Message::Network(
                 NetworkMessage::Event(payload)

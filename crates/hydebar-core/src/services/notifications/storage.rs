@@ -60,7 +60,9 @@ impl NotificationStorage {
     pub fn replace(&mut self, id: u32, mut notification: Notification) {
         notification.id = id;
 
-        if let Some(existing) = self.notifications.iter_mut().find(|n| n.id == id) { *existing = notification } else {
+        if let Some(existing) = self.notifications.iter_mut().find(|n| n.id == id) {
+            *existing = notification;
+        } else {
             if self.notifications.len() >= MAX_NOTIFICATIONS {
                 self.notifications.pop_back();
             }

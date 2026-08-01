@@ -40,9 +40,7 @@ impl std::error::Error for TrayWatcherError {
     }
 }
 
-pub async fn initialize_data(
-    conn: &zbus::Connection
-) -> Result<TrayData, TrayWatcherError> {
+pub async fn initialize_data(conn: &zbus::Connection) -> Result<TrayData, TrayWatcherError> {
     debug!("initializing tray data");
     let proxy = StatusNotifierWatcherProxy::new(conn).await.map_err(|err| {
         TrayWatcherError::Initialization(AppError::internal(format!(
@@ -82,7 +80,10 @@ pub async fn initialize_data(
     clippy::too_many_lines,
     reason = "one subscription per tray signal is wired into a single merged stream; splitting would scatter the wiring"
 )]
-#[expect(clippy::needless_continue, reason = "the continue lives inside the stream_select macro expansion")]
+#[expect(
+    clippy::needless_continue,
+    reason = "the continue lives inside the stream_select macro expansion"
+)]
 pub async fn events(conn: &zbus::Connection) -> Result<TrayEventStream, TrayWatcherError> {
     let watcher = StatusNotifierWatcherProxy::new(conn).await.map_err(|err| {
         TrayWatcherError::EventStream(AppError::internal(format!(

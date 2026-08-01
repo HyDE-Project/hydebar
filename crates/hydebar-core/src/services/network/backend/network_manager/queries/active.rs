@@ -96,9 +96,10 @@ async fn vpn_info(
     kind: &str
 ) -> AppResult<ActiveConnectionInfo> {
     Ok(ActiveConnectionInfo::Vpn {
-        name:        connection.id().await.map_err(|e| {
-            AppError::internal(format!("Failed to get {kind} connection ID: {e}"))
-        })?,
+        name:        connection
+            .id()
+            .await
+            .map_err(|e| AppError::internal(format!("Failed to get {kind} connection ID: {e}")))?,
         object_path: connection.inner().path().to_owned().into()
     })
 }

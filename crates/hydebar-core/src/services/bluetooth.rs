@@ -84,7 +84,10 @@ impl BluetoothService {
         })
     }
 
-    #[expect(clippy::needless_continue, reason = "the continue lives inside the stream_select macro expansion")]
+    #[expect(
+        clippy::needless_continue,
+        reason = "the continue lives inside the stream_select macro expansion"
+    )]
     async fn events(conn: &zbus::Connection) -> AppResult<impl Stream<Item = ()> + use<>> {
         let bluetooth = BluetoothDbus::new(conn).await?;
 

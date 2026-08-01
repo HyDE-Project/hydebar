@@ -128,7 +128,8 @@ impl PulseAudioServer {
                         let data = server.mainloop.iterate(true);
                         if let IterateResult::Quit(_) | IterateResult::Err(_) = data {
                             error!("PulseAudio mainloop error");
-                            let _ = from_server_tx.try_send(BackendEvent::Error("PulseAudio mainloop error".into()));
+                            let _ = from_server_tx
+                                .try_send(BackendEvent::Error("PulseAudio mainloop error".into()));
                             break;
                         }
                     }

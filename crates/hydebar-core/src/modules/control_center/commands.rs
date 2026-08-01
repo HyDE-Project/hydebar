@@ -122,16 +122,14 @@ where
     if let (Some(handle), Some(sender), Some(service)) =
         (params.runtime, params.sender, params.service)
     {
-        let service_name = params.service_name.to_string();
+        let _service_name = params.service_name.to_string();
         let runner = params.runner;
         let message_ctor = params.message_ctor;
         let event_ctor = params.event_ctor;
         let command = params.command;
         handle.spawn(async move {
             let event = runner(service, command).await;
-            if let Err(err) = sender.try_send(message_ctor(event_ctor(event))) {
-                warn!("failed to publish {service_name} command event: {err}");
-            }
+            sender.send(message_ctor(event_ctor(event)));
         });
         true
     } else {
@@ -172,16 +170,14 @@ where
     if let (Some(handle), Some(sender), Some(service)) =
         (params.runtime, params.sender, params.service)
     {
-        let service_name = params.service_name.to_string();
+        let _service_name = params.service_name.to_string();
         let runner = params.runner;
         let message_ctor = params.message_ctor;
         let event_ctor = params.event_ctor;
         let command = params.command;
         handle.spawn(async move {
-            if let Some(event) = runner(service, command).await
-                && let Err(err) = sender.try_send(message_ctor(event_ctor(event)))
-            {
-                warn!("failed to publish {service_name} command event: {err}");
+            if let Some(event) = runner(service, command).await {
+                sender.send(message_ctor(event_ctor(event)));
             }
         });
         true

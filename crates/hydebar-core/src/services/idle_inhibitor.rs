@@ -27,7 +27,8 @@ pub struct IdleInhibitorManager {
 
 impl std::fmt::Debug for IdleInhibitorManager {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("IdleInhibitorManager").finish_non_exhaustive()
+        f.debug_struct("IdleInhibitorManager")
+            .finish_non_exhaustive()
     }
 }
 

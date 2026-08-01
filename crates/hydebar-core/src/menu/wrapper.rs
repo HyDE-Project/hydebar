@@ -98,7 +98,11 @@ pub fn menu_wrapper<Message: Clone + 'static>(
         .width(Length::Fill)
         .max_width(width)
         .padding(padding)
-        .style(menu_container_style(layout.opacity, layout.radius, layout.finish));
+        .style(menu_container_style(
+            layout.opacity,
+            layout.radius,
+            layout.finish
+        ));
 
     if overflows && let Some(room) = layout.available_height {
         menu_box = menu_box.height(Length::Fixed(room));

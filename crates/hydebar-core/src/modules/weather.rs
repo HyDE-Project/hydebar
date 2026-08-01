@@ -234,15 +234,11 @@ impl Weather {
                                 location.clone(),
                                 use_celsius
                             );
-                            if let Err(err) = sender.try_send(WeatherEvent::Updated(data)) {
-                                error!("Failed to publish weather update: {err}");
-                            }
+                            sender.send(WeatherEvent::Updated(data));
                         }
                         Err(err) => {
                             error!("Failed to fetch weather: {err}");
-                            if let Err(e) = sender.try_send(WeatherEvent::Error(err.to_string())) {
-                                error!("Failed to publish weather error: {e}");
-                            }
+                            sender.send(WeatherEvent::Error(err.to_string()));
                         }
                     }
                 }
@@ -286,11 +282,10 @@ impl Weather {
                             Ok(response) => {
                                 let data =
                                     WeatherData::from_response(&response, location, use_celsius);
-                                let _ = update_sender.try_send(WeatherEvent::Updated(data));
+                                update_sender.send(WeatherEvent::Updated(data));
                             }
                             Err(err) => {
-                                let _ =
-                                    update_sender.try_send(WeatherEvent::Error(err.to_string()));
+                                update_sender.send(WeatherEvent::Error(err.to_string()));
                             }
                         }
                     });

@@ -124,8 +124,9 @@ async fn run_once(
             error!("Custom module '{module_name}' command failed: {failure:?}");
             *published = None;
 
-            return send_event(sender, ServiceEvent::Error(failure))
-                .map_err(CustomListenerError::Module);
+            send_event(sender, ServiceEvent::Error(failure));
+
+            return Ok(());
         }
 
         return Ok(());
@@ -139,15 +140,18 @@ async fn run_once(
 
             *published = Some(data.clone());
 
-            send_event(sender, ServiceEvent::Update(data)).map_err(CustomListenerError::Module)
+            send_event(sender, ServiceEvent::Update(data));
+
+            Ok(())
         }
         Err(err) => {
             let parse_error = CustomCommandError::Parse(truncate_snippet(payload), Arc::new(err));
             error!("Custom module '{module_name}' failed to parse JSON output: {parse_error:?}");
             *published = None;
 
-            send_event(sender, ServiceEvent::Error(parse_error))
-                .map_err(CustomListenerError::Module)
+            send_event(sender, ServiceEvent::Error(parse_error));
+
+            Ok(())
         }
     }
 }

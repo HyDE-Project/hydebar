@@ -56,7 +56,6 @@ mod module {
     use std::sync::Arc;
 
     use iced::{Element, SurfaceId as Id};
-    use log::error;
 
     use super::super::{
         Module, ModuleError, OnModulePress,
@@ -140,9 +139,7 @@ mod module {
                 TrayService::start_listening(|event| {
                     let sender = sender.clone();
                     async move {
-                        if let Err(err) = sender.try_send(TrayMessage::Event(Box::new(event))) {
-                            error!("failed to publish tray service event: {err}");
-                        }
+                        sender.send(TrayMessage::Event(Box::new(event)));
                     }
                 })
                 .await;
@@ -197,9 +194,7 @@ mod state {
 
             runtime.spawn(async move {
                 let event = command_future.await;
-                if let Err(err) = sender.try_send(TrayMessage::Event(Box::new(event))) {
-                    error!("failed to publish tray command result: {err}");
-                }
+                sender.send(TrayMessage::Event(Box::new(event)));
             });
         }
 
@@ -521,7 +516,7 @@ mod tests {
             .block_on(async {
                 timeout(Duration::from_millis(100), async {
                     loop {
-                        if let Some(event) = receiver.try_recv().expect("bus read") {
+                        if let Some(event) = receiver.try_recv() {
                             break event;
                         }
                         yield_now().await;

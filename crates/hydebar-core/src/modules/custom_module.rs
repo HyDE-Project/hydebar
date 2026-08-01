@@ -68,13 +68,13 @@ mod tests {
     use crate::{
         ModuleContext, ModuleEventSender,
         event_bus::{BusEvent, EventBus, ModuleEvent},
-        modules::ModuleError,
         services::ServiceEvent
     };
 
     #[tokio::test]
-    async fn send_event_propagates_module_errors() {
+    async fn send_event_survives_a_full_bus_by_evicting_the_oldest() {
         let bus = EventBus::new(NonZeroUsize::new(1).expect("non-zero"));
+        let mut receiver = bus.receiver();
         let context = ModuleContext::new(bus.sender(), tokio::runtime::Handle::current());
         let module_name: Arc<str> = Arc::from("custom");
         let sender = context.module_sender({
@@ -85,17 +85,30 @@ mod tests {
             }
         });
 
-        let data = CustomListenData {
-            alt: String::from("alt"),
+        let stale = CustomListenData {
+            alt: String::from("stale"),
+            ..CustomListenData::default()
+        };
+        let fresh = CustomListenData {
+            alt: String::from("fresh"),
             ..CustomListenData::default()
         };
 
-        sender
-            .try_send(Message::Event(ServiceEvent::Update(data.clone())))
-            .expect("initial send");
+        sender.send(Message::Event(ServiceEvent::Update(stale)));
+        send_event(&sender, ServiceEvent::Update(fresh));
 
-        let result = send_event(&sender, ServiceEvent::Update(data));
-        assert!(matches!(result, Err(ModuleError::EventBus(_))));
+        let survivor = receiver.try_recv().expect("event present");
+        match survivor {
+            BusEvent::Module(ModuleEvent::Custom {
+                message: Message::Event(ServiceEvent::Update(data)),
+                ..
+            }) => assert_eq!(data.alt, "fresh"),
+            other => panic!("unexpected event: {other:?}")
+        }
+        assert!(
+            receiver.try_recv().is_none(),
+            "the stale event must be gone"
+        );
     }
 
     #[tokio::test]
@@ -129,10 +142,7 @@ invalid
 
         let mut receiver = bus.receiver();
 
-        let first = receiver
-            .try_recv()
-            .expect("first event")
-            .expect("event present");
+        let first = receiver.try_recv().expect("event present");
         match first {
             BusEvent::Module(ModuleEvent::Custom {
                 name,
@@ -150,10 +160,7 @@ invalid
             other => panic!("unexpected event: {other:?}")
         }
 
-        let second = receiver
-            .try_recv()
-            .expect("second event")
-            .expect("event present");
+        let second = receiver.try_recv().expect("event present");
         match second {
             BusEvent::Module(ModuleEvent::Custom {
                 name,
@@ -198,7 +205,7 @@ invalid
 
         timeout(Duration::from_secs(2), async {
             loop {
-                if let Some(event) = receiver.try_recv().expect("receive")
+                if let Some(event) = receiver.try_recv()
                     && let BusEvent::Module(ModuleEvent::Custom {
                         name,
                         message
@@ -214,7 +221,7 @@ invalid
         .await
         .expect("first update");
 
-        while let Ok(Some(_)) = receiver.try_recv() {}
+        while receiver.try_recv().is_some() {}
 
         let second = CustomModuleDef {
             name: String::from("second"),
@@ -238,7 +245,7 @@ invalid
             loop {
                 // the listener suppresses repeats, so the replacement
                 // publishes its payload once and then stays quiet
-                if let Some(event) = receiver.try_recv().expect("receive")
+                if let Some(event) = receiver.try_recv()
                     && let BusEvent::Module(ModuleEvent::Custom {
                         name,
                         message
@@ -323,7 +330,7 @@ invalid
         let mut alts = Vec::with_capacity(count);
 
         loop {
-            while let Ok(Some(event)) = receiver.try_recv() {
+            while let Some(event) = receiver.try_recv() {
                 if let BusEvent::Module(ModuleEvent::Custom {
                     name,
                     message: Message::Event(ServiceEvent::Update(data))
@@ -504,7 +511,7 @@ invalid
         <Custom as Module<Message>>::register(&mut custom, &context, Some(&scheduled))
             .expect("scheduled register");
 
-        while receiver.try_recv().expect("drain").is_some() {}
+        while receiver.try_recv().is_some() {}
 
         let polled = timeout(
             Duration::from_secs(5),

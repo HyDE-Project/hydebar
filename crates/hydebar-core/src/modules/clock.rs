@@ -8,7 +8,6 @@ use std::time::Duration;
 
 use chrono::{DateTime, Local};
 use iced::Element;
-use log::error;
 use tokio::{task::JoinHandle, time::sleep};
 
 use crate::{
@@ -176,9 +175,7 @@ impl Clock {
 
                     rendered = Some(next);
 
-                    if let Err(err) = update_sender.try_send(ClockEvent::Tick(now)) {
-                        error!("Failed to publish clock tick: {err}");
-                    }
+                    update_sender.send(ClockEvent::Tick(now));
                 }
             }));
         }

@@ -116,11 +116,7 @@ where
                                 match event {
                                     Ok(HyprlandKeyboardEvent::SubmapChanged(submap)) => {
                                         let payload = submap.unwrap_or_default();
-                                        if let Err(err) =
-                                            sender.try_send(Message::SubmapChanged(payload))
-                                        {
-                                            error!("failed to publish submap update: {err}");
-                                        }
+                                        sender.send(Message::SubmapChanged(payload));
                                     }
                                     Ok(_) => {}
                                     Err(err) => {

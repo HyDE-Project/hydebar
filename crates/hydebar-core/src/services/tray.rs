@@ -287,6 +287,7 @@ impl Service for TrayService {
     type Command = TrayCommand;
 
     fn command(&mut self, command: Self::Command) -> Task<ServiceEvent<Self>> {
-        self.prepare_command(command).map_or_else(Task::none, |future| Task::perform(future, |event| event))
+        self.prepare_command(command)
+            .map_or_else(Task::none, |future| Task::perform(future, |event| event))
     }
 }

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use iced::{Element, SurfaceId as Id};
-use log::{debug, error, info, warn};
+use log::{debug, info, warn};
 use tokio::runtime::Handle;
 
 use super::{commands, view};
@@ -269,7 +269,7 @@ impl Updates {
 
             runtime.spawn(async move {
                 let publish = move |lines| {
-                    let _ = log_sender.try_send(Message::UpdateLog(lines));
+                    log_sender.send(Message::UpdateLog(lines));
                 };
 
                 let failed = match commands::apply_updates(update_command.as_ref(), publish).await
@@ -282,11 +282,9 @@ impl Updates {
                     }
                 };
 
-                if let Err(err) = sender.try_send(Message::UpdateFinished {
+                sender.send(Message::UpdateFinished {
                     failed
-                }) {
-                    error!("failed to publish update completion: {err}");
-                }
+                });
             });
         } else {
             warn!("updates module is not fully initialised; skipping update command");
@@ -311,7 +309,7 @@ impl Updates {
 
             runtime.spawn(async move {
                 let publish = move |lines| {
-                    let _ = log_sender.try_send(Message::HydeUpdateLog(lines));
+                    log_sender.send(Message::HydeUpdateLog(lines));
                 };
 
                 let failed =
@@ -324,15 +322,11 @@ impl Updates {
                         }
                     };
 
-                if let Err(err) = sender.try_send(Message::HydeUpdateFinished {
+                sender.send(Message::HydeUpdateFinished {
                     failed
-                }) {
-                    error!("failed to publish the hyde update outcome: {err}");
-                }
+                });
 
-                if let Err(err) = sender.try_send(Message::CheckNow) {
-                    error!("failed to ask for a check after the hyde update: {err}");
-                }
+                sender.send(Message::CheckNow);
             });
         } else {
             warn!("no hyde clone is known; skipping the hyde update");
