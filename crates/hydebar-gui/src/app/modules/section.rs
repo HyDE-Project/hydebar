@@ -5,6 +5,15 @@ use iced::{Alignment, Element, Length, Subscription, SurfaceId as Id, widget::ro
 
 use crate::app::state::{App, Message};
 
+/// Snaps a fade share to a sixty-fourth.
+///
+/// Neighbouring islands land on near-identical shares mid-sweep; snapping
+/// them to one step lets a single derived theme serve them all, and a step
+/// of one sixty-fourth is beneath what the eye tells apart.
+fn quantized(share: f32) -> f32 {
+    (share * 64.0).round() / 64.0
+}
+
 impl App {
     /// Wraps an island in the palette of its place under the travelling front.
     ///
@@ -18,22 +27,21 @@ impl App {
     fn swept_island<'a>(
         &self,
         island: Element<'a, Message>,
-        position: f32,
-        themes: &mut std::collections::HashMap<(u32, u32), iced::Theme>
+        position: f32
     ) -> Element<'a, Message> {
         let palette_local = self.appearance_transition.is_animating().then(|| {
-            hydebar_core::animation::sweep(
+            quantized(hydebar_core::animation::sweep(
                 self.appearance_transition.progress(),
                 position,
                 self.sweep.spread
-            )
+            ))
         });
 
-        let arrival = hydebar_core::animation::sweep(
+        let arrival = quantized(hydebar_core::animation::sweep(
             self.entrance.value().clamp(0.0, 1.0),
             position,
             self.sweep.spread
-        );
+        ));
 
         if palette_local.is_none() && arrival >= 1.0 {
             return island;
@@ -43,7 +51,9 @@ impl App {
             palette_local.unwrap_or(f32::NAN).to_bits(),
             arrival.to_bits()
         );
-        let theme = themes
+        let theme = self
+            .derived_themes
+            .borrow_mut()
             .entry(key)
             .or_insert_with(|| {
                 let base = palette_local.map_or_else(
@@ -136,7 +146,6 @@ impl App {
             .spacing(self.appearance().island_gap());
 
         let total = self.island_count().max(1) as f32;
-        let mut themes = std::collections::HashMap::new();
 
         for (index, module_def) in modules_def.iter().enumerate() {
             let island = match module_def {
@@ -151,8 +160,7 @@ impl App {
                 1.0 - ordinal
             };
 
-            row = row
-                .push_maybe(island.map(|island| self.swept_island(island, position, &mut themes)));
+            row = row.push_maybe(island.map(|island| self.swept_island(island, position)));
         }
 
         row.into()

@@ -142,6 +142,13 @@ pub struct App {
     /// is finished before the adoption clone and the compositor questions it
     /// asks.
     pub(super) raw_config: Option<Arc<Config>>,
+    /// Faded and swept themes derived this frame, by quantised key.
+    ///
+    /// One palette blend serves every island and menu that lands on the
+    /// same sixty-fourth of the fade; cleared each frame, so the map holds
+    /// a handful of entries and never staleness.
+    pub(super) derived_themes:
+        std::cell::RefCell<std::collections::HashMap<(u32, u32), iced::Theme>>,
     /// The layer metrics last stated to the compositor.
     ///
     /// Style, scale bits and height bits: while they stand still, a reload
@@ -515,6 +522,7 @@ impl App {
             hints: hydebar_core::tooltip::Hints::default(),
             greeting_line: String::new(),
             raw_config: None,
+            derived_themes: std::cell::RefCell::new(std::collections::HashMap::new()),
             stated_layer_metrics: None,
             weather: Weather::new(
                 config.weather.location.clone(),

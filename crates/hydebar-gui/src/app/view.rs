@@ -55,14 +55,20 @@ impl App {
     fn faded_menu<'a>(&self, menu: Element<'a, Message>, progress: f32) -> Element<'a, Message> {
         if progress < 1.0 {
             let opacity = self.config.appearance.menu.opacity.clamp(0.0, 1.0);
-            let share = progress * (1.0 - opacity).mul_add(progress, opacity);
+            let share =
+                (progress * (1.0 - opacity).mul_add(progress, opacity) * 64.0).round() / 64.0;
+            let key = (u32::MAX, share.to_bits());
 
-            iced::widget::themer(
-                Some(hydebar_core::style::faded_theme(&self.theme_cache, share)),
-                menu
-            )
-            .text_color(|theme: &Theme| theme.palette().text)
-            .into()
+            let theme = self
+                .derived_themes
+                .borrow_mut()
+                .entry(key)
+                .or_insert_with(|| hydebar_core::style::faded_theme(&self.theme_cache, share))
+                .clone();
+
+            iced::widget::themer(Some(theme), menu)
+                .text_color(|theme: &Theme| theme.palette().text)
+                .into()
         } else {
             menu
         }

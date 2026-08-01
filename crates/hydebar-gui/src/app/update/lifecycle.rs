@@ -79,6 +79,8 @@ impl App {
     pub(super) fn update_lifecycle(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::Frame(now) => {
+                self.derived_themes.borrow_mut().clear();
+
                 let elapsed = self
                     .last_frame
                     .map(|last| now.saturating_duration_since(last))
