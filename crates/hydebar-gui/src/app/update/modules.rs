@@ -243,8 +243,29 @@ impl App {
             }
             Message::Wallpaper(msg) => {
                 let config = Arc::clone(&self.config);
+                let listed = matches!(msg, modules::wallpaper::Message::Listed(_));
 
-                self.wallpaper.update(msg, &config).map(Message::Wallpaper)
+                let task = self.wallpaper.update(msg, &config).map(Message::Wallpaper);
+
+                if listed && let Some((id, button_ui_ref)) = self.wallpaper_pending.take() {
+                    if self.wallpaper.is_empty() {
+                        log::warn!("the theme offers no wallpapers, the picker stays closed");
+
+                        return task;
+                    }
+
+                    let open = self.outputs.toggle_menu(
+                        id,
+                        hydebar_core::menu::MenuType::Wallpaper,
+                        button_ui_ref,
+                        &self.config
+                    );
+                    self.attend_the_open_menu();
+
+                    return Task::batch([task, open]);
+                }
+
+                task
             }
             Message::MediaPlayer(msg) => {
                 self.media_player.update(msg, &self.config.media_player);

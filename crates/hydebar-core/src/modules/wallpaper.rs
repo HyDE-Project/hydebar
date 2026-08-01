@@ -13,7 +13,7 @@
 use hydebar_proto::config::Config;
 use iced::{
     Element, Length, Task,
-    widget::{Column, Row, container}
+    widget::{Column, Row}
 };
 use log::error;
 use serde::Deserialize;
@@ -127,6 +127,8 @@ pub enum Message {
     },
     /// Deliver the wallpapers of the theme in force to the picker.
     Listed(Vec<WallpaperEntry>),
+    /// Advance the loading indicator by one frame.
+    Tick,
     /// Ask the desktop to wear the picture at the given path.
     Pick(String)
 }
@@ -138,7 +140,15 @@ pub enum Message {
 #[derive(Debug, Clone, Default)]
 pub struct Wallpaper {
     /// Wallpapers of the theme in force, while the picker shows them.
-    entries: Vec<WallpaperEntry>
+    entries: Vec<WallpaperEntry>,
+    /// Whether a listing is being read right now.
+    ///
+    /// While it is, the bar entry itself spins: the press was taken and
+    /// the pictures are on their way, said in place without a window of
+    /// placeholder text jumping in first.
+    loading: bool,
+    /// Frame the loading indicator is on.
+    spinner: crate::modules::themes::Spinner
 }
 
 impl Wallpaper {
@@ -148,13 +158,27 @@ impl Wallpaper {
         Self::default()
     }
 
+    /// Whether the picker has nothing to show yet.
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+
+    /// Whether a listing is being read right now.
+    #[must_use]
+    pub const fn is_loading(&self) -> bool {
+        self.loading
+    }
+
     /// Starts reading the theme's wallpapers, off this thread.
     ///
     /// Thumbnails already decoded ride along and are reused by path, so a
     /// reopened picker decodes nothing and a theme switch decodes only the
     /// pictures it brought.
     #[must_use]
-    pub fn load_entries(&self) -> Task<Message> {
+    pub fn load_entries(&mut self) -> Task<Message> {
+        self.loading = true;
+
         let known: std::collections::HashMap<String, iced::widget::image::Handle> = self
             .entries
             .iter()
@@ -174,15 +198,6 @@ impl Wallpaper {
     /// Renders the picker: the theme's wallpapers as pressable tiles.
     #[must_use]
     pub fn menu_view<'a>(&self, font_size: f32) -> Element<'a, Message> {
-        if self.entries.is_empty() {
-            return container(
-                crate::components::text::text("no wallpapers to offer")
-                    .size(scale::scaled(font_size))
-            )
-            .padding(scale::scaled(8.0))
-            .into();
-        }
-
         let tile = scale::scaled(font_size * 7.0);
         let gap = scale::scaled(6.0);
         let mut grid = Column::new().spacing(gap);
@@ -235,6 +250,10 @@ impl Wallpaper {
             }
             Message::Listed(entries) => {
                 self.entries = entries;
+                self.loading = false;
+            }
+            Message::Tick => {
+                self.spinner.advance();
             }
             Message::Pick(path) => {
                 let command = format!("hydectl wallpaper set '{}'", path.replace('\'', "'\\''"));
@@ -260,6 +279,15 @@ where
         &self,
         icons: Self::ViewData<'_>
     ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
+        if self.loading {
+            return Some((
+                crate::components::text::text(self.spinner.glyph())
+                    .size(scale::scaled(12.0))
+                    .into(),
+                None
+            ));
+        }
+
         Some((icon(icons, Icons::Wallpaper).into(), None))
     }
 }

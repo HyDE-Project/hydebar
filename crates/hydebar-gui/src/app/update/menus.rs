@@ -16,7 +16,7 @@ impl App {
     /// the last menu releases the attention rather than handing it back to
     /// whatever the pointer happens to be over, so nothing stays attended by
     /// accident.
-    fn attend_the_open_menu(&mut self) {
+    pub(super) fn attend_the_open_menu(&mut self) {
         let focus = self.outputs.open_menu().map(MenuType::owner);
 
         self.attention.look_at(focus);
@@ -107,6 +107,13 @@ impl App {
                     MenuType::Wallpaper => {
                         if self.outputs.open_menu() != Some(&MenuType::Wallpaper) {
                             cmd.push(self.wallpaper.load_entries().map(Message::Wallpaper));
+
+                            if self.wallpaper.is_empty() {
+                                self.wallpaper_pending = Some((id, button_ui_ref));
+                                self.attend_the_open_menu();
+
+                                return Task::batch(cmd);
+                            }
                         }
                     }
                     MenuType::Themes => {

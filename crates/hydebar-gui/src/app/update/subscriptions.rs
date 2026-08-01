@@ -27,7 +27,9 @@ enum Clock {
     /// Serves every pollable module the layout draws.
     Rest,
     /// Serves the one module the user is looking at.
-    Attended
+    Attended,
+    /// Serves the wallpaper entry's loading indicator.
+    WallpaperSpinner
 }
 
 impl App {
@@ -66,6 +68,20 @@ impl App {
         if self.themes.is_waiting() {
             iced::time::every(themes::FRAME_INTERVAL)
                 .map(|_| Message::Themes(themes::Message::Tick))
+        } else {
+            Subscription::none()
+        }
+    }
+
+    /// Tick of the wallpaper entry's loading indicator.
+    ///
+    /// Runs only while a listing is being read, on the indicator's own
+    /// cadence, and under its own clock identity so it never collapses
+    /// into the theme switch tick that shares the period.
+    fn wallpaper_loading_subscription(&self) -> Subscription<Message> {
+        if self.wallpaper.is_loading() {
+            Self::clock(Clock::WallpaperSpinner, themes::FRAME_INTERVAL)
+                .map(|_| Message::Wallpaper(hydebar_core::modules::wallpaper::Message::Tick))
         } else {
             Subscription::none()
         }
@@ -132,6 +148,7 @@ impl App {
             bus::subscription(self.bus_receiver.clone()).map(Message::BusFlushed),
             shutdown::subscription().map(Message::Shutdown),
             self.frame_subscription(),
+            self.wallpaper_loading_subscription(),
             self.rest_clock(),
             self.attended_clock(),
             self.switch_subscription(),

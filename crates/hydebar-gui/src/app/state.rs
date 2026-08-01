@@ -142,6 +142,8 @@ pub struct App {
     /// is finished before the adoption clone and the compositor questions it
     /// asks.
     pub(super) raw_config: Option<Arc<Config>>,
+    /// The wallpaper press waiting for its pictures before its window opens.
+    pub(super) wallpaper_pending: Option<(Id, ButtonUIRef)>,
     /// Faded and swept themes derived this frame, by quantised key.
     ///
     /// One palette blend serves every island and menu that lands on the
@@ -522,6 +524,7 @@ impl App {
             hints: hydebar_core::tooltip::Hints::default(),
             greeting_line: String::new(),
             raw_config: None,
+            wallpaper_pending: None,
             derived_themes: std::cell::RefCell::new(std::collections::HashMap::new()),
             stated_layer_metrics: None,
             weather: Weather::new(
