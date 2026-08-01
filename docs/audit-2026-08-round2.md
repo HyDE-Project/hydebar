@@ -47,10 +47,11 @@ inside each section; a checked box means the fix has landed on `main`.
   bluetooth, brightness, upower and the tray watcher now count failures in
   their driver loops and sleep the graded `reconnect_delay(failures)`, like
   network and privacy always did.
-- [ ] **Notifications service never retries.** Six return paths end the
-  daemon silently — after the bar may already have stopped the incumbent
-  (`services/notifications/service.rs:116-234`). Wrap in the standard
-  Init/Active/Error loop.
+- [x] **Notifications service never retries.** The server lifecycle now runs
+  inside the standard retry loop with the graded delay: every refusal — bus
+  not up yet, interface registration, a holder that will not yield — ends
+  one attempt instead of the whole daemon, and the desk reopens on the next
+  knock.
 - [ ] **Tray rebuild window loses registrations.** Every registration tears
   down and rebuilds all item streams; items arriving during the rebuild are
   dropped, unregistrations missed (`services/tray/watcher.rs:270`).

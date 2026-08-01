@@ -189,6 +189,31 @@ async fn serve(
         return SessionEnd::Failed;
     }
 
+    if let Err(end) = claim_name(&connection, output).await {
+        return end;
+    }
+
+    while let Some(event) = announced.next().await {
+        if output.send(ServiceEvent::Update(event)).await.is_err() {
+            debug!("the bar stopped listening for notifications");
+            return SessionEnd::UiClosed;
+        }
+    }
+
+    error!("the notification announcement stream ended, restarting the server");
+    SessionEnd::Failed
+}
+
+/// Claims the notification name, deposing a holder that can be stopped.
+///
+/// # Errors
+///
+/// Returns how the attempt ended when ownership could not be taken: the
+/// caller either stops serving or retries later.
+async fn claim_name(
+    connection: &Connection,
+    output: &mut iced::futures::channel::mpsc::Sender<ServiceEvent<NotificationsService>>
+) -> Result<(), SessionEnd> {
     let flags = RequestNameFlags::ReplaceExisting | RequestNameFlags::AllowReplacement;
 
     match connection
@@ -197,19 +222,20 @@ async fn serve(
     {
         Ok(RequestNameReply::PrimaryOwner) => {
             debug!("the bar now serves the notification bus");
+            Ok(())
         }
         Ok(RequestNameReply::InQueue) => {
-            let Some(unit) = takeover::replaceable_unit(&connection).await else {
+            let Some(unit) = takeover::replaceable_unit(connection).await else {
                 error!(
                     "a notification daemon the bar cannot safely replace holds the bus; \
                      stop it to let the bar draw its own popups"
                 );
-                return SessionEnd::Failed;
+                return Err(SessionEnd::Failed);
             };
 
             if !takeover::stop(&unit).await {
                 error!("{unit} holds the notification bus and would not stop");
-                return SessionEnd::Failed;
+                return Err(SessionEnd::Failed);
             }
 
             if let Err(err) = connection
@@ -217,10 +243,11 @@ async fn serve(
                 .await
             {
                 error!("the notification bus stayed out of reach: {err}");
-                return SessionEnd::Failed;
+                return Err(SessionEnd::Failed);
             }
 
             debug!("took the notification bus over from {unit}");
+            Ok(())
         }
         Ok(reply) => {
             error!(
@@ -234,9 +261,9 @@ async fn serve(
                 .await
                 .is_err()
             {
-                return SessionEnd::UiClosed;
+                return Err(SessionEnd::UiClosed);
             }
-            return SessionEnd::Failed;
+            Err(SessionEnd::Failed)
         }
         Err(err) => {
             error!("Failed to request D-Bus name: {err}");
@@ -247,19 +274,9 @@ async fn serve(
                 .await
                 .is_err()
             {
-                return SessionEnd::UiClosed;
+                return Err(SessionEnd::UiClosed);
             }
-            return SessionEnd::Failed;
+            Err(SessionEnd::Failed)
         }
     }
-
-    while let Some(event) = announced.next().await {
-        if output.send(ServiceEvent::Update(event)).await.is_err() {
-            debug!("the bar stopped listening for notifications");
-            return SessionEnd::UiClosed;
-        }
-    }
-
-    error!("the notification announcement stream ended, restarting the server");
-    SessionEnd::Failed
 }
