@@ -68,12 +68,6 @@ pub struct GpuReadings {
 }
 
 impl GpuReadings {
-    /// Short tag the bar puts in front of the reading, when one is needed.
-    #[must_use]
-    pub fn tag(&self) -> Option<&'static str> {
-        self.placement.tag()
-    }
-
     /// Reports whether the device answered with anything worth drawing.
     #[must_use]
     fn is_empty(&self) -> bool {
@@ -554,7 +548,6 @@ mod tests {
         assert_eq!(readings.cpu, Some(71));
         assert_eq!(gpu.temperature, Some(47));
         assert_eq!(gpu.placement, GpuPlacement::Integrated);
-        assert_eq!(gpu.tag(), Some("iGPU"));
         assert_eq!(gpu.source.as_deref(), Some("amdgpu edge"));
     }
 

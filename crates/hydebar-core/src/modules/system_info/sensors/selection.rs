@@ -460,7 +460,6 @@ mod tests {
 
         assert_eq!((label.as_str(), value), ("amdgpu edge", 47.0));
         assert_eq!(placement, GpuPlacement::Integrated);
-        assert_eq!(placement.tag(), Some("iGPU"));
     }
 
     #[test]
@@ -476,11 +475,6 @@ mod tests {
 
         assert_eq!((label.as_str(), value), ("i915 temp1", 45.0));
         assert_eq!(placement, GpuPlacement::Integrated);
-        assert_eq!(
-            placement.tag(),
-            Some("iGPU"),
-            "the reading of the block inside the processor is never shown as the card"
-        );
     }
 
     #[test]
@@ -490,7 +484,6 @@ mod tests {
         let (_, _, placement) = sensors.gpu(None).expect("graphics reading");
 
         assert_eq!(placement, GpuPlacement::Discrete);
-        assert_eq!(placement.tag(), None);
     }
 
     #[test]

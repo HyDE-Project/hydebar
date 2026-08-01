@@ -46,22 +46,6 @@ pub enum GpuPlacement {
     Integrated
 }
 
-impl GpuPlacement {
-    /// Short tag the bar puts in front of the reading.
-    ///
-    /// Only the integrated block is tagged: a user looking at a machine
-    /// with a card must never mistake the block inside the
-    /// processor for it, while a machine with a single card
-    /// gains nothing from a prefix.
-    #[must_use]
-    pub const fn tag(self) -> Option<&'static str> {
-        match self {
-            Self::Integrated => Some("iGPU"),
-            Self::Discrete | Self::Unknown => None
-        }
-    }
-}
-
 /// Chip families whose readings stand for the processor, best tier
 /// first.
 ///

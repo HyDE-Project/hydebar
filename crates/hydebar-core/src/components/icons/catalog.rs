@@ -20,6 +20,7 @@ pub enum Icons {
     WindowCapture,
     Cpu,
     Gpu,
+    IntegratedGpu,
     Accelerator,
     Mem,
     Temp,
@@ -98,7 +99,7 @@ pub enum Icons {
 
 impl Icons {
     /// Every icon that can be overridden from the configuration.
-    pub const ALL: [Icons; 90] = [
+    pub const ALL: [Icons; 91] = [
         Icons::None,
         Icons::AppLauncher,
         Icons::Clipboard,
@@ -116,6 +117,7 @@ impl Icons {
         Icons::WindowCapture,
         Icons::Cpu,
         Icons::Gpu,
+        Icons::IntegratedGpu,
         Icons::Accelerator,
         Icons::Mem,
         Icons::Temp,
@@ -209,6 +211,7 @@ impl Icons {
             Icons::MenuOpen => "menu_open",
             Icons::Cpu => "cpu",
             Icons::Gpu => "gpu",
+            Icons::IntegratedGpu => "integrated_gpu",
             Icons::Accelerator => "accelerator",
             Icons::Mem => "mem",
             Icons::Temp => "temp",
@@ -312,6 +315,7 @@ impl Icons {
             Icons::MenuOpen => "",
             Icons::Cpu => "󰔂",
             Icons::Gpu => "󰢮",
+            Icons::IntegratedGpu => "󰘚",
             Icons::Accelerator => "󰧑",
             Icons::Mem => "",
             Icons::Temp => "󰔏",

@@ -3,7 +3,12 @@ use iced::{
     widget::{Row, container, row}
 };
 
-use super::{Message, data::SystemInfoData, indicators, sensors::GpuReadings};
+use super::{
+    Message,
+    data::SystemInfoData,
+    indicators,
+    sensors::{GpuPlacement, GpuReadings}
+};
 use crate::{
     components::{
         icons::{IconTheme, Icons, icon},
@@ -101,14 +106,25 @@ where
 /// The placement is spelled out rather than abbreviated, so a machine with
 /// switchable graphics says which of its two devices the bar is watching.
 pub(crate) fn gpu_title(gpu: &GpuReadings) -> String {
-    let placement = match gpu.tag() {
-        Some(_) => "Integrated graphics",
-        None => "Graphics"
+    let placement = match gpu.placement {
+        GpuPlacement::Integrated => "Integrated graphics",
+        GpuPlacement::Discrete | GpuPlacement::Unknown => "Graphics"
     };
 
     match gpu.source.as_deref() {
         Some(source) => format!("{placement} ({source})"),
         None => format!("{placement} ({})", gpu.name)
+    }
+}
+
+/// Glyph a graphics device wears on the bar.
+///
+/// An integrated device gets a glyph of its own instead of a text tag beside
+/// the number, so every readout on the bar is one icon and one value.
+fn gpu_icon(gpu: &GpuReadings) -> Icons {
+    match gpu.placement {
+        GpuPlacement::Integrated => Icons::IntegratedGpu,
+        GpuPlacement::Discrete | GpuPlacement::Unknown => Icons::Gpu
     }
 }
 
@@ -200,8 +216,8 @@ where
             gpu.temperature.map(|temperature| {
                 indicator_info_element(
                     icons,
-                    Icons::Gpu,
-                    indicator_label(gpu.tag(), temperature, "°C"),
+                    gpu_icon(gpu),
+                    indicator_label(None, temperature, "°C"),
                     Some(Thresholds::new(
                         temperature,
                         config.gpu.warn_threshold,
@@ -216,7 +232,7 @@ where
                 indicator_info_element(
                     icons,
                     Icons::Accelerator,
-                    indicator_label(gpu.tag(), usage, "%"),
+                    indicator_label(None, usage, "%"),
                     Some(Thresholds::new(
                         usage,
                         config.gpu.usage_warn_threshold,
