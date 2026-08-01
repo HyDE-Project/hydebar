@@ -127,6 +127,8 @@ pub struct App {
     pub sweep: hydebar_core::style::SweepStyle,
     /// Birth of the bar: the islands ride in on the theme's own wave once.
     pub entrance: hydebar_core::animation::Spring,
+    /// Travel of the blocks gliding to a rearranged layout's places.
+    pub relayout: hydebar_core::animation::Spring,
     /// Presence of the greeting shown mid-screen while the bar comes up.
     pub greeting: hydebar_core::animation::Spring,
     /// The menu surfaces the greeting has raised, each exactly once.
@@ -523,6 +525,7 @@ impl App {
             hover: HoverFades::default(),
             sweep: hydebar_core::style::SweepStyle::default(),
             entrance: hydebar_core::animation::Spring::new(0.0),
+            relayout: hydebar_core::animation::Spring::new(1.0),
             greeting: hydebar_core::animation::Spring::new(0.0),
             greeting_raised: Vec::new(),
             greeting_deadline: None,

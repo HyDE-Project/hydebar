@@ -119,6 +119,7 @@ impl App {
                     self.appearance_transition.advance_reporting(elapsed);
                 let hover_animating = self.hover.advance(elapsed);
                 let entering = self.entrance.advance(elapsed);
+                let _sliding = self.relayout.advance(elapsed);
                 let greeting_animating = self.greeting.advance(elapsed);
                 let values_fading = self.clock.tick_fade(elapsed)
                     | self.updates.tick_fade(elapsed)
@@ -298,10 +299,9 @@ impl App {
                 }
 
                 if impact.layout_changed && self.config.appearance.animations.enabled {
-                    self.entrance = hydebar_core::animation::Spring::new(0.0)
-                        .with_response(self.sweep.response)
-                        .with_damping_ratio(self.sweep.damping);
-                    self.entrance.set_target(1.0);
+                    self.relayout = hydebar_core::animation::Spring::new(0.0)
+                        .with_response(hydebar_core::animation::STANDARD);
+                    self.relayout.set_target(1.0);
                 }
 
                 if impact.log_level_changed {

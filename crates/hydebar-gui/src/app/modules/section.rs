@@ -1,7 +1,7 @@
 //! Assembly of the module rows and subscriptions of a bar section.
 
-use hydebar_core::{components::push_maybe::PushMaybe, config::ModuleDef, modules::OnModulePress};
-use iced::{Alignment, Element, Length, Subscription, SurfaceId as Id, widget::row};
+use hydebar_core::{config::ModuleDef, modules::OnModulePress};
+use iced::{Element, Subscription, SurfaceId as Id};
 
 use crate::app::state::{App, Message};
 
@@ -140,12 +140,13 @@ impl App {
         opacity: f32,
         island_offset: usize
     ) -> Element<'a, Message> {
-        let mut row = row!()
-            .height(Length::Shrink)
-            .align_y(Alignment::Center)
-            .spacing(self.appearance().island_gap());
+        let mut row = hydebar_core::components::sliding_row::SlidingRow::new(
+            self.appearance().island_gap(),
+            self.relayout.value().clamp(0.0, 1.0)
+        );
 
         let total = self.island_count().max(1) as f32;
+        let mut seat = 0u64;
 
         for (index, module_def) in modules_def.iter().enumerate() {
             let island = match module_def {
@@ -160,7 +161,10 @@ impl App {
                 1.0 - ordinal
             };
 
-            row = row.push_maybe(island.map(|island| self.swept_island(island, position)));
+            if let Some(island) = island {
+                row = row.push(seat, self.swept_island(island, position));
+                seat += 1;
+            }
         }
 
         row.into()

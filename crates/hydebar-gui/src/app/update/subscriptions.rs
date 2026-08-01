@@ -139,6 +139,7 @@ impl App {
             || self.appearance_transition.is_animating()
             || self.hover.is_animating()
             || self.entrance.is_animating()
+            || self.relayout.is_animating()
             || self.greeting.is_animating()
             || self.greeting.target() > 0.0
             || self.hints.needs_frames()
