@@ -320,10 +320,20 @@ pub(crate) fn theme_chip<'a, M: Clone + 'static>(
     opacity: f32,
     cell: f32,
     paint: Option<ChipPaint>,
+    screenshot: Option<std::path::PathBuf>,
     actions: Vec<(&'static str, M, bool)>,
     horizontal: bool
 ) -> Element<'a, M> {
     let control = style::control_size(font_size);
+
+    let preview = |height: f32| {
+        screenshot.as_ref().map(|path| {
+            iced::widget::image(iced::widget::image::Handle::from_path(path))
+                .width(Length::Fill)
+                .height(Length::Fixed(height))
+                .content_fit(iced::ContentFit::Cover)
+        })
+    };
 
     let paint_colors = paint
         .as_ref()
@@ -366,6 +376,10 @@ pub(crate) fn theme_chip<'a, M: Clone + 'static>(
             .align_y(Alignment::Center)
             .push(container(name_row).width(Length::Fill))
             .width(Length::Fill);
+
+        if let Some(thumb) = preview(control * 2.2) {
+            face = face.push(container(thumb).width(Length::Fixed(control * 4.0)));
+        }
 
         if let Some(paint) = &paint {
             face = face.push(
@@ -424,8 +438,13 @@ pub(crate) fn theme_chip<'a, M: Clone + 'static>(
 
         let body: Element<'a, M> = match &paint {
             Some(paint) => {
-                let mut column = Column::new()
-                    .spacing(DOT_GAP_EM * control)
+                let mut column = Column::new().spacing(DOT_GAP_EM * control);
+
+                if let Some(shot) = preview(cell * 0.5) {
+                    column = column.push(shot);
+                }
+
+                let mut column = column
                     .push(name)
                     .push(palette_dots(paint.palette.clone(), control));
 

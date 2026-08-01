@@ -80,6 +80,7 @@ const SECTION_COUNT: f32 = 1.0;
 pub(super) fn view<'a>(
     state: &HydeState,
     swatches: &HashMap<String, ThemeSwatch>,
+    screenshots: &HashMap<String, std::path::PathBuf>,
     switching: Option<&str>,
     catalogue: &[super::gallery::GalleryTheme],
     author: Option<&str>,
@@ -112,6 +113,7 @@ pub(super) fn view<'a>(
         themes(
             state,
             swatches,
+            screenshots,
             switching,
             condemned,
             updating,
@@ -134,6 +136,7 @@ pub(super) fn view<'a>(
             offer(
                 state,
                 catalogue,
+                screenshots,
                 author,
                 switching,
                 installing,
@@ -219,16 +222,17 @@ fn card_rows(
 /// Dashes and underscores stand in for spaces across the gallery, its
 /// branches and the installed directories, and case drifts between them.
 pub(super) fn same_theme(a: &str, b: &str) -> bool {
-    let canon = |name: &str| {
-        name.chars()
-            .map(|c| match c {
-                '-' | '_' => ' ',
-                other => other.to_ascii_lowercase()
-            })
-            .collect::<String>()
-    };
+    canonical(a) == canonical(b)
+}
 
-    canon(a) == canon(b)
+/// One spelling for a theme name, whatever surface wrote it down.
+pub(super) fn canonical(name: &str) -> String {
+    name.chars()
+        .map(|c| match c {
+            '-' | '_' => ' ',
+            other => other.to_ascii_lowercase()
+        })
+        .collect()
 }
 
 /// Renders the gallery as a grid of chips painted in announced colours.
@@ -239,6 +243,7 @@ pub(super) fn same_theme(a: &str, b: &str) -> bool {
 fn offer<'a>(
     state: &HydeState,
     catalogue: &[super::gallery::GalleryTheme],
+    screenshots: &HashMap<String, std::path::PathBuf>,
     author: Option<&str>,
     switching: Option<&str>,
     installing: Option<&str>,
@@ -277,6 +282,7 @@ fn offer<'a>(
                 opacity,
                 cell,
                 entry.map(offer_paint),
+                screenshots.get(&canonical(name)).cloned(),
                 vec![(
                     Icons::Download.default_glyph(),
                     Message::Install(name.clone()),
@@ -378,6 +384,7 @@ fn offer_paint(entry: &super::gallery::GalleryTheme) -> ChipPaint {
 fn themes<'a>(
     state: &HydeState,
     swatches: &HashMap<String, ThemeSwatch>,
+    screenshots: &HashMap<String, std::path::PathBuf>,
     switching: Option<&str>,
     condemned: Option<&str>,
     updating: Option<&Option<String>>,
@@ -443,6 +450,7 @@ fn themes<'a>(
                 opacity,
                 cell,
                 paint,
+                screenshots.get(&canonical(name)).cloned(),
                 vec![
                     (
                         Icons::Refresh.default_glyph(),

@@ -80,6 +80,33 @@ fn hex(value: &str) -> Option<iced::Color> {
     Some(iced::Color::from_rgb8(parsed.r, parsed.g, parsed.b))
 }
 
+/// Screenshots HyDE's local gallery database keeps, by canonical theme name.
+///
+/// The database is written by the desktop's own gallery tooling — one
+/// directory per theme with a `screenshot.png` of the desktop wearing it —
+/// so the cards can show the real look from disk, no network involved.
+pub(super) fn local_screenshots() -> std::collections::HashMap<String, std::path::PathBuf> {
+    let Some(base) = dirs::cache_dir().map(|cache| cache.join("hyde").join("gallery-database"))
+    else {
+        return std::collections::HashMap::new();
+    };
+
+    let Ok(entries) = std::fs::read_dir(base) else {
+        return std::collections::HashMap::new();
+    };
+
+    entries
+        .flatten()
+        .filter_map(|entry| {
+            let name = entry.file_name().into_string().ok()?;
+            let shot = entry.path().join("screenshot.png");
+
+            shot.is_file()
+                .then(|| (super::view::canonical(&name), shot))
+        })
+        .collect()
+}
+
 /// The command the install runs, quoted for the shell.
 pub fn import_command(name: &str, link: &str) -> String {
     format!(

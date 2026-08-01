@@ -82,7 +82,10 @@ pub enum Message {
     /// Raised by the reader the menu starts when it opens; the colours arrive
     /// a beat after the names because reading them hashes every theme's
     /// wallpaper, which is nothing the opening animation should wait on.
-    SwatchesLoaded(HashMap<String, ThemeSwatch>),
+    SwatchesLoaded(
+        HashMap<String, ThemeSwatch>,
+        HashMap<String, std::path::PathBuf>
+    ),
     /// Deliver the upstream catalogue the gallery section draws.
     CatalogueLoaded(Vec<gallery::GalleryTheme>, Option<String>),
     /// Install the named theme from the gallery, then switch to it.
@@ -177,6 +180,9 @@ pub struct Themes {
     /// so the menu can paint every chip in the colours of the theme it stands
     /// for. A theme without an entry is painted like any other control.
     swatches:    HashMap<String, ThemeSwatch>,
+    /// Screenshots of the desktop wearing each theme, from the local gallery
+    /// database, by canonical name.
+    screenshots: HashMap<String, std::path::PathBuf>,
     /// Theme a switch is running for, while one is.
     switching:   Option<String>,
     /// The upstream catalogue, once the menu has loaded it.
@@ -206,6 +212,7 @@ impl Themes {
         Self {
             hyde:        hyde_state::load(),
             swatches:    HashMap::new(),
+            screenshots: HashMap::new(),
             switching:   None,
             catalogue:   Vec::new(),
             author:      None,
@@ -230,11 +237,13 @@ impl Themes {
 
         Task::perform(
             async move {
-                tokio::task::spawn_blocking(move || read_swatches(&themes))
-                    .await
-                    .unwrap_or_default()
+                tokio::task::spawn_blocking(move || {
+                    (read_swatches(&themes), gallery::local_screenshots())
+                })
+                .await
+                .unwrap_or_default()
             },
-            Message::SwatchesLoaded
+            |(swatches, screenshots)| Message::SwatchesLoaded(swatches, screenshots)
         )
     }
 
@@ -298,6 +307,7 @@ impl Themes {
         view::view(
             &self.hyde,
             &self.swatches,
+            &self.screenshots,
             self.switching(),
             &self.catalogue,
             self.author.as_deref(),
@@ -373,7 +383,10 @@ impl Themes {
                     self.spinner.advance();
                 }
             }
-            Message::SwatchesLoaded(swatches) => self.swatches = swatches,
+            Message::SwatchesLoaded(swatches, screenshots) => {
+                self.swatches = swatches;
+                self.screenshots = screenshots;
+            }
             Message::CatalogueLoaded(catalogue, author) => {
                 self.catalogue = catalogue;
                 self.author = author;
