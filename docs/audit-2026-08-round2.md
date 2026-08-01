@@ -167,11 +167,12 @@ inside each section; a checked box means the fix has landed on `main`.
   message-generic view can construct. The font-size fallback speaks
   through the one shared derivation everywhere.
 - [ ] **Convention debt:** the updates state file passed 1 000 lines;
-  themes plus its view total ~1 900 for one module. The config glob
-  re-export gives every proto type two import paths; two workspace-internal
-  enums are `#[non_exhaustive]`, forcing wildcards that swallow new events
-  at runtime; menu view functions take twelve to fifteen positional
-  arguments; the broken-tests feature gates six rotted test blocks.
+  themes plus its view total ~1 900 for one module; menu view functions
+  take twelve to fifteen positional arguments; the broken-tests feature
+  gates six rotted test blocks. Settled meanwhile: the config crossing is
+  a named export list, and the two bus enums dropped `#[non_exhaustive]` —
+  the mapping is total and a new variant is a compile error, not a
+  silently dropped event.
 
 ## Standing constraints
 
