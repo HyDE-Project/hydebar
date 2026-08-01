@@ -175,7 +175,7 @@ impl App {
             ()
         );
         gate(
-            "settings",
+            "hardware-services",
             layout.hosts_any(&CONTROL_CENTER_CONSUMERS),
             &mut self.control_center,
             ctx,
