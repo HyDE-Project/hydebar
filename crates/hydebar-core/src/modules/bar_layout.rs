@@ -236,6 +236,8 @@ impl BarLayout {
             } => {
                 if let Some(reason) = failure {
                     error!("the bar layout could not be changed: {reason}");
+                } else {
+                    return self.load_entries();
                 }
             }
             Message::Listed(entries) => {

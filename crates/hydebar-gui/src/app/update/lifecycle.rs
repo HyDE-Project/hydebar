@@ -297,6 +297,13 @@ impl App {
                     self.register_modules();
                 }
 
+                if impact.layout_changed && self.config.appearance.animations.enabled {
+                    self.entrance = hydebar_core::animation::Spring::new(0.0)
+                        .with_response(self.sweep.response)
+                        .with_damping_ratio(self.sweep.damping);
+                    self.entrance.set_target(1.0);
+                }
+
                 if impact.log_level_changed {
                     self.logger
                         .set_new_spec(get_log_spec(&self.config.log_level));
