@@ -102,14 +102,6 @@ pub mod tray {
 
     use crate::app::Message;
 
-    /// Share of the themed icon size a tray image is drawn at.
-    ///
-    /// The font glyphs ink about this share of their stated size; a trimmed
-    /// image fills its box edge to edge, so drawn at the full size it stands
-    /// a head taller than every glyph beside it. Measured against the bar,
-    /// not derived.
-    const GLYPH_MATCH: f32 = 0.85;
-
     /// Renders the tray strip, or nothing while no application is registered.
     ///
     /// Each icon is its own positioned button so the menu it toggles opens
@@ -121,7 +113,7 @@ pub mod tray {
         icons: &IconTheme
     ) -> Option<Element<'static, Message>> {
         let items = module.service.as_ref().filter(|s| !s.data.is_empty())?;
-        let size = icons.size().unwrap_or_else(scale::base) * GLYPH_MATCH;
+        let size = icons.size().unwrap_or_else(scale::base);
 
         Some(
             Row::with_children(items.data.iter().map(|item| {
