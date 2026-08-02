@@ -101,3 +101,223 @@ fn expand_plain(raw: &str) -> String {
         _ => data_dir().map_or_else(|| raw.to_owned(), |dir| format!("{}{rest}", dir.display()))
     }
 }
+
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
+mod tests {
+    use std::{io::Write, sync::Mutex};
+
+    use super::*;
+
+    /// The environment is process-wide, so the tests that set it take turns.
+    static ENVIRONMENT: Mutex<()> = Mutex::new(());
+
+    /// Runs `body` with `XDG_DATA_HOME` pointing at a scratch directory that
+    /// holds `definition` as the desktop's menu module, if given.
+    fn with_data_home<T>(definition: Option<&str>, body: impl FnOnce() -> T) -> T {
+        let _guard = ENVIRONMENT
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        let home = tempfile::tempdir().expect("a scratch data home");
+
+        if let Some(definition) = definition {
+            let modules = home.path().join("waybar/modules");
+            std::fs::create_dir_all(&modules).expect("the module directory is made");
+
+            let mut file = std::fs::File::create(modules.join("custom-hyde-menu.jsonc"))
+                .expect("the module file is made");
+            file.write_all(definition.as_bytes())
+                .expect("the module is written");
+        }
+
+        let previous = std::env::var_os("XDG_DATA_HOME");
+        // SAFETY: the lock above keeps every other test off the environment.
+        unsafe { std::env::set_var("XDG_DATA_HOME", home.path()) };
+
+        let outcome = body();
+
+        match previous {
+            // SAFETY: as above.
+            Some(value) => unsafe { std::env::set_var("XDG_DATA_HOME", value) },
+            None => unsafe { std::env::remove_var("XDG_DATA_HOME") }
+        }
+
+        outcome
+    }
+
+    #[test]
+    fn a_desktop_that_ships_no_module_states_nothing() {
+        assert!(with_data_home(None, read_definition).is_none());
+    }
+
+    #[test]
+    fn a_module_file_that_is_not_json_states_nothing() {
+        assert!(with_data_home(Some("{ not json"), read_definition).is_none());
+    }
+
+    #[test]
+    fn a_json_file_without_the_menu_module_states_nothing() {
+        assert!(with_data_home(Some(r#"{"custom/other": {}}"#), read_definition).is_none());
+    }
+
+    #[test]
+    fn the_module_states_its_glyph_its_menu_file_and_its_actions() {
+        let definition = with_data_home(
+            Some(
+                r#"{
+                    // the desktop comments its modules
+                    "custom/hyde-menu": {
+                        "format": "",
+                        "menu-file": "/etc/hyde/menu.ui",
+                        "menu-actions": { "lock": "hyprlock", "quit": "uwsm stop" }
+                    }
+                }"#
+            ),
+            read_definition
+        )
+        .expect("the module is read");
+
+        assert_eq!(definition.glyph.as_deref(), Some("\u{f303}"));
+        assert_eq!(definition.menu_file.as_deref(), Some("/etc/hyde/menu.ui"));
+        assert_eq!(
+            definition.actions.get("lock").map(String::as_str),
+            Some("hyprlock")
+        );
+        assert_eq!(
+            definition.actions.get("quit").map(String::as_str),
+            Some("uwsm stop")
+        );
+    }
+
+    #[test]
+    fn a_module_that_states_nothing_about_itself_is_still_read() {
+        let definition = with_data_home(Some(r#"{"custom/hyde-menu": {}}"#), read_definition)
+            .expect("the module is read");
+
+        assert!(definition.glyph.is_none());
+        assert!(definition.menu_file.is_none());
+        assert!(definition.actions.is_empty());
+    }
+
+    #[test]
+    fn an_action_that_is_not_a_command_is_dropped() {
+        let definition = with_data_home(
+            Some(r#"{"custom/hyde-menu": {"menu-actions": {"lock": 3, "quit": "exit"}}}"#),
+            read_definition
+        )
+        .expect("the module is read");
+
+        assert!(!definition.actions.contains_key("lock"));
+        assert_eq!(
+            definition.actions.get("quit").map(String::as_str),
+            Some("exit")
+        );
+    }
+
+    #[test]
+    fn a_path_naming_no_variable_is_left_as_it_stands() {
+        assert_eq!(expand_path("/etc/hyde/menu.ui"), "/etc/hyde/menu.ui");
+    }
+
+    #[test]
+    fn a_braced_variable_is_replaced_by_what_it_holds() {
+        let _guard = ENVIRONMENT
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        // SAFETY: the lock keeps every other test off the environment.
+        unsafe { std::env::set_var("HYDE_MENU_ROOT", "/opt/hyde") };
+
+        assert_eq!(
+            expand_path("${HYDE_MENU_ROOT}/menu.ui"),
+            "/opt/hyde/menu.ui"
+        );
+
+        // SAFETY: as above.
+        unsafe { std::env::remove_var("HYDE_MENU_ROOT") };
+    }
+
+    #[test]
+    fn a_braced_variable_nobody_set_falls_back_to_what_the_file_names() {
+        let _guard = ENVIRONMENT
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        // SAFETY: the lock keeps every other test off the environment.
+        unsafe { std::env::remove_var("HYDE_MENU_ROOT") };
+
+        assert_eq!(
+            expand_path("${HYDE_MENU_ROOT:-/etc/hyde}/menu.ui"),
+            "/etc/hyde/menu.ui"
+        );
+    }
+
+    #[test]
+    fn a_variable_holding_nothing_is_treated_as_unset() {
+        let _guard = ENVIRONMENT
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        // SAFETY: the lock keeps every other test off the environment.
+        unsafe { std::env::set_var("HYDE_MENU_ROOT", "") };
+
+        assert_eq!(
+            expand_path("${HYDE_MENU_ROOT:-/etc/hyde}/menu.ui"),
+            "/etc/hyde/menu.ui"
+        );
+
+        // SAFETY: as above.
+        unsafe { std::env::remove_var("HYDE_MENU_ROOT") };
+    }
+
+    #[test]
+    fn a_braced_variable_with_no_fallback_and_no_value_leaves_a_bare_path() {
+        let _guard = ENVIRONMENT
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        // SAFETY: the lock keeps every other test off the environment.
+        unsafe { std::env::remove_var("HYDE_MENU_ROOT") };
+
+        assert_eq!(expand_path("${HYDE_MENU_ROOT}/menu.ui"), "/menu.ui");
+    }
+
+    /// An unclosed brace is not a form the desktop's files use; the reader
+    /// falls through to the bare-variable rule rather than guessing, so the
+    /// path lands under the data directory instead of being handed on with a
+    /// `$` in it that nothing could open.
+    #[test]
+    fn an_unclosed_brace_falls_through_to_the_bare_variable_rule() {
+        with_data_home(None, || {
+            let expanded = expand_path("${HYDE/menu.ui");
+
+            assert!(expanded.ends_with("/menu.ui"));
+            assert!(!expanded.contains('$'));
+        });
+    }
+
+    #[test]
+    fn a_bare_variable_is_replaced_by_what_it_holds() {
+        let _guard = ENVIRONMENT
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        // SAFETY: the lock keeps every other test off the environment.
+        unsafe { std::env::set_var("HYDE_MENU_ROOT", "/opt/hyde") };
+
+        assert_eq!(expand_plain("$HYDE_MENU_ROOT/menu.ui"), "/opt/hyde/menu.ui");
+
+        // SAFETY: as above.
+        unsafe { std::env::remove_var("HYDE_MENU_ROOT") };
+    }
+
+    #[test]
+    fn a_bare_variable_nobody_set_falls_back_to_the_data_directory() {
+        with_data_home(None, || {
+            let expanded = expand_plain("$HYDE_MENU_ROOT/menu.ui");
+
+            assert!(expanded.ends_with("/menu.ui"));
+            assert!(!expanded.starts_with('$'));
+        });
+    }
+
+    #[test]
+    fn a_path_with_no_leading_variable_is_left_as_it_stands() {
+        assert_eq!(expand_plain("/etc/hyde/menu.ui"), "/etc/hyde/menu.ui");
+    }
+}
