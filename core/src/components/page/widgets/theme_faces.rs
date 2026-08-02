@@ -14,6 +14,19 @@ use super::theme_card::{
 };
 use crate::components::icons::icon_raw_sized;
 
+/// The paint a face presses in: unfilled, so only the card behind it carries
+/// a surface, and inked with the colour the card's own state settles on.
+fn face_style(
+    paint_colors: Option<(iced::Color, iced::Color, iced::Color)>,
+    state: ThemeChip
+) -> impl Fn(&Theme, button::Status) -> button::Style {
+    move |theme: &Theme, _| button::Style {
+        background: None,
+        text_color: card_colors(theme, paint_colors, state).1,
+        ..button::Style::default()
+    }
+}
+
 /// The screenshot of a theme, sized to the room its face gives it.
 fn preview(path: &PathBuf, height: f32) -> iced::widget::Image<iced::widget::image::Handle> {
     iced::widget::image(iced::widget::image::Handle::from_path(path))
@@ -65,11 +78,7 @@ pub(super) fn horizontal_face<'a, M: Clone + 'static>(
 
     let pressable = button(face)
         .padding(0)
-        .style(move |theme: &Theme, _| button::Style {
-            background: None,
-            text_color: card_colors(theme, paint_colors, state).1,
-            ..button::Style::default()
-        })
+        .style(face_style(paint_colors, state))
         .width(Length::Fill);
 
     let mut line = Row::new()
@@ -149,11 +158,7 @@ pub(super) fn vertical_face<'a, M: Clone + 'static>(
 
     let pressable = button(container(body).width(Length::Fill))
         .padding(0)
-        .style(move |theme: &Theme, _| button::Style {
-            background: None,
-            text_color: card_colors(theme, paint_colors, state).1,
-            ..button::Style::default()
-        })
+        .style(face_style(paint_colors, state))
         .width(Length::Fill);
 
     let mut column = Column::new()
@@ -166,4 +171,178 @@ pub(super) fn vertical_face<'a, M: Clone + 'static>(
     }
 
     column.into()
+}
+
+#[cfg(test)]
+mod tests {
+    use iced::Color;
+
+    use super::*;
+    use crate::modules::themes::Spinner;
+
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    enum Msg {
+        Deed
+    }
+
+    const CONTROL: f32 = 12.0;
+    const COLORS: (Color, Color, Color) = (
+        Color::from_rgb(0.1, 0.1, 0.1),
+        Color::from_rgb(0.9, 0.9, 0.9),
+        Color::from_rgb(0.5, 0.0, 0.5)
+    );
+
+    fn paint() -> ChipPaint {
+        ChipPaint {
+            background: COLORS.0,
+            text:       COLORS.1,
+            accent:     COLORS.2,
+            palette:    vec![Color::WHITE, Color::BLACK]
+        }
+    }
+
+    fn shot() -> PathBuf {
+        PathBuf::from("/nonexistent/theme.png")
+    }
+
+    fn deeds<'a>() -> Row<'a, Msg> {
+        Row::new().push(button(text("x")).on_press(Msg::Deed))
+    }
+
+    #[test]
+    fn a_bare_line_shows_only_its_name() {
+        let face: Element<'_, Msg> = horizontal_face(
+            "Mocha".to_owned(),
+            None,
+            None,
+            None,
+            None,
+            ThemeChip::Idle,
+            CONTROL,
+            None
+        );
+
+        assert_eq!(face.as_widget().size().width, Length::Fill);
+    }
+
+    #[test]
+    fn a_full_line_carries_the_badge_the_shot_the_palette_and_the_deeds() {
+        let face: Element<'_, Msg> = horizontal_face(
+            "Mocha".to_owned(),
+            Some("\u{f00c}"),
+            Some(&shot()),
+            Some(&paint()),
+            Some(COLORS),
+            ThemeChip::Active,
+            CONTROL,
+            Some(deeds())
+        );
+
+        assert_eq!(face.as_widget().size().width, Length::Fill);
+    }
+
+    #[test]
+    fn a_line_being_applied_grows_a_busy_strip() {
+        let face: Element<'_, Msg> = horizontal_face(
+            "Mocha".to_owned(),
+            None,
+            None,
+            Some(&paint()),
+            Some(COLORS),
+            ThemeChip::Applying(Spinner::default()),
+            CONTROL,
+            None
+        );
+
+        assert_eq!(face.as_widget().size().width, Length::Fill);
+    }
+
+    #[test]
+    fn a_bare_tile_shows_only_its_name() {
+        let face: Element<'_, Msg> = vertical_face(
+            "Mocha".to_owned(),
+            None,
+            None,
+            None,
+            None,
+            ThemeChip::Idle,
+            CONTROL,
+            120.0,
+            None
+        );
+
+        assert_eq!(face.as_widget().size().width, Length::Fill);
+    }
+
+    #[test]
+    fn a_badged_tile_centres_the_name_beside_its_glyph() {
+        let face: Element<'_, Msg> = vertical_face(
+            "Mocha".to_owned(),
+            Some("\u{f00c}"),
+            None,
+            None,
+            None,
+            ThemeChip::Inert,
+            CONTROL,
+            120.0,
+            None
+        );
+
+        assert_eq!(face.as_widget().size().width, Length::Fill);
+    }
+
+    #[test]
+    fn a_full_tile_stacks_the_shot_the_name_the_palette_and_the_deeds() {
+        let face: Element<'_, Msg> = vertical_face(
+            "Mocha".to_owned(),
+            Some("\u{f00c}"),
+            Some(&shot()),
+            Some(&paint()),
+            Some(COLORS),
+            ThemeChip::Applying(Spinner::default()),
+            CONTROL,
+            120.0,
+            Some(deeds())
+        );
+
+        assert_eq!(face.as_widget().size().width, Length::Fill);
+    }
+
+    #[test]
+    fn a_painted_tile_without_a_shot_still_draws_its_palette() {
+        let face: Element<'_, Msg> = vertical_face(
+            "Mocha".to_owned(),
+            None,
+            None,
+            Some(&paint()),
+            Some(COLORS),
+            ThemeChip::Idle,
+            CONTROL,
+            120.0,
+            None
+        );
+
+        assert_eq!(face.as_widget().size().width, Length::Fill);
+    }
+
+    #[test]
+    fn a_face_presses_without_a_surface_of_its_own() {
+        let theme = Theme::Dark;
+        let styled = face_style(Some(COLORS), ThemeChip::Active)(&theme, button::Status::Active);
+
+        assert!(styled.background.is_none());
+        assert_eq!(
+            styled.text_color,
+            card_colors(&theme, Some(COLORS), ThemeChip::Active).1
+        );
+    }
+
+    #[test]
+    fn a_blocked_face_is_inked_more_faintly_than_an_idle_one() {
+        let theme = Theme::Dark;
+        let idle = face_style(Some(COLORS), ThemeChip::Idle)(&theme, button::Status::Active);
+        let blocked = face_style(Some(COLORS), ThemeChip::Blocked)(&theme, button::Status::Active);
+
+        assert!(blocked.text_color.a < idle.text_color.a);
+    }
 }

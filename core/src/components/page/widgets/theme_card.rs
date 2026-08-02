@@ -253,3 +253,190 @@ mod tests {
         assert!(BLOCKED_ALPHA < 1.0);
     }
 }
+
+#[cfg(test)]
+mod paint_tests {
+    #![allow(clippy::float_cmp)]
+
+    use iced::Color;
+
+    use super::*;
+
+    const PAINT: (Color, Color, Color) = (
+        Color::from_rgb(0.1, 0.1, 0.1),
+        Color::from_rgb(0.9, 0.9, 0.9),
+        Color::from_rgb(0.5, 0.0, 0.5)
+    );
+
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    enum Msg {}
+
+    fn applying() -> ThemeChip {
+        ThemeChip::Applying(Spinner::default())
+    }
+
+    #[test]
+    fn a_resting_window_has_travelled_its_whole_fade() {
+        assert_eq!(fade_share(&Theme::Dark), Theme::Dark.palette().text.a);
+    }
+
+    #[test]
+    fn an_unpainted_active_card_takes_the_accent_fill_and_no_ring() {
+        let theme = Theme::Dark;
+        let (background, text, ringed) = card_colors(&theme, None, ThemeChip::Active);
+        let palette = theme.extended_palette();
+
+        assert_eq!(background, palette.primary.base.color);
+        assert_eq!(text, palette.primary.base.text);
+        assert!(!ringed);
+    }
+
+    #[test]
+    fn a_painted_active_card_keeps_its_own_colours_and_gains_a_ring() {
+        let theme = Theme::Dark;
+        let (background, text, ringed) = card_colors(&theme, Some(PAINT), ThemeChip::Active);
+
+        assert_eq!(background, PAINT.0.scale_alpha(fade_share(&theme)));
+        assert_eq!(text, PAINT.1.scale_alpha(fade_share(&theme)));
+        assert!(ringed);
+    }
+
+    #[test]
+    fn an_idle_and_an_inert_card_look_alike() {
+        let theme = Theme::Dark;
+
+        assert_eq!(
+            card_colors(&theme, Some(PAINT), ThemeChip::Idle),
+            card_colors(&theme, Some(PAINT), ThemeChip::Inert)
+        );
+        assert!(!card_colors(&theme, Some(PAINT), ThemeChip::Idle).2);
+    }
+
+    #[test]
+    fn an_unpainted_idle_card_falls_back_to_the_weak_background() {
+        let theme = Theme::Dark;
+        let (background, text, _) = card_colors(&theme, None, ThemeChip::Idle);
+        let palette = theme.extended_palette();
+
+        assert_eq!(background, palette.background.weak.color);
+        assert_eq!(text, palette.background.base.text);
+    }
+
+    #[test]
+    fn a_card_being_applied_pulses_its_fill_and_keeps_its_ink() {
+        let theme = Theme::Dark;
+        let resting = card_colors(&theme, Some(PAINT), ThemeChip::Idle);
+        let busy = card_colors(&theme, Some(PAINT), applying());
+
+        assert_eq!(busy.0.a, resting.0.a * Spinner::default().pulse());
+        assert_eq!(busy.1, resting.1);
+        assert!(busy.2);
+    }
+
+    #[test]
+    fn an_unpainted_card_being_applied_pulses_the_accent() {
+        let theme = Theme::Dark;
+        let busy = card_colors(&theme, None, applying());
+        let palette = theme.extended_palette();
+
+        assert_eq!(
+            busy.0,
+            palette.primary.base.color.scale_alpha(Spinner::default().pulse())
+        );
+        assert_eq!(busy.1, palette.primary.base.text);
+        assert!(!busy.2);
+    }
+
+    #[test]
+    fn a_blocked_card_fades_both_its_fill_and_its_ink() {
+        let theme = Theme::Dark;
+        let idle = card_colors(&theme, Some(PAINT), ThemeChip::Idle);
+        let blocked = card_colors(&theme, Some(PAINT), ThemeChip::Blocked);
+
+        assert_eq!(blocked.0.a, idle.0.a * BLOCKED_ALPHA);
+        assert_eq!(blocked.1.a, idle.1.a * BLOCKED_ALPHA);
+        assert!(!blocked.2);
+    }
+
+    #[test]
+    fn a_condemned_card_keeps_its_colours_and_gains_a_ring() {
+        let theme = Theme::Dark;
+        let idle = card_colors(&theme, Some(PAINT), ThemeChip::Idle);
+        let condemned = card_colors(&theme, Some(PAINT), ThemeChip::Condemned);
+
+        assert_eq!((condemned.0, condemned.1), (idle.0, idle.1));
+        assert!(condemned.2);
+    }
+
+    #[test]
+    fn a_condemned_card_is_ringed_in_danger_whatever_it_is_painted_with() {
+        let theme = Theme::Dark;
+
+        assert_eq!(
+            card_ring(&theme, Some(PAINT), ThemeChip::Condemned),
+            theme.palette().danger
+        );
+        assert_eq!(
+            card_ring(&theme, None, ThemeChip::Condemned),
+            theme.palette().danger
+        );
+    }
+
+    #[test]
+    fn a_painted_card_is_ringed_in_its_own_accent() {
+        let theme = Theme::Dark;
+
+        assert_eq!(
+            card_ring(&theme, Some(PAINT), ThemeChip::Active),
+            PAINT.2.scale_alpha(fade_share(&theme))
+        );
+    }
+
+    #[test]
+    fn an_unpainted_card_is_ringed_in_the_bar_accent() {
+        let theme = Theme::Dark;
+
+        assert_eq!(
+            card_ring(&theme, None, ThemeChip::Active),
+            theme.extended_palette().primary.base.color
+        );
+    }
+
+    #[test]
+    fn the_dot_row_reserves_the_dot_and_the_gap_above_it() {
+        assert_eq!(DOT_ROW_EM, DOT_EM + DOT_GAP_EM);
+    }
+
+    #[test]
+    fn a_palette_row_fills_the_width_it_is_given() {
+        let dots: Element<'_, Msg> =
+            palette_dots(vec![Color::WHITE, Color::BLACK, Color::from_rgb(1.0, 0.0, 0.0)], 14.0);
+
+        assert_eq!(dots.as_widget().size().width, Length::Fill);
+    }
+
+    #[test]
+    fn a_theme_that_announces_no_palette_still_draws_a_row() {
+        let dots: Element<'_, Msg> = palette_dots(Vec::new(), 14.0);
+
+        assert_eq!(dots.as_widget().size().width, Length::Fill);
+    }
+
+    #[test]
+    fn the_busy_strip_spans_the_card() {
+        let strip: Element<'_, Msg> = busy_strip(Spinner::default(), 14.0);
+
+        assert_eq!(strip.as_widget().size().width, Length::Fill);
+    }
+
+    #[test]
+    fn the_busy_strip_is_drawn_at_every_phase_of_the_cycle() {
+        let mut spinner = Spinner::default();
+
+        for _ in 0..Spinner::cycle() {
+            let strip: Element<'_, Msg> = busy_strip(spinner, 14.0);
+            assert_eq!(strip.as_widget().size().width, Length::Fill);
+            spinner.advance();
+        }
+    }
+}

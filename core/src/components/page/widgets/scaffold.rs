@@ -112,23 +112,31 @@ pub fn labelled_row<'a, M: 'a>(
         .into()
 }
 
+/// Builds the fill a card is drawn with.
+///
+/// Named rather than inlined so the paint of a card can be read back on its
+/// own, the way the button styles are.
+fn card_style(font_size: f32, opacity: f32) -> impl Fn(&Theme) -> container::Style {
+    move |theme: &Theme| container::Style {
+        background: Some(Background::Color(
+            theme
+                .extended_palette()
+                .background
+                .weak
+                .color
+                .scale_alpha(opacity * style::CARD_FILL_ALPHA)
+        )),
+        border: Border::default().rounded(style::corner_radius(font_size)),
+        ..container::Style::default()
+    }
+}
+
 /// Renders a card the detail of a picked entry lives in.
 pub fn card<'a, M: 'a>(content: Element<'a, M>, font_size: f32, opacity: f32) -> Element<'a, M> {
     container(content)
         .padding(style::card_padding(font_size))
         .width(Length::Fill)
-        .style(move |theme: &Theme| container::Style {
-            background: Some(Background::Color(
-                theme
-                    .extended_palette()
-                    .background
-                    .weak
-                    .color
-                    .scale_alpha(opacity * style::CARD_FILL_ALPHA)
-            )),
-            border: Border::default().rounded(style::corner_radius(font_size)),
-            ..container::Style::default()
-        })
+        .style(card_style(font_size, opacity))
         .into()
 }
 
@@ -143,18 +151,195 @@ pub fn outlined<'a, M: 'a>(
 ) -> Element<'a, M> {
     container(content)
         .padding(style::card_padding(font_size))
-        .style(move |theme: &Theme| container::Style {
-            border: Border {
-                width:  style::BORDER_WIDTH,
-                radius: style::corner_radius(font_size).into(),
-                color:  theme
-                    .extended_palette()
-                    .secondary
-                    .strong
-                    .color
-                    .scale_alpha(opacity)
-            },
-            ..container::Style::default()
-        })
+        .style(outline_style(font_size, opacity))
         .into()
+}
+
+/// Builds the border an outlined box is drawn with.
+fn outline_style(font_size: f32, opacity: f32) -> impl Fn(&Theme) -> container::Style {
+    move |theme: &Theme| container::Style {
+        border: Border {
+            width:  style::BORDER_WIDTH,
+            radius: style::corner_radius(font_size).into(),
+            color:  theme
+                .extended_palette()
+                .secondary
+                .strong
+                .color
+                .scale_alpha(opacity)
+        },
+        ..container::Style::default()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::float_cmp)]
+
+    use super::*;
+
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    enum Msg {
+        Pressed
+    }
+
+    const FONT: f32 = 14.0;
+
+    fn leaf<'a>() -> Element<'a, Msg> {
+        text("leaf").into()
+    }
+
+    #[test]
+    fn a_note_is_drawn_smaller_than_the_page_text() {
+        let note: Element<'_, Msg> = note("nothing here yet", FONT);
+
+        assert!(style::caption_size(FONT) < FONT);
+        assert_eq!(
+            note.as_widget().size(),
+            iced::Size::new(Length::Shrink, Length::Shrink)
+        );
+    }
+
+    #[test]
+    fn a_section_fills_the_page_width() {
+        let section: Element<'_, Msg> = section("Appearance", leaf(), FONT);
+
+        assert_eq!(section.as_widget().size().width, Length::Fill);
+    }
+
+    #[test]
+    fn every_page_column_fills_the_width() {
+        let page: Element<'_, Msg> = page(FONT).push(leaf()).into();
+        let rows: Element<'_, Msg> = rows(FONT).push(leaf()).into();
+        let grid: Element<'_, Msg> = grid(FONT).push(leaf()).into();
+
+        for column in [page, rows, grid] {
+            assert_eq!(column.as_widget().size().width, Length::Fill);
+        }
+    }
+
+    #[test]
+    fn the_page_column_is_spaced_wider_than_the_rows_it_holds() {
+        assert!(style::section_gap(FONT) > style::page_gap(FONT));
+        assert!(style::page_gap(FONT) > style::group_gap(FONT));
+    }
+
+    #[test]
+    fn a_control_row_hugs_what_it_holds() {
+        let controls: Element<'_, Msg> = controls(FONT).push(leaf()).into();
+        let group: Element<'_, Msg> = group(FONT).push(leaf()).into();
+
+        for row in [controls, group] {
+            assert_eq!(row.as_widget().size().width, Length::Shrink);
+        }
+    }
+
+    #[test]
+    fn a_labelled_row_fills_the_width_and_reserves_the_label_column() {
+        let row: Element<'_, Msg> = labelled_row("Style", leaf(), FONT);
+
+        assert_eq!(row.as_widget().size().width, Length::Fill);
+        assert!(style::label_width(FONT) > 0.0);
+    }
+
+    #[test]
+    fn a_card_fills_the_width_it_is_given() {
+        let card: Element<'_, Msg> = card(leaf(), FONT, 1.0);
+
+        assert_eq!(card.as_widget().size().width, Length::Fill);
+    }
+
+    #[test]
+    fn an_outline_hugs_what_it_frames() {
+        let outlined: Element<'_, Msg> = outlined(leaf(), FONT, 1.0);
+
+        assert_eq!(
+            outlined.as_widget().size(),
+            iced::Size::new(Length::Shrink, Length::Shrink)
+        );
+    }
+
+    #[test]
+    fn a_card_and_an_outline_share_the_padding_and_the_corner() {
+        assert!(style::corner_radius(FONT) > 0.0);
+        const { assert!(style::BORDER_WIDTH > 0.0) };
+        const { assert!(style::CARD_FILL_ALPHA > 0.0 && style::CARD_FILL_ALPHA <= 1.0) };
+
+        let card = card_style(FONT, 1.0)(&Theme::Dark);
+        let outline = outline_style(FONT, 1.0)(&Theme::Dark);
+
+        assert_eq!(card.border.radius, outline.border.radius);
+    }
+
+    #[test]
+    fn a_card_is_filled_by_a_faded_weak_background() {
+        let theme = Theme::Dark;
+        let filled = card_style(FONT, 1.0)(&theme);
+
+        assert_eq!(
+            filled.background,
+            Some(Background::Color(
+                theme
+                    .extended_palette()
+                    .background
+                    .weak
+                    .color
+                    .scale_alpha(style::CARD_FILL_ALPHA)
+            ))
+        );
+        assert_eq!(filled.border.width, 0.0);
+    }
+
+    #[test]
+    fn the_card_fill_follows_the_opacity_it_is_handed() {
+        let opaque = card_style(FONT, 1.0)(&Theme::Dark).background;
+        let faded = card_style(FONT, 0.25)(&Theme::Dark).background;
+
+        let alpha = |background| match background {
+            Some(Background::Color(color)) => color.a,
+            _ => panic!("a card is always filled")
+        };
+
+        assert!(alpha(faded) < alpha(opaque));
+    }
+
+    #[test]
+    fn an_outline_is_bordered_and_never_filled() {
+        let theme = Theme::Dark;
+        let outline = outline_style(FONT, 1.0)(&theme);
+
+        assert!(outline.background.is_none());
+        assert_eq!(outline.border.width, style::BORDER_WIDTH);
+        assert_eq!(
+            outline.border.color,
+            theme.extended_palette().secondary.strong.color
+        );
+    }
+
+    #[test]
+    fn the_outline_fades_with_the_opacity_it_is_handed() {
+        let faded = outline_style(FONT, 0.5)(&Theme::Dark);
+
+        assert!(faded.border.color.a < outline_style(FONT, 1.0)(&Theme::Dark).border.color.a);
+    }
+
+    #[test]
+    fn a_wider_page_text_rounds_the_card_further() {
+        assert_ne!(
+            card_style(24.0, 1.0)(&Theme::Dark).border.radius,
+            card_style(10.0, 1.0)(&Theme::Dark).border.radius
+        );
+    }
+
+    #[test]
+    fn a_scaffolded_page_carries_the_message_of_what_it_holds() {
+        let pressed: Element<'_, Msg> = iced::widget::button(text("press"))
+            .on_press(Msg::Pressed)
+            .into();
+        let page: Element<'_, Msg> = page(FONT)
+            .push(section("Modules", card(pressed, FONT, 1.0), FONT))
+            .into();
+
+        assert_eq!(page.as_widget().size().width, Length::Fill);
+    }
 }
