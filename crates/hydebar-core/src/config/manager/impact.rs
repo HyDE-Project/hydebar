@@ -6,9 +6,9 @@
 //! [`ConfigImpact::moves_module_registration`] — whether any background work
 //! has to be torn down and restarted at all.
 
-use std::collections::{BTreeSet, HashMap};
+use std::collections::BTreeSet;
 
-use hydebar_proto::config::{Config, CustomModuleDef, ModuleName};
+use hydebar_proto::config::{Config, ModuleName};
 
 /// Represents the effect a configuration update has on the running system.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -55,10 +55,9 @@ impl ConfigImpact {
     }
 }
 
-#[expect(
-    clippy::too_many_lines,
-    reason = "one flat comparison per module keeps every impact visible in one place"
-)]
+mod custom;
+mod modules;
+
 pub(super) fn compute_impact(previous: &Config, next: &Config) -> ConfigImpact {
     let mut impact = ConfigImpact::default();
 
@@ -92,137 +91,18 @@ pub(super) fn compute_impact(previous: &Config, next: &Config) -> ConfigImpact {
         impact.menu_focus_changed = true;
     }
 
-    mark_if_changed(
-        &mut impact,
-        ModuleName::AppLauncher,
-        &previous.app_launcher_cmd,
-        &next.app_launcher_cmd
-    );
-    mark_if_changed(
-        &mut impact,
-        ModuleName::Clipboard,
-        &previous.clipboard_cmd,
-        &next.clipboard_cmd
-    );
-    mark_if_changed(
-        &mut impact,
-        ModuleName::Updates,
-        &previous.updates,
-        &next.updates
-    );
-    mark_if_changed(
-        &mut impact,
-        ModuleName::Workspaces,
-        &previous.workspaces,
-        &next.workspaces
-    );
-    mark_if_changed(
-        &mut impact,
-        ModuleName::WindowTitle,
-        &previous.window_title,
-        &next.window_title
-    );
-    mark_if_changed(
-        &mut impact,
-        ModuleName::SystemInfo,
-        &previous.system,
-        &next.system
-    );
-    mark_if_changed(&mut impact, ModuleName::Cpu, &previous.system, &next.system);
-    mark_if_changed(
-        &mut impact,
-        ModuleName::Memory,
-        &previous.system,
-        &next.system
-    );
-    mark_if_changed(
-        &mut impact,
-        ModuleName::Battery,
-        &previous.battery,
-        &next.battery
-    );
-    mark_if_changed(&mut impact, ModuleName::Clock, &previous.clock, &next.clock);
-    mark_if_changed(
-        &mut impact,
-        ModuleName::Clock,
-        &previous.weather,
-        &next.weather
-    );
-    mark_if_changed(
-        &mut impact,
-        ModuleName::ControlCenter,
-        &previous.control_center,
-        &next.control_center
-    );
-    mark_if_changed(
-        &mut impact,
-        ModuleName::MediaPlayer,
-        &previous.media_player,
-        &next.media_player
-    );
-    mark_if_changed(
-        &mut impact,
-        ModuleName::KeyboardLayout,
-        &previous.keyboard_layout,
-        &next.keyboard_layout
-    );
-    mark_if_changed(
-        &mut impact,
-        ModuleName::Notifications,
-        &previous.notifications,
-        &next.notifications
-    );
+    modules::mark_module_configs(&mut impact, previous, next);
 
     if previous.custom_modules != next.custom_modules {
         impact.custom_modules_changed = true;
-        update_custom_module_impact(&mut impact, &previous.custom_modules, &next.custom_modules);
+        custom::update_custom_module_impact(
+            &mut impact,
+            &previous.custom_modules,
+            &next.custom_modules
+        );
     }
 
     impact
-}
-
-fn mark_if_changed<T>(impact: &mut ConfigImpact, module: ModuleName, previous: &T, next: &T)
-where
-    T: PartialEq
-{
-    if previous != next {
-        impact.affected_modules.insert(module);
-    }
-}
-
-fn update_custom_module_impact(
-    impact: &mut ConfigImpact,
-    previous: &[CustomModuleDef],
-    next: &[CustomModuleDef]
-) {
-    let previous_map: HashMap<&str, &CustomModuleDef> = previous
-        .iter()
-        .map(|module| (module.name.as_str(), module))
-        .collect();
-    let next_map: HashMap<&str, &CustomModuleDef> = next
-        .iter()
-        .map(|module| (module.name.as_str(), module))
-        .collect();
-
-    for (name, module) in &next_map {
-        let needs_update = previous_map
-            .get(name)
-            .is_none_or(|current| *current != *module);
-
-        if needs_update {
-            impact
-                .affected_modules
-                .insert(ModuleName::Custom((*name).to_string()));
-        }
-    }
-
-    for name in previous_map.keys() {
-        if !next_map.contains_key(name) {
-            impact
-                .affected_modules
-                .insert(ModuleName::Custom((*name).to_string()));
-        }
-    }
 }
 
 #[cfg(test)]
