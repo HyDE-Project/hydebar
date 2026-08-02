@@ -87,6 +87,7 @@ pub(super) fn inverts(recolour: Recolour, mode: DcolMode, color_scheme: Option<&
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

@@ -92,6 +92,7 @@ pub(super) fn upower_forwarder(
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use std::num::NonZeroUsize;
 

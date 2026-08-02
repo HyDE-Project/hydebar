@@ -56,6 +56,7 @@ pub fn text_input_style(theme: &Theme, status: text_input::Status) -> text_input
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     #![allow(clippy::float_cmp)]
     #![allow(clippy::suboptimal_flops)]

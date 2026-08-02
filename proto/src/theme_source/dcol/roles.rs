@@ -82,6 +82,7 @@ const fn with_alpha(color: Rgba, alpha: f32) -> Rgba {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::{super::fixtures::WALL_DCOL, *};
 

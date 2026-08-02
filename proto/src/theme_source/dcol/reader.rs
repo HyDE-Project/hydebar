@@ -97,6 +97,7 @@ fn color_scheme(dirs: &HydeDirs, theme: Option<&str>) -> Option<String> {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::{
         super::fixtures::{THEME_DCOL, WALL_DCOL},

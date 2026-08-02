@@ -11,6 +11,7 @@ pub fn is_output_requested(name: Option<&str>, outputs: &config::Outputs) -> boo
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use hydebar_proto::config::Outputs;
 

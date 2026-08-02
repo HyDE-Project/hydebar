@@ -178,6 +178,7 @@ fn build_danger_pair(
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use hex_color::HexColor;
     use iced::Color;

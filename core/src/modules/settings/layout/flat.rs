@@ -71,6 +71,7 @@ pub fn rebuild(entries: &[Entry]) -> Vec<ModuleDef> {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

@@ -92,6 +92,7 @@ pub fn quick_settings_submenu_button_style(
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     #![allow(clippy::float_cmp)]
 

@@ -72,6 +72,7 @@ fn resolve_icon(theme: Option<&str>, icon_name: &str) -> Option<TrayIcon> {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use std::{
         path::PathBuf,

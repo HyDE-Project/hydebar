@@ -1,3 +1,5 @@
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
+
 /// Default height of the main status bar in logical pixels.
 pub const HEIGHT: f64 = 34.;
 

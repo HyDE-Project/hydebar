@@ -63,6 +63,7 @@ pub(super) const fn resolve_status(
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

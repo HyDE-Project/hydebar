@@ -103,6 +103,7 @@ fn layout_file(dirs: &HydeDirs, staterc: &str) -> Option<PathBuf> {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use std::fs;
 

@@ -36,6 +36,7 @@ const fn default_hover_duration_ms() -> u64 {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

@@ -46,6 +46,7 @@ impl<'de> Deserialize<'de> for ModuleName {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use serde::de::value::{Error as DeError, StrDeserializer};
 

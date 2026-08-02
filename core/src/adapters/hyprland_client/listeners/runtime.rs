@@ -99,6 +99,7 @@ pub fn handle() -> Result<&'static Handle, HyprlandError> {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use std::time::{Duration, Instant};
 

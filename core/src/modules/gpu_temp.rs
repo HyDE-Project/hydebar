@@ -52,6 +52,7 @@ pub fn hint(data: &SystemInfoData) -> String {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use crate::modules::system_info::{GpuPlacement, GpuReadings, GpuVendor};

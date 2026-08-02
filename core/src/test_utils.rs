@@ -1,6 +1,7 @@
 //! Test doubles available to internal tests and, via the `test-utils`
 //! feature, to other crates' tests.
 #![cfg(any(test, feature = "test-utils"))]
+#![cfg_attr(coverage_nightly, coverage(off))]
 #![allow(
     clippy::unwrap_used,
     clippy::expect_used,

@@ -258,6 +258,7 @@ pub fn page_height(rows: f32, font_size: f32) -> f32 {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     #![allow(clippy::suboptimal_flops)]
 

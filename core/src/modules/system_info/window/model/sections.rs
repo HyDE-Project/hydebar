@@ -172,6 +172,7 @@ pub fn footnotes(data: &SystemInfoData, config: &SystemModuleConfig) -> Vec<Stri
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use crate::modules::system_info::{

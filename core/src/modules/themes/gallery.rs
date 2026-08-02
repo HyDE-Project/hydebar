@@ -28,6 +28,7 @@ pub fn import_command(name: &str, link: &str) -> String {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

@@ -69,6 +69,7 @@ fn fallback_glyph(class: &str) -> String {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::{entry_strength, fallback_glyph};
 

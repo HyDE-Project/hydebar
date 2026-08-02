@@ -54,6 +54,7 @@ pub fn menu_backdrop_style(backdrop: f32) -> impl Fn(&Theme) -> Style {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     #![allow(clippy::float_cmp)]
 

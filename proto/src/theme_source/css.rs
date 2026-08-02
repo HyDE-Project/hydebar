@@ -81,6 +81,7 @@ pub(super) fn declarations(body: &str) -> Vec<(String, String)> {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

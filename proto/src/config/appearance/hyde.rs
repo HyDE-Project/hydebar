@@ -157,6 +157,7 @@ const fn text_hex(color: AppearanceColor) -> Option<HexColor> {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     #![allow(clippy::float_cmp)]
     use super::{super::metrics::MODULE_GAP_EM, *};

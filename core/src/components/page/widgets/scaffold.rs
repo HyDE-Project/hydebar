@@ -173,6 +173,7 @@ fn outline_style(font_size: f32, opacity: f32) -> impl Fn(&Theme) -> container::
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     #![allow(clippy::float_cmp)]
 

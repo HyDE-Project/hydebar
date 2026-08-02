@@ -209,6 +209,7 @@ pub fn view<'a, Message: 'a>(
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

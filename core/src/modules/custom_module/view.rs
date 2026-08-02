@@ -181,6 +181,7 @@ impl Custom {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::{
         super::{data::CustomListenData, error::CustomCommandError},

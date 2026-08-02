@@ -182,6 +182,7 @@ const fn to_degrees(raw: i64) -> i32 {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use std::fs;
 

@@ -41,6 +41,7 @@ pub use reaper::start_orphan_reaper;
 pub use termination::{install_termination_handler, terminate_all, terminate_group};
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use std::{
         fs,

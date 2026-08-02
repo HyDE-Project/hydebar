@@ -1,3 +1,4 @@
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 use flexi_logger::LogSpecification;
 
 mod centerbox;
@@ -21,6 +22,7 @@ pub fn get_log_spec(log_level: &str) -> LogSpecification {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

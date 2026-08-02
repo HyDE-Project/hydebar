@@ -201,6 +201,7 @@ pub(super) async fn run_custom_poller(
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

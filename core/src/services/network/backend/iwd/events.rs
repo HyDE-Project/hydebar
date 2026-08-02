@@ -269,6 +269,7 @@ const fn strength_of_level(level: i16) -> u8 {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::strength_of_level;
 

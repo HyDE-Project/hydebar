@@ -106,6 +106,7 @@ pub(super) fn compute_impact(previous: &Config, next: &Config) -> ConfigImpact {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use hydebar_proto::config::{ModuleDef, NotificationSource};
 

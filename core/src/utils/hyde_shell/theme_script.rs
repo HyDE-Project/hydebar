@@ -162,6 +162,7 @@ fn is_executable_file(path: &Path) -> bool {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use std::{fs, os::unix::fs::PermissionsExt};
 

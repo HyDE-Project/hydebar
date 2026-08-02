@@ -86,6 +86,7 @@ fn fade_extended(extended: &palette::Extended, share: f32) -> palette::Extended 
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     #![allow(clippy::float_cmp)]
 

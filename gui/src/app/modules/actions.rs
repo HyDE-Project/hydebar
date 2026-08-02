@@ -184,6 +184,7 @@ pub(super) fn custom_module_action(
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

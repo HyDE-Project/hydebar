@@ -70,6 +70,7 @@ fn compose(data: &SystemInfoData, load: Option<(f64, f64, f64)>) -> String {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

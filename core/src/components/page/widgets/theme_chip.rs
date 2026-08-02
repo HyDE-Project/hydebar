@@ -152,6 +152,7 @@ fn deeds_row<'a, M: Clone + 'static>(
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     #![allow(clippy::float_cmp)]
 

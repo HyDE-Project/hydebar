@@ -167,6 +167,7 @@ pub fn settings_button_style(opacity: f32) -> impl Fn(&Theme, Status) -> button:
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     #![allow(clippy::float_cmp)]
 

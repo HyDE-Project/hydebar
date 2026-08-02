@@ -177,6 +177,7 @@ pub fn post_to_bus(message: &str) {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use hex_color::HexColor;
 

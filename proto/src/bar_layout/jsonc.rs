@@ -97,6 +97,7 @@ fn strip_trailing_commas(source: &str) -> String {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use crate::{
         bar_layout::parse,

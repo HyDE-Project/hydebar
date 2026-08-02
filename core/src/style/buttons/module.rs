@@ -94,6 +94,7 @@ fn blend_background(rest: Option<Color>, lit: Color, t: f32) -> Option<Color> {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     #![allow(clippy::float_cmp)]
 

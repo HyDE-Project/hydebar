@@ -123,6 +123,7 @@ pub fn processor_section_full(data: &SystemInfoData) -> Section {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

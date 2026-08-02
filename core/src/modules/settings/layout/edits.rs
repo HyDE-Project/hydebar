@@ -124,6 +124,7 @@ pub fn apply(modules: &Modules, edit: &LayoutEdit) -> Modules {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use hydebar_proto::config::{ModuleDef, ModuleName};
 

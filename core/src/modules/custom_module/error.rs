@@ -125,6 +125,7 @@ impl std::error::Error for CustomListenerError {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use std::{error::Error, sync::Arc};
 

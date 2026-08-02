@@ -62,6 +62,7 @@ pub(super) fn askpass_helper() -> Option<std::path::PathBuf> {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

@@ -24,6 +24,7 @@ pub use self::builder::{Archipelago, PillPaint};
 pub use super::flip::FlipMemo;
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     #![allow(clippy::float_cmp)]
 

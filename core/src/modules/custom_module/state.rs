@@ -203,6 +203,7 @@ impl crate::services::ReadOnlyService for CustomCommandService {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

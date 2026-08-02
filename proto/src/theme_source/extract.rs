@@ -147,6 +147,7 @@ fn targets_full_pill(selector: &str) -> bool {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::{
         super::{

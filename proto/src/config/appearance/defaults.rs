@@ -63,6 +63,7 @@ pub(super) const fn default_opacity() -> f32 {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     #![allow(clippy::float_cmp)]
     use serde::de::value::{Error as DeError, F32Deserializer, F64Deserializer};

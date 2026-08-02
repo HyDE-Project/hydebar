@@ -74,6 +74,7 @@ pub(super) fn truncated(value: &str, max: usize) -> Cow<'_, str> {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

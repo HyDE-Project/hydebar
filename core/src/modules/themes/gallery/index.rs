@@ -67,6 +67,7 @@ fn hex(value: &str) -> Option<iced::Color> {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

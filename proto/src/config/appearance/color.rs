@@ -143,6 +143,7 @@ pub(super) fn default_workspace_colors() -> Vec<AppearanceColor> {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

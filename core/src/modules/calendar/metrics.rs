@@ -63,6 +63,7 @@ pub(super) fn content_height() -> f32 {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::WEEKDAYS;
 

@@ -86,6 +86,7 @@ where
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::{RECONNECT_MAX_DELAY, RECONNECT_MIN_DELAY, reconnect_delay};
 

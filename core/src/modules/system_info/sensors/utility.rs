@@ -128,6 +128,7 @@ fn parse_mebibytes(value: &str) -> Option<u64> {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

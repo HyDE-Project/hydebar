@@ -23,6 +23,7 @@ pub fn calculate_retry_delay(base_backoff: Duration, attempt: u8) -> Duration {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use std::time::Duration;
 

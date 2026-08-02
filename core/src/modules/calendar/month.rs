@@ -200,6 +200,7 @@ impl std::fmt::Display for CalendarError {
 impl std::error::Error for CalendarError {}
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use chrono::{Datelike, Local};
 

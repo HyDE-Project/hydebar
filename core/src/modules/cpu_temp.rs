@@ -51,6 +51,7 @@ pub fn hint(data: &SystemInfoData) -> String {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

@@ -23,6 +23,7 @@ pub(super) fn active_label(state: &HydeState, switching: Option<&str>) -> String
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

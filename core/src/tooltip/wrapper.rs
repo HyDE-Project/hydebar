@@ -101,6 +101,7 @@ pub fn tooltip_wrapper<'a, Message: 'a>(
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     #![allow(clippy::float_cmp)]
     #![allow(clippy::suboptimal_flops)]

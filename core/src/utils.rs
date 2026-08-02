@@ -65,6 +65,7 @@ pub fn truncate_text(value: &str, max_length: u32) -> String {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

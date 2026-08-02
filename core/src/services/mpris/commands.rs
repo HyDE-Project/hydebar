@@ -111,6 +111,7 @@ pub async fn execute_player_command(
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

@@ -17,6 +17,7 @@ pub use metrics::{content_height_of, content_width, section_window_height};
 pub use render::{build_menu_view, build_section_window};
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use hydebar_proto::config::{SystemIndicator, SystemModuleConfig};
 

@@ -128,6 +128,7 @@ impl core::fmt::Display for MissingGlobal {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::{IdleInhibitorError, MissingGlobal};
 

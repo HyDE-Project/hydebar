@@ -34,6 +34,7 @@ pub fn sweep(progress: f32, position: f32, spread: f32) -> f32 {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     #![allow(clippy::float_cmp)]
 

@@ -180,6 +180,7 @@ where
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use iced::{Point, Theme, widget::Space};
     use iced_core::layout::Limits;

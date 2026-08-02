@@ -30,6 +30,7 @@ impl std::error::Error for TrayWatcherError {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use masterror::AppError;
 

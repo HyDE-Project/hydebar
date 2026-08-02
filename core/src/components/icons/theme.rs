@@ -122,6 +122,7 @@ fn leaked(glyph: &str) -> &'static str {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

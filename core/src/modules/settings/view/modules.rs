@@ -53,6 +53,7 @@ fn island_of(entries: &[Entry], index: usize) -> usize {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use hydebar_proto::config::{ModuleDef, ModuleName, Modules};
 

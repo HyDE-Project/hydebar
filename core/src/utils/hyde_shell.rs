@@ -148,6 +148,7 @@ pub async fn run(command: String) -> Option<String> {
 const COMMAND_DEADLINE: std::time::Duration = std::time::Duration::from_mins(2);
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

@@ -99,6 +99,7 @@ fn compare_names(left: &str, right: &str) -> Ordering {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use std::fs;
 

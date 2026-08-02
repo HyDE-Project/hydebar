@@ -123,6 +123,7 @@ pub(super) fn offer_paint(entry: &GalleryTheme) -> ChipPaint {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::{GalleryTheme, authored_badge};
 

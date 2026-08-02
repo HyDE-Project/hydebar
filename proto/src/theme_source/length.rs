@@ -30,6 +30,7 @@ pub(super) fn parse_length(value: &str, font_size_px: Option<f32>) -> Option<f32
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::{super::fixtures::assert_close, *};
 

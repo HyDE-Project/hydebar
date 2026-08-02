@@ -30,6 +30,7 @@ where
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use serde::de::value::{Error as DeError, SeqDeserializer};
 

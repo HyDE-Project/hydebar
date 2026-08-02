@@ -28,6 +28,7 @@ pub fn restart_delay(base: Duration, attempt: u32) -> Duration {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use std::time::Duration;
 

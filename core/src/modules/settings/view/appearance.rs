@@ -122,6 +122,7 @@ pub(super) fn view(config: &Config, opacity: f32, magnification: f32) -> Element
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

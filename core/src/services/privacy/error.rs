@@ -147,6 +147,7 @@ impl From<pipewire::Error> for PrivacyError {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::PrivacyError;
 

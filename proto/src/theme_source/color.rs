@@ -149,6 +149,7 @@ fn parse_hex(body: &str) -> Option<Rgba> {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::{super::fixtures::assert_close, *};
 

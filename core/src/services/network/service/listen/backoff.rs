@@ -24,6 +24,7 @@ pub(super) fn reconnect_delay(failures: u32) -> Duration {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::{RECONNECT_MAX_DELAY, RECONNECT_MIN_DELAY, reconnect_delay};
 

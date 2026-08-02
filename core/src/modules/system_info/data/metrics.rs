@@ -60,6 +60,7 @@ pub(super) fn memory_share(total: u64, unused: u64) -> (u32, u64) {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

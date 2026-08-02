@@ -180,6 +180,7 @@ impl IwdDbus<'_> {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::strength_from_rssi;
 

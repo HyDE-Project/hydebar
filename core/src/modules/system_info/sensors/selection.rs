@@ -219,6 +219,7 @@ pub fn matches(preferred: &str, chip: &str, vendor: GpuVendor, placement: GpuPla
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

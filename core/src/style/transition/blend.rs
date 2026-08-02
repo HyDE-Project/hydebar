@@ -152,6 +152,7 @@ fn blend_optional_colors(
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

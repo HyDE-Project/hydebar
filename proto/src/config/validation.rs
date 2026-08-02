@@ -145,6 +145,7 @@ impl Config {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::{super::CustomModuleDef, *};
     use crate::config::Modules;

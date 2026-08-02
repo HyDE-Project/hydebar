@@ -46,6 +46,7 @@ pub(super) fn trim_transparent(width: u32, height: u32, bytes: Vec<u8>) -> (u32,
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::trim_transparent;
 

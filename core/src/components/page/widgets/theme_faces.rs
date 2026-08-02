@@ -174,6 +174,7 @@ pub(super) fn vertical_face<'a, M: Clone + 'static>(
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use iced::Color;
 

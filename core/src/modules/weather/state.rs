@@ -145,6 +145,7 @@ impl Weather {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::{
         super::data::{MainWeather, WeatherCondition, WeatherResponse, Wind},

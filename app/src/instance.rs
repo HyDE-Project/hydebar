@@ -32,6 +32,7 @@ pub use error::InstanceError;
 pub use takeover::acquire;
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use std::{
         fs, io,

@@ -188,6 +188,7 @@ pub fn parse_flag(answer: &str) -> Option<bool> {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

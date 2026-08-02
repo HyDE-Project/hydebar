@@ -61,6 +61,7 @@ impl ControlCenterViewExt for ControlCenter {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     //! Unit tests for the settings menu layout helpers.
 

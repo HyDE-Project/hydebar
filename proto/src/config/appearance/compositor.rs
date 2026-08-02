@@ -91,6 +91,7 @@ fn unscaled_padding(gap: f32, scale_factor: f64) -> f32 {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     #![allow(clippy::float_cmp)]
     use super::*;

@@ -171,6 +171,7 @@ fn load_config_or_default(path: &Path) -> Config {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use std::fs;
 

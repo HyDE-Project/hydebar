@@ -67,6 +67,7 @@ pub async fn fetch_players(conn: &Connection, names: &[String]) -> Vec<MprisPlay
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

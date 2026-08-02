@@ -88,6 +88,7 @@ pub fn format_speed(speed: u32) -> String {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 

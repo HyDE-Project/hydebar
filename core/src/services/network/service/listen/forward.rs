@@ -76,6 +76,7 @@ impl NetworkService {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::{super::throttle::LinkThrottle, NetworkEvent, NetworkService};
 

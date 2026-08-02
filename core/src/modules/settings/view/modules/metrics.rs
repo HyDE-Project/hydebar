@@ -90,6 +90,7 @@ pub fn desired_height(font_size: f32, entries: &[Entry]) -> f32 {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     #![allow(clippy::float_cmp)]
 

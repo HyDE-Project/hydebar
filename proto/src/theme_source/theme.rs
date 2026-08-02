@@ -121,6 +121,7 @@ fn apply_hyde(theme: &mut HydeTheme, dirs: &HydeDirs) {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use std::{fs, path::PathBuf};
 

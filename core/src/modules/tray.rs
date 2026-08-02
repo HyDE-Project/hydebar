@@ -62,6 +62,7 @@ impl std::fmt::Debug for TrayModule {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     //! Unit tests for the tray module.
 

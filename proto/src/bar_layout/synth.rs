@@ -50,6 +50,7 @@ pub(super) fn synthesize_text_entry(
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use crate::{
         bar_layout::parse,

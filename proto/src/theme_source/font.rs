@@ -135,6 +135,7 @@ impl Sources {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     #![allow(clippy::float_cmp)]
     use std::path::PathBuf;

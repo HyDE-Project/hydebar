@@ -58,6 +58,7 @@ pub fn desired_height(font_size: f32, auto_scale: bool, hyde_branch: bool) -> f3
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     #![allow(clippy::float_cmp, clippy::cast_precision_loss)]
 

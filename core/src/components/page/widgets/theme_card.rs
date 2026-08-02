@@ -217,6 +217,7 @@ pub(super) fn busy_strip<'a, M: 'a>(spinner: Spinner, control: f32) -> Element<'
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 
@@ -255,6 +256,7 @@ mod tests {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod paint_tests {
     #![allow(clippy::float_cmp)]
 

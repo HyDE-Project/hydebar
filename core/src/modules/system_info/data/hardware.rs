@@ -144,6 +144,7 @@ pub(super) fn selected_algorithm(algorithms: &str) -> Option<String> {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 
