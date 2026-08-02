@@ -8,9 +8,9 @@ rust-version.workspace = true
 serde_json.workspace = true
 clap.workspace = true
 flexi_logger.workspace = true
-hydebar-core = { path = "../hydebar-core" }
-hydebar-gui = { path = "../hydebar-gui" }
-hydebar-proto = { path = "../hydebar-proto" }
+hydebar-core = { path = "../core" }
+hydebar-gui = { path = "../gui" }
+hydebar-proto = { path = "../proto" }
 iced.workspace = true
 libc.workspace = true
 log.workspace = true

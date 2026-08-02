@@ -14,7 +14,7 @@ image.workspace = true
 resvg.workspace = true
 futures.workspace = true
 hex_color.workspace = true
-hydebar-proto = { path = "../hydebar-proto" }
+hydebar-proto = { path = "../proto" }
 hyprland.workspace = true
 iced.workspace = true
 iced_core.workspace = true

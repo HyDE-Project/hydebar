@@ -16,7 +16,7 @@ use tokio::runtime::Handle;
 
 use crate::{error::MainError, housekeeping, instance, logging, startup_scale};
 
-const ICON_FONT: &[u8] = include_bytes!("../../../assets/SymbolsNerdFont-Regular.ttf");
+const ICON_FONT: &[u8] = include_bytes!("../../assets/SymbolsNerdFont-Regular.ttf");
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
