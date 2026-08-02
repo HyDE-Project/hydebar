@@ -1,0 +1,26 @@
+name: System dependencies
+description: >
+  Installs the C libraries the bar links against: Wayland and xkbcommon for the
+  surface, PipeWire and PulseAudio for the audio service, udev for the backlight
+  and D-Bus for every desktop service.
+
+runs:
+  using: composite
+  steps:
+    - name: Install system packages
+      shell: bash
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        sudo apt-get update
+        sudo apt-get install --no-install-recommends -y \
+          clang \
+          dbus \
+          libclang-dev \
+          libpipewire-0.3-dev \
+          libpulse-dev \
+          libudev-dev \
+          libwayland-dev \
+          libxkbcommon-dev \
+          llvm-dev \
+          pkg-config

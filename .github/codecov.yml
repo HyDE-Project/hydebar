@@ -1,0 +1,30 @@
+# Coverage is reported against production code only: every test module in the
+# workspace carries `#[cfg_attr(coverage_nightly, coverage(off))]`, so the
+# numbers here are what the bar's own code exercises, not what the tests do.
+
+coverage:
+  precision: 2
+  round: down
+  range: "50...95"
+
+  status:
+    # No fixed number to hit while the suite is still being built out; what a
+    # pull request may not do is take the figure backwards.
+    project:
+      default:
+        target: auto
+        threshold: 0.5%
+        informational: false
+    # Code a pull request adds is held to a real bar, since it is being written
+    # now and its tests can be written with it.
+    patch:
+      default:
+        target: 80%
+        threshold: 0%
+
+comment:
+  layout: "condensed_header, diff, files"
+  require_changes: true
+
+github_checks:
+  annotations: true
