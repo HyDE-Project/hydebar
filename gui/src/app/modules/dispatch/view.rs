@@ -150,51 +150,13 @@ impl App {
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
-    use std::{num::NonZeroUsize, path::PathBuf, sync::Arc};
-
-    use hydebar_core::{
-        config::{Config, ConfigManager, CustomModuleDef},
-        event_bus::EventBus,
-        test_utils::MockHyprlandPort
-    };
-    use hydebar_proto::ports::hyprland::HyprlandPort;
+    use hydebar_core::config::CustomModuleDef;
     use iced_test::simulator;
 
-    use super::{super::super::super::state::test_support::test_logger, *};
-
-    /// The bar with the stock configuration, plus whatever `shape` adds.
-    ///
-    /// The runtime is leaked on purpose: the application keeps the handle it
-    /// was built with, and a view test outlives the scope a dropped runtime
-    /// would end.
-    fn app_with(shape: impl FnOnce(&mut Config)) -> App {
-        let mut config = Config::default();
-        shape(&mut config);
-
-        let port: Arc<dyn HyprlandPort> = Arc::new(MockHyprlandPort::default());
-        let manager = Arc::new(ConfigManager::new(config.clone()));
-        let bus = EventBus::new(NonZeroUsize::new(16).expect("a capacity of sixteen"));
-        let runtime = Box::leak(Box::new(
-            tokio::runtime::Runtime::new().expect("a test runtime")
-        ));
-
-        let (app, _) = App::new((
-            test_logger(),
-            Arc::new(config),
-            manager,
-            PathBuf::new(),
-            port,
-            bus.sender(),
-            runtime.handle().clone(),
-            bus.receiver()
-        ));
-
-        app
-    }
-
-    fn app() -> App {
-        app_with(|_| {})
-    }
+    use super::{
+        super::super::super::state::test_support::{test_app, test_app_with},
+        *
+    };
 
     fn surface() -> Id {
         Id::unique()
@@ -202,7 +164,7 @@ mod tests {
 
     #[test]
     fn every_module_the_bar_ships_is_dispatched_without_panicking() {
-        let app = app();
+        let app = test_app();
 
         for module_name in ModuleName::BUILT_IN {
             let _ = app.get_module_view(&module_name, surface(), 1.0);
@@ -211,7 +173,7 @@ mod tests {
 
     #[test]
     fn whatever_a_module_draws_can_be_drawn() {
-        let app = app();
+        let app = test_app();
 
         for module_name in ModuleName::BUILT_IN {
             if let Some((content, _)) = app.get_module_view(&module_name, surface(), 1.0) {
@@ -227,7 +189,7 @@ mod tests {
 
     #[test]
     fn the_launchers_carry_the_press_that_opens_them() {
-        let app = app();
+        let app = test_app();
 
         for module_name in [ModuleName::AppLauncher, ModuleName::Clipboard] {
             let (_, press) = app
@@ -243,7 +205,7 @@ mod tests {
 
     #[test]
     fn a_custom_module_the_configuration_does_not_declare_is_not_drawn() {
-        let app = app();
+        let app = test_app();
 
         assert!(
             app.get_module_view(&ModuleName::Custom("gone".to_owned()), surface(), 1.0)
@@ -253,7 +215,7 @@ mod tests {
 
     #[test]
     fn a_declared_custom_module_is_built_and_drawn() {
-        let app = app_with(|config| {
+        let app = test_app_with(|config| {
             config.custom_modules = vec![CustomModuleDef {
                 name: "mine".to_owned(),
                 ..CustomModuleDef::default()
@@ -270,7 +232,7 @@ mod tests {
 
     #[test]
     fn a_custom_module_answers_only_to_its_own_name() {
-        let app = app_with(|config| {
+        let app = test_app_with(|config| {
             config.custom_modules = vec![CustomModuleDef {
                 name: "mine".to_owned(),
                 ..CustomModuleDef::default()
@@ -285,7 +247,7 @@ mod tests {
 
     #[test]
     fn the_hyde_buttons_all_launch_a_command() {
-        let app = app();
+        let app = test_app();
 
         for module_name in [
             ModuleName::KeybindHint,
@@ -302,7 +264,7 @@ mod tests {
 
     #[test]
     fn the_idle_inhibitor_is_always_drawn() {
-        let app = app();
+        let app = test_app();
 
         assert!(
             app.get_module_view(&ModuleName::IdleInhibitor, surface(), 1.0)

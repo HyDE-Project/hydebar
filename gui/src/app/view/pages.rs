@@ -173,51 +173,12 @@ impl App {
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
-    use std::{num::NonZeroUsize, path::PathBuf, sync::Arc};
-
-    use hydebar_core::{
-        config::{Config, ConfigManager},
-        event_bus::EventBus,
-        test_utils::MockHyprlandPort
-    };
-    use hydebar_proto::ports::hyprland::HyprlandPort;
     use iced_test::simulator;
 
-    use super::{super::super::state::test_support::test_logger, *};
-
-    /// The bar with the stock configuration, plus whatever `shape` adds to it.
-    ///
-    /// The runtime is leaked on purpose: the application keeps the handle it
-    /// was built with, and a view test outlives the scope a dropped runtime
-    /// would end.
-    fn app_with(shape: impl FnOnce(&mut Config)) -> App {
-        let mut config = Config::default();
-        shape(&mut config);
-
-        let port: Arc<dyn HyprlandPort> = Arc::new(MockHyprlandPort::default());
-        let manager = Arc::new(ConfigManager::new(config.clone()));
-        let bus = EventBus::new(NonZeroUsize::new(16).expect("a capacity of sixteen"));
-        let runtime = Box::leak(Box::new(
-            tokio::runtime::Runtime::new().expect("a test runtime")
-        ));
-
-        let (app, _) = App::new((
-            test_logger(),
-            Arc::new(config),
-            manager,
-            PathBuf::new(),
-            port,
-            bus.sender(),
-            runtime.handle().clone(),
-            bus.receiver()
-        ));
-
-        app
-    }
-
-    fn app() -> App {
-        app_with(|_| {})
-    }
+    use super::{
+        super::super::state::test_support::{test_app, test_app_with},
+        *
+    };
 
     fn surface() -> Id {
         Id::unique()
@@ -244,7 +205,7 @@ mod tests {
 
     #[test]
     fn every_plain_menu_names_a_page_of_the_width_it_asks_for() {
-        let app = app();
+        let app = test_app();
 
         for (menu_type, expected) in plain_menus() {
             let (_, size, measured) = app
@@ -261,7 +222,7 @@ mod tests {
 
     #[test]
     fn every_plain_menu_draws_what_it_names() {
-        let app = app();
+        let app = test_app();
 
         for (menu_type, _) in plain_menus() {
             let (content, _, _) = app
@@ -278,7 +239,7 @@ mod tests {
 
     #[test]
     fn the_measured_menus_state_a_height_of_their_own() {
-        let app = app();
+        let app = test_app();
 
         for menu_type in [
             MenuType::Settings,
@@ -298,7 +259,7 @@ mod tests {
 
     #[test]
     fn a_custom_menu_the_configuration_no_longer_declares_names_no_page() {
-        let app = app();
+        let app = test_app();
 
         assert!(
             app.menu_page(&MenuType::Custom("gone".to_owned()), surface(), 1.0)
@@ -308,7 +269,7 @@ mod tests {
 
     #[test]
     fn a_declared_custom_menu_names_its_own_page() {
-        let app = app_with(|config| {
+        let app = test_app_with(|config| {
             config.custom_modules = vec![hydebar_core::config::CustomModuleDef {
                 name: "mine".to_owned(),
                 ..hydebar_core::config::CustomModuleDef::default()
@@ -328,7 +289,7 @@ mod tests {
 
     #[test]
     fn a_custom_menu_answers_only_to_its_own_name() {
-        let app = app_with(|config| {
+        let app = test_app_with(|config| {
             config.custom_modules = vec![hydebar_core::config::CustomModuleDef {
                 name: "mine".to_owned(),
                 ..hydebar_core::config::CustomModuleDef::default()

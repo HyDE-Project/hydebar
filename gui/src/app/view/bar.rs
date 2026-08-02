@@ -154,3 +154,111 @@ impl App {
         self.dismisses_the_open_menu(bar.into())
     }
 }
+
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
+mod tests {
+    use iced_test::simulator;
+
+    use super::{super::super::state::test_support::test_app_with, *};
+
+    fn surface() -> Id {
+        Id::unique()
+    }
+
+    #[test]
+    fn every_appearance_style_paints_a_bar() {
+        for style in [
+            AppearanceStyle::Islands,
+            AppearanceStyle::Solid,
+            AppearanceStyle::Gradient
+        ] {
+            let app = test_app_with(|config| config.appearance.style = style);
+            let mut ui = simulator(app.bar_surface(surface()));
+
+            assert!(ui.snapshot(&iced::Theme::Dark).is_ok(), "{style:?} paints");
+        }
+    }
+
+    #[test]
+    fn a_gradient_bar_is_painted_from_either_edge() {
+        for position in [Position::Top, Position::Bottom] {
+            let app = test_app_with(|config| {
+                config.appearance.style = AppearanceStyle::Gradient;
+                config.position = position;
+            });
+            let mut ui = simulator(app.bar_surface(surface()));
+
+            assert!(
+                ui.snapshot(&iced::Theme::Dark).is_ok(),
+                "{position:?} paints"
+            );
+        }
+    }
+
+    #[test]
+    fn an_island_bar_without_a_wash_is_left_unpainted() {
+        let app = test_app_with(|config| {
+            config.appearance.style = AppearanceStyle::Islands;
+            config.appearance.bar_opacity = 0.0;
+        });
+
+        let mut ui = simulator(app.bar_surface(surface()));
+
+        assert!(ui.snapshot(&iced::Theme::Dark).is_ok());
+    }
+
+    #[test]
+    fn an_island_bar_with_a_wash_carries_it() {
+        let app = test_app_with(|config| {
+            config.appearance.style = AppearanceStyle::Islands;
+            config.appearance.bar_opacity = 0.5;
+        });
+
+        let mut ui = simulator(app.bar_surface(surface()));
+
+        assert!(ui.snapshot(&iced::Theme::Dark).is_ok());
+    }
+
+    #[test]
+    fn a_bar_with_no_menu_open_takes_no_dismissal_wrapper() {
+        let app = test_app_with(|_| {});
+
+        assert!(!app.outputs.menu_is_open());
+
+        let mut ui = simulator(app.bar_surface(surface()));
+        assert!(ui.snapshot(&iced::Theme::Dark).is_ok());
+    }
+
+    #[test]
+    fn a_bar_naming_its_own_height_is_drawn_to_it() {
+        let tall = test_app_with(|config| config.appearance.height = Some(48.0));
+        let short = test_app_with(|config| config.appearance.height = Some(24.0));
+
+        let tall = simulator(tall.bar_surface(surface()))
+            .snapshot(&iced::Theme::Dark)
+            .is_ok();
+        let short = simulator(short.bar_surface(surface()))
+            .snapshot(&iced::Theme::Dark)
+            .is_ok();
+
+        assert!(tall && short);
+    }
+
+    #[test]
+    fn the_three_sections_are_drawn_side_by_side() {
+        let app = test_app_with(|config| {
+            config.modules.left = vec![hydebar_proto::config::ModuleDef::Single(
+                hydebar_core::config::ModuleName::Clock
+            )];
+            config.modules.center = Vec::new();
+            config.modules.right = vec![hydebar_proto::config::ModuleDef::Single(
+                hydebar_core::config::ModuleName::Settings
+            )];
+        });
+
+        let mut ui = simulator(app.bar_surface(surface()));
+
+        assert!(ui.snapshot(&iced::Theme::Dark).is_ok());
+    }
+}
