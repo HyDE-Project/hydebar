@@ -108,3 +108,131 @@ impl App {
         Task::batch(cmd)
     }
 }
+
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
+mod tests {
+    use std::{num::NonZeroUsize, path::PathBuf, sync::Arc};
+
+    use hydebar_core::{
+        config::{Config, ConfigManager},
+        event_bus::EventBus,
+        test_utils::MockHyprlandPort
+    };
+    use hydebar_proto::ports::hyprland::HyprlandPort;
+
+    use super::{super::super::super::state::test_support::test_logger, *};
+
+    /// The bar with the stock configuration.
+    ///
+    /// The runtime is leaked on purpose: the application keeps the handle it
+    /// was built with, and these tests outlive the scope a dropped runtime
+    /// would end.
+    fn app() -> App {
+        let config = Config::default();
+        let port: Arc<dyn HyprlandPort> = Arc::new(MockHyprlandPort::default());
+        let manager = Arc::new(ConfigManager::new(config.clone()));
+        let bus = EventBus::new(NonZeroUsize::new(16).expect("a capacity of sixteen"));
+        let runtime = Box::leak(Box::new(
+            tokio::runtime::Runtime::new().expect("a test runtime")
+        ));
+
+        let (app, _) = App::new((
+            test_logger(),
+            Arc::new(config),
+            manager,
+            PathBuf::new(),
+            port,
+            bus.sender(),
+            runtime.handle().clone(),
+            bus.receiver()
+        ));
+
+        app
+    }
+
+    fn surface() -> Id {
+        Id::unique()
+    }
+
+    fn press() -> ButtonUIRef {
+        ButtonUIRef {
+            position: iced::Point::new(10.0, 4.0),
+            viewport: (1920.0, 34.0)
+        }
+    }
+
+    /// Every menu a press can open, one of each kind the toggle answers to.
+    fn every_menu() -> Vec<MenuType> {
+        vec![
+            MenuType::Updates,
+            MenuType::Tray("app".to_owned()),
+            MenuType::Wallpaper,
+            MenuType::BarLayout,
+            MenuType::Themes,
+            MenuType::Audio,
+            MenuType::HydeMenu,
+            MenuType::Network,
+            MenuType::Bluetooth,
+            MenuType::ControlCenter,
+            MenuType::Settings,
+            MenuType::Calendar,
+            MenuType::Custom("mine".to_owned()),
+        ]
+    }
+
+    #[test]
+    fn every_menu_readies_itself_for_the_press_that_opens_it() {
+        for menu_type in every_menu() {
+            let mut app = app();
+
+            let _ = app.on_toggle_menu(menu_type.clone(), surface(), press());
+        }
+    }
+
+    #[test]
+    fn a_wallpaper_menu_with_nothing_to_show_waits_for_its_entries() {
+        let mut app = app();
+
+        let _ = app.on_toggle_menu(MenuType::Wallpaper, surface(), press());
+
+        assert!(
+            app.wallpaper_pending.is_some(),
+            "the press is held until the wallpapers are read"
+        );
+    }
+
+    #[test]
+    fn a_bar_layout_menu_with_nothing_to_show_waits_for_its_entries() {
+        let mut app = app();
+
+        let _ = app.on_toggle_menu(MenuType::BarLayout, surface(), press());
+
+        assert!(
+            app.bar_layout_pending.is_some(),
+            "the press is held until the layouts are read"
+        );
+    }
+
+    #[test]
+    fn a_held_press_is_dropped_when_another_menu_is_asked_for() {
+        let mut app = app();
+
+        let _ = app.on_toggle_menu(MenuType::Wallpaper, surface(), press());
+        assert!(app.wallpaper_pending.is_some());
+
+        let _ = app.on_toggle_menu(MenuType::Updates, surface(), press());
+
+        assert!(app.wallpaper_pending.is_none());
+        assert!(app.bar_layout_pending.is_none());
+    }
+
+    #[test]
+    fn a_tray_menu_of_an_item_the_bar_never_saw_readies_nothing() {
+        let mut app = app();
+
+        let _ = app.on_toggle_menu(MenuType::Tray("gone".to_owned()), surface(), press());
+
+        assert!(app.tray.service.is_none());
+    }
+}
