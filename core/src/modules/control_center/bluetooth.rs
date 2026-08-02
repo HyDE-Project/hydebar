@@ -144,3 +144,222 @@ impl BluetoothData {
         .into()
     }
 }
+
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
+mod tests {
+    use std::convert::TryFrom;
+
+    use iced_test::simulator;
+    use zbus::zvariant::OwnedObjectPath;
+
+    use super::*;
+    use crate::services::bluetooth::BluetoothDevice;
+
+    fn surface() -> Id {
+        Id::unique()
+    }
+
+    fn icons() -> IconTheme {
+        IconTheme::default()
+    }
+
+    fn path(at: &str) -> OwnedObjectPath {
+        OwnedObjectPath::try_from(at).expect("a well formed object path")
+    }
+
+    fn device(name: &str, connected: bool, battery: Option<u8>) -> BluetoothDevice {
+        BluetoothDevice {
+            name: name.to_owned(),
+            battery,
+            path: path(&format!("/device/{name}")),
+            connected
+        }
+    }
+
+    fn data(state: BluetoothState, devices: Vec<BluetoothDevice>) -> BluetoothData {
+        BluetoothData {
+            state,
+            devices
+        }
+    }
+
+    #[test]
+    fn the_adapter_is_always_offered_as_a_quick_setting() {
+        let data = data(BluetoothState::Inactive, vec![]);
+
+        let (button, submenu) = data
+            .get_quick_setting_button(surface(), None, false, 1.0, &icons())
+            .expect("the toggle is always there");
+
+        assert!(submenu.is_none());
+
+        let mut ui = simulator(button);
+        assert!(ui.find("Bluetooth").is_ok());
+    }
+
+    #[test]
+    fn pressing_the_toggle_asks_to_switch_the_adapter() {
+        let data = data(BluetoothState::Inactive, vec![]);
+
+        let (button, _) = data
+            .get_quick_setting_button(surface(), None, false, 1.0, &icons())
+            .expect("the toggle is always there");
+
+        let mut ui = simulator(button);
+        let _ = ui.click("Bluetooth").expect("the toggle is pressable");
+
+        assert!(
+            ui.into_messages()
+                .any(|message| matches!(message, Message::Bluetooth(BluetoothMessage::Toggle)))
+        );
+    }
+
+    #[test]
+    fn a_switched_off_adapter_opens_no_device_list() {
+        for state in [BluetoothState::Inactive, BluetoothState::Unavailable] {
+            let data = data(state, vec![device("buds", false, None)]);
+
+            let (_, submenu) = data
+                .get_quick_setting_button(
+                    surface(),
+                    Some(SubMenu::Bluetooth),
+                    false,
+                    1.0,
+                    &icons()
+                )
+                .expect("the toggle is always there");
+
+            let mut ui = simulator(submenu.expect("the open submenu is drawn"));
+            assert!(ui.snapshot(&Theme::Dark).is_ok());
+        }
+    }
+
+    #[test]
+    fn another_open_submenu_does_not_open_the_device_list() {
+        let data = data(BluetoothState::Active, vec![]);
+
+        let (_, submenu) = data
+            .get_quick_setting_button(surface(), Some(SubMenu::Wifi), false, 1.0, &icons())
+            .expect("the toggle is always there");
+
+        assert!(submenu.is_none());
+    }
+
+    #[test]
+    fn an_adapter_that_has_paired_with_nothing_says_so() {
+        let data = data(BluetoothState::Active, vec![]);
+
+        let mut ui = simulator(data.bluetooth_menu(surface(), false, 1.0, &icons()));
+
+        assert!(ui.find("No paired devices").is_ok());
+    }
+
+    #[test]
+    fn every_paired_device_is_named_with_the_deed_it_offers() {
+        let data = data(
+            BluetoothState::Active,
+            vec![device("buds", true, None), device("mouse", false, None)]
+        );
+
+        let mut ui = simulator(data.bluetooth_menu(surface(), false, 1.0, &icons()));
+
+        assert!(ui.find("buds").is_ok());
+        assert!(ui.find("mouse").is_ok());
+        assert!(ui.find("Disconnect").is_ok());
+        assert!(ui.find("Connect").is_ok());
+    }
+
+    #[test]
+    fn pressing_connect_asks_for_that_device() {
+        let data = data(BluetoothState::Active, vec![device("mouse", false, None)]);
+
+        let mut ui = simulator(data.bluetooth_menu(surface(), false, 1.0, &icons()));
+        let _ = ui.click("Connect").expect("the deed is pressable");
+
+        assert!(ui.into_messages().any(|message| matches!(
+            message,
+            Message::Bluetooth(BluetoothMessage::ConnectDevice(at))
+                if at.as_str() == "/device/mouse"
+        )));
+    }
+
+    #[test]
+    fn pressing_disconnect_asks_for_that_device() {
+        let data = data(BluetoothState::Active, vec![device("buds", true, None)]);
+
+        let mut ui = simulator(data.bluetooth_menu(surface(), false, 1.0, &icons()));
+        let _ = ui.click("Disconnect").expect("the deed is pressable");
+
+        assert!(ui.into_messages().any(|message| matches!(
+            message,
+            Message::Bluetooth(BluetoothMessage::DisconnectDevice(at))
+                if at.as_str() == "/device/buds"
+        )));
+    }
+
+    #[test]
+    fn a_device_that_reports_its_charge_shows_it() {
+        let data = data(BluetoothState::Active, vec![device("buds", true, Some(64))]);
+
+        let mut ui = simulator(data.bluetooth_menu(surface(), false, 1.0, &icons()));
+
+        assert!(ui.find("64%").is_ok());
+    }
+
+    #[test]
+    fn a_device_that_reports_no_charge_shows_none() {
+        let data = data(BluetoothState::Active, vec![device("buds", true, None)]);
+
+        let mut ui = simulator(data.bluetooth_menu(surface(), false, 1.0, &icons()));
+
+        assert!(ui.find("100%").is_err());
+        assert!(ui.snapshot(&Theme::Dark).is_ok());
+    }
+
+    #[test]
+    fn every_step_of_the_charge_is_drawn() {
+        for charge in [10, 30, 50, 70, 90] {
+            let data = data(
+                BluetoothState::Active,
+                vec![device("buds", true, Some(charge))]
+            );
+
+            let mut ui = simulator(data.bluetooth_menu(surface(), false, 1.0, &icons()));
+
+            assert!(ui.find(format!("{charge}%")).is_ok());
+            assert!(ui.snapshot(&Theme::Dark).is_ok());
+        }
+    }
+
+    #[test]
+    fn a_menu_that_can_show_more_carries_the_offer() {
+        let data = data(BluetoothState::Active, vec![device("buds", true, None)]);
+
+        let mut ui = simulator(data.bluetooth_menu(surface(), true, 1.0, &icons()));
+
+        assert!(ui.find("More").is_ok());
+    }
+
+    #[test]
+    fn a_menu_that_holds_everything_offers_nothing_more() {
+        let data = data(BluetoothState::Active, vec![device("buds", true, None)]);
+
+        let mut ui = simulator(data.bluetooth_menu(surface(), false, 1.0, &icons()));
+
+        assert!(ui.find("More").is_err());
+    }
+
+    #[test]
+    fn pressing_more_asks_the_list_to_open_wider() {
+        let data = data(BluetoothState::Active, vec![]);
+
+        let mut ui = simulator(data.bluetooth_menu(surface(), true, 1.0, &icons()));
+        let _ = ui.click("More").expect("the offer is pressable");
+
+        assert!(
+            ui.into_messages()
+                .any(|message| matches!(message, Message::Bluetooth(BluetoothMessage::More(_))))
+        );
+    }
+}
