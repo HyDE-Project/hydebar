@@ -17,3 +17,180 @@ mod memo;
 mod widget;
 
 pub use self::{anchor::FlipAnchor, memo::FlipMemo};
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::float_cmp)]
+
+    use std::cell::RefCell;
+
+    use iced::{
+        Element, Point, Theme,
+        widget::{button, container, text}
+    };
+    use iced_test::simulator;
+
+    use super::*;
+
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    enum Msg {
+        Pressed
+    }
+
+    fn block(memo: &RefCell<FlipMemo>, key: u64, progress: f32) -> Element<'_, Msg> {
+        FlipAnchor::new(
+            key,
+            progress,
+            memo,
+            container(button(text("Block")).on_press(Msg::Pressed)).padding(40)
+        )
+        .into()
+    }
+
+    #[test]
+    fn a_fresh_book_remembers_nothing() {
+        let memo = FlipMemo::default();
+
+        assert!(memo.from_map().is_empty());
+    }
+
+    #[test]
+    fn departing_turns_the_live_seats_into_the_ones_to_travel_from() {
+        let mut memo = FlipMemo::default();
+        memo.record(1, 120.0);
+        memo.depart();
+
+        assert_eq!(memo.from_map().get(&1), Some(&120.0));
+    }
+
+    #[test]
+    fn a_seat_nobody_restates_is_dropped_at_the_next_departure() {
+        let mut memo = FlipMemo::default();
+        memo.record(1, 120.0);
+        memo.depart();
+        memo.depart();
+
+        assert!(memo.from_map().is_empty());
+    }
+
+    #[test]
+    fn the_latest_seat_of_a_key_is_the_one_kept() {
+        let mut memo = FlipMemo::default();
+        memo.record(1, 10.0);
+        memo.record(1, 90.0);
+        memo.depart();
+
+        assert_eq!(memo.from_map().get(&1), Some(&90.0));
+    }
+
+    #[test]
+    fn a_resting_anchor_leaves_its_block_where_it_sits() {
+        let memo = RefCell::new(FlipMemo::default());
+        memo.borrow_mut().record(1, 500.0);
+        memo.borrow_mut().depart();
+
+        let anchor: FlipAnchor<'_, Msg> = FlipAnchor::new(1, 1.0, &memo, text::<Theme, iced::Renderer>("Block"));
+
+        assert_eq!(anchor.offset(20.0), 0.0);
+    }
+
+    #[test]
+    fn a_travelling_anchor_draws_its_block_part_way_from_where_it_was() {
+        let memo = RefCell::new(FlipMemo::default());
+        memo.borrow_mut().record(1, 100.0);
+        memo.borrow_mut().depart();
+
+        let anchor: FlipAnchor<'_, Msg> = FlipAnchor::new(1, 0.25, &memo, text::<Theme, iced::Renderer>("Block"));
+
+        assert_eq!(anchor.offset(20.0), 60.0);
+    }
+
+    #[test]
+    fn an_anchor_nobody_remembers_does_not_travel() {
+        let memo = RefCell::new(FlipMemo::default());
+        let anchor: FlipAnchor<'_, Msg> = FlipAnchor::new(9, 0.5, &memo, text::<Theme, iced::Renderer>("Block"));
+
+        assert_eq!(anchor.offset(20.0), 0.0);
+    }
+
+    #[test]
+    fn drawing_an_anchor_writes_the_seat_its_block_rests_at() {
+        let memo = RefCell::new(FlipMemo::default());
+        let mut ui = simulator(block(&memo, 1, 1.0));
+        let _ = ui.snapshot(&Theme::Dark).expect("the block draws");
+
+        memo.borrow_mut().depart();
+        assert!(memo.borrow().from_map().contains_key(&1));
+    }
+
+    #[test]
+    fn a_resting_block_answers_a_press_where_it_sits() {
+        let memo = RefCell::new(FlipMemo::default());
+        let mut ui = simulator(block(&memo, 1, 1.0));
+        let _ = ui.click("Block").expect("the block carries its label");
+
+        let published: Vec<Msg> = ui.into_messages().collect();
+        assert_eq!(published, vec![Msg::Pressed]);
+    }
+
+    #[test]
+    fn a_gliding_block_is_hit_where_it_is_drawn_not_where_it_will_sit() {
+        let memo = RefCell::new(FlipMemo::default());
+        let settled = {
+            let mut ui = simulator(block(&memo, 1, 1.0));
+
+            ui.find("Block")
+                .expect("the block carries its label")
+                .visible_bounds()
+                .expect("a seated block is visible")
+        };
+
+        memo.borrow_mut().record(1, 200.0);
+        memo.borrow_mut().depart();
+
+        let mut ui = simulator(block(&memo, 1, 0.5));
+        let _ = ui.snapshot(&Theme::Dark).expect("the block draws");
+        ui.point_at(Point::new(
+            settled.center().x + 100.0,
+            settled.center().y
+        ));
+        let _ = ui.simulate(iced_test::simulator::click());
+
+        let published: Vec<Msg> = ui.into_messages().collect();
+        assert_eq!(published, vec![Msg::Pressed]);
+    }
+
+    #[test]
+    fn a_gliding_block_ignores_a_press_at_the_seat_it_left() {
+        let memo = RefCell::new(FlipMemo::default());
+        let settled = {
+            let mut ui = simulator(block(&memo, 1, 1.0));
+
+            ui.find("Block")
+                .expect("the block carries its label")
+                .visible_bounds()
+                .expect("a seated block is visible")
+        };
+
+        memo.borrow_mut().record(1, 400.0);
+        memo.borrow_mut().depart();
+
+        let mut ui = simulator(block(&memo, 1, 0.5));
+        let _ = ui.snapshot(&Theme::Dark).expect("the block draws");
+        ui.point_at(settled.center());
+        let _ = ui.simulate(iced_test::simulator::click());
+
+        assert!(ui.into_messages().next().is_none());
+    }
+
+    #[test]
+    fn an_anchor_states_its_key_and_journey_when_printed() {
+        let memo = RefCell::new(FlipMemo::default());
+        let anchor: FlipAnchor<'_, Msg> = FlipAnchor::new(7, 0.5, &memo, text::<Theme, iced::Renderer>("Block"));
+
+        let printed = format!("{anchor:?}");
+
+        assert!(printed.contains('7'));
+        assert!(printed.contains("0.5"));
+    }
+}

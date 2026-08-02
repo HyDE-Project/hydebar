@@ -46,6 +46,7 @@ wayland-protocols.workspace = true
 zbus.workspace = true
 
 [dev-dependencies]
+iced_test = "0.14"
 tempfile = "3"
 
 [features]
