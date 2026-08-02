@@ -79,8 +79,7 @@ impl NetworkService {
                         while let Some(events) = event_s.next().await {
                             for event in events {
                                 if gate.admits(&event) {
-                                    let refresh_link =
-                                        Self::moves_the_link(&event, &mut throttle);
+                                    let refresh_link = Self::moves_the_link(&event, &mut throttle);
                                     let () = publisher.send(ServiceEvent::Update(event)).await;
 
                                     if refresh_link {

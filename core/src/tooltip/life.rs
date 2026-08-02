@@ -23,8 +23,8 @@ mod command;
 mod fade;
 mod observe;
 
-pub use command::HintCommand;
 use command::Dwell;
+pub use command::HintCommand;
 
 /// How long the pointer rests on a module before its tooltip shows.
 const DWELL: Duration = Duration::from_secs(1);

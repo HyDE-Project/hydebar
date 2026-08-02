@@ -70,7 +70,9 @@ impl App {
         self.last_frame = Some(now);
 
         if self.greeting.target() > 0.0 {
-            let deadline = *self.greeting_deadline.get_or_insert(now + GREETING_LIFETIME);
+            let deadline = *self
+                .greeting_deadline
+                .get_or_insert(now + GREETING_LIFETIME);
 
             if now >= deadline {
                 debug!("the greeting's three seconds are up, letting it out");

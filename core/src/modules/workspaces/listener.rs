@@ -2,9 +2,7 @@
 
 use std::{sync::Arc, time::Duration};
 
-use hydebar_proto::ports::hyprland::{
-    HyprlandEventStream, HyprlandPort, HyprlandWorkspaceEvent
-};
+use hydebar_proto::ports::hyprland::{HyprlandEventStream, HyprlandPort, HyprlandWorkspaceEvent};
 use log::error;
 use tokio::time::sleep;
 use tokio_stream::StreamExt;

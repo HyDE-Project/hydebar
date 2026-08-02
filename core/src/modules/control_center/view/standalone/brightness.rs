@@ -1,6 +1,9 @@
 //! Bar entry of the standalone brightness module.
 
-use iced::{Element, widget::{Row, mouse_area}};
+use iced::{
+    Element,
+    widget::{Row, mouse_area}
+};
 
 use crate::{
     components::{

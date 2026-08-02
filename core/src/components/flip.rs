@@ -90,7 +90,8 @@ mod tests {
         memo.borrow_mut().record(1, 500.0);
         memo.borrow_mut().depart();
 
-        let anchor: FlipAnchor<'_, Msg> = FlipAnchor::new(1, 1.0, &memo, text::<Theme, iced::Renderer>("Block"));
+        let anchor: FlipAnchor<'_, Msg> =
+            FlipAnchor::new(1, 1.0, &memo, text::<Theme, iced::Renderer>("Block"));
 
         assert_eq!(anchor.offset(20.0), 0.0);
     }
@@ -101,7 +102,8 @@ mod tests {
         memo.borrow_mut().record(1, 100.0);
         memo.borrow_mut().depart();
 
-        let anchor: FlipAnchor<'_, Msg> = FlipAnchor::new(1, 0.25, &memo, text::<Theme, iced::Renderer>("Block"));
+        let anchor: FlipAnchor<'_, Msg> =
+            FlipAnchor::new(1, 0.25, &memo, text::<Theme, iced::Renderer>("Block"));
 
         assert_eq!(anchor.offset(20.0), 60.0);
     }
@@ -109,7 +111,8 @@ mod tests {
     #[test]
     fn an_anchor_nobody_remembers_does_not_travel() {
         let memo = RefCell::new(FlipMemo::default());
-        let anchor: FlipAnchor<'_, Msg> = FlipAnchor::new(9, 0.5, &memo, text::<Theme, iced::Renderer>("Block"));
+        let anchor: FlipAnchor<'_, Msg> =
+            FlipAnchor::new(9, 0.5, &memo, text::<Theme, iced::Renderer>("Block"));
 
         assert_eq!(anchor.offset(20.0), 0.0);
     }
@@ -151,10 +154,7 @@ mod tests {
 
         let mut ui = simulator(block(&memo, 1, 0.5));
         let _ = ui.snapshot(&Theme::Dark).expect("the block draws");
-        ui.point_at(Point::new(
-            settled.center().x + 100.0,
-            settled.center().y
-        ));
+        ui.point_at(Point::new(settled.center().x + 100.0, settled.center().y));
         let _ = ui.simulate(iced_test::simulator::click());
 
         let published: Vec<Msg> = ui.into_messages().collect();
@@ -187,7 +187,8 @@ mod tests {
     #[test]
     fn an_anchor_states_its_key_and_journey_when_printed() {
         let memo = RefCell::new(FlipMemo::default());
-        let anchor: FlipAnchor<'_, Msg> = FlipAnchor::new(7, 0.5, &memo, text::<Theme, iced::Renderer>("Block"));
+        let anchor: FlipAnchor<'_, Msg> =
+            FlipAnchor::new(7, 0.5, &memo, text::<Theme, iced::Renderer>("Block"));
 
         let printed = format!("{anchor:?}");
 

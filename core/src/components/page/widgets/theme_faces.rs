@@ -9,9 +9,7 @@ use iced::{
     widget::{Column, Row, button, container, text}
 };
 
-use super::theme_card::{
-    ChipPaint, DOT_GAP_EM, ThemeChip, busy_strip, card_colors, palette_dots
-};
+use super::theme_card::{ChipPaint, DOT_GAP_EM, ThemeChip, busy_strip, card_colors, palette_dots};
 use crate::components::icons::icon_raw_sized;
 
 /// The paint a face presses in: unfilled, so only the card behind it carries

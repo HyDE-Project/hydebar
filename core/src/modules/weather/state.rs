@@ -81,8 +81,11 @@ impl Weather {
 
                     match fetch_weather(&location, api_key.as_ref()).await {
                         Ok(response) => {
-                            let data =
-                                WeatherData::from_response(&response, location.clone(), use_celsius);
+                            let data = WeatherData::from_response(
+                                &response,
+                                location.clone(),
+                                use_celsius
+                            );
                             sender.send(WeatherEvent::Updated(data));
                         }
                         Err(err) => {

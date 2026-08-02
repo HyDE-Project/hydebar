@@ -50,10 +50,7 @@ pub(super) async fn run(hyprland: Arc<dyn HyprlandPort>, sender: ModuleEventSend
 /// The port call blocks on the compositor socket with retries; resolving it
 /// here keeps both the runtime workers and the update thread free, and the
 /// message arrives carrying its data instead of an order to go fetch some.
-async fn publish_active_window(
-    port: &Arc<dyn HyprlandPort>,
-    sender: &ModuleEventSender<Message>
-) {
+async fn publish_active_window(port: &Arc<dyn HyprlandPort>, sender: &ModuleEventSender<Message>) {
     let port = Arc::clone(port);
 
     match tokio::task::spawn_blocking(move || port.active_window()).await {

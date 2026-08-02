@@ -7,9 +7,12 @@ use log::{debug, warn};
 use masterror::AppError;
 
 use super::{
+    super::{
+        StatusNotifierItem, TrayData, TrayEvent, app_identity, dbus::StatusNotifierWatcherProxy,
+        icon
+    },
     TrayEventStream,
-    error::TrayWatcherError,
-    super::{StatusNotifierItem, TrayData, TrayEvent, app_identity, dbus::StatusNotifierWatcherProxy, icon}
+    error::TrayWatcherError
 };
 
 /// Longest a tray application may take to answer the item handshake.

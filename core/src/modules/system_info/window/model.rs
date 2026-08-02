@@ -98,7 +98,10 @@ fn meter(label: &str, value: String, percent: u32) -> Row {
 
 /// A pool spelled out with the share the meter next to it draws.
 fn pool(used: u64, total: u64, percent: u32) -> String {
-    format!("{} ({percent}%)", super::super::view::used_of_total(used, total))
+    format!(
+        "{} ({percent}%)",
+        super::super::view::used_of_total(used, total)
+    )
 }
 
 /// A frequency stated in MHz, spelled in GHz.

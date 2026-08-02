@@ -63,9 +63,7 @@ fn fallback_glyph(class: &str) -> String {
     class
         .chars()
         .next()
-        .map_or_else(|| String::from("?"), |first| {
-            first.to_uppercase().collect()
-        })
+        .map_or_else(|| String::from("?"), |first| first.to_uppercase().collect())
 }
 
 #[cfg(test)]

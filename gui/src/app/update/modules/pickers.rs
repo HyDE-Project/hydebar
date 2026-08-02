@@ -43,10 +43,7 @@ impl App {
 
     /// Forwards a wallpaper picker message, opening the waiting window on its
     /// pictures.
-    pub(super) fn update_wallpaper(
-        &mut self,
-        msg: modules::wallpaper::Message
-    ) -> Task<Message> {
+    pub(super) fn update_wallpaper(&mut self, msg: modules::wallpaper::Message) -> Task<Message> {
         let config = std::sync::Arc::clone(&self.config);
         let listed = matches!(msg, modules::wallpaper::Message::Listed(_));
 

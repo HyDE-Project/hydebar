@@ -7,11 +7,10 @@
 mod metrics;
 mod sections;
 
+use iced::Element;
 #[cfg(test)]
 pub(super) use metrics::rows;
 pub(super) use metrics::{desired_height, desired_width};
-
-use iced::Element;
 use sections::{desktop_rows, placement_rows, size_rows};
 
 use crate::{

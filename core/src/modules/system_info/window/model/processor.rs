@@ -1,10 +1,7 @@
 //! The processor's own windows: the monitor section, the standalone
 //! entry and the temperature window beside it.
 
-use super::{
-    super::super::data::SystemInfoData,
-    Row, Section, fact, gigahertz, meter
-};
+use super::{super::super::data::SystemInfoData, Row, Section, fact, gigahertz, meter};
 use crate::components::icons::Icons;
 
 /// The one section a scoped window shows, picked by its icon.

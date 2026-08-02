@@ -36,11 +36,7 @@ fn boot_once<D, A>(deps: D, build: fn(D) -> A) -> impl Fn() -> A {
         clippy::expect_used,
         reason = "iced's boot contract offers no error path for a repeated call"
     )]
-    move || {
-        deps.take()
-            .map(build)
-            .expect("boot called more than once")
-    }
+    move || deps.take().map(build).expect("boot called more than once")
 }
 
 /// Reads the configuration, becomes the single instance and runs the bar.

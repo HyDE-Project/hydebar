@@ -163,10 +163,8 @@ impl HyprlandPort for HyprlandClient {
     fn focus_window(&self, address: &str) -> Result<(), HyprlandError> {
         let address = address.to_string();
         self.execute_with_retry(FOCUS_WINDOW_OP, move || {
-            dispatch::dispatch_in_any_dialect(|dialect| {
-                dispatch::focus_window(dialect, &address)
-            })
-            .map_err(|err| Self::backend_error(FOCUS_WINDOW_OP, err))
+            dispatch::dispatch_in_any_dialect(|dialect| dispatch::focus_window(dialect, &address))
+                .map_err(|err| Self::backend_error(FOCUS_WINDOW_OP, err))
         })
     }
 }

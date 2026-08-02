@@ -25,9 +25,7 @@ pub(super) async fn run(hyprland: Arc<dyn HyprlandPort>, sender: ModuleEventSend
                         Ok(HyprlandKeyboardEvent::LayoutChanged(layout)) => {
                             sender.send(Message::ActiveLayoutChanged(layout));
                         }
-                        Ok(HyprlandKeyboardEvent::LayoutConfigurationChanged(
-                            flag
-                        )) => {
+                        Ok(HyprlandKeyboardEvent::LayoutConfigurationChanged(flag)) => {
                             sender.send(Message::LayoutConfigChanged(flag));
                         }
                         Ok(HyprlandKeyboardEvent::SubmapChanged(_)) => {}

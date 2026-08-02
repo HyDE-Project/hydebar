@@ -2,7 +2,8 @@
 //! device connections.
 
 use super::super::super::{
-    ControlCenter, Message, SubMenu, bluetooth::BluetoothMessage, commands::ControlCenterCommandExt
+    ControlCenter, Message, SubMenu, bluetooth::BluetoothMessage,
+    commands::ControlCenterCommandExt
 };
 use crate::{
     config::ControlCenterModuleConfig,

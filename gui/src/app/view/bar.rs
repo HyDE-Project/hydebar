@@ -9,8 +9,7 @@ use hydebar_core::{
 };
 use hydebar_proto::config::{AppearanceStyle, Position};
 use iced::{
-    Alignment, Color, Element, Gradient, Length, Radians, SurfaceId as Id,
-    gradient::Linear,
+    Alignment, Color, Element, Gradient, Length, Radians, SurfaceId as Id, gradient::Linear,
     widget::container
 };
 
@@ -43,12 +42,8 @@ impl App {
         reason = "the backdrop of every appearance style is painted from one match"
     )]
     pub(super) fn bar_surface(&self, id: Id) -> Element<'_, Message> {
-        let left = self.modules_section(
-            &self.config.modules.left,
-            id,
-            self.appearance().opacity,
-            0
-        );
+        let left =
+            self.modules_section(&self.config.modules.left, id, self.appearance().opacity, 0);
         let center = self.modules_section(
             &self.config.modules.center,
             id,

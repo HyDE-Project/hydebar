@@ -1,7 +1,10 @@
 //! The bar readout of each configured indicator, one spelling per
 //! subject.
 
-use iced::{Element, widget::container, widget::row};
+use iced::{
+    Element,
+    widget::{container, row}
+};
 
 use super::{
     super::{Message, data::SystemInfoData},

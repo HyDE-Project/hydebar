@@ -2,10 +2,7 @@
 
 use std::collections::HashMap;
 
-use hydebar_core::{
-    config::ConfigImpact,
-    modules::custom_module::Custom
-};
+use hydebar_core::{config::ConfigImpact, modules::custom_module::Custom};
 use hydebar_proto::config::{Config, ModuleName};
 
 use super::{super::super::state::App, gate::SYSTEM_INFO_CONSUMERS};

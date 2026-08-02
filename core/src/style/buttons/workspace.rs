@@ -152,7 +152,8 @@ mod tests {
     #[test]
     fn an_unconfigured_focused_workspace_fills_with_the_weak_background() {
         let theme = Theme::Dark;
-        let resting = workspace_button_style(false, true, false, 8.0, None)(&theme, Status::Active);
+        let resting =
+            workspace_button_style(false, true, false, 8.0, None)(&theme, Status::Active);
 
         assert_eq!(
             background_color(&resting),
@@ -165,7 +166,8 @@ mod tests {
     #[test]
     fn an_idle_workspace_is_muted_and_keeps_the_bar_text() {
         let theme = Theme::Dark;
-        let resting = workspace_button_style(false, false, false, 8.0, None)(&theme, Status::Active);
+        let resting =
+            workspace_button_style(false, false, false, 8.0, None)(&theme, Status::Active);
 
         assert!(resting.background.is_none());
         assert_eq!(resting.text_color, theme.palette().text);
@@ -183,7 +185,8 @@ mod tests {
     #[test]
     fn hovering_an_empty_workspace_uses_the_strong_background_and_bar_text() {
         let theme = Theme::Dark;
-        let hovered = workspace_button_style(true, true, false, 8.0, None)(&theme, Status::Hovered);
+        let hovered =
+            workspace_button_style(true, true, false, 8.0, None)(&theme, Status::Hovered);
 
         assert_eq!(
             background_color(&hovered),
@@ -248,7 +251,8 @@ mod tests {
     #[test]
     fn an_urgent_unfocused_workspace_is_painted_danger() {
         let theme = Theme::Dark;
-        let resting = workspace_button_style(false, false, true, 8.0, None)(&theme, Status::Active);
+        let resting =
+            workspace_button_style(false, false, true, 8.0, None)(&theme, Status::Active);
         let danger = theme.extended_palette().danger;
 
         assert_eq!(background_color(&resting), Some(danger.base.color));
@@ -260,7 +264,8 @@ mod tests {
     #[test]
     fn hovering_an_urgent_workspace_deepens_the_danger_fill() {
         let theme = Theme::Dark;
-        let hovered = workspace_button_style(false, false, true, 8.0, None)(&theme, Status::Hovered);
+        let hovered =
+            workspace_button_style(false, false, true, 8.0, None)(&theme, Status::Hovered);
         let danger = theme.extended_palette().danger;
 
         assert_eq!(background_color(&hovered), Some(danger.strong.color));

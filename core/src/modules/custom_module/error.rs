@@ -137,7 +137,8 @@ mod tests {
 
     fn json_error() -> Arc<serde_json::Error> {
         Arc::new(
-            serde_json::from_str::<serde_json::Value>("not json").expect_err("json must not parse")
+            serde_json::from_str::<serde_json::Value>("not json")
+                .expect_err("json must not parse")
         )
     }
 
@@ -238,7 +239,10 @@ mod tests {
         let exactly_at_the_limit = "a".repeat(120);
 
         assert_eq!(truncate_snippet("ok"), "ok");
-        assert_eq!(truncate_snippet(&exactly_at_the_limit), exactly_at_the_limit);
+        assert_eq!(
+            truncate_snippet(&exactly_at_the_limit),
+            exactly_at_the_limit
+        );
     }
 
     #[test]

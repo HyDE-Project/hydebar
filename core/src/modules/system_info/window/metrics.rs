@@ -213,12 +213,8 @@ mod tests {
         let two_sections = [section(vec![fact()], None), section(vec![meter()], None)];
         let footnote = ["Swap usage — no swap".to_owned()];
 
-        assert!(
-            content_height_of(&two_sections, &[]) > content_height_of(&one_section, &[])
-        );
-        assert!(
-            content_height_of(&one_section, &footnote) > content_height_of(&one_section, &[])
-        );
+        assert!(content_height_of(&two_sections, &[]) > content_height_of(&one_section, &[]));
+        assert!(content_height_of(&one_section, &footnote) > content_height_of(&one_section, &[]));
     }
 
     #[test]

@@ -1,6 +1,8 @@
 //! Mapping of connection kinds and signal strengths onto bar icons.
 
-use crate::{components::icons::Icons, services::network::ActiveConnectionInfo, utils::IndicatorState};
+use crate::{
+    components::icons::Icons, services::network::ActiveConnectionInfo, utils::IndicatorState
+};
 
 static WIFI_SIGNAL_ICONS: [Icons; 6] = [
     Icons::Wifi0,

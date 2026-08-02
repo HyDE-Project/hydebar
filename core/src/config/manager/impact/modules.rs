@@ -23,7 +23,12 @@ pub(super) fn mark_module_configs(impact: &mut ConfigImpact, previous: &Config, 
         &previous.clipboard_cmd,
         &next.clipboard_cmd
     );
-    mark_if_changed(impact, ModuleName::Updates, &previous.updates, &next.updates);
+    mark_if_changed(
+        impact,
+        ModuleName::Updates,
+        &previous.updates,
+        &next.updates
+    );
     mark_if_changed(
         impact,
         ModuleName::Workspaces,

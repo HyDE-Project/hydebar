@@ -9,8 +9,8 @@ use std::time::Instant;
 
 use super::sensors::GpuReadings;
 
-pub(super) mod hardware;
 mod extras;
+pub(super) mod hardware;
 mod metrics;
 mod network;
 mod sampler;

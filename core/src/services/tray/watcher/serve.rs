@@ -7,10 +7,10 @@ use log::{debug, info};
 use masterror::AppError;
 
 use super::{
+    super::{TrayEvent, TrayService, dbus::StatusNotifierWatcherProxy},
     TrayEventStream,
     error::TrayWatcherError,
-    items::{build_item, enrol, initialize_data},
-    super::{TrayEvent, TrayService, dbus::StatusNotifierWatcherProxy}
+    items::{build_item, enrol, initialize_data}
 };
 use crate::services::ServiceEvent;
 

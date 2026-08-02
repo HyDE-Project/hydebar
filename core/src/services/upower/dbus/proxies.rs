@@ -1,9 +1,6 @@
 //! Proxy definitions for the `UPower` D-Bus interfaces.
 
-use zbus::{
-    Result, proxy,
-    zvariant::OwnedObjectPath
-};
+use zbus::{Result, proxy, zvariant::OwnedObjectPath};
 
 #[proxy(
     interface = "org.freedesktop.UPower",

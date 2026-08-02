@@ -7,7 +7,6 @@
 //! in [`application`]. This file only strings them together and turns the
 //! outcome into an exit code.
 #![cfg_attr(coverage_nightly, feature(coverage_attribute))]
-
 #![allow(mismatched_lifetime_syntaxes)]
 #![allow(clippy::collapsible_if)]
 #![allow(clippy::redundant_closure)]

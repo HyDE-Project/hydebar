@@ -44,24 +44,20 @@ pub(super) async fn select_access_point(
             .object_server()
             .at(path.clone(), pw_agent)
             .await
-            .map_err(|e| {
-                AppError::internal(format!("Failed to register password agent: {e}"))
-            })?;
+            .map_err(|e| AppError::internal(format!("Failed to register password agent: {e}")))?;
 
-        agent_manager.register_agent(&path).await.map_err(|e| {
-            AppError::internal(format!("Failed to register agent with IWD: {e}"))
-        })?;
+        agent_manager
+            .register_agent(&path)
+            .await
+            .map_err(|e| AppError::internal(format!("Failed to register agent with IWD: {e}")))?;
 
-        tx.send(p).map_err(|e| {
-            AppError::internal(format!("Failed to send password to agent: {e}"))
-        })?;
+        tx.send(p)
+            .map_err(|e| AppError::internal(format!("Failed to send password to agent: {e}")))?;
     }
 
     let net = NetworkProxy::builder(iwd.inner().connection())
         .destination("net.connman.iwd")
-        .map_err(|e| {
-            AppError::internal(format!("Failed to set NetworkProxy destination: {e}"))
-        })?
+        .map_err(|e| AppError::internal(format!("Failed to set NetworkProxy destination: {e}")))?
         .path(ap.path.clone())
         .map_err(|e| AppError::internal(format!("Failed to set NetworkProxy path: {e}")))?
         .build()

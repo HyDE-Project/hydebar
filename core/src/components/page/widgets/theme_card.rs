@@ -63,10 +63,7 @@ fn fade_share(theme: &Theme) -> f32 {
 }
 
 /// Renders the palette of a theme as a row of coloured dots.
-pub(super) fn palette_dots<'a, M: 'a>(
-    palette: Vec<iced::Color>,
-    control: f32
-) -> Element<'a, M> {
+pub(super) fn palette_dots<'a, M: 'a>(palette: Vec<iced::Color>, control: f32) -> Element<'a, M> {
     let dot = DOT_EM * control;
     let mut row = Row::new()
         .spacing(DOT_GAP_EM * control)
@@ -343,7 +340,11 @@ mod paint_tests {
 
         assert_eq!(
             busy.0,
-            palette.primary.base.color.scale_alpha(Spinner::default().pulse())
+            palette
+                .primary
+                .base
+                .color
+                .scale_alpha(Spinner::default().pulse())
         );
         assert_eq!(busy.1, palette.primary.base.text);
         assert!(!busy.2);
@@ -411,8 +412,10 @@ mod paint_tests {
 
     #[test]
     fn a_palette_row_fills_the_width_it_is_given() {
-        let dots: Element<'_, Msg> =
-            palette_dots(vec![Color::WHITE, Color::BLACK, Color::from_rgb(1.0, 0.0, 0.0)], 14.0);
+        let dots: Element<'_, Msg> = palette_dots(
+            vec![Color::WHITE, Color::BLACK, Color::from_rgb(1.0, 0.0, 0.0)],
+            14.0
+        );
 
         assert_eq!(dots.as_widget().size().width, Length::Fill);
     }

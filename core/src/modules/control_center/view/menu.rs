@@ -1,9 +1,6 @@
 //! Rendering of the settings menu contents.
 
-use iced::{
-    Element, Length, SurfaceId as Id,
-    widget::Column
-};
+use iced::{Element, Length, SurfaceId as Id, widget::Column};
 
 use super::helpers::sub_menu_wrapper;
 use crate::{

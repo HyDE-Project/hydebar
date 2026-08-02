@@ -1,7 +1,10 @@
 //! One indicator on the bar: an icon, a label and the thresholds that
 //! colour it.
 
-use iced::{Element, Theme, widget::container, widget::row};
+use iced::{
+    Element, Theme,
+    widget::{container, row}
+};
 
 use super::super::Message;
 use crate::components::{

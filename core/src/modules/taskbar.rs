@@ -73,9 +73,9 @@ impl Taskbar {
 #[cfg(test)]
 pub(crate) fn test_client(address: &str, focused: bool) -> HyprlandClientInfo {
     HyprlandClientInfo {
-        address:      address.to_owned(),
-        class:        "kitty".to_owned(),
-        title:        "shell".to_owned(),
+        address: address.to_owned(),
+        class: "kitty".to_owned(),
+        title: "shell".to_owned(),
         workspace_id: 1,
         focused
     }

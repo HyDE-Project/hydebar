@@ -5,8 +5,8 @@ use log::debug;
 use masterror::{AppError, AppResult};
 
 use super::{
-    EventStream,
-    super::{NetworkBackend, NetworkDbus, NetworkSettingsDbus}
+    super::{NetworkBackend, NetworkDbus, NetworkSettingsDbus},
+    EventStream
 };
 use crate::services::network::{ConnectivityState, NetworkEvent};
 

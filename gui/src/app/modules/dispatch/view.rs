@@ -111,9 +111,7 @@ impl App {
             ModuleName::Audio => self.control_center.audio_bar(self.icons()),
             ModuleName::Brightness => self.control_center.brightness_bar(self.icons()),
             ModuleName::Weather => self.weather.bar_view(self.icons()),
-            ModuleName::Taskbar => self
-                .taskbar
-                .view(self.config.appearance.font_size_px()),
+            ModuleName::Taskbar => self.taskbar.view(self.config.appearance.font_size_px()),
             ModuleName::KeybindHint => Some(hyde_button::bar_view(
                 hyde_button::HydeButton::KeybindHint,
                 self.icons(),

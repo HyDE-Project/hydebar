@@ -1,8 +1,7 @@
 //! System tray service speaking the status notifier protocol.
 
-use iced::widget::{image, svg};
-
 use dbus::Layout;
+use iced::widget::{image, svg};
 
 pub mod dbus;
 

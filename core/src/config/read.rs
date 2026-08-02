@@ -85,11 +85,7 @@ pub fn read_config(path: &Path) -> Result<Config, ConfigReadError> {
 /// must not pay for either. Injecting them also lets a watcher overlay the
 /// directory it is watching, which is the only way a test can observe a theme
 /// switch without mutating the environment of the whole process.
-pub fn read_config_with<F, G>(
-    path: &Path,
-    theme: F,
-    layout: G
-) -> Result<Config, ConfigReadError>
+pub fn read_config_with<F, G>(path: &Path, theme: F, layout: G) -> Result<Config, ConfigReadError>
 where
     F: FnOnce() -> HydeTheme,
     G: FnOnce(&[String]) -> Option<bar_layout::RestatedLayout>

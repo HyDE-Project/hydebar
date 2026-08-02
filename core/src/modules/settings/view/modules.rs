@@ -23,9 +23,9 @@ mod detail;
 mod metrics;
 mod page;
 
-pub(super) use metrics::{desired_height, desired_width};
 #[cfg(test)]
 pub(super) use metrics::rows;
+pub(super) use metrics::{desired_height, desired_width};
 pub(super) use page::view;
 
 use crate::modules::settings::layout::Entry;

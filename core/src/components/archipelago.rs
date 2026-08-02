@@ -114,8 +114,7 @@ mod tests {
     #[test]
     fn an_island_is_padded_before_its_first_module() {
         let memo = RefCell::new(FlipMemo::default());
-        let strip =
-            Archipelago::new(GAP, PAD, 1.0, &memo, filled).push(1, 0, 1.0, module("Only"));
+        let strip = Archipelago::new(GAP, PAD, 1.0, &memo, filled).push(1, 0, 1.0, module("Only"));
 
         let seats = seats(strip, &["Only"]);
 
@@ -221,8 +220,8 @@ mod tests {
     fn a_gliding_module_is_hit_where_it_is_drawn_not_where_it_will_sit() {
         let memo = RefCell::new(FlipMemo::default());
         let settled = {
-            let resting = Archipelago::new(GAP, PAD, 1.0, &memo, filled)
-                .push(1, 0, 1.0, module("A"));
+            let resting =
+                Archipelago::new(GAP, PAD, 1.0, &memo, filled).push(1, 0, 1.0, module("A"));
 
             seats(resting, &["A"])[0]
         };
@@ -234,10 +233,7 @@ mod tests {
             Archipelago::new(GAP, PAD, 0.5, &memo, filled).push(1, 0, 1.0, module("A"));
 
         let mut ui = simulator(Element::new(travelling));
-        ui.point_at(Point::new(
-            settled.center().x + 100.0,
-            settled.center().y
-        ));
+        ui.point_at(Point::new(settled.center().x + 100.0, settled.center().y));
         let _ = ui.simulate(iced_test::simulator::click());
 
         let published: Vec<Msg> = ui.into_messages().collect();
@@ -248,8 +244,8 @@ mod tests {
     fn a_gliding_module_ignores_a_press_at_the_seat_it_left() {
         let memo = RefCell::new(FlipMemo::default());
         let settled = {
-            let resting = Archipelago::new(GAP, PAD, 1.0, &memo, filled)
-                .push(1, 0, 1.0, module("A"));
+            let resting =
+                Archipelago::new(GAP, PAD, 1.0, &memo, filled).push(1, 0, 1.0, module("A"));
 
             seats(resting, &["A"])[0]
         };
@@ -289,7 +285,10 @@ mod tests {
     fn a_pill_is_described_by_the_paint_it_is_handed() {
         let paint = filled(&Theme::Dark).expect("the theme paints a pill");
 
-        assert_eq!(paint.background, Theme::Dark.extended_palette().background.weak.color);
+        assert_eq!(
+            paint.background,
+            Theme::Dark.extended_palette().background.weak.color
+        );
         assert_eq!(paint.border.radius, 8.0.into());
         assert_eq!(paint.shadow.color, Color::TRANSPARENT);
     }
@@ -297,8 +296,7 @@ mod tests {
     #[test]
     fn a_strip_states_its_keys_and_journey_when_printed() {
         let memo = RefCell::new(FlipMemo::default());
-        let strip = Archipelago::new(GAP, PAD, 0.5, &memo, filled)
-            .push(7, 0, 1.0, module("A"));
+        let strip = Archipelago::new(GAP, PAD, 0.5, &memo, filled).push(7, 0, 1.0, module("A"));
 
         let printed = format!("{strip:?}");
 

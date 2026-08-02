@@ -54,7 +54,10 @@ where
         self.sender = None;
     }
 
-    fn view(&self, font_size: Self::ViewData<'_>) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
+    fn view(
+        &self,
+        font_size: Self::ViewData<'_>
+    ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
         self.entries_row(font_size).map(|row| (row, None))
     }
 }
@@ -68,9 +71,7 @@ mod tests {
 
     use super::{Message, Module, ModuleContext, Taskbar};
     use crate::{
-        event_bus::EventBus,
-        modules::taskbar::test_client,
-        test_utils::MockHyprlandPort
+        event_bus::EventBus, modules::taskbar::test_client, test_utils::MockHyprlandPort
     };
 
     #[tokio::test]
@@ -80,10 +81,7 @@ mod tests {
         let ctx = ModuleContext::new(bus.sender(), tokio::runtime::Handle::current());
 
         let port = Arc::new(MockHyprlandPort::default());
-        *port
-            .clients_snapshot
-            .lock()
-            .expect("clients lock") = vec![test_client("0x1", true)];
+        *port.clients_snapshot.lock().expect("clients lock") = vec![test_client("0x1", true)];
 
         let mut taskbar = Taskbar::new(Arc::clone(&port) as Arc<dyn HyprlandPort>);
         <Taskbar as Module<Message>>::register(&mut taskbar, &ctx, ()).expect("registration");

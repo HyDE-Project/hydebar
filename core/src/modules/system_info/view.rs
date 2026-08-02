@@ -4,10 +4,7 @@
 //! The spellings live in [`format`], the coloured single readout in
 //! [`indicator`] and [`threshold`]; this file only lines them up.
 
-use iced::{
-    Alignment, Element,
-    widget::Row
-};
+use iced::{Alignment, Element, widget::Row};
 
 use super::{Message, data::SystemInfoData, indicators};
 use crate::{

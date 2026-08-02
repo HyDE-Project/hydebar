@@ -84,18 +84,23 @@ mod tests {
 
     #[test]
     fn every_button_owns_a_distinct_glyph() {
-        assert_ne!(HydeButton::KeybindHint.glyph(), HydeButton::NightLight.glyph());
+        assert_ne!(
+            HydeButton::KeybindHint.glyph(),
+            HydeButton::NightLight.glyph()
+        );
         assert_ne!(HydeButton::NightLight.glyph(), HydeButton::GameMode.glyph());
-        assert_ne!(HydeButton::KeybindHint.glyph(), HydeButton::GameMode.glyph());
+        assert_ne!(
+            HydeButton::KeybindHint.glyph(),
+            HydeButton::GameMode.glyph()
+        );
     }
 
     #[test]
     fn a_press_carries_the_button_command() {
-        let (_, action) = bar_view::<String>(
-            HydeButton::GameMode,
-            &IconTheme::default(),
-            |command| command
-        );
+        let (_, action) =
+            bar_view::<String>(HydeButton::GameMode, &IconTheme::default(), |command| {
+                command
+            });
 
         match action {
             Some(OnModulePress::Action(command)) => {

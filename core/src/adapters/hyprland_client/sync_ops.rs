@@ -78,4 +78,3 @@ where
         HyprlandError::message(operation, "Hyprland operation failed without error detail")
     }))
 }
-

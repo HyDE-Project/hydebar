@@ -7,14 +7,13 @@ use iced_futures::subscription::{self, Recipe};
 use inotify::Inotify;
 use log::{error, info};
 
-use super::{
-    BATCH_SIZE, SETTLE, ThemeWatcher,
-    watches::add_watches
-};
+use super::{BATCH_SIZE, SETTLE, ThemeWatcher, watches::add_watches};
 use crate::config::{
     ConfigEvent,
-    theme_watch::interpret::{handle_theme_event, interpret_theme_event},
-    theme_watch::sources::watched_names,
+    theme_watch::{
+        interpret::{handle_theme_event, interpret_theme_event},
+        sources::watched_names
+    },
     watch::{WatchLoopOutcome, interpret::process_event_batches}
 };
 
@@ -39,87 +38,91 @@ impl Recipe for ThemeWatcher {
             manager
         } = *self;
 
-        Box::pin(iced::stream::channel(100, move |output: Sender<ConfigEvent>| {
-            let manager = Arc::clone(&manager);
-            let names = watched_names();
+        Box::pin(iced::stream::channel(
+            100,
+            move |output: Sender<ConfigEvent>| {
+                let manager = Arc::clone(&manager);
+                let names = watched_names();
 
-            async move {
-                let mut restarts: u32 = 0;
-                loop {
-                    let inotify = match Inotify::init() {
-                        Ok(inotify) => inotify,
-                        Err(e) => {
-                            error!("Failed to initialize inotify for the HyDE theme: {e}");
+                async move {
+                    let mut restarts: u32 = 0;
+                    loop {
+                        let inotify = match Inotify::init() {
+                            Ok(inotify) => inotify,
+                            Err(e) => {
+                                error!("Failed to initialize inotify for the HyDE theme: {e}");
+                                break;
+                            }
+                        };
+
+                        if !add_watches(&inotify, &targets) {
+                            error!("No HyDE theme directory could be watched; giving up");
                             break;
                         }
-                    };
 
-                    if !add_watches(&inotify, &targets) {
-                        error!("No HyDE theme directory could be watched; giving up");
-                        break;
-                    }
+                        let buffer = [0; 1024];
+                        let stream = match inotify.into_event_stream(buffer) {
+                            Ok(stream) => stream,
+                            Err(e) => {
+                                error!("Failed to create the HyDE theme event stream: {e}");
+                                break;
+                            }
+                        };
 
-                    let buffer = [0; 1024];
-                    let stream = match inotify.into_event_stream(buffer) {
-                        Ok(stream) => stream,
-                        Err(e) => {
-                            error!("Failed to create the HyDE theme event stream: {e}");
-                            break;
-                        }
-                    };
+                        let event_stream = stream.ready_chunks(BATCH_SIZE);
+                        pin_mut!(event_stream);
 
-                    let event_stream = stream.ready_chunks(BATCH_SIZE);
-                    pin_mut!(event_stream);
+                        let sender_template = output.clone();
+                        let config_path_clone = config_path.clone();
+                        let roots_clone = roots.clone();
+                        let manager_clone = Arc::clone(&manager);
+                        let names_ref = &names;
 
-                    let sender_template = output.clone();
-                    let config_path_clone = config_path.clone();
-                    let roots_clone = roots.clone();
-                    let manager_clone = Arc::clone(&manager);
-                    let names_ref = &names;
+                        let outcome = process_event_batches(
+                            event_stream.as_mut(),
+                            |event| interpret_theme_event(event, names_ref),
+                            move |event| {
+                                let mut sender = sender_template.clone();
+                                let config_path = config_path_clone.clone();
+                                let roots = roots_clone.clone();
+                                let manager = Arc::clone(&manager_clone);
 
-                    let outcome = process_event_batches(
-                        event_stream.as_mut(),
-                        |event| interpret_theme_event(event, names_ref),
-                        move |event| {
-                            let mut sender = sender_template.clone();
-                            let config_path = config_path_clone.clone();
-                            let roots = roots_clone.clone();
-                            let manager = Arc::clone(&manager_clone);
+                                async move {
+                                    tokio::time::sleep(SETTLE).await;
 
-                            async move {
-                                tokio::time::sleep(SETTLE).await;
+                                    handle_theme_event(
+                                        &mut sender,
+                                        &config_path,
+                                        &roots,
+                                        event,
+                                        manager
+                                    )
+                                    .await
+                                }
+                            }
+                        )
+                        .await;
 
-                                handle_theme_event(
-                                    &mut sender,
-                                    &config_path,
-                                    &roots,
-                                    event,
-                                    manager
-                                )
-                                .await
+                        match outcome {
+                            WatchLoopOutcome::StreamEnded => {
+                                info!(
+                                    "HyDE theme watch stream closed; attempting to restart the inotify watcher"
+                                );
+
+                                restarts = restarts.saturating_add(1);
+                                tokio::time::sleep(crate::services::reconnect_delay(restarts))
+                                    .await;
+                            }
+                            WatchLoopOutcome::HandlerClosed => {
+                                info!("HyDE theme watch handler closed; stopping watcher loop");
+                                break;
                             }
                         }
-                    )
-                    .await;
-
-                    match outcome {
-                        WatchLoopOutcome::StreamEnded => {
-                            info!(
-                                "HyDE theme watch stream closed; attempting to restart the inotify watcher"
-                            );
-
-                            restarts = restarts.saturating_add(1);
-                            tokio::time::sleep(crate::services::reconnect_delay(restarts)).await;
-                        }
-                        WatchLoopOutcome::HandlerClosed => {
-                            info!("HyDE theme watch handler closed; stopping watcher loop");
-                            break;
-                        }
                     }
-                }
 
-                info!("HyDE theme watcher terminated");
+                    info!("HyDE theme watcher terminated");
+                }
             }
-        }))
+        ))
     }
 }

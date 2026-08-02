@@ -260,7 +260,10 @@ mod tests {
 
         assert_eq!(idle.border.width, 0.0);
         assert_eq!(active.border.width, 2.0);
-        assert_eq!(active.border.color, card_ring(&theme, Some(COLORS), ThemeChip::Active));
+        assert_eq!(
+            active.border.color,
+            card_ring(&theme, Some(COLORS), ThemeChip::Active)
+        );
     }
 
     #[test]
@@ -284,12 +287,13 @@ mod tests {
     #[test]
     fn the_card_fill_fades_with_the_opacity_it_is_handed() {
         let theme = Theme::Dark;
-        let alpha = |opacity| match card_style(Some(COLORS), ThemeChip::Idle, FONT, opacity)(&theme)
-            .background
-        {
-            Some(Background::Color(color)) => color.a,
-            _ => panic!("a card is always filled")
-        };
+        let alpha =
+            |opacity| match card_style(Some(COLORS), ThemeChip::Idle, FONT, opacity)(&theme)
+                .background
+            {
+                Some(Background::Color(color)) => color.a,
+                _ => panic!("a card is always filled")
+            };
 
         assert!(alpha(0.4) < alpha(1.0));
     }
@@ -302,7 +306,10 @@ mod tests {
     #[test]
     fn a_deed_that_cannot_run_is_drawn_without_a_press() {
         let row = deeds_row(
-            vec![("\u{f1f8}", Msg::Remove, false), ("\u{f00c}", Msg::Apply, true)],
+            vec![
+                ("\u{f1f8}", Msg::Remove, false),
+                ("\u{f00c}", Msg::Apply, true),
+            ],
             12.0,
             1.0
         );

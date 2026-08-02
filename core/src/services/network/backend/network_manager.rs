@@ -235,8 +235,10 @@ impl NetworkBackend for NetworkDbus<'_> {
             debug!("Activating VPN: {connection:?}");
             let root = || zvariant::ObjectPath::from_static_str_unchecked("/").into();
             self.activate_connection(connection, root(), root())
-            .await
-            .map_err(|e| AppError::internal(format!("Failed to activate VPN connection: {e}")))?;
+                .await
+                .map_err(|e| {
+                    AppError::internal(format!("Failed to activate VPN connection: {e}"))
+                })?;
         } else {
             debug!("Deactivating VPN: {connection:?}");
             self.deactivate_connection(connection).await.map_err(|e| {

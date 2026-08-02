@@ -338,8 +338,8 @@ mod tests {
         let theme = dark();
         let opaque = background_color(&confirm_button_style(1.0)(&theme, Status::Active))
             .map(|color| color.a);
-        let faded =
-            background_color(&confirm_button_style(0.4)(&theme, Status::Active)).map(|color| color.a);
+        let faded = background_color(&confirm_button_style(0.4)(&theme, Status::Active))
+            .map(|color| color.a);
 
         assert!(faded < opaque);
     }

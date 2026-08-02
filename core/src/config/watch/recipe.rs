@@ -118,7 +118,7 @@ impl Recipe for ConfigWatcher {
                             info!(
                                 "Config watch stream closed; attempting to restart the inotify watcher"
                             );
-                        
+
                             restarts = restarts.saturating_add(1);
                             tokio::time::sleep(crate::services::reconnect_delay(restarts)).await;
                         }

@@ -5,11 +5,11 @@ use log::debug;
 use masterror::{AppError, AppResult};
 
 use super::{
-    EventStream,
     super::{
         NetworkDbus,
         proxies::{AccessPointProxy, DeviceProxy}
-    }
+    },
+    EventStream
 };
 use crate::services::network::{AccessPoint, DeviceState, NetworkEvent};
 

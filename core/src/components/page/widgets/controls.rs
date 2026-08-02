@@ -303,7 +303,8 @@ mod tests {
 
     #[test]
     fn a_waiting_status_row_leads_with_its_indicator() {
-        let row: Element<'_, Msg> = status_row("Theme", "Mocha".to_owned(), Some("\u{f110}"), FONT);
+        let row: Element<'_, Msg> =
+            status_row("Theme", "Mocha".to_owned(), Some("\u{f110}"), FONT);
 
         assert_eq!(row.as_widget().size().width, Length::Fill);
     }

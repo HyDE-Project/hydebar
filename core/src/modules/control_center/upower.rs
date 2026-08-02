@@ -163,7 +163,10 @@ mod tests {
     }
 
     fn battery(capacity: i64, status: BatteryStatus) -> BatteryData {
-        BatteryData { capacity, status }
+        BatteryData {
+            capacity,
+            status
+        }
     }
 
     #[test]
@@ -242,7 +245,11 @@ mod tests {
 
     #[test]
     fn only_the_profiles_that_depart_from_balance_carry_an_indicator() {
-        assert!(PowerProfile::Balanced.indicator::<Probe>(&icons()).is_none());
+        assert!(
+            PowerProfile::Balanced
+                .indicator::<Probe>(&icons())
+                .is_none()
+        );
         assert!(PowerProfile::Unknown.indicator::<Probe>(&icons()).is_none());
         assert!(
             PowerProfile::Performance
@@ -302,11 +309,15 @@ mod tests {
             .expect("a known profile offers a quick setting");
 
         let mut ui = simulator(button);
-        let _ = ui.click("Balanced").expect("the quick setting is pressable");
+        let _ = ui
+            .click("Balanced")
+            .expect("the quick setting is pressable");
 
-        assert!(ui.into_messages().any(|message| matches!(
-            message,
-            Message::UPower(UPowerMessage::TogglePowerProfile)
-        )));
+        assert!(
+            ui.into_messages().any(|message| matches!(
+                message,
+                Message::UPower(UPowerMessage::TogglePowerProfile)
+            ))
+        );
     }
 }

@@ -1,6 +1,8 @@
 //! Handling of power profile messages from the `UPower` service.
 
-use super::super::super::{ControlCenter, commands::ControlCenterCommandExt, upower::UPowerMessage};
+use super::super::super::{
+    ControlCenter, commands::ControlCenterCommandExt, upower::UPowerMessage
+};
 use crate::services::{ReadOnlyService, ServiceEvent, upower::PowerProfileCommand};
 
 impl ControlCenter {

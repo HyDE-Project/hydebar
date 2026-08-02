@@ -20,10 +20,7 @@ use crate::components::{
 };
 
 /// The whole month view.
-pub(super) fn month_view<'a>(
-    state: &'a CalendarState,
-    icons: &IconTheme
-) -> Element<'a, Message> {
+pub(super) fn month_view<'a>(state: &'a CalendarState, icons: &IconTheme) -> Element<'a, Message> {
     let header = row![
         nav_button(icon(icons, Icons::LeftChevron), Message::PreviousMonth),
         button(
@@ -200,7 +197,10 @@ mod tests {
         let mut ui = simulator(view());
 
         for day in WEEKDAYS {
-            assert!(ui.find(day.to_owned()).is_ok(), "the {day} column is headed");
+            assert!(
+                ui.find(day.to_owned()).is_ok(),
+                "the {day} column is headed"
+            );
         }
     }
 

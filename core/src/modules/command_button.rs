@@ -55,7 +55,8 @@ mod tests {
         let button = CommandButton::new(Icons::AppLauncher);
         let command = Some("wofi".to_string());
 
-        let result = <CommandButton as Module<()>>::view(&button, (&command, &IconTheme::default()));
+        let result =
+            <CommandButton as Module<()>>::view(&button, (&command, &IconTheme::default()));
         assert!(result.is_some());
 
         if let Some((_, action)) = result {
@@ -68,7 +69,8 @@ mod tests {
         let button = CommandButton::new(Icons::Clipboard);
         let command = None;
 
-        let result = <CommandButton as Module<()>>::view(&button, (&command, &IconTheme::default()));
+        let result =
+            <CommandButton as Module<()>>::view(&button, (&command, &IconTheme::default()));
         assert!(result.is_none());
     }
 }
