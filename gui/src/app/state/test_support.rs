@@ -5,7 +5,7 @@ use std::sync::OnceLock;
 use flexi_logger::LoggerHandle;
 
 /// The one logger every state test shares, started on first use.
-pub(super) fn test_logger() -> LoggerHandle {
+pub(in crate::app) fn test_logger() -> LoggerHandle {
     static LOGGER: OnceLock<LoggerHandle> = OnceLock::new();
     LOGGER
         .get_or_init(|| {

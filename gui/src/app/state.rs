@@ -5,7 +5,7 @@ mod appearance;
 mod init;
 mod message;
 #[cfg(test)]
-mod test_support;
+pub(in crate::app) mod test_support;
 
 pub use app::App;
 pub(super) use app::GREETING_LIFETIME;

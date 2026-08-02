@@ -1889,6 +1889,7 @@ dependencies = [
  "iced_core",
  "iced_futures",
  "iced_layershell",
+ "iced_test",
  "log",
  "tokio",
  "wayland-client",
