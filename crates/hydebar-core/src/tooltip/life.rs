@@ -15,44 +15,22 @@ use std::time::{Duration, Instant};
 use hydebar_proto::config::ModuleName;
 use iced::SurfaceId as Id;
 
+#[cfg(test)]
 use super::TooltipInfo;
-use crate::animation::{GENTLE, SNAPPY, Spring};
+use crate::animation::{SNAPPY, Spring};
+
+mod command;
+mod fade;
+mod observe;
+
+pub use command::HintCommand;
+use command::Dwell;
 
 /// How long the pointer rests on a module before its tooltip shows.
 const DWELL: Duration = Duration::from_secs(1);
 
 /// How long after a tooltip hides the next one still shows at once.
 const WARMTH: Duration = Duration::from_millis(300);
-
-/// What the shell must do for the machine, in its own vocabulary.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum HintCommand {
-    /// Put this hint on the tooltip surface.
-    Show {
-        /// Bar surface the module sits on.
-        surface: Id,
-        /// Module the hint belongs to.
-        module:  ModuleName,
-        /// The hint itself.
-        info:    TooltipInfo
-    },
-    /// Take the hint off the tooltip surface.
-    Hide {
-        /// Bar surface the module sits on.
-        surface: Id,
-        /// Only hide a hint this module owns; [`None`] hides whatever shows.
-        owner:   Option<ModuleName>
-    }
-}
-
-/// A hint waiting out the rest of the pointer's dwell.
-#[derive(Debug, Clone)]
-struct Dwell {
-    surface: Id,
-    module:  ModuleName,
-    info:    TooltipInfo,
-    due:     Instant
-}
 
 /// The one tooltip lifecycle of the bar.
 ///
@@ -97,163 +75,6 @@ impl Hints {
     #[must_use]
     pub fn needs_frames(&self) -> bool {
         self.dwell.is_some() || self.presence.is_animating()
-    }
-
-    /// Follows the pointer entering or leaving a module.
-    ///
-    /// `hint` carries the module's tooltip when it publishes one for this
-    /// move. With `animated` off, every fade collapses to a snap.
-    pub fn observe(
-        &mut self,
-        surface: Id,
-        module: ModuleName,
-        entered: bool,
-        hint: Option<TooltipInfo>,
-        now: Instant,
-        animated: bool
-    ) -> Option<HintCommand> {
-        match hint {
-            Some(_) if !entered => {
-                // the anchors never publish a hint on a leave; a machine that
-                // trusted that silently would show a hint for a module the
-                // pointer just left if they ever did
-                self.hide(surface, Some(module), now, animated)
-            }
-            Some(info) => {
-                let warm = self.shown || self.warm_until.is_some_and(|until| now < until);
-
-                if warm {
-                    self.dwell = None;
-
-                    return Some(self.show(surface, module, info, animated));
-                }
-
-                self.dwell = Some(Dwell {
-                    surface,
-                    module,
-                    info,
-                    due: now + DWELL
-                });
-
-                None
-            }
-            None => {
-                if self
-                    .dwell
-                    .as_ref()
-                    .is_some_and(|dwell| !entered && dwell.module == module)
-                {
-                    self.dwell = None;
-                }
-
-                let owner = if entered { None } else { Some(module) };
-
-                self.hide(surface, owner, now, animated)
-            }
-        }
-    }
-
-    /// The show whose dwell `now` has served, if one was waiting.
-    pub fn served(&mut self, now: Instant, animated: bool) -> Option<HintCommand> {
-        if self.dwell.as_ref().is_none_or(|dwell| now < dwell.due) {
-            return None;
-        }
-
-        let dwell = self.dwell.take()?;
-
-        Some(self.show(dwell.surface, dwell.module, dwell.info, animated))
-    }
-
-    /// Advances the fade and reports it, with the hide a landed fade-out owes.
-    pub fn advance(&mut self, elapsed: Duration) -> (bool, Option<HintCommand>) {
-        let fading = self.presence.advance(elapsed);
-
-        if !fading
-            && self.presence.value() <= f32::EPSILON
-            && let Some((surface, owner)) = self.closing.take()
-        {
-            return (
-                false,
-                Some(HintCommand::Hide {
-                    surface,
-                    owner
-                })
-            );
-        }
-
-        (fading, None)
-    }
-
-    /// Drops every hint at once, for the moment a menu takes the screen.
-    ///
-    /// The warmth goes too: opening a menu is a change of activity, and the
-    /// first hint after it must wait out the dwell like any first hint.
-    pub fn dismiss(&mut self) {
-        self.dwell = None;
-        self.shown = false;
-        self.warm_until = None;
-        self.closing = None;
-        self.presence.snap_to(0.0);
-    }
-
-    /// Starts showing a hint, fading it in unless fades are off.
-    ///
-    /// The entrance is gentle on purpose — a hint is passive information, and
-    /// arriving softly is what tells it apart from something demanding
-    /// attention. The exit in [`Hints::hide`] is quicker: a hint on its way
-    /// out is in the way.
-    fn show(
-        &mut self,
-        surface: Id,
-        module: ModuleName,
-        info: TooltipInfo,
-        animated: bool
-    ) -> HintCommand {
-        self.shown = true;
-        self.closing = None;
-
-        if animated {
-            self.presence.set_response(GENTLE);
-            self.presence.set_target(1.0);
-        } else {
-            self.presence.snap_to(1.0);
-        }
-
-        HintCommand::Show {
-            surface,
-            module,
-            info
-        }
-    }
-
-    /// Starts hiding, deferring the surface wipe until the fade lands.
-    fn hide(
-        &mut self,
-        surface: Id,
-        owner: Option<ModuleName>,
-        now: Instant,
-        animated: bool
-    ) -> Option<HintCommand> {
-        if self.shown {
-            self.shown = false;
-            self.warm_until = Some(now + WARMTH);
-        }
-
-        if animated && self.presence.value() > f32::EPSILON {
-            self.closing = Some((surface, owner));
-            self.presence.set_response(SNAPPY);
-            self.presence.set_target(0.0);
-
-            return None;
-        }
-
-        self.presence.snap_to(0.0);
-        self.closing = None;
-
-        Some(HintCommand::Hide {
-            surface,
-            owner
-        })
     }
 }
 
