@@ -193,8 +193,10 @@ mod tests {
         let mut ui = simulator(placement_rows(&config, FONT, 1.0));
         let _ = ui.click("Bottom").expect("the bottom edge is offered");
 
-        let published: Vec<Message> = ui.into_messages().collect();
-        assert!(published.contains(&Message::SetPosition(Position::Bottom)));
+        assert!(
+            ui.into_messages()
+                .any(|message| message == Message::SetPosition(Position::Bottom))
+        );
     }
 
     #[test]
@@ -268,8 +270,10 @@ mod tests {
 
         let _ = ui.click("+").expect("the stepper offers a step up");
 
-        let published: Vec<Message> = ui.into_messages().collect();
-        assert!(published.contains(&Message::SetOpacity(Settings::opacity_above(opacity))));
+        assert!(
+            ui.into_messages()
+                .any(|message| message == Message::SetOpacity(Settings::opacity_above(opacity)))
+        );
     }
 
     #[test]
@@ -320,7 +324,9 @@ mod tests {
             .click(wanted.label().to_owned())
             .expect("the branch is offered");
 
-        let published: Vec<Message> = ui.into_messages().collect();
-        assert!(published.contains(&Message::SetHydeBranch(wanted)));
+        assert!(
+            ui.into_messages()
+                .any(|message| message == Message::SetHydeBranch(wanted))
+        );
     }
 }
