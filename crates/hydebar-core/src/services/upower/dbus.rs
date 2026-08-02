@@ -1,10 +1,15 @@
+//! Access to power devices and profiles over the `UPower` system bus.
+
 use std::ops::Deref;
 
 use masterror::{AppError, AppResult};
-use zbus::{
-    Result, proxy,
-    zvariant::{ObjectPath, OwnedObjectPath}
-};
+use zbus::zvariant::ObjectPath;
+
+mod battery;
+mod proxies;
+
+pub use battery::Battery;
+pub use proxies::{DeviceProxy, PowerProfilesProxy, UPowerProxy};
 
 pub struct UPowerDbus<'a>(UPowerProxy<'a>);
 
@@ -13,82 +18,6 @@ impl<'a> Deref for UPowerDbus<'a> {
 
     fn deref(&self) -> &Self::Target {
         &self.0
-    }
-}
-
-pub struct Battery(Vec<DeviceProxy<'static>>);
-
-impl Battery {
-    pub async fn state(&self) -> i32 {
-        let mut charging = false;
-        let mut discharging = false;
-
-        for device in &self.0 {
-            if let Ok(state) = device.state().await {
-                match state {
-                    1 => {
-                        charging = true;
-                    }
-                    2 => {
-                        discharging = true;
-                    }
-                    _ => {}
-                }
-            }
-        }
-
-        if charging {
-            1
-        } else if discharging {
-            2
-        } else {
-            4
-        }
-    }
-
-    pub async fn percentage(&self) -> f64 {
-        let mut percentage = 0.0;
-        let mut count = 0;
-
-        for device in &self.0 {
-            if let Ok(p) = device.percentage().await {
-                percentage += p;
-                count += 1;
-            }
-        }
-
-        percentage / f64::from(count)
-    }
-
-    pub async fn time_to_empty(&self) -> i64 {
-        let mut time = 0;
-
-        for device in &self.0 {
-            if let Ok(t) = device.time_to_empty().await {
-                time += t;
-            }
-        }
-
-        time
-    }
-
-    pub async fn time_to_full(&self) -> i64 {
-        let mut time = 0;
-
-        for device in &self.0 {
-            if let Ok(t) = device.time_to_full().await {
-                time += t;
-            }
-        }
-
-        time
-    }
-
-    pub fn get_devices_path(self) -> Vec<ObjectPath<'static>> {
-        self.0
-            .into_iter()
-            .map(|device| device.inner().path().to_owned())
-            .collect()
     }
 }
 
@@ -150,54 +79,4 @@ impl UPowerDbus<'_> {
 
         Ok(device)
     }
-}
-
-#[proxy(
-    interface = "org.freedesktop.UPower",
-    default_service = "org.freedesktop.UPower",
-    default_path = "/org/freedesktop/UPower"
-)]
-pub trait UPower {
-    fn enumerate_devices(&self) -> Result<Vec<OwnedObjectPath>>;
-
-    #[zbus(signal)]
-    fn device_added(&self) -> Result<OwnedObjectPath>;
-}
-
-#[proxy(
-    default_service = "org.freedesktop.UPower",
-    default_path = "/org/freedesktop/UPower/Device",
-    interface = "org.freedesktop.UPower.Device"
-)]
-pub trait Device {
-    #[zbus(property, name = "Type")]
-    fn device_type(&self) -> Result<u32>;
-
-    #[zbus(property)]
-    fn power_supply(&self) -> Result<bool>;
-
-    #[zbus(property)]
-    fn time_to_empty(&self) -> Result<i64>;
-
-    #[zbus(property)]
-    fn time_to_full(&self) -> Result<i64>;
-
-    #[zbus(property)]
-    fn percentage(&self) -> Result<f64>;
-
-    #[zbus(property)]
-    fn state(&self) -> Result<u32>;
-}
-
-#[proxy(
-    default_service = "org.freedesktop.UPower.PowerProfiles",
-    default_path = "/org/freedesktop/UPower/PowerProfiles",
-    interface = "org.freedesktop.UPower.PowerProfiles"
-)]
-pub trait PowerProfiles {
-    #[zbus(property)]
-    fn active_profile(&self) -> Result<String>;
-
-    #[zbus(property)]
-    fn set_active_profile(&self, profile: &str) -> Result<()>;
 }
