@@ -125,3 +125,167 @@ pub fn workspace_button_style(
         base
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::float_cmp)]
+
+    use super::*;
+
+    fn background_color(style: &button::Style) -> Option<Color> {
+        match style.background {
+            Some(Background::Color(color)) => Some(color),
+            _ => None
+        }
+    }
+
+    fn custom() -> AppearanceColor {
+        AppearanceColor::Complete {
+            base:   hex_color::HexColor::rgb(0x10, 0x20, 0x30),
+            strong: None,
+            weak:   None,
+            text:   Some(hex_color::HexColor::rgb(0xf0, 0xf0, 0xf0))
+        }
+    }
+
+    #[test]
+    fn an_unconfigured_focused_workspace_fills_with_the_weak_background() {
+        let theme = Theme::Dark;
+        let resting = workspace_button_style(false, true, false, 8.0, None)(&theme, Status::Active);
+
+        assert_eq!(
+            background_color(&resting),
+            Some(theme.extended_palette().background.weak.color)
+        );
+        assert_eq!(resting.border.radius, 8.0.into());
+        assert_eq!(resting.border.width, 0.0);
+    }
+
+    #[test]
+    fn an_idle_workspace_is_muted_and_keeps_the_bar_text() {
+        let theme = Theme::Dark;
+        let resting = workspace_button_style(false, false, false, 8.0, None)(&theme, Status::Active);
+
+        assert!(resting.background.is_none());
+        assert_eq!(resting.text_color, theme.palette().text);
+    }
+
+    #[test]
+    fn an_empty_workspace_is_outlined_rather_than_filled() {
+        let theme = Theme::Dark;
+        let resting = workspace_button_style(true, true, false, 8.0, None)(&theme, Status::Active);
+
+        assert!(resting.background.is_none());
+        assert_eq!(resting.border.width, 1.0);
+    }
+
+    #[test]
+    fn hovering_an_empty_workspace_uses_the_strong_background_and_bar_text() {
+        let theme = Theme::Dark;
+        let hovered = workspace_button_style(true, true, false, 8.0, None)(&theme, Status::Hovered);
+
+        assert_eq!(
+            background_color(&hovered),
+            Some(theme.extended_palette().background.strong.color)
+        );
+        assert_eq!(hovered.text_color, theme.palette().text);
+    }
+
+    #[test]
+    fn hovering_a_filled_workspace_deepens_it_to_the_strong_pair() {
+        let theme = Theme::Dark;
+        let hovered =
+            workspace_button_style(false, true, false, 8.0, Some(None))(&theme, Status::Hovered);
+
+        assert_eq!(
+            background_color(&hovered),
+            Some(theme.extended_palette().primary.strong.color)
+        );
+        assert_eq!(
+            hovered.text_color,
+            theme.extended_palette().primary.strong.text
+        );
+    }
+
+    #[test]
+    fn a_default_coloured_workspace_takes_the_primary_pair() {
+        let theme = Theme::Dark;
+        let resting =
+            workspace_button_style(false, true, false, 8.0, Some(None))(&theme, Status::Active);
+
+        assert_eq!(
+            background_color(&resting),
+            Some(theme.extended_palette().primary.base.color)
+        );
+        assert_eq!(
+            resting.text_color,
+            theme.extended_palette().primary.base.text
+        );
+    }
+
+    #[test]
+    fn a_custom_coloured_workspace_generates_its_own_pair() {
+        let theme = Theme::Dark;
+        let resting = workspace_button_style(false, true, false, 8.0, Some(Some(custom())))(
+            &theme,
+            Status::Active
+        );
+
+        assert_ne!(
+            background_color(&resting),
+            Some(theme.extended_palette().primary.base.color)
+        );
+        assert!(resting.background.is_some());
+
+        let hovered = workspace_button_style(false, true, false, 8.0, Some(Some(custom())))(
+            &theme,
+            Status::Hovered
+        );
+        assert_ne!(background_color(&hovered), background_color(&resting));
+    }
+
+    #[test]
+    fn an_urgent_unfocused_workspace_is_painted_danger() {
+        let theme = Theme::Dark;
+        let resting = workspace_button_style(false, false, true, 8.0, None)(&theme, Status::Active);
+        let danger = theme.extended_palette().danger;
+
+        assert_eq!(background_color(&resting), Some(danger.base.color));
+        assert_eq!(resting.text_color, danger.base.text);
+        assert_eq!(resting.border.radius, 8.0.into());
+        assert_eq!(resting.border.width, 0.0);
+    }
+
+    #[test]
+    fn hovering_an_urgent_workspace_deepens_the_danger_fill() {
+        let theme = Theme::Dark;
+        let hovered = workspace_button_style(false, false, true, 8.0, None)(&theme, Status::Hovered);
+        let danger = theme.extended_palette().danger;
+
+        assert_eq!(background_color(&hovered), Some(danger.strong.color));
+        assert_eq!(hovered.text_color, danger.strong.text);
+    }
+
+    #[test]
+    fn urgency_yields_to_focus() {
+        let theme = Theme::Dark;
+        let focused =
+            workspace_button_style(false, true, true, 8.0, Some(None))(&theme, Status::Active);
+
+        assert_eq!(
+            background_color(&focused),
+            Some(theme.extended_palette().primary.base.color)
+        );
+    }
+
+    #[test]
+    fn pressed_and_disabled_workspaces_keep_the_resting_fill() {
+        let theme = Theme::Dark;
+        let styled = workspace_button_style(false, true, false, 8.0, Some(None));
+        let resting = background_color(&styled(&theme, Status::Active));
+
+        for status in [Status::Pressed, Status::Disabled] {
+            assert_eq!(background_color(&styled(&theme, status)), resting);
+        }
+    }
+}
