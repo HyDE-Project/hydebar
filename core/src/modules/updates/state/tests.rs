@@ -30,6 +30,25 @@ fn context(runtime: &Runtime) -> (EventBus, ModuleContext) {
     (bus, ctx)
 }
 
+/// Waits for the aborted task behind `handle` to actually finish.
+///
+/// An abort is a request, not an event: the task ends when the runtime next
+/// polls it. A fixed sleep is long enough on an idle machine and too short
+/// under a loaded one — instrumented coverage runs are exactly that — so the
+/// wait is on the condition, with a deadline generous enough that a genuine
+/// hang still fails the test.
+fn wait_until_finished(runtime: &Runtime, handle: &tokio::task::AbortHandle) {
+    runtime.block_on(async {
+        for _ in 0..600 {
+            if handle.is_finished() {
+                return;
+            }
+
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    });
+}
+
 fn config(check: &str, interval: u64) -> UpdatesModuleConfig {
     UpdatesModuleConfig {
         check_cmd:      check.to_owned(),
@@ -163,9 +182,7 @@ fn a_replaced_schedule_ends_the_task_it_replaced() {
     <Updates as Module<Message>>::register(&mut updates, &ctx, Some(&config("sleep 40", 3600)))
         .expect("the second registration succeeds");
 
-    runtime.block_on(async {
-        tokio::time::sleep(Duration::from_millis(100)).await;
-    });
+    wait_until_finished(&runtime, &first);
 
     assert!(first.is_finished());
 }
@@ -201,9 +218,7 @@ fn losing_the_configuration_ends_the_running_schedule() {
     <Updates as Module<Message>>::register(&mut updates, &ctx, None)
         .expect("registration succeeds without a configuration");
 
-    runtime.block_on(async {
-        tokio::time::sleep(Duration::from_millis(100)).await;
-    });
+    wait_until_finished(&runtime, &handle);
 
     assert!(updates.schedule.is_none());
     assert!(handle.is_finished());
@@ -226,9 +241,7 @@ fn deregistering_ends_the_schedule() {
 
     <Updates as Module<Message>>::deregister(&mut updates);
 
-    runtime.block_on(async {
-        tokio::time::sleep(Duration::from_millis(100)).await;
-    });
+    wait_until_finished(&runtime, &handle);
 
     assert!(updates.schedule.is_none());
     assert!(handle.is_finished());
