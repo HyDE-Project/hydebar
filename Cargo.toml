@@ -69,6 +69,10 @@ softbuffer = { git = "https://github.com/MalpenZibo/softbuffer", branch = "wayla
 
 [workspace.lints.rust]
 missing_debug_implementations = "warn"
+unexpected_cfgs = { level = "warn", check-cfg = [
+  "cfg(coverage)",
+  "cfg(coverage_nightly)",
+] }
 
 [workspace.lints.clippy]
 pedantic = { level = "warn", priority = -1 }

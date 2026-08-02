@@ -161,3 +161,148 @@ fn day_button_style(
 
     base
 }
+
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
+mod tests {
+    #![allow(clippy::float_cmp)]
+
+    use iced::widget::button::Status;
+    use iced_test::simulator;
+
+    use super::*;
+
+    fn view() -> Element<'static, Message> {
+        let state = CalendarState::new(2026, 8).expect("August 2026 is a month");
+
+        month_view_owned(state)
+    }
+
+    /// The month view over a state the test owns for as long as the view
+    /// lives, which is what the simulator needs.
+    fn month_view_owned(state: CalendarState) -> Element<'static, Message> {
+        let state = Box::leak(Box::new(state));
+        let icons = Box::leak(Box::new(IconTheme::default()));
+
+        month_view(state, icons)
+    }
+
+    #[test]
+    fn the_month_view_names_the_month_and_the_year() {
+        let mut ui = simulator(view());
+
+        assert!(ui.find("August 2026").is_ok());
+        assert!(ui.snapshot(&Theme::Dark).is_ok());
+    }
+
+    #[test]
+    fn every_weekday_heads_its_column() {
+        let mut ui = simulator(view());
+
+        for day in WEEKDAYS {
+            assert!(ui.find(day.to_owned()).is_ok(), "the {day} column is headed");
+        }
+    }
+
+    #[test]
+    fn pressing_the_title_returns_to_today() {
+        let mut ui = simulator(view());
+        let _ = ui.click("August 2026").expect("the title is a button");
+
+        let published: Vec<Message> = ui.into_messages().collect();
+        assert_eq!(published, vec![Message::Today]);
+    }
+
+    #[test]
+    fn a_day_of_the_grid_is_drawn_for_every_cell_of_six_weeks() {
+        let state = CalendarState::new(2026, 8).expect("August 2026 is a month");
+        let days = state.generate_calendar().days;
+
+        assert_eq!(days.len() % 7, 0);
+        assert!(days.iter().any(|day| day.in_month));
+        assert!(days.iter().any(|day| !day.in_month));
+    }
+
+    #[test]
+    fn the_grid_is_drawn_for_a_month_that_holds_today() {
+        let mut ui = simulator(month_view_owned(CalendarState::current()));
+
+        assert!(ui.snapshot(&Theme::Dark).is_ok());
+    }
+
+    #[test]
+    fn a_resting_chevron_paints_nothing() {
+        let resting = nav_button_style(&Theme::Dark, Status::Active);
+
+        assert!(resting.background.is_none());
+        assert_eq!(resting.border.width, 0.0);
+        assert_eq!(resting.border.color, Color::TRANSPARENT);
+        assert_eq!(resting.text_color, Theme::Dark.palette().text);
+    }
+
+    #[test]
+    fn a_hovered_chevron_fills_with_the_weak_background() {
+        let theme = Theme::Dark;
+        let hovered = nav_button_style(&theme, Status::Hovered);
+
+        assert_eq!(
+            hovered.background,
+            Some(theme.extended_palette().background.weak.color.into())
+        );
+    }
+
+    #[test]
+    fn pressed_and_disabled_chevrons_rest_like_an_idle_one() {
+        for status in [Status::Pressed, Status::Disabled] {
+            assert!(nav_button_style(&Theme::Dark, status).background.is_none());
+        }
+    }
+
+    #[test]
+    fn today_is_the_one_filled_cell() {
+        let theme = Theme::Dark;
+        let today = day_button_style(&theme, Status::Active, true, true);
+
+        assert_eq!(today.background, Some(theme.palette().primary.into()));
+        assert_eq!(today.text_color, theme.extended_palette().primary.base.text);
+    }
+
+    #[test]
+    fn a_day_of_this_month_sits_flat_in_the_bar_text() {
+        let theme = Theme::Dark;
+        let day = day_button_style(&theme, Status::Active, true, false);
+
+        assert!(day.background.is_none());
+        assert_eq!(day.text_color, theme.palette().text);
+    }
+
+    #[test]
+    fn a_day_of_a_neighbouring_month_is_dimmed() {
+        let theme = Theme::Dark;
+        let outside = day_button_style(&theme, Status::Active, false, false);
+
+        assert!(outside.background.is_none());
+        assert_eq!(
+            outside.text_color,
+            theme.extended_palette().background.weak.text
+        );
+    }
+
+    #[test]
+    fn hovering_a_day_lights_it_up() {
+        let theme = Theme::Dark;
+        let hovered = day_button_style(&theme, Status::Hovered, true, false);
+        let palette = theme.extended_palette();
+
+        assert_eq!(hovered.background, Some(palette.primary.weak.color.into()));
+        assert_eq!(hovered.text_color, palette.primary.weak.text);
+    }
+
+    #[test]
+    fn hovering_today_leaves_it_filled_as_it_was() {
+        let theme = Theme::Dark;
+        let hovered = day_button_style(&theme, Status::Hovered, true, true);
+
+        assert_eq!(hovered.background, Some(theme.palette().primary.into()));
+    }
+}
