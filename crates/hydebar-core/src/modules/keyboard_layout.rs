@@ -1,17 +1,20 @@
-use std::{sync::Arc, time::Duration};
+//! The keyboard layout indicator: the active layout's label in the bar.
+//!
+//! One folder, three rooms: [`state`] folds messages in and steps the
+//! label's dissolve, [`listener`] follows the compositor's keyboard events
+//! in the background and [`module`] wires the module to the bar. The root
+//! holds the state the rooms share.
 
-use hydebar_proto::ports::hyprland::{HyprlandKeyboardEvent, HyprlandKeyboardState, HyprlandPort};
-use iced::{Element, widget::text};
-use log::error;
-use tokio::{task::JoinHandle, time::sleep};
-use tokio_stream::StreamExt;
+use std::sync::Arc;
 
-use super::{Module, ModuleError, OnModulePress};
-use crate::{
-    ModuleContext, ModuleEventSender, config::KeyboardLayoutModuleConfig, event_bus::ModuleEvent
-};
+use hydebar_proto::ports::hyprland::{HyprlandKeyboardState, HyprlandPort};
+use tokio::task::JoinHandle;
 
-const KEYBOARD_EVENT_RETRY_DELAY: Duration = Duration::from_millis(500);
+use crate::ModuleEventSender;
+
+mod listener;
+mod module;
+mod state;
 
 pub struct KeyboardLayout {
     hyprland:        Arc<dyn HyprlandPort>,
@@ -36,13 +39,15 @@ impl std::fmt::Debug for KeyboardLayout {
 }
 
 impl Clone for KeyboardLayout {
+    /// The running listener task stays behind: a [`JoinHandle`] cannot be
+    /// cloned, so the clone starts without one.
     fn clone(&self) -> Self {
         Self {
             hyprland:        Arc::clone(&self.hyprland),
             multiple_layout: self.multiple_layout,
             active:          self.active.clone(),
             sender:          self.sender.clone(),
-            task:            None, // JoinHandle can't be cloned
+            task:            None,
             shown:           self.shown.clone()
         }
     }
@@ -78,144 +83,6 @@ impl KeyboardLayout {
             shown: crate::components::crossfade::Crossfade::default()
         }
     }
-
-    /// `animated` decides whether the shown label dissolves into its
-    /// replacement or swaps outright.
-    pub fn update(
-        &mut self,
-        message: Message,
-        config: &KeyboardLayoutModuleConfig,
-        animated: bool
-    ) {
-        match message {
-            Message::ActiveLayoutChanged(layout) => {
-                self.active = layout;
-            }
-            Message::LayoutConfigChanged(layout_flag) => self.multiple_layout = layout_flag,
-            Message::ChangeLayout => {
-                if let Err(err) = self.hyprland.switch_keyboard_layout() {
-                    error!("failed to switch keyboard layout: {err}");
-                }
-            }
-        }
-
-        let label = match config.labels.get(&self.active) {
-            Some(value) => value.clone(),
-            None => self.active.clone()
-        };
-        self.shown.set(label, animated);
-    }
-
-    /// Advances the dissolve of the shown label.
-    pub fn tick_fade(&mut self, elapsed: Duration) -> bool {
-        self.shown.advance(elapsed)
-    }
-
-    /// Whether the shown label is still dissolving.
-    #[must_use]
-    pub fn is_fading(&self) -> bool {
-        self.shown.is_animating()
-    }
-
-    /// Layout currently in force, as the compositor names it.
-    #[must_use]
-    pub fn active_layout(&self) -> &str {
-        &self.active
-    }
-
-    #[cfg(test)]
-    pub(crate) const fn has_multiple_layouts(&self) -> bool {
-        self.multiple_layout
-    }
-}
-
-impl<M> Module<M> for KeyboardLayout
-where
-    M: 'static + Clone
-{
-    type ViewData<'a> = &'a KeyboardLayoutModuleConfig;
-    type RegistrationData<'a> = ();
-
-    fn register(
-        &mut self,
-        ctx: &ModuleContext,
-        (): Self::RegistrationData<'_>
-    ) -> Result<(), ModuleError> {
-        self.sender = Some(ctx.module_sender(ModuleEvent::KeyboardLayout));
-
-        if let Some(handle) = self.task.take() {
-            handle.abort();
-        }
-
-        if let Some(sender) = self.sender.clone() {
-            let hyprland = Arc::clone(&self.hyprland);
-            self.task = Some(ctx.runtime_handle().spawn(async move {
-                loop {
-                    match hyprland.keyboard_events() {
-                        Ok(mut stream) => {
-                            while let Some(event) = stream.next().await {
-                                match event {
-                                    Ok(HyprlandKeyboardEvent::LayoutChanged(layout)) => {
-                                        sender.send(Message::ActiveLayoutChanged(layout));
-                                    }
-                                    Ok(HyprlandKeyboardEvent::LayoutConfigurationChanged(
-                                        flag
-                                    )) => {
-                                        sender.send(Message::LayoutConfigChanged(flag));
-                                    }
-                                    Ok(HyprlandKeyboardEvent::SubmapChanged(_)) => {}
-                                    Err(err) => {
-                                        error!("keyboard event stream error: {err}");
-                                    }
-                                }
-                            }
-                        }
-                        Err(err) => {
-                            error!("failed to start keyboard event stream: {err}");
-                        }
-                    }
-
-                    sleep(KEYBOARD_EVENT_RETRY_DELAY).await;
-                }
-            }));
-        }
-
-        Ok(())
-    }
-
-    /// Drops the keyboard event stream once the layout indicator leaves the
-    /// bar.
-    fn deregister(&mut self) {
-        if let Some(task) = self.task.take() {
-            task.abort();
-        }
-
-        self.sender = None;
-    }
-
-    fn view(
-        &self,
-        config: Self::ViewData<'_>
-    ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
-        if self.multiple_layout {
-            let label = if self.shown.current().is_empty() {
-                let active = config
-                    .labels
-                    .get(&self.active)
-                    .map_or_else(|| self.active.clone(), Clone::clone);
-
-                text(active).into()
-            } else {
-                self.shown.element(crate::components::scale::base())
-            };
-
-            Some((
-                label, None // Action handled in GUI layer
-            ))
-        } else {
-            None
-        }
-    }
 }
 
 #[cfg(test)]
@@ -232,20 +99,5 @@ mod tests {
 
         assert_eq!(module.active_layout(), "us");
         assert!(module.has_multiple_layouts());
-    }
-
-    #[test]
-    fn change_layout_invokes_port_command() {
-        let port = Arc::new(MockHyprlandPort::default());
-        let port_trait: Arc<dyn HyprlandPort> = port.clone();
-        let mut module = KeyboardLayout::new(port_trait);
-
-        module.update(
-            Message::ChangeLayout,
-            &hydebar_proto::config::KeyboardLayoutModuleConfig::default(),
-            false
-        );
-
-        assert_eq!(port.switch_layout_calls(), 1);
     }
 }
