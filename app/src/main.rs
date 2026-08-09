@@ -44,7 +44,13 @@ fn main() -> ExitCode {
 }
 
 /// Builds the runtime and runs the bar on it.
+///
+/// The cap on borrowed runtimes comes first, while the process is still one
+/// thread: it is stated in the environment, and the toolkit reads it the
+/// moment it builds a runtime of its own.
 fn start() -> Result<(), MainError> {
+    runtime::cap_borrowed_pools();
+
     let runtime = runtime::build()?;
 
     application::run(runtime.handle().clone())
