@@ -243,6 +243,24 @@ pub fn load_config() -> Result<Config, ConfigError> {
 let duration: Duration = Duration::from_millis(200);
 ```
 
+### File size
+
+A source file holds at most **150 lines of code**. Doc comments, doctests and
+the file's own `#[cfg(test)] mod tests` are not counted — the limit measures
+the code that runs in production, and a file's tests are expected to be
+longer than what they cover.
+
+Past the limit, the file becomes a directory named after it, one file per
+responsibility, nested again where a submodule outgrows its own file. The
+path a caller imports stays the same, so splitting a file is never a
+breaking change for the rest of the tree.
+
+```bash
+# code lines in a file, tests and doc comments excluded
+sed '/^#\[cfg(test)\]/,$d' core/src/modules/cpu.rs \
+  | grep -vE '^\s*(///|//!|$)' | wc -l
+```
+
 ### Formatting
 
 Always run before committing:
@@ -303,7 +321,7 @@ mod tests {
 ### Creating a New Theme
 
 1. **Choose colors** - Pick a cohesive palette
-2. **Add to PresetTheme enum** in `crates/hydebar-proto/src/config/themes.rs`
+2. **Add to PresetTheme enum** in `proto/src/config/themes.rs`
    (the enum is `#[serde(rename_all = "kebab-case")]`, so `YourThemeName`
    becomes `appearance = "your-theme-name"`):
 
@@ -393,30 +411,30 @@ appearance = "your-theme-name"
 
 ### Creating a New Module
 
-A module lives in `crates/hydebar-core/src/modules/` and implements the
-`Module` trait from `crates/hydebar-core/src/modules.rs` (`register`,
+A module lives in `core/src/modules/` and implements the
+`Module` trait from `core/src/modules.rs` (`register`,
 `deregister`, `poll_schedule`/`poll`, `view`, `subscription`). Wiring it up
 touches four places:
 
 1. **Name** - add a variant to `ModuleName` (and its `BUILT_IN` list,
-   `as_str`, `label`) in `crates/hydebar-proto/src/config/modules.rs`
+   `as_str`, `label`) in `proto/src/config/modules.rs`
 2. **Module** - the state, logic and iced view in
-   `crates/hydebar-core/src/modules/your_module.rs` (split into
-   `state`/`view`/`commands` submodules when it grows)
+   `core/src/modules/your_module.rs`, or in `core/src/modules/your_module/`
+   once its code passes 150 lines (see [File size](#file-size))
 3. **Events** - a `ModuleEvent` variant in
-   `crates/hydebar-core/src/event_bus.rs` if the module publishes background
+   `core/src/event_bus.rs` if the module publishes background
    updates
-4. **Registration and dispatch** - `crates/hydebar-gui/src/app/` —
+4. **Registration and dispatch** - `gui/src/app/` —
    `update/registration.rs` (register while hosted, release when not),
    `update/modules.rs` and the module actions/element wiring under
    `app/modules/`
 
 Any per-module configuration gets its own file under
-`crates/hydebar-proto/src/config/` and a field on `Config`.
+`proto/src/config/` and a field on `Config`.
 
-See existing modules for reference; `modules/weather.rs` is a small
-self-contained example, `modules/media_player.rs` a large one organised with
-inline `mod` blocks. Modules are always one flat file, never a folder.
+See existing modules for reference: `modules/cpu.rs` is a small self-contained
+one, `modules/media_player/` a large one split into `state`, `messages`,
+`commands` and `view`.
 
 ---
 

@@ -56,15 +56,14 @@
 └──────────────────────────────────────┘
 ```
 
-The four crates live under `crates/`: `hydebar-proto` (no GUI dependencies
-beyond shared types), `hydebar-core` (modules, services, event bus),
-`hydebar-gui` (the `App` state machine and bar composition) and `hydebar-app`
-(the binary).
+The four crates live at the workspace root: `proto/` (no GUI dependencies
+beyond shared types), `core/` (modules, services, event bus), `gui/` (the
+`App` state machine and bar composition) and `app/` (the binary).
 
 ## Module Design Pattern
 
-A module lives in `crates/hydebar-core/src/modules/` and implements the
-`Module` trait from `crates/hydebar-core/src/modules.rs`:
+A module lives in `core/src/modules/` and implements the `Module` trait from
+`core/src/modules.rs`:
 
 ```rust
 pub trait Module<Message> {
@@ -91,13 +90,20 @@ pub trait Module<Message> {
   module being attended.
 - `view` renders the bar entry and names the press action.
 
-A module is one file in `modules/` while it fits in one; a mid-sized one is
-organised with inline `mod` blocks inside that file (for example
-`modules/media_player.rs` holds `state`, `messages`, `commands` and `view` as
-inline submodules). A module that outgrows a readable file becomes a
-directory named after it, one file per submodule, nested where a submodule
-outgrows its own file — `modules/system_info/` is the worked example, with
-`sensors/` and `window/` nested inside.
+### One file, 150 lines
+
+A source file holds at most **150 lines of code**. Doc comments, doctests and
+the file's own `#[cfg(test)] mod tests` do not count against the limit — a
+file is measured by the code that runs in production, and tests are expected
+to be longer than what they cover.
+
+A module is therefore one file in `modules/` only while its code fits in 150
+lines — `cpu.rs`, `memory.rs` and `idle_inhibitor.rs` are that size. Anything
+larger becomes a directory named after the module, one file per
+responsibility: `media_player/` splits into `state`, `messages`, `commands`
+and `view`, and a submodule that outgrows its own file nests further —
+`system_info/` is the worked example, with `sensors/` and `window/` inside
+it. The path a caller imports never changes when a file becomes a directory.
 
 ### Where module design is heading
 
@@ -119,11 +125,11 @@ migrated module leaves this list in the commit that moves it.
 
 ### Registration: one law
 
-`crates/hydebar-gui/src/app/update/registration.rs` states the single rule: a
-module is wired to the event bus while the layout hosts it, and released the
-moment it is not. `Modules::hosts` (from
-`crates/hydebar-proto/src/config/modules.rs`) answers "is this drawn
-anywhere", groups included, so an unused module never wakes the runtime.
+`gui/src/app/update/registration.rs` states the single rule: a module is
+wired to the event bus while the layout hosts it, and released the moment it
+is not. `Modules::hosts` (from `proto/src/config/modules.rs`) answers "is
+this drawn anywhere", groups included, so an unused module never wakes the
+runtime.
 
 Some bar entries share one worker: the control-center services feed the
 standalone `Audio`, `Network`, `Bluetooth` and `PowerProfile` readouts, the
@@ -157,8 +163,8 @@ burst is delivered immediately; no grace window taxes a user click.
 
 ### Modularity
 - Adding a module means one entry in the `ModuleName` enum
-  (`crates/hydebar-proto/src/config/modules.rs`), the module itself in core,
-  and its wiring in the GUI registration and dispatch.
+  (`proto/src/config/modules.rs`), the module itself in core, and its wiring
+  in the GUI registration and dispatch.
 
 ### Performance
 - Event-driven updates: the bar sleeps until a bus, socket or file watch wakes
@@ -172,7 +178,8 @@ burst is delivered immediately; no grace window taxes a user click.
 
 ## Example
 
-The battery module is a complete worked example: data and logic in
-`crates/hydebar-core/src/modules/battery.rs`, backed by the UPower service in
-`crates/hydebar-core/src/services/upower/`, with a GUI view in
-`crates/hydebar-gui/src/views/battery.rs`.
+The battery module is a complete worked example, and it is already split the
+way the size limit asks: `core/src/modules/battery/` holds `data`, `state`
+and `view` in a file each, backed by the UPower service in
+`core/src/services/upower/`, and the GUI only dispatches to it from
+`gui/src/app/modules/dispatch/view.rs`.
