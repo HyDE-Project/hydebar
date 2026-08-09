@@ -1,5 +1,6 @@
 #![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 pub mod bar_layout;
+pub mod compositor_ipc;
 pub mod compositor_look;
 pub mod config;
 pub mod hyde_dirs;
