@@ -15,6 +15,17 @@ use crate::error::MainError;
 /// starve the others.
 const RUNTIME_WORKER_THREADS: usize = 4;
 
+/// Ceiling on the threads the blocking pool may hold at once.
+///
+/// Every synchronous errand the bar runs — the compositor round trips behind a
+/// snapshot, the `sysinfo` sampler, a theme's swatches, a directory of
+/// wallpapers, a tray icon being decoded — is handed to this pool, and the
+/// default ceiling is five hundred and twelve. Startup is the busiest the
+/// pool ever gets and it takes eight; a ceiling at twice the observed peak
+/// leaves that untouched while denying any burst the right to answer with
+/// hundreds of threads.
+const BLOCKING_THREAD_CEILING: usize = 16;
+
 /// Workers left to a runtime the bar does not build itself.
 ///
 /// The widget toolkit builds one of its own for subscriptions, sized to the
@@ -57,6 +68,7 @@ pub fn build() -> Result<Runtime, MainError> {
 
     tokio::runtime::Builder::new_multi_thread()
         .worker_threads(workers)
+        .max_blocking_threads(BLOCKING_THREAD_CEILING)
         .thread_name("hydebar-rt")
         .enable_all()
         .build()
