@@ -51,7 +51,7 @@ machine.
   event of a burst is delivered without a grace window: a user click pays no
   batching latency.
 - **Registration gating.** A module absent from the layout starts no
-  background work at all (`crates/hydebar-gui/src/app/update/registration.rs`).
+  background work at all (`gui/src/app/update/registration.rs`).
 - **Bounded runtime.** The tokio pool is pinned to 4 workers
   (`HYDEBAR_RUNTIME_THREADS` overrides it) instead of one per CPU, since the
   workload is parking on D-Bus, Wayland, Hyprland and child-process pipes.

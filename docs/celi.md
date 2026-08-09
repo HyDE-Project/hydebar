@@ -8,10 +8,10 @@
 ЗАДАЧА: Реализовать модуль <name> для Hyprland-панели (hydebar), UI через iced, слой iced_layershell.
 
 СКОУП:
-- Модульный контракт уже в проекте (trait Module в crates/hydebar-core/src/modules.rs: register/deregister, poll_schedule/poll, view, subscription); следовать ему.
-- Реализовать модуль в crates/hydebar-core/src/modules/<name>.rs: локальная модель, register с подписками/расписанием, публикация через ModuleContext в event bus.
+- Модульный контракт уже в проекте (trait Module в core/src/modules.rs: register/deregister, poll_schedule/poll, view, subscription); следовать ему.
+- Реализовать модуль в core/src/modules/<name>.rs: локальная модель, register с подписками/расписанием, публикация через ModuleContext в event bus.
 - Проводка в hydebar-gui: регистрация в app/update/registration.rs (по закону «зарегистрирован, пока layout его рисует»), диспетчеризация в app/update/modules.rs и app/modules/.
-- Конфиг: секция в crates/hydebar-proto/src/config/<name>.rs (serde), валидация, hot-reload изменяет только этот модуль.
+- Конфиг: секция в proto/src/config/<name>.rs (serde), валидация, hot-reload изменяет только этот модуль.
 
 ВНЕ СКОУПА: версия crates/toolchain, CHANGELOG, общий рефактор ядра.
 
@@ -21,17 +21,17 @@ AR/DoD:
 - События модуля идут через BusEvent/ModuleEvent (event_bus.rs); без panic/unwrap/unsafe, минимум clone().
 
 ПЛАН:
-1) Вариант в ModuleName (crates/hydebar-proto/src/config/modules.rs) + конфиг-секция.
+1) Вариант в ModuleName (proto/src/config/modules.rs) + конфиг-секция.
 2) Реализовать Module: register, poll_schedule/poll, view.
 3) hydebar-gui: регистрация + диспетчеризация, батчить Redraw.
 4) Hot-reload.
 5) Юнит-тесты на логику; интеграционный на событие→GUI.
 
 ТОЧКИ ИЗМЕНЕНИЙ:
-- crates/hydebar-core/src/modules/<name>.rs
-- crates/hydebar-proto/src/config/modules.rs (ModuleName) и config/<name>.rs
-- crates/hydebar-core/src/event_bus.rs (вариант ModuleEvent)
-- crates/hydebar-gui/src/app/update/registration.rs, app/update/modules.rs (регистрация и диспетчеризация)
+- core/src/modules/<name>.rs
+- proto/src/config/modules.rs (ModuleName) и config/<name>.rs
+- core/src/event_bus.rs (вариант ModuleEvent)
+- gui/src/app/update/registration.rs, app/update/modules.rs (регистрация и диспетчеризация)
 
 КОМАНДЫ: `cargo check && cargo test --all && cargo fmt --all && cargo clippy --all-targets -- -D warnings`
 
@@ -60,7 +60,7 @@ AR/DoD:
 2) GUI: общий PopupManager, слой, фокус/esc, auto-close.
 3) Мини-тесты на логику; ручная проверка.
 
-ТОЧКИ ИЗМЕНЕНИЙ: crates/hydebar-core/src/modules/<name>/**, crates/hydebar-core/src/menu/** (MenuType), crates/hydebar-gui/src/app/
+ТОЧКИ ИЗМЕНЕНИЙ: core/src/modules/<name>/**, core/src/menu/** (MenuType), gui/src/app/
 
 КОМАНДЫ: `cargo check && cargo test --all && cargo fmt --all && cargo clippy -- -D warnings`
 
@@ -92,7 +92,7 @@ AR/DoD:
 3) Миграция вызовов по участкам, удаление прямых зависимостей.
 4) Тест/проверка.
 
-ИЗМЕНЕНИЯ: crates/hydebar-proto/src/ports/**, crates/hydebar-core/src/adapters/hyprland_client/**, обновления imports в модулях.
+ИЗМЕНЕНИЯ: proto/src/ports/**, core/src/adapters/hyprland_client/**, обновления imports в модулях.
 
 КОМАНДЫ: стандартный набор (check/test/fmt/clippy).
 
@@ -101,13 +101,13 @@ AR/DoD:
 
 ---
 
-## 4) Горячая перезагрузка конфига (база реализована в crates/hydebar-core/src/config/watch)
+## 4) Горячая перезагрузка конфига (база реализована в core/src/config/watch)
 
 ```
 ЗАДАЧА: Реализовать hot-reload конфигов модулей с безопасной валидацией и частичной перезагрузкой.
 
 СКОУП:
-- TOML-схема через serde (crates/hydebar-proto/src/config), валидация при загрузке.
+- TOML-схема через serde (proto/src/config), валидация при загрузке.
 - Перезагружать только изменившиеся модули; при ошибке откатывать к предыдущей валидной конфигурации.
 
 AR/DoD:
@@ -121,7 +121,7 @@ AR/DoD:
 3) Частичная перезагрузка, транзакционность.
 4) Тесты.
 
-ИЗМЕНЕНИЯ: crates/hydebar-core/src/config/**, crates/hydebar-proto/src/config/**
+ИЗМЕНЕНИЯ: core/src/config/**, proto/src/config/**
 
 КОМАНДЫ: стандартный набор.
 
@@ -148,7 +148,7 @@ AR/DoD:
 2) Микро-тикер в GUI.
 3) Бенч/замер.
 
-ИЗМЕНЕНИЯ: crates/hydebar-core/src/event_bus.rs, crates/hydebar-gui/src/app/
+ИЗМЕНЕНИЯ: core/src/event_bus.rs, gui/src/app/
 
 КОМАНДЫ: стандарт.
 
@@ -175,7 +175,7 @@ AR/DoD:
 2) Обернуть вызовы в адаптере.
 3) Лёгкие интеграционные тесты-симуляторы.
 
-ИЗМЕНЕНИЯ: crates/hydebar-core/src/adapters/**, crates/hydebar-core/src/utils/**
+ИЗМЕНЕНИЯ: core/src/adapters/**, core/src/utils/**
 
 КОМАНДЫ: стандарт.
 
@@ -204,7 +204,7 @@ AR/DoD:
 2) Исправить владение/отписки/Drop.
 3) Повторные тесты.
 
-ИЗМЕНЕНИЯ: crates/hydebar-core/src/modules/<name>/**
+ИЗМЕНЕНИЯ: core/src/modules/<name>/**
 
 КОМАНДЫ: стандарт.
 
@@ -233,7 +233,7 @@ AR/DoD:
 2) Правки путей/импортов.
 3) Тест/валидация.
 
-ИЗМЕНЕНИЯ: Cargo.toml/workspace, crates/**
+ИЗМЕНЕНИЯ: Cargo.toml/workspace, proto/**, core/**, gui/**, app/**
 
 КОМАНДЫ: стандарт.
 
@@ -281,7 +281,7 @@ AR/DoD:
 2) Позитив/негатив кейсы.
 3) Замеры coalesce.
 
-ИЗМЕНЕНИЯ: tests/integration/gui_events.rs, crates/hydebar-gui/src/app.rs (точки инъекции)
+ИЗМЕНЕНИЯ: tests/integration/gui_events.rs, gui/src/app.rs (точки инъекции)
 
 КОМАНДЫ: стандарт.
 ```
@@ -306,7 +306,7 @@ AR/DoD:
 2) Пара примерных миграций.
 3) Тесты.
 
-ИЗМЕНЕНИЯ: crates/hydebar-core/src/config/migrations/**
+ИЗМЕНЕНИЯ: core/src/config/migrations/**
 
 КОМАНДЫ: стандарт.
 ```

@@ -9,7 +9,7 @@ records the exact sequence, what each step costs, which outputs hydebar actually
 and which files hydebar must watch in order to recolour without a restart.
 
 Command entry point used by the bar today:
-`crates/hydebar-core/src/utils/hyde_shell.rs` → `scripts/theme-switch '<theme>'`,
+`core/src/utils/hyde_shell.rs` → `scripts/theme-switch '<theme>'`,
 which runs the sequence below with waybar's wallbash template excluded — see §6.
 
 ---
@@ -221,13 +221,13 @@ justifies stage 2 below.
 ## 4. What to move to Rust
 
 Current state: stages 1–3 below have landed.
-`crates/hydebar-proto/src/theme_source/` reads the palette from
+`proto/src/theme_source/` reads the palette from
 `~/.cache/hyde/wall.dcol` (`dcol.rs`), resolves the font natively through the
 HyDE chain (`font.rs`), takes the radius from the compositor
 (`compositor_look.rs`) and keeps the waybar stylesheets (`waybar.rs`,
 `css.rs`) only as a last resort; `hyde_state/` reads `staterc` and the themes
 directory. A dedicated theme watcher
-(`crates/hydebar-core/src/config/theme_watch/`) follows the HyDE files and
+(`core/src/config/theme_watch/`) follows the HyDE files and
 re-runs the config load on any change, so the bar repaints on a HyDE theme
 switch without its own config being touched. The stage descriptions are kept
 below as the record of why each step was taken.
