@@ -7,7 +7,10 @@
 
 use std::process::Command;
 
-use hydebar_proto::config::{AppearanceColor, Config};
+use hydebar_proto::{
+    compositor_ipc,
+    config::{AppearanceColor, Config}
+};
 use log::warn;
 
 /// How long a notice about a refused desktop action stays on screen, in
@@ -91,19 +94,16 @@ pub fn notify_args(
 /// Asks the compositor to show `message`, painted with the bar theme.
 ///
 /// Failures are logged rather than propagated: a notice that cannot be shown
-/// must not take the bar down with it. The whole exchange runs on its own
-/// thread — the callers sit on the update path, and a notice is not worth
-/// stalling a frame for a process round trip.
+/// must not take the bar down with it. The exchange still runs on its own
+/// thread: the callers sit on the update path, and a compositor that has
+/// stopped answering must cost them nothing at all.
 pub fn notify(notice: Notice, duration: u32, color: &str, font_size: f32, message: &str) {
-    let args = notify_args(notice, duration, color, font_size, message);
+    let request = notify_args(notice, duration, color, font_size, message).join(" ");
 
-    std::thread::spawn(move || match Command::new("hyprctl").args(&args).output() {
-        Ok(output) if output.status.success() => {}
-        Ok(output) => warn!(
-            "the compositor refused a notice: {}",
-            String::from_utf8_lossy(&output.stderr).trim()
-        ),
-        Err(err) => warn!("the compositor could not be reached for a notice: {err}")
+    std::thread::spawn(move || match compositor_ipc::request(&request) {
+        Some(answer) if answer.trim() == "ok" => {}
+        Some(answer) => warn!("the compositor refused a notice: {}", answer.trim()),
+        None => warn!("the compositor could not be reached for a notice")
     });
 }
 

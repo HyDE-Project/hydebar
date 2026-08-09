@@ -5,9 +5,8 @@
 //! to know the screen before that moment, so the compositor is asked directly
 //! rather than waiting for the first output event.
 
-use std::process::Command;
-
 use hydebar_core::outputs::auto_metrics;
+use hydebar_proto::compositor_ipc;
 use log::debug;
 
 /// Geometry of the screen the bar will land on.
@@ -32,17 +31,13 @@ impl ScreenGeometry {
 ///
 /// Returns nothing when the compositor cannot be reached or answers something
 /// unexpected, in which case the bar simply keeps the configured sizes.
+///
+/// The screen listing is asked for over the compositor's own socket. This runs
+/// before the first surface exists, so the reading is on the path the bar is
+/// measured by, and the millimetres it needs are in the listing the socket
+/// gives but not in the typed one a client library models.
 pub fn focused_screen() -> Option<ScreenGeometry> {
-    let output = Command::new("hyprctl")
-        .args(["-j", "monitors"])
-        .output()
-        .ok()?;
-
-    if !output.status.success() {
-        return None;
-    }
-
-    parse_focused(&String::from_utf8_lossy(&output.stdout))
+    parse_focused(&compositor_ipc::request("j/monitors")?)
 }
 
 /// Picks the focused screen out of the compositor answer.

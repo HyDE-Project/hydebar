@@ -14,16 +14,15 @@
 //! machine that has never heard of the bar.
 //!
 //! How the rule is handed over depends on how the session was configured. A
-//! Hyprland reading a Lua configuration refuses `hyprctl keyword` outright —
-//! it answers `keyword can't work with non-legacy parsers` — and takes rules
-//! only through `hyprctl eval`, which runs a line of Lua against the running
+//! Hyprland reading a Lua configuration refuses the `keyword` request outright
+//! — it answers `keyword can't work with non-legacy parsers` — and takes rules
+//! only through `eval`, which runs a line of Lua against the running
 //! configuration. A Hyprland reading the older configuration format has no
 //! evaluator at all. Both spellings are therefore offered, the Lua one first.
 
-use std::{
-    process::Command,
-    sync::atomic::{AtomicU8, Ordering}
-};
+use std::sync::atomic::{AtomicU8, Ordering};
+
+use hydebar_proto::compositor_ipc;
 
 use super::wayland::MAIN_NAMESPACE;
 
@@ -35,7 +34,7 @@ const SPELLING_UNKNOWN: u8 = u8::MAX;
 /// The parser a session runs does not change while it runs, and the bar
 /// restates its rules after every compositor reload — a burst of them on a
 /// theme switch. Remembering the accepted spelling turns each restatement
-/// into one process instead of a probe of up to three per rule, the same
+/// into one request instead of a probe of up to three per rule, the same
 /// bargain the dispatch dialect strikes.
 static ACCEPTED_SPELLING: AtomicU8 = AtomicU8::new(SPELLING_UNKNOWN);
 
@@ -105,17 +104,9 @@ fn on_hyprland() -> bool {
     std::env::var_os("HYPRLAND_INSTANCE_SIGNATURE").is_some()
 }
 
-/// Runs one control command, returning what the compositor answered.
-fn hyprctl(command: &str, argument: &str) -> Option<String> {
-    let output = Command::new("hyprctl")
-        .args([command, argument])
-        .output()
-        .ok()?;
-
-    output
-        .status
-        .success()
-        .then(|| String::from_utf8_lossy(&output.stdout).into_owned())
+/// States one rule and returns what the compositor answered.
+fn state_rule(command: &str, argument: &str) -> Option<String> {
+    compositor_ipc::request(&format!("{command} {argument}"))
 }
 
 /// Hands one rule over in whichever spelling the session takes.
@@ -165,7 +156,7 @@ fn try_spelling(command: &str, argument: &str) -> bool {
         argument.to_owned()
     };
 
-    hyprctl(command, &spelled).is_some_and(|answer| accepted(&answer))
+    state_rule(command, &spelled).is_some_and(|answer| accepted(&answer))
 }
 
 /// Asks the compositor to blur what shows through the bar.
