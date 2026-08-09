@@ -195,6 +195,25 @@ mod tests {
         assert_eq!(audio, 1);
     }
 
+    /// Every name a layout has ever called the workspaces by lands on the one
+    /// module: the compositor-specific entry, the layer-shell one it replaced,
+    /// and the protocol-neutral one the layouts shipping today are written
+    /// with.
+    #[test]
+    fn the_workspaces_are_placed_whichever_name_the_layout_calls_them_by() {
+        for name in ["hyprland/workspaces", "wlr/workspaces", "ext/workspaces"] {
+            let source = format!("{{ \"modules-center\": [\"{name}\"] }}");
+
+            let modules = parse(&source, &[]).expect("layout").modules;
+
+            assert_eq!(
+                modules.center,
+                vec![ModuleDef::Single(ModuleName::Workspaces)],
+                "{name} left the workspaces off the bar"
+            );
+        }
+    }
+
     /// The icon and command a user wrote for a name are their word; the
     /// built-in map answers only for names the configuration says nothing
     /// about.

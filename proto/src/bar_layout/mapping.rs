@@ -52,7 +52,7 @@ fn builtin_for(name: &str) -> Option<ModuleName> {
         "memory" => ModuleName::Memory,
         "clock" => ModuleName::Clock,
         "idle_inhibitor" => ModuleName::IdleInhibitor,
-        "hyprland/workspaces" => ModuleName::Workspaces,
+        "hyprland/workspaces" | "wlr/workspaces" | "ext/workspaces" => ModuleName::Workspaces,
         "hyprland/window" => ModuleName::WindowTitle,
         "hyprland/language" | "keyboard-state" => ModuleName::KeyboardLayout,
         "hyprland/submap" => ModuleName::KeyboardSubmap,
