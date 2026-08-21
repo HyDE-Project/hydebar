@@ -273,7 +273,7 @@ impl App {
     }
 
     /// The modules one unit carries.
-    fn members(unit: &ModuleDef) -> Vec<&ModuleName> {
+    pub(crate) fn members(unit: &ModuleDef) -> Vec<&ModuleName> {
         match unit {
             ModuleDef::Single(module) => vec![module],
             ModuleDef::Group(group) => group.iter().collect()

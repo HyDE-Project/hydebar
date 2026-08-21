@@ -464,6 +464,34 @@ mod tests {
     }
 
     #[test]
+    fn every_module_of_a_group_flies_home_not_only_its_first() {
+        use hydebar_core::config::ModuleName;
+        use hydebar_proto::config::ModuleDef;
+
+        let mut app = test_app_with(|config| {
+            config.desk.enabled = true;
+            config.modules.left = vec![ModuleDef::Group(vec![
+                ModuleName::Memory,
+                ModuleName::CpuTemp,
+            ])];
+            config.modules.center = Vec::new();
+            config.modules.right = Vec::new();
+        });
+        app.screen_width = Some(1920.0);
+        open(&mut app);
+
+        app.desk_fades.point(None, false, false, SWEEP);
+        app.send_the_islands_home(surface());
+
+        let seated = app.flip.borrow().from_map().len();
+
+        assert!(
+            seated >= 2,
+            "both modules of the group are given a seat to fly from, not {seated}"
+        );
+    }
+
+    #[test]
     fn each_block_of_a_section_stands_in_a_lane_of_its_own() {
         use hydebar_core::config::ModuleName;
         use hydebar_proto::config::ModuleDef;

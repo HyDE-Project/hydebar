@@ -99,6 +99,12 @@ impl App {
     /// each island is seated beyond the edge it belongs to — the left hand
     /// section past the left edge, the right hand one past the right — and
     /// the strip's own travel carries them in to their places.
+    ///
+    /// Seated module by module, not island by island: on the strip every
+    /// module holds a seat of its own, and the pill around a group is painted
+    /// around wherever its modules are. Seating the group under one key left
+    /// every module but the first without a seat to fly from, and they simply
+    /// appeared while their neighbour flew.
     pub(crate) fn send_the_islands_home(&mut self, surface: iced::SurfaceId) {
         if !self.config.appearance.animations.enabled {
             return;
@@ -116,7 +122,9 @@ impl App {
                 (&layout.modules.right, beyond * 2.0)
             ] {
                 for unit in Self::desk_order(section, false) {
-                    memo.record(self.unit_key(unit, surface), from);
+                    for module in Self::members(unit) {
+                        memo.record(self.flip_key(module, surface), from);
+                    }
                 }
             }
         }
