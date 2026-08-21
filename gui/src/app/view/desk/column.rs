@@ -287,34 +287,30 @@ impl App {
     /// pill its modules shared. It is not swapped for a heading once the
     /// block opens — the block grows underneath it — because a module that
     /// vanished at the end of its own journey would undo the journey.
+    ///
+    /// Its members are drawn as the strip draws a grouped module, which is
+    /// the one that owns the height its own content needs. A module drawn as
+    /// its own island fills the row it stands in, and a row of the canvas is
+    /// as tall as the column: the island stretched down the screen and left
+    /// its own readings behind.
     fn desk_island<'a>(&'a self, unit: &'a ModuleDef, id: Id) -> Option<Element<'a, Message>> {
         let opacity = self.appearance().opacity;
 
-        match unit {
-            ModuleDef::Single(module) => {
+        let members: Vec<Element<'a, Message>> = Self::members(unit)
+            .into_iter()
+            .filter_map(|module| {
                 let (content, action) = self.get_module_view(module, id, opacity)?;
                 let actions = self.module_actions(module, action);
 
-                Some(self.module_element(content, actions, module, id, false))
-            }
-            ModuleDef::Group(group) => {
-                let members: Vec<Element<'a, Message>> = group
-                    .iter()
-                    .filter_map(|module| {
-                        let (content, action) = self.get_module_view(module, id, opacity)?;
-                        let actions = self.module_actions(module, action);
+                Some(self.module_element(content, actions, module, id, true))
+            })
+            .collect();
 
-                        Some(self.module_element(content, actions, module, id, true))
-                    })
-                    .collect();
-
-                if members.is_empty() {
-                    return None;
-                }
-
-                Some(self.desk_pill(members))
-            }
+        if members.is_empty() {
+            return None;
         }
+
+        Some(self.desk_pill(members))
     }
 
     /// The one pill a group of modules shares, as the strip paints it.
