@@ -20,6 +20,9 @@ enum Clock {
     BarLayoutSpinner
 }
 
+/// How often the frame clock ticks while anything is moving.
+const FRAME: std::time::Duration = std::time::Duration::from_millis(8);
+
 impl App {
     /// Keeps the indicator of a running desktop change moving.
     ///
@@ -98,6 +101,13 @@ impl App {
     }
 
     /// of interpolating on a polling timer.
+    ///
+    /// The tick is finer than a screen refresh on purpose. It is a timer, not
+    /// the compositor's own frame callback, so a tick of exactly one refresh
+    /// drifts against it and every few frames the compositor shows the state
+    /// it showed before — which is what juddering is. Ticking twice a refresh
+    /// leaves every refresh a fresh state to draw, and it only runs while
+    /// something is moving.
     pub(super) fn frame_subscription(&self) -> Subscription<Message> {
         if self.outputs.menu_is_animating()
             || self.appearance_transition.is_animating()
@@ -114,8 +124,7 @@ impl App {
             || self.keyboard_submap.is_fading()
             || self.battery.is_fading()
         {
-            iced::time::every(std::time::Duration::from_millis(16))
-                .map(|_| Message::Frame(std::time::Instant::now()))
+            iced::time::every(FRAME).map(|_| Message::Frame(std::time::Instant::now()))
         } else {
             Subscription::none()
         }

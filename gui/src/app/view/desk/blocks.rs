@@ -70,10 +70,10 @@ impl Ink {
 
 /// Draws one panel: heading, rule, then a line per reading.
 ///
-/// `bloom` is how far the block has written itself out, and it writes out one
-/// line at a time rather than all at once behind a fade: the heading and its
-/// rule come first, then a reading, then the next, the way a monitor filling
-/// in reads.
+/// `bloom` is how far the block has written itself out. It writes out from
+/// the top, the readings appearing as the room for them grows, rather than a
+/// line at a time: a line is a step, and a dozen steps in a fifth of a second
+/// is what the eye reads as juddering.
 pub(super) fn panel<'a>(panel: &Panel, side: Side, ink: Ink, bloom: f32) -> Element<'a, Message> {
     let heading = text(panel.title.to_uppercase())
         .size(ink.size * 1.05)
@@ -86,29 +86,34 @@ pub(super) fn panel<'a>(panel: &Panel, side: Side, ink: Ink, bloom: f32) -> Elem
             ..container::Style::default()
         });
 
-    #[expect(
-        clippy::cast_possible_truncation,
-        clippy::cast_precision_loss,
-        clippy::cast_sign_loss,
-        reason = "a block holds a handful of rows, far below any precision limit"
-    )]
-    let written = (bloom.clamp(0.0, 1.0) * panel.rows.len() as f32).ceil() as usize;
-
     let lines = panel
         .rows
         .iter()
-        .take(written)
         .map(|(label, value)| line(label, value, side, ink));
 
-    Column::with_children(
+    let written = Column::with_children(
         std::iter::once(heading.into())
             .chain(std::iter::once(rule.into()))
             .chain(lines)
     )
     .spacing(ink.size * 0.28)
     .width(Length::Fill)
-    .align_x(side.alignment_x())
-    .into()
+    .align_x(side.alignment_x());
+
+    if bloom >= 1.0 {
+        return written.into();
+    }
+
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "a block holds a handful of rows, far below any precision limit"
+    )]
+    let full = ink.size * 2.0 * (panel.rows.len() + 2) as f32;
+
+    container(written)
+        .max_height(full * bloom.clamp(0.0, 1.0))
+        .clip(true)
+        .into()
 }
 
 /// One reading: its label and its value, pushed to opposite edges.

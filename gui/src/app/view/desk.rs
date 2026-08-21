@@ -421,18 +421,32 @@ mod tests {
     }
 
     #[test]
-    fn a_block_writes_itself_out_a_line_at_a_time() {
+    fn a_block_opens_from_the_top_rather_than_a_line_at_a_time() {
         let mut app = test_app_with(|config| config.desk.enabled = true);
         set_off(&mut app);
 
+        let shown = |app: &App| {
+            ["in use", "available", "cached"]
+                .into_iter()
+                .filter(|row| {
+                    iced_test::simulator::Simulator::with_size(
+                        iced_test::core::Settings::default(),
+                        iced::Size::new(1920.0, 1080.0),
+                        app.desk_surface(surface())
+                    )
+                    .find(*row)
+                    .ok()
+                    .and_then(|found| found.visible_bounds())
+                    .is_some()
+                })
+                .count()
+        };
+
         let mut first = None;
-        let mut last = 0usize;
+        let mut last = 0;
 
         for _ in 0..256 {
-            let drawn = ["in use", "available", "cached", "swap"]
-                .into_iter()
-                .filter(|row| simulator(app.desk_surface(surface())).find(*row).is_ok())
-                .count();
+            let drawn = shown(&app);
 
             if drawn > 0 && first.is_none() {
                 first = Some(drawn);
@@ -445,9 +459,10 @@ mod tests {
             }
         }
 
+        assert_eq!(last, 3, "every reading stands once the block is open");
         assert!(
             first.is_some_and(|first| first < last),
-            "the block starts with fewer lines than it ends with"
+            "the block shows less of itself while it is still opening"
         );
     }
 
