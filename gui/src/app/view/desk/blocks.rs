@@ -142,7 +142,7 @@ pub(super) fn awaited<'a>(title: &str, side: Side, ink: Ink, bloom: f32) -> Elem
 
     let written = Column::with_children(
         std::iter::once(heading.into())
-            .chain(std::iter::once(rule(ink).into()))
+            .chain(std::iter::once(rule(ink)))
             .chain(lines)
     )
     .spacing(ink.size * 0.28)
