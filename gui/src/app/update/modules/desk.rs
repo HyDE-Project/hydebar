@@ -17,6 +17,13 @@ impl App {
     /// arrived — because a spring nobody points at never travels, and the
     /// canvas is drawn out of exactly that travel.
     ///
+    /// The canvas travels out and snaps back. Unfolding happens on a screen
+    /// nobody is using, so it can take its time; folding happens because a
+    /// window has just taken the screen, and that window is on it already —
+    /// a strip still travelling home while the window waits for it reads as
+    /// the bar lagging behind the compositor, so the way back is not
+    /// travelled at all.
+    ///
     /// The returned task hands the canvas its pointer input, or takes it
     /// away: the surface spans the whole screen, so one left taking presses
     /// while it is folded away would swallow every press meant for the
@@ -37,7 +44,8 @@ impl App {
             let unfolded = enabled && self.desk.covers(screen.as_deref());
             let was_out = self.desk_fades.progress(&screen) > 0.0;
 
-            self.desk_fades.point(screen, unfolded, animated, GENTLE);
+            self.desk_fades
+                .point(screen, unfolded, animated && unfolded, GENTLE);
 
             if unfolded != was_out {
                 tasks.push(set_input_region(

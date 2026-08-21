@@ -219,6 +219,23 @@ mod tests {
     }
 
     #[test]
+    fn the_strip_is_back_on_the_very_frame_a_window_takes_the_screen() {
+        let mut app = test_app_with(|config| config.desk.enabled = true);
+        app.desk_fades.point(None, true, false, GENTLE);
+
+        let (strip, canvas) = shapes_on_screen(&app);
+        assert!(!strip && canvas, "the canvas holds the bare screen");
+
+        app.desk_fades.point(None, false, false, GENTLE);
+
+        let (strip, canvas) = shapes_on_screen(&app);
+        assert!(
+            strip && !canvas,
+            "the strip is back with the window, not travelling behind it"
+        );
+    }
+
+    #[test]
     fn the_strip_takes_the_screen_back_the_moment_the_travel_ends() {
         let mut app = test_app_with(|config| config.desk.enabled = true);
         app.desk_fades.point(None, true, false, GENTLE);
