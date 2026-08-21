@@ -86,9 +86,9 @@ impl App {
                         appearance.height
                     );
 
-                    self.unfold_desk();
+                    let unfold = self.unfold_desk();
 
-                    Task::batch([measure, add])
+                    Task::batch([measure, add, unfold])
                 }
                 OutputEvent::Removed(id) => {
                     info!("Output destroyed");
@@ -99,9 +99,8 @@ impl App {
                         id,
                         &self.config
                     );
-                    self.unfold_desk();
 
-                    removed
+                    Task::batch([removed, self.unfold_desk()])
                 }
                 OutputEvent::InfoChanged(info) => measure_screen(info.name),
                 OutputEvent::SurfaceEnteredOutput {

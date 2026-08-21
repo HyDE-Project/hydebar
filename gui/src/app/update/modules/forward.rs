@@ -63,8 +63,8 @@ impl App {
             }
             Message::Desk(msg) => {
                 self.desk.update(msg);
-                self.unfold_desk();
-                Task::none()
+
+                self.unfold_desk()
             }
             Message::Tray(msg) => {
                 let close_tray = match &msg {

@@ -1,34 +1,32 @@
-//! The desk surface: the canvas the bar unfolds into on a bare screen.
+//! The desk surface: the shape the bar takes when the screen is bare.
 //!
-//! Three columns over the wallpaper, in the shape the old desktop monitors
-//! kept: the machine and its link down the left edge, the hour and the sky in
-//! the middle, the load and the mounts down the right. It is drawn only while
-//! the screen the surface stands on holds no window at all, so it never
-//! competes with anything for attention — there is nothing else there.
+//! Not a second bar and not a second set of readouts — the same modules, in
+//! the same layout, come down off the strip and stand over the wallpaper at a
+//! size a room away can read. The three sections of the layout become three
+//! columns, each keeping its own order and its own groups, and each module
+//! keeps the presses it answers to on the strip.
 //!
-//! One folder, three rooms: [`readings`] settles what each panel says,
-//! [`blocks`] draws one panel and [`hour`] draws the middle.
+//! One folder, one room so far: [`column`] stacks a section into a column.
 
-mod blocks;
-mod hour;
-mod readings;
+mod column;
 
-use blocks::{Ink, Side};
-use hydebar_proto::config::DeskPanel;
+use hydebar_core::outputs::HasOutput;
 use iced::{
-    Alignment, Element, Length, SurfaceId as Id,
-    widget::{Column, Row, container}
+    Alignment, Element, Length, Padding, SurfaceId as Id,
+    widget::{Row, container}
 };
 
 use super::super::state::{App, Message};
 
 impl App {
-    /// Draws the desk of one output, or nothing while a window holds it.
+    /// Draws the unfolded bar of one output, or nothing while a window holds
+    /// the screen.
     ///
     /// The canvas unfolds rather than appears: it fades in over the wallpaper
-    /// and rises the last stretch into place, and folds back the same way the
-    /// moment a window maps. The travel is the screen's own spring, so a
-    /// second monitor still holding a window is untouched by it.
+    /// and rises the last stretch into place while the strip fades out under
+    /// it, and folds back the same way the moment a window maps. The travel is
+    /// the screen's own spring, so a second monitor still holding a window is
+    /// untouched by it.
     pub(super) fn desk_surface(&self, id: Id) -> Element<'_, Message> {
         let screen = self.outputs.screen_of(id).flatten();
         let presence = self.desk_presence(screen);
@@ -37,72 +35,45 @@ impl App {
             return Row::new().into();
         }
 
-        let ink = Ink {
-            value: self.theme_cache.palette().text.scale_alpha(presence),
-            size:  self.appearance().font_size_px()
-        };
-        let desk = &self.config.desk;
-        let margin = ink.size * 2.0;
-        let rise = margin.mul_add(1.0 - presence, margin);
+        let margin = self.appearance().font_size_px() * 1.5;
+        let modules = &self.config.modules;
 
         let columns = [
-            (&desk.left, Side::Leading),
-            (&desk.center, Side::Leading),
-            (&desk.right, Side::Trailing)
+            (&modules.left, Alignment::Start),
+            (&modules.center, Alignment::Center),
+            (&modules.right, Alignment::End)
         ]
         .into_iter()
-        .map(|(panels, side)| self.desk_column(panels, side, ink));
+        .filter_map(|(section, align)| self.desk_column(section, id, align));
 
-        container(
+        let canvas = container(
             Row::with_children(columns)
-                .spacing(ink.size * 4.0)
+                .spacing(margin * 2.0)
                 .align_y(Alignment::Start)
         )
         .width(Length::Fill)
         .height(Length::Fill)
-        .padding(iced::Padding {
-            top:    rise,
+        .padding(Padding {
+            top:    margin.mul_add(1.0 - presence, margin),
             right:  margin,
             bottom: margin,
             left:   margin
-        })
-        .into()
+        });
+
+        self.faded_menu(canvas.into(), presence)
     }
 
-    /// Stacks one column of the canvas, empty panels left out.
-    fn desk_column(&self, panels: &[DeskPanel], side: Side, ink: Ink) -> Element<'_, Message> {
-        Column::with_children(
-            panels
-                .iter()
-                .filter_map(|panel| self.desk_panel(*panel, side, ink))
-        )
-        .spacing(ink.size * 1.8)
-        .width(Length::FillPortion(1))
-        .align_x(side.alignment_x())
-        .into()
-    }
+    /// How much larger than the strip the canvas of `id` is drawn.
+    ///
+    /// One for every surface but the desk: the modules are drawn from the
+    /// same views the strip uses, and the whole surface is magnified instead,
+    /// which is what lets one layout serve a thirty pixel strip and a whole
+    /// screen without a second set of sizes.
+    pub(crate) fn desk_magnification(&self, id: Id) -> f64 {
+        if !self.config.desk.enabled || !matches!(self.outputs.has(id), Some(HasOutput::Desk)) {
+            return 1.0;
+        }
 
-    /// Draws one panel, or nothing when the machine reports nothing for it.
-    fn desk_panel(&self, panel: DeskPanel, side: Side, ink: Ink) -> Option<Element<'_, Message>> {
-        let data = self.system_info.data();
-
-        let reading = match panel {
-            DeskPanel::System => readings::system(data),
-            DeskPanel::Network => readings::network(data),
-            DeskPanel::Processor => readings::processor(data),
-            DeskPanel::Graphics => readings::graphics(data),
-            DeskPanel::Memory => readings::memory(data),
-            DeskPanel::Storage => readings::storage(data),
-            DeskPanel::Clock => {
-                return Some(hour::clock(self.clock.data(), &self.config.clock, ink));
-            }
-            DeskPanel::Weather => {
-                let sky = self.weather.data();
-
-                return sky.has_reading().then(|| hour::weather(sky, ink));
-            }
-        };
-
-        reading.map(|reading| blocks::panel(&reading, side, ink))
+        f64::from(self.config.desk.magnification())
     }
 }

@@ -1,84 +1,43 @@
-//! Configuration of the desk: the canvas the bar unfolds into on an empty
-//! workspace.
+//! Configuration of the desk: the bar's other form.
 //!
-//! The bar stays a strip for as long as a window is mapped on the screen it
-//! stands on. The moment the workspace is cleared it has the whole wallpaper
-//! to itself, and the readouts that do not fit a strip — the machine, the
-//! link, the mounts — are drawn there instead of being hidden behind a menu.
+//! The bar and the desk are one thing in two shapes. While a window is mapped
+//! on a screen the bar is a strip along its edge; the moment the workspace is
+//! cleared the very same modules, in the very same layout, come down off the
+//! strip and stand over the wallpaper at a size the whole room can read. No
+//! second set of readouts and no second arrangement: whatever the layout says
+//! is on the bar is what the desk unfolds into.
 
 use serde::Deserialize;
 
-/// One block of readouts drawn on the desk.
-#[derive(Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum DeskPanel {
-    /// Kernel, processor model and the firmware steering it.
-    System,
-    /// Address of the link and what is crossing it.
-    Network,
-    /// Load, temperature and clock of the processor.
-    Processor,
-    /// Load, temperature and memory of the graphics device.
-    Graphics,
-    /// Memory and swap in use, against what is installed.
-    Memory,
-    /// Every mounted filesystem, with what is left on it.
-    Storage,
-    /// The hour, large, with the date under it.
-    Clock,
-    /// The sky over the configured location.
-    Weather
-}
+/// Largest magnification the desk may be drawn at.
+///
+/// A canvas drawn ten times the size of the strip would fit one module on the
+/// screen; the ceiling keeps a mistyped number from hiding the layout.
+const MAX_ZOOM: f32 = 6.0;
 
-/// Where the desk draws its panels.
-#[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
+/// How the desk unfolds.
+#[derive(Deserialize, Clone, Debug, PartialEq)]
 #[serde(default)]
 pub struct DeskConfig {
     /// Whether the bar unfolds at all.
     pub enabled: bool,
-    /// Panels drawn down the left edge.
-    pub left:    Vec<DeskPanel>,
-    /// Panels drawn down the middle of the screen.
-    pub center:  Vec<DeskPanel>,
-    /// Panels drawn down the right edge.
-    pub right:   Vec<DeskPanel>
+    /// How much larger than the strip the modules are drawn on the canvas.
+    pub zoom:    f32
 }
 
 impl DeskConfig {
-    /// Every panel the desk draws, in no particular order.
-    pub fn panels(&self) -> impl Iterator<Item = DeskPanel> + '_ {
-        self.left
-            .iter()
-            .chain(self.center.iter())
-            .chain(self.right.iter())
-            .copied()
-    }
-
-    /// Reports whether the desk draws `panel` anywhere.
-    #[must_use]
-    pub fn draws(&self, panel: DeskPanel) -> bool {
-        self.enabled && self.panels().any(|drawn| drawn == panel)
-    }
-
-    /// Reports whether any panel of the desk renders a system sample.
+    /// The magnification the canvas is actually drawn at.
     ///
-    /// The sampler behind those readouts is otherwise started only for the
-    /// bar entries that show them; a desk drawing the machine has to keep it
-    /// running on its own account.
+    /// A number below one would draw the unfolded bar smaller than the strip
+    /// it came off, which is never what was meant, and one far above the
+    /// ceiling would leave a single module on the screen.
     #[must_use]
-    pub fn wants_system_sample(&self) -> bool {
-        self.enabled
-            && self.panels().any(|panel| {
-                matches!(
-                    panel,
-                    DeskPanel::System
-                        | DeskPanel::Network
-                        | DeskPanel::Processor
-                        | DeskPanel::Graphics
-                        | DeskPanel::Memory
-                        | DeskPanel::Storage
-                )
-            })
+    pub const fn magnification(&self) -> f32 {
+        if self.zoom.is_finite() {
+            self.zoom.clamp(1.0, MAX_ZOOM)
+        } else {
+            default_zoom()
+        }
     }
 }
 
@@ -86,16 +45,15 @@ impl Default for DeskConfig {
     fn default() -> Self {
         Self {
             enabled: false,
-            left:    vec![DeskPanel::System, DeskPanel::Network],
-            center:  vec![DeskPanel::Clock, DeskPanel::Weather],
-            right:   vec![
-                DeskPanel::Processor,
-                DeskPanel::Graphics,
-                DeskPanel::Memory,
-                DeskPanel::Storage,
-            ]
+            zoom:    default_zoom()
         }
     }
+}
+
+/// Magnification the canvas is drawn at unless the configuration says
+/// otherwise.
+const fn default_zoom() -> f32 {
+    2.0
 }
 
 #[cfg(test)]
@@ -108,45 +66,45 @@ mod tests {
         let config = DeskConfig::default();
 
         assert!(!config.enabled);
-        assert!(!config.draws(DeskPanel::Clock));
-        assert!(!config.wants_system_sample());
+        assert!((config.magnification() - 2.0).abs() < f32::EPSILON);
     }
 
     #[test]
-    fn the_stock_desk_reads_like_the_screenshot_it_replaces() {
-        let config = DeskConfig {
-            enabled: true,
-            ..DeskConfig::default()
-        };
-
-        assert!(config.draws(DeskPanel::System));
-        assert!(config.draws(DeskPanel::Storage));
-        assert!(config.wants_system_sample());
-    }
-
-    #[test]
-    fn a_desk_of_hours_alone_leaves_the_sampler_asleep() {
+    fn a_named_magnification_is_taken_as_it_stands() {
         let config: DeskConfig = toml::from_str(
-            r#"
+            r"
             enabled = true
-            left = []
-            center = ["clock"]
-            right = []
-            "#
+            zoom = 3.5
+            "
         )
         .expect("desk config");
 
-        assert!(config.draws(DeskPanel::Clock));
-        assert!(!config.wants_system_sample());
+        assert!(config.enabled);
+        assert!((config.magnification() - 3.5).abs() < f32::EPSILON);
     }
 
     #[test]
-    fn the_panels_of_every_column_are_read_as_one_roster() {
+    fn a_magnification_below_the_strip_or_past_the_ceiling_is_pulled_back() {
+        for (named, drawn) in [(0.2, 1.0), (-4.0, 1.0), (40.0, MAX_ZOOM)] {
+            let config = DeskConfig {
+                enabled: true,
+                zoom:    named
+            };
+
+            assert!(
+                (config.magnification() - drawn).abs() < f32::EPSILON,
+                "zoom {named} draws at {drawn}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_magnification_that_is_not_a_number_falls_back_to_the_stock_one() {
         let config = DeskConfig {
             enabled: true,
-            ..DeskConfig::default()
+            zoom:    f32::NAN
         };
 
-        assert_eq!(config.panels().count(), 8);
+        assert!((config.magnification() - 2.0).abs() < f32::EPSILON);
     }
 }

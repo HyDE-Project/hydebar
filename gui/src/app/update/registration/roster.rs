@@ -1,7 +1,7 @@
 //! The roster of modules wired to the event bus on every reload.
 
 use hydebar_core::modules;
-use hydebar_proto::config::{DeskPanel, ModuleName};
+use hydebar_proto::config::ModuleName;
 use log::error;
 
 use super::{
@@ -54,7 +54,7 @@ impl App {
         );
         gate(
             "clock",
-            hosts(ModuleName::Clock) || self.config.desk.draws(DeskPanel::Clock),
+            hosts(ModuleName::Clock),
             &mut self.clock,
             ctx,
             &self.config.clock
@@ -62,8 +62,7 @@ impl App {
         gate(
             "weather",
             hosts(ModuleName::Weather)
-                || (hosts(ModuleName::Clock) && self.config.clock.show_weather)
-                || self.config.desk.draws(DeskPanel::Weather),
+                || (hosts(ModuleName::Clock) && self.config.clock.show_weather),
             &mut self.weather,
             ctx,
             &self.config.weather
@@ -89,17 +88,12 @@ impl App {
             ctx,
             ()
         );
-        let desk_samples = self.config.desk.wants_system_sample();
-
         gate(
             "system-info",
-            layout.hosts_any(&SYSTEM_INFO_CONSUMERS) || desk_samples,
+            layout.hosts_any(&SYSTEM_INFO_CONSUMERS),
             &mut self.system_info,
             ctx,
-            (
-                &self.config.system,
-                layout.hosts(&ModuleName::SystemInfo) || desk_samples
-            )
+            (&self.config.system, layout.hosts(&ModuleName::SystemInfo))
         );
         gate(
             "keyboard-layout",

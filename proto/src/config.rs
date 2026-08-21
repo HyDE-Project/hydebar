@@ -37,7 +37,7 @@ pub use battery::BatteryModuleConfig;
 pub use clock::ClockModuleConfig;
 pub use control_center::ControlCenterModuleConfig;
 pub use custom_module::{CustomMenuEntry, CustomModuleDef, CustomModuleSource};
-pub use desk::{DeskConfig, DeskPanel};
+pub use desk::DeskConfig;
 pub use icons::IconsConfig;
 pub use idle_inhibitor::IdleInhibitorModuleConfig;
 pub use keybindings::{GlobalKeybindings, Keybindings, MenuKeybindings};

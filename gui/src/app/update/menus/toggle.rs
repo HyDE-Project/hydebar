@@ -10,6 +10,36 @@ use iced::{SurfaceId as Id, Task};
 use super::super::super::state::{App, Message};
 
 impl App {
+    /// Restates a press position in the coordinates the menu surface uses.
+    ///
+    /// The desk is drawn magnified while every other surface is not, so a
+    /// press that landed halfway across the canvas names half the distance
+    /// the menu surface would put it at. Multiplying the position and the
+    /// viewport by that magnification is what makes a menu open under the
+    /// module that was pressed rather than at a fraction of the way there.
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "the desk magnification is a small configured factor"
+    )]
+    fn in_screen_coordinates(&self, id: Id, button_ui_ref: ButtonUIRef) -> ButtonUIRef {
+        let magnification = self.desk_magnification(id) as f32;
+
+        if (magnification - 1.0).abs() < f32::EPSILON {
+            return button_ui_ref;
+        }
+
+        ButtonUIRef {
+            position: iced::Point {
+                x: button_ui_ref.position.x * magnification,
+                y: button_ui_ref.position.y * magnification
+            },
+            viewport: (
+                button_ui_ref.viewport.0 * magnification,
+                button_ui_ref.viewport.1 * magnification
+            )
+        }
+    }
+
     /// Toggles the menu a bar press asked for, readying its content first.
     pub(super) fn on_toggle_menu(
         &mut self,
@@ -17,6 +47,8 @@ impl App {
         id: Id,
         button_ui_ref: ButtonUIRef
     ) -> Task<Message> {
+        let button_ui_ref = self.in_screen_coordinates(id, button_ui_ref);
+
         self.hints.dismiss();
         self.wallpaper_pending = None;
         self.bar_layout_pending = None;

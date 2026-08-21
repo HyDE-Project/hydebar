@@ -16,7 +16,7 @@ impl App {
     /// Custom modules declare right and middle press commands, and a module
     /// cycling display formats hands its left button over to the cycling and
     /// keeps its menu on the right button.
-    pub(super) fn module_actions(
+    pub(crate) fn module_actions(
         &self,
         module_name: &ModuleName,
         left: Option<OnModulePress<Message>>

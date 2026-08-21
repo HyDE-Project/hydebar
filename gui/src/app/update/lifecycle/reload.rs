@@ -134,7 +134,8 @@ impl App {
         }
 
         if impact.desk_changed {
-            self.unfold_desk();
+            let unfold = self.unfold_desk();
+            tasks.push(unfold);
         }
 
         if (impact.layout_changed || impact.custom_modules_changed)

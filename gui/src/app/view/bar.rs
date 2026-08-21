@@ -42,6 +42,12 @@ impl App {
         reason = "the backdrop of every appearance style is painted from one match"
     )]
     pub(super) fn bar_surface(&self, id: Id) -> Element<'_, Message> {
+        let unfolded = self.desk_presence(self.outputs.screen_of(id).flatten());
+
+        if unfolded >= 0.996 {
+            return iced::widget::Row::new().into();
+        }
+
         let left =
             self.modules_section(&self.config.modules.left, id, self.appearance().opacity, 0);
         let center = self.modules_section(
@@ -151,7 +157,7 @@ impl App {
             ..Default::default()
         });
 
-        self.dismisses_the_open_menu(bar.into())
+        self.dismisses_the_open_menu(self.faded_menu(bar.into(), 1.0 - unfolded))
     }
 }
 

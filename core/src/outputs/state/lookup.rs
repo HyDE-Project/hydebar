@@ -105,6 +105,17 @@ impl Outputs {
             .map(|(name, _, _)| name.as_deref())
     }
 
+    /// Every desk surface the bar owns, with the screen it stands on.
+    ///
+    /// The canvas is the one surface whose pointer input comes and goes: it
+    /// covers the whole screen and must swallow nothing while it is folded
+    /// away, so the caller states its region again on every fold.
+    pub fn desk_surfaces(&self) -> impl Iterator<Item = (Id, Option<&str>)> {
+        self.0.iter().filter_map(|(name, info, _)| {
+            info.as_ref().map(|info| (info.desk_id, name.as_deref()))
+        })
+    }
+
     /// Check whether an output with the provided name is already tracked.
     ///
     /// # Examples

@@ -27,10 +27,11 @@ impl Outputs {
     ) -> Task<Message> {
         let hide_tooltip = self.hide_tooltip(id, None);
 
-        match self.0.iter_mut().find(|(_, shell_info, _)| {
-            shell_info.as_ref().map(|shell_info| shell_info.id) == Some(id)
-                || shell_info.as_ref().map(|shell_info| shell_info.menu.id) == Some(id)
-        }) {
+        match self
+            .0
+            .iter_mut()
+            .find(|(_, shell_info, _)| shell_info.as_ref().is_some_and(|info| info.owns(id)))
+        {
             Some((_, Some(shell_info), _)) => {
                 let toggle_task = shell_info.menu.toggle(menu_type, button_ui_ref, config);
                 let mut tasks = self
@@ -38,10 +39,10 @@ impl Outputs {
                     .iter_mut()
                     .filter_map(|(_, shell_info, _)| {
                         if let Some(shell_info) = shell_info {
-                            if shell_info.id != id && shell_info.menu.id != id {
-                                Some(shell_info.menu.close(config))
-                            } else {
+                            if shell_info.owns(id) {
                                 None
+                            } else {
+                                Some(shell_info.menu.close(config))
                             }
                         } else {
                             None
@@ -68,10 +69,11 @@ impl Outputs {
         id: Id,
         config: &crate::config::Config
     ) -> Task<Message> {
-        match self.0.iter_mut().find(|(_, shell_info, _)| {
-            shell_info.as_ref().map(|shell_info| shell_info.id) == Some(id)
-                || shell_info.as_ref().map(|shell_info| shell_info.menu.id) == Some(id)
-        }) {
+        match self
+            .0
+            .iter_mut()
+            .find(|(_, shell_info, _)| shell_info.as_ref().is_some_and(|info| info.owns(id)))
+        {
             Some((_, Some(shell_info), _)) => shell_info.menu.close(config),
             _ => Task::none()
         }
@@ -94,10 +96,11 @@ impl Outputs {
         menu_type: MenuType,
         config: &crate::config::Config
     ) -> Task<Message> {
-        match self.0.iter_mut().find(|(_, shell_info, _)| {
-            shell_info.as_ref().map(|shell_info| shell_info.id) == Some(id)
-                || shell_info.as_ref().map(|shell_info| shell_info.menu.id) == Some(id)
-        }) {
+        match self
+            .0
+            .iter_mut()
+            .find(|(_, shell_info, _)| shell_info.as_ref().is_some_and(|info| info.owns(id)))
+        {
             Some((_, Some(shell_info), _)) => shell_info.menu.close_if(&menu_type, config),
             _ => Task::none()
         }

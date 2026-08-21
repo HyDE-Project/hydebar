@@ -307,38 +307,26 @@ greeting = false   # turn it off
 
 ## The desk
 
-A workspace with nothing on it has room for readouts no strip can hold, so
-the bar unfolds into them: the machine and its link down the left edge, the
-hour and the sky in the middle, the load and the mounts down the right,
-drawn straight onto the wallpaper. The moment a window maps on that screen
-the canvas folds back and the bar is a strip again. Off by default:
+The bar and the desk are one thing in two shapes. While a window is mapped on
+a screen the bar is the strip along its edge; the moment that workspace is
+cleared the strip fades out and the very same modules come down over the
+wallpaper, drawn several times larger, and they stay as clickable as they were
+on the strip. A window maps again and they fold straight back. Off by default:
 
 ```toml
 [desk]
 enabled = true
+zoom = 2.0   # how much larger than the strip the modules are drawn
 ```
 
-Each column is a list of panels, and any panel may stand in any column:
+There is no second layout to write: the three sections of `[modules]` become
+the three columns of the canvas — left section down the left edge, centre in
+the middle, right down the right edge — each keeping its own order, and a
+group staying a group. Rearranging the bar rearranges the desk with it.
 
-```toml
-[desk]
-enabled = true
-left   = ["system", "network"]
-center = ["clock", "weather"]
-right  = ["processor", "graphics", "memory", "storage"]
-```
-
-The panels are `system` (kernel, processor, governor, microcode), `network`
-(address and transfer rates), `processor` (load, temperature, clock),
-`graphics`, `memory` (memory, swap and what is cached), `storage` (one line
-per filesystem), `clock` (the hour at the size a room away can read it) and
-`weather`. A panel the machine reports nothing for is left out rather than
-drawn empty, and the weather appears only once it has been read — which
-needs an API key, see [Weather](#weather) above.
-
-Every screen answers for itself: a second monitor running a browser keeps
-its strip while the first one, cleared, gets the whole wallpaper. A special
-workspace pulled up over a screen counts as something on it.
+Every screen answers for itself: a second monitor running a browser keeps its
+strip while the first one, cleared, unfolds. A special workspace pulled up
+over a screen counts as something on it.
 
 ## Next Steps
 
