@@ -4,19 +4,15 @@ use hydebar_core::modules::system_info::{DiskData, SystemInfoData, gigabytes, us
 
 use super::{Panel, push};
 
-/// The machine itself: what it runs and what steers it.
+/// The machine itself: what it runs on.
+///
+/// The processor has a block of its own, so this one names what stands
+/// behind it rather than repeating it: the kernel the session runs and the
+/// firmware revision under it.
 pub fn system(data: &SystemInfoData) -> Option<Panel> {
     let mut rows = Vec::new();
 
     push(&mut rows, "kernel", data.kernel.clone());
-    push(&mut rows, "processor", data.cpu_model.clone());
-    push(
-        &mut rows,
-        "cores",
-        data.cpu_cores
-            .map(|cores| format!("{cores} / {} threads", data.cpu_count))
-    );
-    push(&mut rows, "governor", data.cpu_governor.clone());
     push(&mut rows, "microcode", data.cpu_microcode.clone());
 
     Panel::of("system", rows)
@@ -215,17 +211,31 @@ mod tests {
     fn a_machine_that_names_itself_is_read_top_to_bottom() {
         let mut data = sample();
         data.kernel = Some("7.1.8".to_owned());
-        data.cpu_cores = Some(6);
-        data.cpu_count = 12;
+        data.cpu_microcode = Some("0xb7".to_owned());
 
         let panel = system(&data).expect("a machine that answered");
 
         assert_eq!(panel.title, "system");
         assert_eq!(panel.rows[0], ("kernel".to_owned(), "7.1.8".to_owned()));
-        assert_eq!(
-            panel.rows[1],
-            ("cores".to_owned(), "6 / 12 threads".to_owned())
-        );
+        assert_eq!(panel.rows[1], ("microcode".to_owned(), "0xb7".to_owned()));
+    }
+
+    #[test]
+    fn the_machine_block_leaves_the_processor_to_its_own() {
+        let mut data = sample();
+        data.kernel = Some("7.1.8".to_owned());
+        data.cpu_model = Some("a processor".to_owned());
+        data.cpu_cores = Some(6);
+        data.cpu_governor = Some("powersave".to_owned());
+
+        let panel = system(&data).expect("a machine that answered");
+
+        for repeated in ["processor", "cores", "governor"] {
+            assert!(
+                !panel.rows.iter().any(|(label, _)| label == repeated),
+                "{repeated} is stated by the processor block, not this one"
+            );
+        }
     }
 
     #[test]

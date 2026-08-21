@@ -24,15 +24,6 @@ pub(super) enum Side {
 }
 
 impl Side {
-    /// Reports whether the column reaches for the corner under it.
-    ///
-    /// The two edge columns do: their last block belongs at the bottom of the
-    /// screen, because it stood at the far end of the strip. The middle one
-    /// does not — it stood at the centre, so it stays at the top.
-    pub(super) const fn reaches_the_corner(self) -> bool {
-        matches!(self, Self::Leading | Self::Trailing)
-    }
-
     /// How a column of this side lines its content up.
     pub(super) const fn alignment_x(self) -> Alignment {
         match self {

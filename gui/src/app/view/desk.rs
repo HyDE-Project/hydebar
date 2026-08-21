@@ -250,6 +250,53 @@ mod tests {
     }
 
     #[test]
+    fn no_two_blocks_of_a_column_are_ever_in_flight_together() {
+        for blocks in 2..8usize {
+            #[expect(
+                clippy::cast_precision_loss,
+                reason = "a column holds a handful of blocks"
+            )]
+            let places: Vec<f32> = (0..blocks)
+                .map(|index| index as f32 / (blocks - 1) as f32)
+                .collect();
+
+            for step in 0..=200 {
+                #[expect(clippy::cast_precision_loss, reason = "a fixed sample count")]
+                let unfolding = step as f32 / 200.0;
+
+                let flying = places
+                    .iter()
+                    .map(|place| super::column::journey(unfolding, *place, blocks).0)
+                    .filter(|travel| *travel > 0.0 && *travel < 1.0)
+                    .count();
+
+                assert!(
+                    flying <= 1,
+                    "{blocks} blocks, {unfolding:.3} of the way: {flying} in flight at once"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn a_block_waits_for_the_one_before_it_to_arrive() {
+        for step in 0..=400 {
+            #[expect(clippy::cast_precision_loss, reason = "a fixed sample count")]
+            let unfolding = step as f32 / 400.0;
+
+            let leader = super::column::journey(unfolding, 0.0, 3).0;
+            let follower = super::column::journey(unfolding, 0.5, 3).0;
+
+            if follower > 0.0 {
+                assert!(
+                    leader >= 1.0,
+                    "the follower set off at {unfolding:.3} with the leader at {leader:.3}"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn a_block_crosses_the_screen_before_it_writes_itself_out() {
         let mut app = test_app_with(|config| config.desk.enabled = true);
         app.desk_fades.point(None, true, true, SWEEP);
@@ -258,7 +305,7 @@ mod tests {
         let mut crossed = false;
 
         for _ in 0..256 {
-            let (travel, bloom) = super::column::journey(app.desk_presence(None), 0.0);
+            let (travel, bloom) = super::column::journey(app.desk_presence(None), 0.0, 2);
             let writing = simulator(app.desk_surface(surface()))
                 .find("MEMORY")
                 .is_ok();
@@ -347,34 +394,6 @@ mod tests {
         assert!(
             middle < edge,
             "the module that stood nearer the middle stands higher: {middle} against {edge}"
-        );
-    }
-
-    #[test]
-    fn the_far_end_of_a_section_reaches_for_its_corner() {
-        use hydebar_core::config::ModuleName;
-        use hydebar_proto::config::ModuleDef;
-
-        let mut app = test_app_with(|config| {
-            config.desk.enabled = true;
-            config.modules.left = vec![
-                ModuleDef::Single(ModuleName::CpuTemp),
-                ModuleDef::Single(ModuleName::Memory),
-            ];
-            config.modules.center = Vec::new();
-            config.modules.right = Vec::new();
-        });
-        open(&mut app);
-
-        let mut ui = simulator(app.desk_surface(surface()));
-        let edge = ui.find("CPU TEMPERATURE").expect("the far module").bounds();
-
-        let mut ui = simulator(app.desk_surface(surface()));
-        let near = ui.find("MEMORY").expect("the near module").bounds();
-
-        assert!(
-            edge.y - near.y > near.height * 4.0,
-            "the far module is pushed well down the screen, not stacked under its neighbour"
         );
     }
 

@@ -7,10 +7,7 @@
 //! always had.
 
 use hydebar_core::config::{ModuleDef, ModuleName};
-use iced::{
-    Element, Length, SurfaceId as Id,
-    widget::{Column, Space}
-};
+use iced::{Element, Length, SurfaceId as Id, widget::Column};
 
 use super::{
     super::super::state::{App, Message},
@@ -26,19 +23,38 @@ use super::{
 /// nothing in between.
 const CROSSING: f32 = 0.55;
 
-/// How much of the unfolding is spent staggering one block behind the next.
+/// The stagger that keeps two blocks from ever being in flight together.
 ///
-/// The blocks nearest the middle of the strip leave first and the far ones
-/// follow, so the canvas opens as a front crossing the screen rather than as
-/// everything moving at once.
-const STAGGER: f32 = 0.45;
+/// Blocks leave the strip from one row and arrive in a column, so their paths
+/// cross: whatever is still travelling would be drawn over whatever is
+/// already there. One at a time is the rule that removes the question — the
+/// block nearest the middle of the strip goes first and the next one starts
+/// when it has arrived.
+///
+/// The share is what makes each window disjoint: with `blocks` of them the
+/// windows are `1 - spread` wide and start `spread / (blocks - 1)` apart, so
+/// a spread of `(blocks - 1) / blocks` leaves them just touching.
+#[expect(
+    clippy::cast_precision_loss,
+    reason = "a column holds a handful of blocks, far below any precision limit"
+)]
+fn stagger(blocks: usize) -> f32 {
+    if blocks < 2 {
+        return 0.0;
+    }
+
+    let blocks = blocks as f32;
+
+    (blocks - 1.0) / blocks
+}
 
 /// How far one block has crossed and how far it has opened.
 ///
 /// `place` is where the block stands in its column: zero leads the front, one
-/// trails it.
-pub(super) fn journey(unfolding: f32, place: f32) -> (f32, f32) {
-    let own = hydebar_core::animation::sweep(unfolding, place, STAGGER);
+/// trails it. `blocks` is how many share the column, which is what sets the
+/// stagger that keeps their flights apart.
+pub(super) fn journey(unfolding: f32, place: f32, blocks: usize) -> (f32, f32) {
+    let own = hydebar_core::animation::sweep(unfolding, place, stagger(blocks));
 
     if own <= CROSSING {
         (own / CROSSING, 0.0)
@@ -62,6 +78,12 @@ impl App {
     /// carries, and nothing else moves. A canvas whose own padding and gaps
     /// also grew with the travel would be moving the places the blocks are
     /// aiming at, which reads as a stagger rather than as a journey.
+    ///
+    /// The gaps are the same size whatever the column holds. Pushing the far
+    /// end of a short column down to the corner leaves a hole through the
+    /// middle of the screen, and a column of everything the machine knows
+    /// runs off the bottom edge instead: one honest gap, filled from the top,
+    /// is what reads as a column either way.
     ///
     /// Returns nothing when no module of the section has anything to draw, so
     /// an empty section leaves no gap on the canvas.
@@ -88,7 +110,7 @@ impl App {
                     reason = "a section holds a handful of modules"
                 )]
                 let place = if last > 0.0 { index as f32 / last } else { 0.0 };
-                let (travel, bloom) = journey(unfolding, place);
+                let (travel, bloom) = journey(unfolding, place, order.len());
 
                 let block = self.desk_block(module, id, side, ink, bloom)?;
 
@@ -109,28 +131,13 @@ impl App {
             return None;
         }
 
-        let reaches_the_corner = side.reaches_the_corner() && blocks.len() > 1;
-        let mut column = Column::new()
-            .width(Length::Fill)
-            .align_x(side.alignment_x());
-
-        for (index, block) in blocks.into_iter().enumerate() {
-            if index > 0 {
-                column = if reaches_the_corner {
-                    column.push(Space::new().height(Length::Fill))
-                } else {
-                    column.push(Space::new().height(Length::Fixed(ink.size * 1.8)))
-                };
-            }
-
-            column = column.push(block);
-        }
-
-        Some(if reaches_the_corner {
-            column.height(Length::Fill).into()
-        } else {
-            column.into()
-        })
+        Some(
+            Column::with_children(blocks)
+                .spacing(ink.size * 1.8)
+                .width(Length::Fill)
+                .align_x(side.alignment_x())
+                .into()
+        )
     }
 
     /// The modules of one section, in the order the canvas stands them in.

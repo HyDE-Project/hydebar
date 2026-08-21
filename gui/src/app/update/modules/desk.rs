@@ -1,6 +1,15 @@
 //! The unfolding of the desk, screen by screen.
 
-use hydebar_core::animation::SWEEP;
+use std::time::Duration;
+
+/// Time one block is given to cross the screen and write itself out.
+const PER_BLOCK: Duration = Duration::from_millis(260);
+
+/// The briefest the whole unfolding is allowed to be.
+const SHORTEST_UNFOLDING: Duration = Duration::from_millis(600);
+
+/// The longest the whole unfolding is allowed to be.
+const LONGEST_UNFOLDING: Duration = Duration::from_millis(2400);
 use iced::{Task, set_input_region};
 
 use super::super::super::state::{App, Message};
@@ -36,6 +45,7 @@ impl App {
     pub(crate) fn unfold_desk(&mut self) -> Task<Message> {
         let animated = self.config.appearance.animations.enabled;
         let enabled = self.config.desk.enabled;
+        let unfolding = self.unfolding_response();
 
         let screens: Vec<(iced::SurfaceId, Option<String>)> = self
             .outputs
@@ -50,7 +60,7 @@ impl App {
             let was_out = self.desk_fades.progress(&screen) > 0.0;
 
             self.desk_fades
-                .point(screen, unfolded, animated && unfolded, SWEEP);
+                .point(screen, unfolded, animated && unfolded, unfolding);
 
             if unfolded != was_out {
                 if unfolded {
@@ -67,6 +77,22 @@ impl App {
         }
 
         Task::batch(tasks)
+    }
+
+    /// How long the whole unfolding takes, given how much there is to unfold.
+    ///
+    /// The blocks travel one at a time, so a layout of a dozen modules has a
+    /// dozen flights to fit in: a fixed duration would either rush a full bar
+    /// into a blur or leave a bar of three modules crawling. Each block is
+    /// given its own share and the whole is held between a quick unfolding
+    /// and one that outstays its welcome.
+    fn unfolding_response(&self) -> Duration {
+        let layout = &self.config.modules;
+        let blocks = layout.left.len() + layout.center.len() + layout.right.len();
+
+        PER_BLOCK
+            .saturating_mul(u32::try_from(blocks).unwrap_or(u32::MAX))
+            .clamp(SHORTEST_UNFOLDING, LONGEST_UNFOLDING)
     }
 
     /// Sends every island of `surface` off the screen and lets it fly back.
