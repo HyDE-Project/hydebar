@@ -16,7 +16,10 @@ mod anchor;
 mod memo;
 mod widget;
 
-pub use self::{anchor::FlipAnchor, memo::FlipMemo};
+pub use self::{
+    anchor::{DESCENT, FlipAnchor},
+    memo::FlipMemo
+};
 
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]

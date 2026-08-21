@@ -6,11 +6,13 @@
 //! the bar stalling, and it is slower into the bargain — the whole unfolding
 //! then takes as long as the queue rather than as long as one flight.
 //!
-//! What a block does with the clock is in two acts rather than one: it
-//! crosses the screen first and writes itself out second. Opening while still
-//! travelling would have text sliding under the eye, and both acts leave
-//! quickly and settle slowly, which is what everything arriving somewhere
-//! does.
+//! What a block does with the clock it does the moment it can. It drops to
+//! its own level and writes itself out from the instant it is on it, while
+//! the last of its journey — the move along its own lane — still runs under
+//! it. And the near blocks are on their level first: the way is shorter and
+//! the speed is the same, so the top of a column is open while the bottom of
+//! it is still coming down. Both acts leave quickly and settle slowly, which
+//! is what everything arriving somewhere does.
 
 use std::time::Duration;
 
@@ -74,15 +76,21 @@ impl Unfold {
 
 /// How far a block has crossed and how far it has opened, at `progress`.
 ///
-/// One answer for every block of the bar, which is what it means for none of
-/// them to wait: they are all in the same act at the same moment, and what
-/// keeps them apart is the lane each one travels down.
+/// `reach` is how far this block has to go against the block that goes
+/// furthest, one being the furthest of them. Every block sets off at the same
+/// instant and they all travel at the same speed, so a block with half the
+/// way to go is there in half the time — and opens there and then, rather
+/// than standing on its place waiting for the far ones to land.
 #[must_use]
-pub fn share(progress: f32) -> (f32, f32) {
+pub fn share(progress: f32, reach: f32) -> (f32, f32) {
     let progress = progress.clamp(0.0, 1.0);
+    let reach = reach.clamp(0.05, 1.0);
 
-    let travel = eased(progress / CROSSING);
-    let bloom = eased((progress - CROSSING) / (1.0 - CROSSING));
+    let crossing = CROSSING * reach;
+    let arrival = crossing * crate::components::flip::DESCENT;
+
+    let travel = eased(progress / crossing);
+    let bloom = eased((progress - arrival) / (1.0 - arrival));
 
     (travel, bloom)
 }
@@ -126,38 +134,85 @@ mod tests {
             #[expect(clippy::cast_precision_loss, reason = "a fixed sample count")]
             let progress = step as f32 / 400.0;
 
-            assert!(
-                share(progress).0 > 0.0,
-                "every block is under way at {progress:.3}"
-            );
+            for reach in [0.2_f32, 0.5, 1.0] {
+                assert!(
+                    share(progress, reach).0 > 0.0,
+                    "every block is under way at {progress:.3}"
+                );
+            }
         }
     }
 
     #[test]
-    fn a_block_crosses_before_it_opens() {
-        assert_eq!(share(0.0), (0.0, 0.0));
-        assert_eq!(share(1.0), (1.0, 1.0));
-
-        for step in 0..=200 {
+    fn the_nearer_block_arrives_first_and_opens_first() {
+        for step in 1..400 {
             #[expect(clippy::cast_precision_loss, reason = "a fixed sample count")]
-            let progress = step as f32 / 200.0;
-            let (travel, bloom) = share(progress);
+            let progress = step as f32 / 400.0;
+
+            let near = share(progress, 0.3);
+            let far = share(progress, 1.0);
 
             assert!(
-                bloom == 0.0 || travel >= 1.0,
-                "nothing opens before it has arrived"
+                near.0 >= far.0 && near.1 >= far.1,
+                "at {progress:.3} the near block is behind the far one: {near:?} against {far:?}"
+            );
+        }
+
+        assert!(
+            share(0.2, 0.3).1 > 0.0,
+            "the near block is open while the far one is still coming down"
+        );
+        assert_eq!(share(0.2, 1.0).1, 0.0);
+    }
+
+    #[test]
+    fn a_block_drops_to_its_level_before_it_opens() {
+        assert_eq!(share(0.0, 1.0), (0.0, 0.0));
+        assert_eq!(share(1.0, 1.0), (1.0, 1.0));
+
+        for reach in [0.2_f32, 0.5, 1.0] {
+            let arrival = CROSSING * reach * crate::components::flip::DESCENT;
+
+            for step in 0..=200 {
+                #[expect(clippy::cast_precision_loss, reason = "a fixed sample count")]
+                let progress = step as f32 / 200.0;
+                let (_, bloom) = share(progress, reach);
+
+                assert!(
+                    bloom == 0.0 || progress >= arrival,
+                    "nothing opens before it is down at {progress:.3}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn a_block_never_stands_still_between_arriving_and_opening() {
+        for step in 0..=400 {
+            #[expect(clippy::cast_precision_loss, reason = "a fixed sample count")]
+            let progress = step as f32 / 400.0;
+
+            if progress <= 0.0 || progress >= 1.0 {
+                continue;
+            }
+
+            let (travel, bloom) = share(progress, 1.0);
+
+            assert!(
+                travel < 1.0 || bloom > 0.0,
+                "at {progress:.3} the journey is over and nothing has begun to open"
             );
         }
     }
 
     #[test]
     fn the_front_moves_on_every_frame_of_the_clock() {
-        let mut moving = share(0.0);
+        let mut moving = share(0.0, 1.0);
 
         for step in 1..=400 {
             #[expect(clippy::cast_precision_loss, reason = "a fixed sample count")]
             let progress = step as f32 / 400.0;
-            let next = share(progress);
+            let next = share(progress, 1.0);
 
             assert!(
                 next.0 > moving.0 || next.1 > moving.1 || next == (1.0, 1.0),

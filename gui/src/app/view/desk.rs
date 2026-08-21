@@ -53,6 +53,7 @@ impl App {
         let modules = &self.config.modules;
 
         let (left, centre, right) = Self::desk_columns(modules);
+        let deepest = left.len().max(centre.len()).max(right.len());
 
         let columns = [
             (&left, blocks::Side::Leading),
@@ -60,7 +61,7 @@ impl App {
             (&right, blocks::Side::Trailing)
         ]
         .into_iter()
-        .filter_map(|(order, side)| self.desk_column(order, id, side, ink, unfolding));
+        .filter_map(|(order, side)| self.desk_column(order, id, side, ink, unfolding, deepest));
 
         let canvas = container(
             Row::with_children(columns)
@@ -347,35 +348,32 @@ mod tests {
     }
 
     #[test]
-    fn a_block_crosses_the_screen_before_it_writes_itself_out() {
+    fn a_block_drops_to_its_level_before_it_writes_itself_out() {
         let mut app = test_app_with(|config| config.desk.enabled = true);
         set_off(&mut app);
 
-        let mut wrote_while_crossing = false;
-        let mut crossed = false;
+        let mut wrote_before_landing = false;
 
         for _ in 0..256 {
-            let (travel, bloom) = hydebar_core::animation::share(app.desk_presence(None));
+            let (_, _, right) = App::desk_columns(&app.config.modules);
+            let reach = App::reach(1, right.len());
+            let down = hydebar_core::animation::share(app.desk_presence(None), reach).1 > 0.0;
             let writing = on_screen(&app)
                 .find("MEMORY")
                 .ok()
                 .and_then(|found| found.visible_bounds())
                 .is_some();
 
-            crossed |= travel >= 1.0;
-            wrote_while_crossing |= writing && travel < 1.0;
-
-            let _ = bloom;
+            wrote_before_landing |= writing && !down;
 
             if !tick(&mut app) {
                 break;
             }
         }
 
-        assert!(crossed, "the leading block reaches its place");
         assert!(
-            !wrote_while_crossing,
-            "no block writes itself out while it is still crossing"
+            !wrote_before_landing,
+            "no block writes itself out before it is down on its level"
         );
         assert!(
             on_screen(&app)
@@ -388,6 +386,45 @@ mod tests {
     }
 
     #[test]
+    fn the_block_with_less_way_to_go_opens_first() {
+        let mut app = test_app_with(|config| config.desk.enabled = true);
+        set_off(&mut app);
+
+        let mut near = None;
+        let mut far = None;
+
+        for frame in 0..256 {
+            let seen = |title: &str| {
+                on_screen(&app)
+                    .find(title)
+                    .ok()
+                    .and_then(|found| found.visible_bounds())
+                    .is_some()
+            };
+
+            if near.is_none() && seen("SYSTEM") {
+                near = Some(frame);
+            }
+
+            if far.is_none() && seen("APP LAUNCHER") {
+                far = Some(frame);
+            }
+
+            if !tick(&mut app) {
+                break;
+            }
+        }
+
+        let near = near.expect("the block nearest the strip opens");
+        let far = far.expect("the block furthest from the strip opens");
+
+        assert!(
+            near < far,
+            "the near block opened on frame {near} and the far one on {far}: it waited"
+        );
+    }
+
+    #[test]
     fn nothing_shifts_in_the_column_while_the_blocks_open() {
         let mut app = test_app_with(|config| config.desk.enabled = true);
         set_off(&mut app);
@@ -395,7 +432,7 @@ mod tests {
         let mut seat = None;
 
         for _ in 0..256 {
-            if hydebar_core::animation::share(app.desk_presence(None)).0 >= 1.0 {
+            if hydebar_core::animation::share(app.desk_presence(None), 1.0).0 >= 1.0 {
                 let now = on_screen(&app)
                     .find("PROCESSOR")
                     .expect("the block under the first one")

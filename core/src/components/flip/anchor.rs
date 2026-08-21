@@ -5,7 +5,11 @@ use std::cell::RefCell;
 use super::memo::FlipMemo;
 
 /// The share of a descending journey spent falling before it closes in.
-const DESCENT: f32 = 0.6;
+///
+/// A block is on its own level once this much of its journey is done, and
+/// what is left is the move along. Stated for the whole crate because what a
+/// block does on arriving at its level — open — is timed off it.
+pub const DESCENT: f32 = 0.6;
 
 /// Wraps one block so it journeys between its recorded seats.
 pub struct FlipAnchor<'a, Message, Theme = iced::Theme, Renderer = iced::Renderer>

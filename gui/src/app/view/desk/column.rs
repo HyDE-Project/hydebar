@@ -52,15 +52,17 @@ impl App {
         id: Id,
         side: Side,
         ink: Ink,
-        unfolding: f32
+        unfolding: f32,
+        deepest: usize
     ) -> Option<Element<'a, Message>> {
         let fan = self.fan_span();
-        let (travel, bloom) = hydebar_core::animation::share(unfolding);
 
         let blocks: Vec<Element<'a, Message>> = order
             .iter()
             .enumerate()
             .filter_map(|(within, unit)| {
+                let (travel, bloom) =
+                    hydebar_core::animation::share(unfolding, Self::reach(within, deepest));
                 let block = self.desk_unit(unit, id, side, ink, bloom)?;
 
                 #[expect(
@@ -100,6 +102,20 @@ impl App {
                 .align_x(side.alignment_x())
                 .into()
         )
+    }
+
+    /// How far the block standing `within` places down a column has to go.
+    ///
+    /// Against the block that goes furthest, which is the last place of the
+    /// longest column: the places of a column are a row apart, so how many
+    /// places down a block stands is how far down the screen it is bound.
+    /// A block half as far down is there in half the time and opens then.
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "a layout holds a handful of units"
+    )]
+    pub(crate) fn reach(within: usize, deepest: usize) -> f32 {
+        (within + 1) as f32 / (deepest.max(1)) as f32
     }
 
     /// The units of one section, in the order the canvas stands them in.

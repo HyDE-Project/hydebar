@@ -199,7 +199,7 @@ impl App {
     /// neighbours flew is the thing this unfolding does not do.
     #[must_use]
     pub(crate) fn has_left_the_strip(&self, screen: Option<&str>) -> bool {
-        hydebar_core::animation::share(self.desk_presence(screen)).0 > 0.0
+        hydebar_core::animation::share(self.desk_presence(screen), 1.0).0 > 0.0
     }
 
     /// Reports whether the strip still has its islands standing on it.
