@@ -24,6 +24,19 @@ pub(super) enum Side {
 }
 
 impl Side {
+    /// The padding that holds a block `inwards` from its own edge.
+    ///
+    /// The lane a block stands in: the edge sections push their near blocks
+    /// away from the edge they belong to, and the middle one stands where it
+    /// is.
+    pub(super) fn lane(self, inwards: f32) -> iced::Padding {
+        match self {
+            Self::Leading => iced::Padding::default().left(inwards),
+            Self::Trailing => iced::Padding::default().right(inwards),
+            Self::Middle => iced::Padding::default()
+        }
+    }
+
     /// How a column of this side lines its content up.
     pub(super) const fn alignment_x(self) -> Alignment {
         match self {

@@ -365,6 +365,46 @@ mod tests {
     }
 
     #[test]
+    fn each_block_of_a_section_stands_in_a_lane_of_its_own() {
+        use hydebar_core::config::ModuleName;
+        use hydebar_proto::config::ModuleDef;
+
+        let mut app = test_app_with(|config| {
+            config.desk.enabled = true;
+            config.modules.left = vec![
+                ModuleDef::Single(ModuleName::CpuTemp),
+                ModuleDef::Single(ModuleName::Memory),
+            ];
+            config.modules.center = Vec::new();
+            config.modules.right = Vec::new();
+        });
+        app.screen_width = Some(1920.0);
+        open(&mut app);
+
+        let edge = simulator(app.desk_surface(surface()))
+            .find("CPU TEMPERATURE")
+            .expect("the far module")
+            .bounds();
+        let middle = simulator(app.desk_surface(surface()))
+            .find("MEMORY")
+            .expect("the near module")
+            .bounds();
+
+        assert!(
+            middle.y < edge.y,
+            "the near module stands higher: {} against {}",
+            middle.y,
+            edge.y
+        );
+        assert!(
+            middle.x > edge.x,
+            "the near module stands further in: {} against {}",
+            middle.x,
+            edge.x
+        );
+    }
+
+    #[test]
     fn the_module_nearest_the_middle_of_the_strip_stands_highest() {
         use hydebar_core::config::ModuleName;
         use hydebar_proto::config::ModuleDef;

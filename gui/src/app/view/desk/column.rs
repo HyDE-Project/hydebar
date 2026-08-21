@@ -7,13 +7,22 @@
 //! always had.
 
 use hydebar_core::config::{ModuleDef, ModuleName};
-use iced::{Element, Length, SurfaceId as Id, widget::Column};
+use iced::{
+    Element, Length, SurfaceId as Id,
+    widget::{Column, container}
+};
 
 use super::{
     super::super::state::{App, Message},
     blocks::{self, Ink, Side},
     readings
 };
+
+/// The share of the screen the fan of one section reaches across.
+///
+/// Wide enough that the lanes are plainly apart and narrow enough that the
+/// two edge sections never meet in the middle, where the centre one stands.
+const FAN: f32 = 0.16;
 
 /// The share of one block's journey spent crossing the screen.
 ///
@@ -101,6 +110,8 @@ impl App {
         )]
         let last = (order.len().saturating_sub(1)) as f32;
 
+        let fan = self.fan_span();
+
         let blocks: Vec<Element<'a, Message>> = order
             .iter()
             .enumerate()
@@ -113,13 +124,17 @@ impl App {
                 let (travel, bloom) = journey(unfolding, place, order.len());
 
                 let block = self.desk_block(module, id, side, ink, bloom)?;
+                let lane = container(block)
+                    .width(Length::Fill)
+                    .align_x(side.alignment_x())
+                    .padding(side.lane(fan * (1.0 - place)));
 
                 Some(
                     hydebar_core::components::flip::FlipAnchor::new(
                         self.flip_key(module, id),
                         travel,
                         &self.flip,
-                        block
+                        lane
                     )
                     .departing_from(self.strip_row())
                     .into()
@@ -164,6 +179,18 @@ impl App {
         }
 
         order
+    }
+
+    /// How far inwards the nearest block of a section stands.
+    ///
+    /// The blocks of a section fan out as they come down: the one that stood
+    /// nearest the middle of the strip lands nearest the middle of the screen
+    /// and the far one lands against the edge, each in a lane of its own.
+    /// Falling straight down a single lane is what had them passing through
+    /// one another — a block on its way to the fourth place crossed the three
+    /// already standing.
+    fn fan_span(&self) -> f32 {
+        self.screen_width.unwrap_or(1920.0) * FAN
     }
 
     /// The height the strip's own islands stand at.
