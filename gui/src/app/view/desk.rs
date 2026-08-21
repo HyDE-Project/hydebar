@@ -9,7 +9,7 @@
 //! One folder, one room so far: [`column`] stacks a section into a column.
 
 mod blocks;
-pub(crate) mod column;
+pub mod column;
 mod readings;
 
 use hydebar_core::config::ModuleName;
