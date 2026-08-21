@@ -160,10 +160,30 @@ impl App {
     /// Reports whether any of them is still travelling.
     pub(crate) fn advance_desk(&mut self, elapsed: std::time::Duration) -> bool {
         let total = self.unfolding_response();
+        let bare: Vec<Option<String>> = self
+            .desk_clocks
+            .keys()
+            .filter(|screen| self.desk_covers(screen.as_deref()))
+            .cloned()
+            .collect();
 
-        self.desk_clocks.values_mut().fold(false, |running, clock| {
-            clock.advance(elapsed, total) | running
+        bare.into_iter().fold(false, |running, screen| {
+            self.desk_clocks
+                .get_mut(&screen)
+                .is_some_and(|clock| clock.advance(elapsed, total))
+                | running
         })
+    }
+
+    /// Reports whether the canvas belongs on `screen` at all.
+    ///
+    /// A clock only runs while its own screen is bare. Left to run on every
+    /// screen it would carry a folded canvas out over a window: the clock of
+    /// a screen holding one is at rest, not at zero speed, and a frame tick
+    /// is not a reason to move it.
+    #[must_use]
+    fn desk_covers(&self, screen: Option<&str>) -> bool {
+        self.config.desk.enabled && self.desk.covers(screen)
     }
 
     /// Reports whether any screen is in the middle of unfolding.

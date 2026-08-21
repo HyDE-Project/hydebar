@@ -206,6 +206,25 @@ mod tests {
     }
 
     #[test]
+    fn a_screen_holding_a_window_keeps_its_strip_however_long_it_stands() {
+        let mut app = test_app_with(|config| config.desk.enabled = true);
+        let hour = app.clock.data().format(&app.config.clock.format);
+
+        app.desk_clocks.entry(None).or_default();
+
+        for frame in 0..240 {
+            let _ = app.advance_desk(std::time::Duration::from_millis(16));
+
+            assert!(
+                simulator(app.bar_surface(surface()))
+                    .find(hour.as_str())
+                    .is_ok(),
+                "frame {frame}: the strip stands on a screen the canvas does not cover"
+            );
+        }
+    }
+
+    #[test]
     fn a_screen_holding_a_window_draws_no_canvas() {
         let app = unfolded(0.0);
         let mut ui = simulator(app.desk_surface(surface()));
