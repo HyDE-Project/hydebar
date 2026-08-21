@@ -163,6 +163,19 @@ mod tests {
         Id::unique()
     }
 
+    /// A simulator the size of the screen the canvas is drawn for.
+    ///
+    /// The blocks take the room they will need from the first frame, so a
+    /// canvas drawn into a window smaller than a screen has its lower blocks
+    /// off the bottom of it and nothing to say about what is visible.
+    fn on_screen(app: &App) -> iced_test::simulator::Simulator<'_, Message> {
+        iced_test::simulator::Simulator::with_size(
+            iced_test::core::Settings::default(),
+            iced::Size::new(1920.0, 1080.0),
+            app.desk_surface(surface())
+        )
+    }
+
     #[test]
     fn a_bare_screen_unfolds_the_bar_into_its_blocks() {
         let app = unfolded(1.0);
@@ -343,9 +356,11 @@ mod tests {
 
         for _ in 0..256 {
             let (travel, bloom) = hydebar_core::animation::share(app.desk_presence(None));
-            let writing = simulator(app.desk_surface(surface()))
+            let writing = on_screen(&app)
                 .find("MEMORY")
-                .is_ok();
+                .ok()
+                .and_then(|found| found.visible_bounds())
+                .is_some();
 
             crossed |= travel >= 1.0;
             wrote_while_crossing |= writing && travel < 1.0;
@@ -363,11 +378,43 @@ mod tests {
             "no block writes itself out while it is still crossing"
         );
         assert!(
-            simulator(app.desk_surface(surface()))
+            on_screen(&app)
                 .find("MEMORY")
-                .is_ok(),
+                .ok()
+                .and_then(|found| found.visible_bounds())
+                .is_some(),
             "the blocks are open once the unfolding is over"
         );
+    }
+
+    #[test]
+    fn nothing_shifts_in_the_column_while_the_blocks_open() {
+        let mut app = test_app_with(|config| config.desk.enabled = true);
+        set_off(&mut app);
+
+        let mut seat = None;
+
+        for _ in 0..256 {
+            if hydebar_core::animation::share(app.desk_presence(None)).0 >= 1.0 {
+                let now = on_screen(&app)
+                    .find("PROCESSOR")
+                    .expect("the block under the first one")
+                    .bounds()
+                    .y;
+                let first = *seat.get_or_insert(now);
+
+                assert!(
+                    (now - first).abs() < 0.5,
+                    "the block below moved from {first} to {now} as the one above it opened"
+                );
+            }
+
+            if !tick(&mut app) {
+                break;
+            }
+        }
+
+        assert!(seat.is_some(), "the blocks reach their places");
     }
 
     #[test]

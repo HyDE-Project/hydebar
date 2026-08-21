@@ -24,13 +24,6 @@ use super::{
 /// two edge sections never meet in the middle, where the centre one stands.
 const FAN: f32 = 0.16;
 
-/// How far the clock has to have opened before its month stands under it.
-///
-/// The face is one line and the month is six: letting them arrive together
-/// would have the whole column jump the moment the block opens, so the hour
-/// lands first and the month follows it.
-const MONTH_OPENS_AT: f32 = 0.45;
-
 impl App {
     /// Stacks one section of the layout into a column of the canvas.
     ///
@@ -155,6 +148,12 @@ impl App {
     }
 
     /// Draws one unit in the form the canvas has room for.
+    ///
+    /// The opened block is built on every frame of the unfolding, empty of
+    /// writing or full of it: it is what takes the unit's room in the column,
+    /// and a unit that stood as a bare island until it began to open would
+    /// take its room only then, moving everything below it down the screen
+    /// mid-flight.
     fn desk_unit<'a>(
         &'a self,
         unit: &'a ModuleName,
@@ -164,11 +163,6 @@ impl App {
         bloom: f32
     ) -> Option<Element<'a, Message>> {
         let island = self.desk_island(unit, id)?;
-
-        if bloom <= 0.0 {
-            return Some(island);
-        }
-
         let opened: Vec<Element<'a, Message>> = self.desk_opened(unit, side, ink, bloom);
 
         if opened.is_empty() {
@@ -193,7 +187,7 @@ impl App {
         bloom: f32
     ) -> Vec<Element<'a, Message>> {
         if matches!(module, ModuleName::Clock) {
-            return self.desk_month(bloom).into_iter().collect();
+            return vec![self.desk_month()];
         }
 
         let panels = self.desk_panels(module);
@@ -265,15 +259,15 @@ impl App {
             .into()
     }
 
-    /// The month the clock opens into, once it has opened far enough.
+    /// The month the clock opens into.
     ///
     /// The very grid its press opens on the strip — the same widget, drawn
-    /// straight onto the wallpaper instead of into a popup. It waits for the
-    /// opening to be under way because it is six rows tall against the one
-    /// row of the island above it.
-    fn desk_month(&self, bloom: f32) -> Option<Element<'_, Message>> {
-        (bloom >= MONTH_OPENS_AT)
-            .then(|| self.calendar.menu_view(self.icons()).map(Message::Calendar))
+    /// straight onto the wallpaper instead of into a popup. It is there from
+    /// the first frame of the unfolding: six rows arriving part way through
+    /// would push the rest of the column down the screen at that moment, and
+    /// the clock is flying at that moment.
+    fn desk_month(&self) -> Element<'_, Message> {
+        self.calendar.menu_view(self.icons()).map(Message::Calendar)
     }
 
     /// What a module has to say once it has the room to say all of it.
