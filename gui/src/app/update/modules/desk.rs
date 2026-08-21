@@ -1,6 +1,6 @@
 //! The unfolding of the desk, screen by screen.
 
-use hydebar_core::animation::GENTLE;
+use hydebar_core::animation::{GENTLE, STANDARD};
 use iced::{Task, set_input_region};
 
 use super::super::super::state::{App, Message};
@@ -56,6 +56,63 @@ impl App {
         }
 
         Task::batch(tasks)
+    }
+
+    /// Advances the opening of every block that has finished travelling.
+    ///
+    /// The two halves of the unfolding are stated apart on purpose. A module
+    /// crosses the screen in the shape the strip gave it — a glance, a pill —
+    /// and only once it has come to rest does it write out everything it
+    /// knows. Starting both at once would have the blocks growing while they
+    /// are still moving, which reads as the layout thrashing rather than as
+    /// the bar unfolding.
+    ///
+    /// Reports whether any opening still needs frames.
+    pub(crate) fn advance_desk_blooms(&mut self, elapsed: std::time::Duration) -> bool {
+        let animated = self.config.appearance.animations.enabled;
+
+        let screens: Vec<Option<String>> = self
+            .outputs
+            .desk_surfaces()
+            .map(|(_, screen)| screen.map(ToOwned::to_owned))
+            .collect();
+
+        for screen in screens {
+            let arrived =
+                self.desk_holds(screen.as_deref()) && self.desk_has_landed(screen.as_ref());
+
+            self.desk_blooms
+                .point(screen, arrived, animated && arrived, STANDARD);
+        }
+
+        self.desk_blooms.advance(elapsed)
+    }
+
+    /// Reports whether the blocks of `screen` have come to rest.
+    fn desk_has_landed(&self, screen: Option<&String>) -> bool {
+        self.desk_fades.progress(&screen.cloned()) >= 1.0
+    }
+
+    /// Reports whether any screen has blocks waiting to be written out.
+    ///
+    /// The frame clock has to keep running through the pause between the two
+    /// halves: the travel has settled, so its spring asks for no more frames,
+    /// and the opening has not started, so neither does it.
+    #[must_use]
+    pub(crate) fn desk_blooms_are_due(&self) -> bool {
+        self.outputs.desk_surfaces().any(|(_, screen)| {
+            let screen = screen.map(ToOwned::to_owned);
+
+            self.desk_holds(screen.as_deref())
+                && self.desk_has_landed(screen.as_ref())
+                && self.desk_blooms.progress(&screen) < 1.0
+        })
+    }
+
+    /// How far the blocks of `screen` have written themselves out.
+    #[must_use]
+    pub(crate) fn desk_bloom(&self, screen: Option<&str>) -> f32 {
+        self.desk_blooms.progress(&screen.map(ToOwned::to_owned))
     }
 
     /// How far the canvas of `screen` has unfolded, zero folded and one out.

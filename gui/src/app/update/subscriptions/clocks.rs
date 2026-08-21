@@ -103,6 +103,8 @@ impl App {
             || self.appearance_transition.is_animating()
             || self.hover.is_animating()
             || self.desk_fades.is_animating()
+            || self.desk_blooms.is_animating()
+            || self.desk_blooms_are_due()
             || self.entrance.is_animating()
             || self.relayout.is_animating()
             || self.greeting.is_animating()

@@ -124,6 +124,12 @@ pub struct App {
     /// may be folding back under a window that just mapped while the other is
     /// still unfolding over a workspace that was cleared.
     pub desk_fades: hydebar_core::animation::HoverFades<Option<String>>,
+    /// Opening of the blocks, one spring per screen the desk stands on.
+    ///
+    /// The second half of the unfolding: the modules travel in the shape the
+    /// strip gave them, come to rest, and only then write themselves out.
+    /// Kept apart from the travel because it starts where the travel ends.
+    pub desk_blooms: hydebar_core::animation::HoverFades<Option<String>>,
     /// The one tooltip lifecycle: dwell, warmth and the fade either way.
     pub hints: hydebar_core::tooltip::Hints,
     /// The greeting line, composed once when the greeting is armed.

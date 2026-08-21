@@ -7,13 +7,23 @@
 //! always had.
 
 use hydebar_core::config::{ModuleDef, ModuleName};
-use iced::{Element, Length, SurfaceId as Id, widget::Column};
+use iced::{
+    Element, Length, SurfaceId as Id,
+    widget::{Column, Space}
+};
 
 use super::{
     super::super::state::{App, Message},
     blocks::{self, Ink, Side},
     face, readings
 };
+
+/// How far the clock has to have opened before its month stands under it.
+///
+/// The face is one line and the month is six: letting them arrive together
+/// would have the whole column jump the moment the block opens, so the hour
+/// lands first and the month follows it.
+const MONTH_OPENS_AT: f32 = 0.45;
 
 impl App {
     /// Stacks one section of the layout into a column of the canvas.
@@ -22,32 +32,70 @@ impl App {
     /// an empty section leaves no gap on the canvas.
     pub(super) fn desk_column<'a>(
         &'a self,
-        section: &'a [ModuleDef],
+        order: &[&'a ModuleName],
         id: Id,
         side: Side,
         ink: Ink,
-        travel: f32
+        travel: f32,
+        bloom: f32
     ) -> Option<Element<'a, Message>> {
-        let blocks: Vec<Element<'a, Message>> = section
+        let blocks: Vec<Element<'a, Message>> = order
             .iter()
-            .flat_map(|module_def| match module_def {
-                ModuleDef::Single(module) => vec![module],
-                ModuleDef::Group(group) => group.iter().collect()
-            })
-            .filter_map(|module| self.desk_block(module, id, side, ink))
+            .filter_map(|module| self.desk_block(module, id, side, ink, bloom))
             .collect();
 
         if blocks.is_empty() {
             return None;
         }
 
-        Some(
-            Column::with_children(blocks)
-                .spacing(ink.size * 1.8 * travel)
-                .width(Length::Fill)
-                .align_x(side.alignment_x())
-                .into()
-        )
+        let reaches_the_corner = side.reaches_the_corner() && blocks.len() > 1;
+        let mut column = Column::new()
+            .width(Length::Fill)
+            .align_x(side.alignment_x());
+
+        for (index, block) in blocks.into_iter().enumerate() {
+            if index > 0 {
+                column = if reaches_the_corner {
+                    column.push(Space::new().height(Length::Fill))
+                } else {
+                    column.push(Space::new().height(Length::Fixed(ink.size * 1.8 * travel)))
+                };
+            }
+
+            column = column.push(block);
+        }
+
+        Some(if reaches_the_corner {
+            column.height(Length::Fill).into()
+        } else {
+            column.into()
+        })
+    }
+
+    /// The modules of one section, in the order the canvas stands them in.
+    ///
+    /// The rule is the distance from the middle of the strip: a module that
+    /// stood near the centre stands high on the canvas, and one that stood at
+    /// an edge reaches for the corner below it. The centre section already
+    /// reads outwards from the middle; the left one reads towards it, so it
+    /// is turned around.
+    pub(super) fn desk_order(
+        section: &[ModuleDef],
+        reads_towards_the_centre: bool
+    ) -> Vec<&ModuleName> {
+        let mut order: Vec<&ModuleName> = section
+            .iter()
+            .flat_map(|module_def| match module_def {
+                ModuleDef::Single(module) => vec![module],
+                ModuleDef::Group(group) => group.iter().collect()
+            })
+            .collect();
+
+        if reads_towards_the_centre {
+            order.reverse();
+        }
+
+        order
     }
 
     /// Draws one module in the form the canvas has room for.
@@ -56,10 +104,15 @@ impl App {
         module: &'a ModuleName,
         id: Id,
         side: Side,
-        ink: Ink
+        ink: Ink,
+        bloom: f32
     ) -> Option<Element<'a, Message>> {
+        if bloom <= 0.0 {
+            return self.desk_reading(module, id);
+        }
+
         if matches!(module, ModuleName::Clock) {
-            return Some(self.desk_clock(ink, side));
+            return Some(self.desk_clock(ink, side, bloom));
         }
 
         let panels = self.desk_panels(module);
@@ -69,11 +122,15 @@ impl App {
         }
 
         Some(
-            Column::with_children(panels.iter().map(|panel| blocks::panel(panel, side, ink)))
-                .spacing(ink.size * 1.4)
-                .width(Length::Fill)
-                .align_x(side.alignment_x())
-                .into()
+            Column::with_children(
+                panels
+                    .iter()
+                    .map(|panel| blocks::panel(panel, side, ink, bloom))
+            )
+            .spacing(ink.size * 1.4)
+            .width(Length::Fill)
+            .align_x(side.alignment_x())
+            .into()
         )
     }
 
@@ -121,15 +178,23 @@ impl App {
     ///
     /// The month is the very grid its press opens on the strip — the same
     /// widget, drawn straight onto the wallpaper instead of into a popup.
-    fn desk_clock(&self, ink: Ink, side: Side) -> Element<'_, Message> {
-        Column::new()
-            .push(face::clock(
-                self.clock.data(),
-                &self.config.clock,
-                ink.size,
-                side.alignment_x()
-            ))
-            .push(self.calendar.menu_view(self.icons()).map(Message::Calendar))
+    fn desk_clock(&self, ink: Ink, side: Side, bloom: f32) -> Element<'_, Message> {
+        let face = face::clock(
+            self.clock.data(),
+            &self.config.clock,
+            ink.size,
+            side.alignment_x()
+        );
+
+        let clock = Column::new().push(face);
+
+        let clock = if bloom >= MONTH_OPENS_AT {
+            clock.push(self.calendar.menu_view(self.icons()).map(Message::Calendar))
+        } else {
+            clock
+        };
+
+        clock
             .spacing(ink.size)
             .width(Length::Fill)
             .align_x(side.alignment_x())

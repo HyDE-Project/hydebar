@@ -18,15 +18,27 @@ pub(super) enum Side {
     /// Pinned to the left edge, label before value.
     Leading,
     /// Pinned to the right edge, value before label.
-    Trailing
+    Trailing,
+    /// Standing in the middle, where the centre of the strip was.
+    Middle
 }
 
 impl Side {
+    /// Reports whether the column reaches for the corner under it.
+    ///
+    /// The two edge columns do: their last block belongs at the bottom of the
+    /// screen, because it stood at the far end of the strip. The middle one
+    /// does not — it stood at the centre, so it stays at the top.
+    pub(super) const fn reaches_the_corner(self) -> bool {
+        matches!(self, Self::Leading | Self::Trailing)
+    }
+
     /// How a column of this side lines its content up.
     pub(super) const fn alignment_x(self) -> Alignment {
         match self {
             Self::Leading => Alignment::Start,
-            Self::Trailing => Alignment::End
+            Self::Trailing => Alignment::End,
+            Self::Middle => Alignment::Center
         }
     }
 }
@@ -53,7 +65,12 @@ impl Ink {
 }
 
 /// Draws one panel: heading, rule, then a line per reading.
-pub(super) fn panel<'a>(panel: &Panel, side: Side, ink: Ink) -> Element<'a, Message> {
+///
+/// `bloom` is how far the block has written itself out, and it writes out one
+/// line at a time rather than all at once behind a fade: the heading and its
+/// rule come first, then a reading, then the next, the way a monitor filling
+/// in reads.
+pub(super) fn panel<'a>(panel: &Panel, side: Side, ink: Ink, bloom: f32) -> Element<'a, Message> {
     let heading = text(panel.title.to_uppercase())
         .size(ink.size * 1.05)
         .color(ink.heading());
@@ -65,9 +82,18 @@ pub(super) fn panel<'a>(panel: &Panel, side: Side, ink: Ink) -> Element<'a, Mess
             ..container::Style::default()
         });
 
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::cast_precision_loss,
+        clippy::cast_sign_loss,
+        reason = "a block holds a handful of rows, far below any precision limit"
+    )]
+    let written = (bloom.clamp(0.0, 1.0) * panel.rows.len() as f32).ceil() as usize;
+
     let lines = panel
         .rows
         .iter()
+        .take(written)
         .map(|(label, value)| line(label, value, side, ink));
 
     Column::with_children(
@@ -87,7 +113,7 @@ fn line<'a>(label: &str, value: &str, side: Side, ink: Ink) -> Element<'a, Messa
     let value = text(value.to_owned()).size(ink.size).color(ink.value);
 
     let children: Vec<Element<'a, Message>> = match side {
-        Side::Leading => vec![
+        Side::Leading | Side::Middle => vec![
             label.into(),
             Space::new().width(Length::Fill).into(),
             value.into(),

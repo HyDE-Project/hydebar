@@ -38,6 +38,7 @@ impl App {
         }
 
         let presence = self.desk_presence(screen);
+        let bloom = self.desk_bloom(screen);
 
         let ink = blocks::Ink {
             value: self.theme_cache.palette().text,
@@ -46,13 +47,17 @@ impl App {
         let margin = ink.size * 2.0;
         let modules = &self.config.modules;
 
+        let left = Self::desk_order(&modules.left, true);
+        let centre = Self::desk_order(&modules.center, false);
+        let right = Self::desk_order(&modules.right, false);
+
         let columns = [
-            (&modules.left, blocks::Side::Leading),
-            (&modules.center, blocks::Side::Leading),
-            (&modules.right, blocks::Side::Trailing)
+            (&left, blocks::Side::Leading),
+            (&centre, blocks::Side::Middle),
+            (&right, blocks::Side::Trailing)
         ]
         .into_iter()
-        .filter_map(|(section, side)| self.desk_column(section, id, side, ink, presence));
+        .filter_map(|(order, side)| self.desk_column(order, id, side, ink, presence, bloom));
 
         let canvas = container(
             Row::with_children(columns)
@@ -90,7 +95,7 @@ impl App {
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
-    use hydebar_core::animation::GENTLE;
+    use hydebar_core::animation::{GENTLE, STANDARD};
     use iced_test::simulator;
 
     use super::{
@@ -106,10 +111,16 @@ mod tests {
         let mut app = test_app_with(|config| config.desk.enabled = true);
 
         if presence > 0.0 {
-            app.desk_fades.point(None, true, false, GENTLE);
+            open(&mut app);
         }
 
         app
+    }
+
+    /// Sends a bar's canvas all the way out: travelled and written out.
+    fn open(app: &mut App) {
+        app.desk_fades.point(None, true, false, GENTLE);
+        app.desk_blooms.point(None, true, false, STANDARD);
     }
 
     fn surface() -> Id {
@@ -145,7 +156,7 @@ mod tests {
     #[test]
     fn the_desk_switched_off_draws_nothing_however_bare_the_screen() {
         let mut app = test_app_with(|config| config.desk.enabled = false);
-        app.desk_fades.point(None, true, false, GENTLE);
+        open(&mut app);
 
         let mut ui = simulator(app.desk_surface(surface()));
 
@@ -177,19 +188,25 @@ mod tests {
 
     /// The two probes that tell which shape holds the screen.
     ///
-    /// One text apiece, each drawn by one shape only: a block heading stands
-    /// on the canvas alone, and the strip states the hour in the format the
-    /// configuration named, which the canvas never uses.
+    /// The strip is asked for the hour in the format the configuration named,
+    /// which it draws whenever it draws at all. The canvas is asked for
+    /// either half of its unfolding: the modules it carries while they are
+    /// still travelling in their strip shape, or a block heading once they
+    /// have opened.
     fn shapes_on_screen(app: &App) -> (bool, bool) {
         let hour = app.clock.data().format(&app.config.clock.format);
 
-        let mut strip = simulator(app.bar_surface(surface()));
-        let mut canvas = simulator(app.desk_surface(surface()));
+        let strip = simulator(app.bar_surface(surface()))
+            .find(hour.as_str())
+            .is_ok();
+        let travelling = simulator(app.desk_surface(surface()))
+            .find(hour.as_str())
+            .is_ok();
+        let opened = simulator(app.desk_surface(surface()))
+            .find("MEMORY")
+            .is_ok();
 
-        (
-            strip.find(hour.as_str()).is_ok(),
-            canvas.find("MEMORY").is_ok()
-        )
+        (strip, travelling || opened)
     }
 
     #[test]
@@ -201,7 +218,7 @@ mod tests {
 
         app.desk_fades.point(None, true, true, GENTLE);
 
-        for frame in 0..64 {
+        for frame in 0..96 {
             let (strip, canvas) = shapes_on_screen(&app);
 
             assert!(
@@ -209,7 +226,10 @@ mod tests {
                 "frame {frame}: strip {strip}, canvas {canvas} — one shape, never two and never none"
             );
 
-            if !app.desk_fades.advance(std::time::Duration::from_millis(16)) {
+            let travelling = app.desk_fades.advance(std::time::Duration::from_millis(16));
+            let opening = app.advance_desk_blooms(std::time::Duration::from_millis(16));
+
+            if !travelling && !opening {
                 break;
             }
         }
@@ -221,12 +241,13 @@ mod tests {
     #[test]
     fn the_strip_is_back_on_the_very_frame_a_window_takes_the_screen() {
         let mut app = test_app_with(|config| config.desk.enabled = true);
-        app.desk_fades.point(None, true, false, GENTLE);
+        open(&mut app);
 
         let (strip, canvas) = shapes_on_screen(&app);
         assert!(!strip && canvas, "the canvas holds the bare screen");
 
         app.desk_fades.point(None, false, false, GENTLE);
+        app.desk_blooms.point(None, false, false, STANDARD);
 
         let (strip, canvas) = shapes_on_screen(&app);
         assert!(
@@ -238,8 +259,9 @@ mod tests {
     #[test]
     fn the_strip_takes_the_screen_back_the_moment_the_travel_ends() {
         let mut app = test_app_with(|config| config.desk.enabled = true);
-        app.desk_fades.point(None, true, false, GENTLE);
+        open(&mut app);
         app.desk_fades.point(None, false, true, GENTLE);
+        app.desk_blooms.point(None, false, false, STANDARD);
 
         for frame in 0..64 {
             let (strip, canvas) = shapes_on_screen(&app);
@@ -262,6 +284,140 @@ mod tests {
     }
 
     #[test]
+    fn the_blocks_travel_first_and_open_afterwards() {
+        let mut app = test_app_with(|config| config.desk.enabled = true);
+        app.desk_fades.point(None, true, true, GENTLE);
+
+        let mut opened_while_travelling = false;
+        let mut travelled = false;
+
+        for _ in 0..96 {
+            let landed = app.desk_presence(None) >= 1.0;
+            let writing = simulator(app.desk_surface(surface()))
+                .find("MEMORY")
+                .is_ok();
+
+            travelled |= landed;
+            opened_while_travelling |= writing && !landed;
+
+            let moving = app.desk_fades.advance(std::time::Duration::from_millis(16));
+            let opening = app.advance_desk_blooms(std::time::Duration::from_millis(16));
+
+            if !moving && !opening {
+                break;
+            }
+        }
+
+        assert!(travelled, "the blocks reach their places");
+        assert!(
+            !opened_while_travelling,
+            "no block writes itself out while it is still moving"
+        );
+        assert!(
+            simulator(app.desk_surface(surface()))
+                .find("MEMORY")
+                .is_ok(),
+            "the blocks are open once the travel is over"
+        );
+    }
+
+    #[test]
+    fn a_block_writes_itself_out_a_line_at_a_time() {
+        let mut app = test_app_with(|config| config.desk.enabled = true);
+        app.desk_fades.point(None, true, false, GENTLE);
+        app.desk_blooms.point(None, true, true, STANDARD);
+
+        let mut first = None;
+        let mut last = 0usize;
+
+        for _ in 0..96 {
+            let drawn = ["in use", "available", "cached", "swap"]
+                .into_iter()
+                .filter(|row| simulator(app.desk_surface(surface())).find(*row).is_ok())
+                .count();
+
+            if drawn > 0 && first.is_none() {
+                first = Some(drawn);
+            }
+
+            last = drawn;
+
+            if !app
+                .desk_blooms
+                .advance(std::time::Duration::from_millis(16))
+            {
+                break;
+            }
+        }
+
+        assert!(
+            first.is_some_and(|first| first < last),
+            "the block starts with fewer lines than it ends with"
+        );
+    }
+
+    #[test]
+    fn the_module_nearest_the_middle_of_the_strip_stands_highest() {
+        use hydebar_core::config::ModuleName;
+        use hydebar_proto::config::ModuleDef;
+
+        let mut app = test_app_with(|config| {
+            config.desk.enabled = true;
+            config.modules.left = vec![
+                ModuleDef::Single(ModuleName::CpuTemp),
+                ModuleDef::Single(ModuleName::Memory),
+            ];
+            config.modules.center = Vec::new();
+            config.modules.right = Vec::new();
+        });
+        open(&mut app);
+
+        let edge = simulator(app.desk_surface(surface()))
+            .find("CPU TEMPERATURE")
+            .expect("the far module")
+            .bounds()
+            .y;
+        let middle = simulator(app.desk_surface(surface()))
+            .find("MEMORY")
+            .expect("the near module")
+            .bounds()
+            .y;
+
+        assert!(
+            middle < edge,
+            "the module that stood nearer the middle stands higher: {middle} against {edge}"
+        );
+    }
+
+    #[test]
+    fn the_far_end_of_a_section_reaches_for_its_corner() {
+        use hydebar_core::config::ModuleName;
+        use hydebar_proto::config::ModuleDef;
+
+        let mut app = test_app_with(|config| {
+            config.desk.enabled = true;
+            config.modules.left = vec![
+                ModuleDef::Single(ModuleName::CpuTemp),
+                ModuleDef::Single(ModuleName::Memory),
+            ];
+            config.modules.center = Vec::new();
+            config.modules.right = Vec::new();
+        });
+        open(&mut app);
+
+        let mut ui = simulator(app.desk_surface(surface()));
+        let edge = ui.find("CPU TEMPERATURE").expect("the far module").bounds();
+
+        let mut ui = simulator(app.desk_surface(surface()));
+        let near = ui.find("MEMORY").expect("the near module").bounds();
+
+        assert!(
+            edge.y - near.y > near.height * 4.0,
+            "the far module is pushed well down the screen, not stacked under its neighbour"
+        );
+    }
+
+    #[test]
     fn every_column_of_the_layout_reaches_the_canvas() {
         let app = unfolded(1.0);
         let mut ui = simulator(app.desk_surface(surface()));
@@ -277,7 +433,7 @@ mod tests {
                 hydebar_core::config::ModuleName::CpuTemp
             )];
         });
-        app.desk_fades.point(None, true, false, GENTLE);
+        open(&mut app);
 
         let mut ui = simulator(app.desk_surface(surface()));
 
@@ -299,7 +455,7 @@ mod tests {
                 hydebar_core::config::ModuleName::AppLauncher
             )];
         });
-        app.desk_fades.point(None, true, false, GENTLE);
+        open(&mut app);
 
         let mut ui = simulator(app.desk_surface(surface()));
 
