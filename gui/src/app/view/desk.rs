@@ -778,6 +778,27 @@ mod tests {
     }
 
     #[test]
+    fn a_module_with_no_readings_opens_into_the_same_shape_as_the_rest() {
+        use hydebar_core::config::ModuleName;
+        use hydebar_proto::config::ModuleDef;
+
+        let mut app = test_app_with(|config| {
+            config.desk.enabled = true;
+            config.modules.left = vec![ModuleDef::Single(ModuleName::AppLauncher)];
+            config.modules.center = Vec::new();
+            config.modules.right = Vec::new();
+        });
+        open(&mut app);
+
+        let mut ui = simulator(app.desk_surface(surface()));
+
+        assert!(
+            ui.find("APP LAUNCHER").is_ok(),
+            "the module opens under its own heading, blanks where its readings would be"
+        );
+    }
+
+    #[test]
     fn a_module_with_nothing_longer_to_say_still_stands_on_the_canvas() {
         let mut app = test_app_with(|config| {
             config.desk.enabled = true;

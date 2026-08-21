@@ -79,13 +79,6 @@ pub(super) fn panel<'a>(panel: &Panel, side: Side, ink: Ink, bloom: f32) -> Elem
         .size(ink.size * 1.05)
         .color(ink.heading());
 
-    let rule = container(Space::new().width(Length::Fill).height(Length::Fixed(1.0)))
-        .width(Length::Fill)
-        .style(move |_| container::Style {
-            background: Some(ink.label().into()),
-            ..container::Style::default()
-        });
-
     let lines = panel
         .rows
         .iter()
@@ -93,7 +86,7 @@ pub(super) fn panel<'a>(panel: &Panel, side: Side, ink: Ink, bloom: f32) -> Elem
 
     let written = Column::with_children(
         std::iter::once(heading.into())
-            .chain(std::iter::once(rule.into()))
+            .chain(std::iter::once(rule(ink)))
             .chain(lines)
     )
     .spacing(ink.size * 0.28)
@@ -113,6 +106,82 @@ pub(super) fn panel<'a>(panel: &Panel, side: Side, ink: Ink, bloom: f32) -> Elem
     container(written)
         .max_height(full * bloom.clamp(0.0, 1.0))
         .clip(true)
+        .into()
+}
+
+/// The block of a module that has nothing to say yet.
+///
+/// Every module opens into the same shape — a heading, a rule and lines
+/// under it — and one with no readings of its own would otherwise open into
+/// nothing and break the shape of the column it stands in. It opens into the
+/// shape with the lines left blank: two dim bars where the readings would
+/// stand, which is a placeholder anywhere anyone has seen one.
+pub(super) fn awaited<'a>(title: &str, side: Side, ink: Ink, bloom: f32) -> Element<'a, Message> {
+    let heading = text(title.to_uppercase())
+        .size(ink.size * 1.05)
+        .color(ink.heading());
+
+    let lines = [0.62_f32, 0.38].into_iter().map(|share| {
+        Row::with_children(match side {
+            Side::Leading | Side::Middle => vec![
+                bar(ink.size * 4.0, ink).into(),
+                Space::new().width(Length::Fill).into(),
+                bar(ink.size * 9.0 * share, ink).into(),
+            ],
+            Side::Trailing => vec![
+                bar(ink.size * 9.0 * share, ink).into(),
+                Space::new().width(Length::Fill).into(),
+                bar(ink.size * 4.0, ink).into(),
+            ]
+        })
+        .width(Length::Fill)
+        .spacing(ink.size)
+        .align_y(Alignment::Center)
+        .into()
+    });
+
+    let written = Column::with_children(
+        std::iter::once(heading.into())
+            .chain(std::iter::once(rule(ink).into()))
+            .chain(lines)
+    )
+    .spacing(ink.size * 0.28)
+    .width(Length::Fill)
+    .align_x(side.alignment_x());
+
+    if bloom >= 1.0 {
+        return written.into();
+    }
+
+    container(written)
+        .max_height(ink.size * 8.0 * bloom.clamp(0.0, 1.0))
+        .clip(true)
+        .into()
+}
+
+/// One blank where a reading will stand, `width` wide.
+fn bar<'a>(width: f32, ink: Ink) -> Element<'a, Message> {
+    container(
+        Space::new()
+            .width(Length::Fixed(width.max(ink.size)))
+            .height(Length::Fixed(ink.size * 0.55))
+    )
+    .style(move |_| container::Style {
+        background: Some(ink.value.scale_alpha(0.18).into()),
+        border: iced::Border::default().rounded(ink.size * 0.2),
+        ..container::Style::default()
+    })
+    .into()
+}
+
+/// The thin line a heading is underscored with.
+fn rule<'a>(ink: Ink) -> Element<'a, Message> {
+    container(Space::new().width(Length::Fill).height(Length::Fixed(1.0)))
+        .width(Length::Fill)
+        .style(move |_| container::Style {
+            background: Some(ink.label().into()),
+            ..container::Style::default()
+        })
         .into()
 }
 

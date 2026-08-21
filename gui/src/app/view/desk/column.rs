@@ -215,7 +215,13 @@ impl App {
             return self.desk_month(bloom).into_iter().collect();
         }
 
-        self.desk_panels(module)
+        let panels = self.desk_panels(module);
+
+        if panels.is_empty() {
+            return vec![blocks::awaited(module.label(), side, ink, bloom)];
+        }
+
+        panels
             .iter()
             .map(|panel| blocks::panel(panel, side, ink, bloom))
             .collect()
