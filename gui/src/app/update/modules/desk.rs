@@ -2,8 +2,6 @@
 
 use std::time::Duration;
 
-use hydebar_core::config::ModuleName;
-
 /// The briefest the whole unfolding is allowed to be.
 const SHORTEST_UNFOLDING: Duration = Duration::from_millis(600);
 
@@ -89,26 +87,16 @@ impl App {
         Task::batch(tasks)
     }
 
-    /// How long the whole unfolding takes, given how much there is to unfold.
+    /// How long the whole unfolding takes.
     ///
-    /// The theme names the time one block is given to cross the screen and
-    /// open, and the clock is that stretched by however much the sequence
-    /// adds on top of a single block. The blocks overlap deeply, so a bar of a
-    /// dozen modules adds far less than a dozen flights would: every block
-    /// gets the whole of its own time whatever else is coming down beside it,
-    /// which is what a fixed budget divided by the count cannot do.
-    ///
-    /// Counted in modules rather than in the entries of the layout, because a
-    /// module is what travels: a group of three comes down as three blocks and
-    /// wants the time for three.
+    /// The time one block is given to cross the screen and open, which is the
+    /// time the whole bar takes: every block leaves at the same instant, so
+    /// what a full bar costs over an empty one is nothing at all. The theme
+    /// names it, and it is held between a snap and an unfolding that outstays
+    /// its welcome.
     fn unfolding_response(&self) -> Duration {
-        let blocks = Self::desk_turns(&self.config.modules).3;
-        let block = self.config.appearance.animations.desk_block_ms;
-
-        Duration::from_secs_f32(
-            Duration::from_millis(block).as_secs_f32() * hydebar_core::animation::stretch(blocks)
-        )
-        .clamp(SHORTEST_UNFOLDING, LONGEST_UNFOLDING)
+        Duration::from_millis(self.config.appearance.animations.desk_block_ms)
+            .clamp(SHORTEST_UNFOLDING, LONGEST_UNFOLDING)
     }
 
     /// Sends every island of `surface` off the screen and lets it fly back.
@@ -198,58 +186,26 @@ impl App {
         self.desk_clocks.values().any(|clock| clock.is_running())
     }
 
-    /// Reports whether `module` has already left the strip of `screen`.
+    /// Reports whether the islands have left the strip of `screen`.
     ///
-    /// The one question the strip and the canvas both ask about a module, so
-    /// that exactly one of them draws it: the strip keeps what has not set
-    /// off yet, and the canvas takes it the moment it does. Asking it twice,
-    /// each in its own terms, is how a module came to be drawn on the canvas
-    /// underneath a strip that was still standing over it.
+    /// The one question the strip and the canvas both ask, so that exactly
+    /// one of them draws a module: the strip keeps what has not set off, and
+    /// the canvas takes it the moment it does. Asking it twice, each in its
+    /// own terms, is how a module came to be drawn on the canvas underneath a
+    /// strip that was still standing over it.
+    ///
+    /// Asked of the whole bar rather than of one module, because the whole
+    /// bar leaves at once: an island that waited its turn while its
+    /// neighbours flew is the thing this unfolding does not do.
     #[must_use]
-    pub(crate) fn has_left_the_strip(&self, module: &ModuleName, screen: Option<&str>) -> bool {
-        let Some((turn, units)) = self.strip_turn(module) else {
-            return true;
-        };
-
-        #[expect(
-            clippy::cast_precision_loss,
-            reason = "a layout holds a handful of units"
-        )]
-        let place = if units > 1 {
-            turn as f32 / (units - 1) as f32
-        } else {
-            0.0
-        };
-
-        hydebar_core::animation::share(self.desk_presence(screen), place, units).0 > 0.0
+    pub(crate) fn has_left_the_strip(&self, screen: Option<&str>) -> bool {
+        hydebar_core::animation::share(self.desk_presence(screen)).0 > 0.0
     }
 
-    /// The turn `module` takes in the unfolding, and how many turns there are.
-    fn strip_turn(&self, module: &ModuleName) -> Option<(usize, usize)> {
-        let (left, centre, right, units) = Self::desk_turns(&self.config.modules);
-
-        left.into_iter()
-            .chain(centre)
-            .chain(right)
-            .find(|(_, standing)| *standing == module)
-            .map(|(turn, _)| (turn, units))
-    }
-
-    /// Reports whether the strip still has a module standing on it.
-    ///
-    /// The strip does not go the moment the first island leaves it: the
-    /// islands leave one at a time, and until the last one has set off there
-    /// is still something standing on the strip. The strip stays under them,
-    /// empty of everything that has already gone, and leaves once the last
-    /// has.
+    /// Reports whether the strip still has its islands standing on it.
     #[must_use]
     pub(crate) fn strip_still_holds(&self, screen: Option<&str>) -> bool {
-        let layout = &self.config.modules;
-
-        [&layout.left, &layout.center, &layout.right]
-            .into_iter()
-            .flat_map(|section| Self::desk_order(section, false))
-            .any(|module| !self.has_left_the_strip(module, screen))
+        !self.has_left_the_strip(screen)
     }
 
     /// Reports whether the canvas, not the strip, holds `screen`.

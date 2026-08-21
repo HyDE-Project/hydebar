@@ -38,6 +38,13 @@ impl App {
     /// are drawn away from them while they travel, by the journey each one
     /// carries, and nothing else moves.
     ///
+    /// Every block of the column carries the same journey, so the whole bar
+    /// leaves at one instant and none of them waits on another. They are kept
+    /// apart by where they go rather than by when they go: each drops to its
+    /// own level down the very line it stood on, which no other block is on,
+    /// and only then closes in along its lane, by which time the levels are
+    /// already a column apart.
+    ///
     /// The gaps are the same size whatever the column holds. Pushing the far
     /// end of a short column down to the corner leaves a hole through the
     /// middle of the screen, and a column of everything the machine knows
@@ -48,62 +55,36 @@ impl App {
     /// an empty section leaves no gap on the canvas.
     pub(super) fn desk_column<'a>(
         &'a self,
-        order: &[(usize, &'a ModuleName)],
+        order: &[&'a ModuleName],
         id: Id,
         side: Side,
         ink: Ink,
-        unfolding: f32,
-        units: usize
+        unfolding: f32
     ) -> Option<Element<'a, Message>> {
         let fan = self.fan_span();
-
-        #[expect(
-            clippy::cast_precision_loss,
-            reason = "a layout holds a handful of units, far below any precision limit"
-        )]
-        let last = units.saturating_sub(1) as f32;
+        let (travel, bloom) = hydebar_core::animation::share(unfolding);
 
         let blocks: Vec<Element<'a, Message>> = order
             .iter()
             .enumerate()
-            .filter_map(|(within, (turn, unit))| {
+            .filter_map(|(within, unit)| {
+                let block = self.desk_unit(unit, id, side, ink, bloom)?;
+
                 #[expect(
                     clippy::cast_precision_loss,
-                    reason = "a layout holds a handful of units"
+                    reason = "a section holds a handful of units"
                 )]
-                let place = if last > 0.0 { *turn as f32 / last } else { 0.0 };
-                let (travel, bloom) = hydebar_core::animation::share(unfolding, place, units);
+                let depth = within as f32 / (order.len().max(2) - 1) as f32;
+                let inwards = fan * (1.0 - depth);
 
-                if travel <= 0.0 {
-                    return None;
-                }
-
-                let block = self.desk_unit(unit, id, side, ink, bloom)?;
-                let inwards = if last > 0.0 {
-                    #[expect(
-                        clippy::cast_precision_loss,
-                        reason = "a section holds a handful of units"
-                    )]
-                    let depth = within as f32 / (order.len().max(2) - 1) as f32;
-
-                    fan * (1.0 - depth)
-                } else {
-                    0.0
-                };
-
-                let anchor = hydebar_core::components::flip::FlipAnchor::new(
+                let travelling = hydebar_core::components::flip::FlipAnchor::new(
                     self.flip_key(unit, id),
                     travel,
                     &self.flip,
                     block
                 )
-                .departing_from(self.strip_row());
-
-                let travelling: Element<'a, Message> = if side == Side::Middle {
-                    anchor.into()
-                } else {
-                    anchor.descending_first().into()
-                };
+                .departing_from(self.strip_row())
+                .descending_first();
 
                 Some(
                     container(travelling)

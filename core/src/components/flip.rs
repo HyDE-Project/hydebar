@@ -134,6 +134,87 @@ mod tests {
     }
 
     #[test]
+    fn a_descending_block_keeps_to_its_line_until_it_has_dropped() {
+        let memo = RefCell::new(FlipMemo::default());
+        memo.borrow_mut().record(1, 100.0);
+        memo.borrow_mut().depart();
+
+        let mut sideways = Vec::new();
+
+        for step in 0..=100 {
+            #[expect(clippy::cast_precision_loss, reason = "a fixed sample count")]
+            let progress = step as f32 / 100.0;
+
+            let anchor: FlipAnchor<'_, Msg> =
+                FlipAnchor::new(1, progress, &memo, text::<Theme, iced::Renderer>("Block"))
+                    .departing_from(10.0)
+                    .descending_first();
+
+            let offset = anchor.offset(Point::new(20.0, 210.0));
+
+            if offset.y.abs() > 0.5 {
+                assert_eq!(
+                    offset.x, 80.0,
+                    "it is still dropping at {progress:.2}, so it has not moved along"
+                );
+            }
+
+            sideways.push(offset.x);
+        }
+
+        assert!(
+            sideways.last().is_some_and(|last| *last == 0.0),
+            "it closes in once it is down"
+        );
+    }
+
+    #[test]
+    fn two_blocks_coming_down_together_never_touch() {
+        use iced::{Rectangle, Size};
+
+        const STRIP: f32 = 8.0;
+        const ISLAND: Size = Size::new(120.0, 38.0);
+
+        let memo = RefCell::new(FlipMemo::default());
+        memo.borrow_mut().record(1, 940.0);
+        memo.borrow_mut().record(2, 1070.0);
+        memo.borrow_mut().depart();
+
+        let resting = [Point::new(880.0, 120.0), Point::new(760.0, 300.0)];
+
+        for step in 0..=200 {
+            #[expect(clippy::cast_precision_loss, reason = "a fixed sample count")]
+            let progress = step as f32 / 200.0;
+
+            let seats: Vec<Rectangle> = [1u64, 2]
+                .into_iter()
+                .zip(resting)
+                .map(|(key, rest)| {
+                    let anchor: FlipAnchor<'_, Msg> = FlipAnchor::new(
+                        key,
+                        progress,
+                        &memo,
+                        text::<Theme, iced::Renderer>("Block")
+                    )
+                    .departing_from(STRIP)
+                    .descending_first();
+
+                    let offset = anchor.offset(rest);
+
+                    Rectangle::new(rest + offset, ISLAND)
+                })
+                .collect();
+
+            assert!(
+                seats[0].intersection(&seats[1]).is_none(),
+                "at {progress:.3} the two blocks share {:?} and {:?}",
+                seats[0],
+                seats[1]
+            );
+        }
+    }
+
+    #[test]
     fn a_block_that_has_arrived_is_left_alone_however_far_it_came() {
         let memo = RefCell::new(FlipMemo::default());
         memo.borrow_mut().record(1, 100.0);

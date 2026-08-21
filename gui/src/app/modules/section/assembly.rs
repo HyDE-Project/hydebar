@@ -76,7 +76,7 @@ impl App {
             let mut seated = false;
 
             for module_name in names {
-                if self.has_left_the_strip(module_name, self.outputs.screen_of(id).flatten()) {
+                if self.has_left_the_strip(self.outputs.screen_of(id).flatten()) {
                     continue;
                 }
 

@@ -14,13 +14,11 @@ mod readings;
 
 use hydebar_core::config::ModuleName;
 
-/// The three sections of the layout with the turn every unit takes, and how
-/// many turns there are in all.
-type Turns<'a> = (
-    Vec<(usize, &'a ModuleName)>,
-    Vec<(usize, &'a ModuleName)>,
-    Vec<(usize, &'a ModuleName)>,
-    usize
+/// The three sections of the layout, each in the order its column stands in.
+type Columns<'a> = (
+    Vec<&'a ModuleName>,
+    Vec<&'a ModuleName>,
+    Vec<&'a ModuleName>
 );
 use iced::{
     Alignment, Element, Length, Padding, SurfaceId as Id,
@@ -54,7 +52,7 @@ impl App {
         let margin = ink.size * 2.0;
         let modules = &self.config.modules;
 
-        let (left, centre, right, units) = Self::desk_turns(modules);
+        let (left, centre, right) = Self::desk_columns(modules);
 
         let columns = [
             (&left, blocks::Side::Leading),
@@ -62,7 +60,7 @@ impl App {
             (&right, blocks::Side::Trailing)
         ]
         .into_iter()
-        .filter_map(|(order, side)| self.desk_column(order, id, side, ink, unfolding, units));
+        .filter_map(|(order, side)| self.desk_column(order, id, side, ink, unfolding));
 
         let canvas = container(
             Row::with_children(columns)
@@ -82,45 +80,19 @@ impl App {
         canvas.into()
     }
 
-    /// The turn every unit of the layout takes, and how many there are.
+    /// The three columns of the canvas, each in the order it stands in.
     ///
-    /// The middle of the strip goes first: the centre section comes down,
-    /// then the sections either side of it, each unit setting off a little
-    /// after the one before it and long before it has landed. Numbering them
-    /// here rather than per column is what lets the three sections share one
-    /// order instead of racing each other down.
-    pub(crate) fn desk_turns(modules: &hydebar_core::config::Modules) -> Turns<'_> {
-        let centre = Self::desk_order(&modules.center, false);
-        let left = Self::desk_order(&modules.left, true);
-        let right = Self::desk_order(&modules.right, false);
-
-        let mut turn = 0;
-        let mut centre_turns = Vec::with_capacity(centre.len());
-
-        for unit in centre {
-            centre_turns.push((turn, unit));
-            turn += 1;
-        }
-
-        let sides = left.len().max(right.len());
-        let mut left = left.into_iter();
-        let mut right = right.into_iter();
-        let mut left_turns = Vec::new();
-        let mut right_turns = Vec::new();
-
-        for _ in 0..sides {
-            if let Some(unit) = left.next() {
-                left_turns.push((turn, unit));
-                turn += 1;
-            }
-
-            if let Some(unit) = right.next() {
-                right_turns.push((turn, unit));
-                turn += 1;
-            }
-        }
-
-        (left_turns, centre_turns, right_turns, turn)
+    /// Read from the middle of the strip outwards: the unit that stood
+    /// nearest the centre heads its column and the one that stood at an edge
+    /// ends it, which is what puts the ends of the bar down in the corners of
+    /// the screen. Nothing here says when a unit moves — they all move at
+    /// once — only where each of them is bound.
+    pub(crate) fn desk_columns(modules: &hydebar_core::config::Modules) -> Columns<'_> {
+        (
+            Self::desk_order(&modules.left, true),
+            Self::desk_order(&modules.center, false),
+            Self::desk_order(&modules.right, false)
+        )
     }
 
     /// The band along the top of the screen the strip itself occupies.
@@ -336,60 +308,29 @@ mod tests {
     }
 
     #[test]
-    fn the_front_moves_without_a_pause_between_one_block_and_the_next() {
-        for blocks in 2..8usize {
-            for step in 1..400 {
-                #[expect(clippy::cast_precision_loss, reason = "a fixed sample count")]
-                let unfolding = step as f32 / 400.0;
+    fn the_whole_bar_is_under_way_on_the_first_frame() {
+        let mut app = test_app_with(|config| config.desk.enabled = true);
+        set_off(&mut app);
 
-                let shares: Vec<(f32, f32)> = (0..blocks)
-                    .map(|index| {
-                        #[expect(clippy::cast_precision_loss, reason = "a handful of blocks")]
-                        let place = index as f32 / (blocks - 1) as f32;
+        assert!(
+            app.has_left_the_strip(None),
+            "no island stands waiting while its neighbours fly"
+        );
 
-                        hydebar_core::animation::share(unfolding, place, blocks)
-                    })
-                    .collect();
+        let hour = app.clock.data().format(&app.config.clock.format);
 
-                let moving = shares.iter().any(|(travel, bloom)| {
-                    (*travel > 0.0 && *travel < 1.0) || (*bloom > 0.0 && *bloom < 1.0)
-                });
-                let arrived = shares
-                    .iter()
-                    .all(|(travel, bloom)| *travel >= 1.0 && *bloom >= 1.0);
-
-                assert!(
-                    moving || arrived,
-                    "{blocks} blocks: the front stands still at {unfolding:.3}"
-                );
-            }
-        }
-    }
-
-    #[test]
-    fn a_block_sets_off_after_the_one_before_it() {
-        for blocks in 2..8usize {
-            for step in 0..=400 {
-                #[expect(clippy::cast_precision_loss, reason = "a fixed sample count")]
-                let unfolding = step as f32 / 400.0;
-
-                let starts: Vec<f32> = (0..blocks)
-                    .map(|index| {
-                        #[expect(clippy::cast_precision_loss, reason = "a handful of blocks")]
-                        let place = index as f32 / (blocks - 1) as f32;
-
-                        hydebar_core::animation::share(unfolding, place, blocks).0
-                    })
-                    .collect();
-
-                for pair in starts.windows(2) {
-                    assert!(
-                        pair[0] >= pair[1],
-                        "{blocks} blocks at {unfolding:.3}: the leader is never behind"
-                    );
-                }
-            }
-        }
+        assert!(
+            simulator(app.bar_surface(surface()))
+                .find(hour.as_str())
+                .is_err(),
+            "nothing of the bar is left standing on the strip"
+        );
+        assert!(
+            simulator(app.desk_surface(surface()))
+                .find(hour.as_str())
+                .is_ok(),
+            "the canvas carries it from the first frame of the travel"
+        );
     }
 
     #[test]
@@ -401,7 +342,7 @@ mod tests {
         let mut crossed = false;
 
         for _ in 0..256 {
-            let (travel, bloom) = hydebar_core::animation::share(app.desk_presence(None), 0.0, 2);
+            let (travel, bloom) = hydebar_core::animation::share(app.desk_presence(None));
             let writing = simulator(app.desk_surface(surface()))
                 .find("MEMORY")
                 .is_ok();
@@ -476,28 +417,38 @@ mod tests {
     }
 
     #[test]
-    fn the_middle_of_the_strip_comes_down_before_the_sides() {
+    fn a_column_is_read_from_the_middle_of_the_strip_outwards() {
         use hydebar_core::config::{ModuleName, Modules};
         use hydebar_proto::config::ModuleDef;
 
         let modules = Modules {
-            left:   vec![ModuleDef::Single(ModuleName::Memory)],
-            center: vec![ModuleDef::Single(ModuleName::Clock)],
-            right:  vec![ModuleDef::Single(ModuleName::CpuTemp)]
+            left:   vec![
+                ModuleDef::Single(ModuleName::Memory),
+                ModuleDef::Single(ModuleName::Clock),
+            ],
+            center: Vec::new(),
+            right:  vec![
+                ModuleDef::Single(ModuleName::CpuTemp),
+                ModuleDef::Single(ModuleName::Battery),
+            ]
         };
 
-        let (left, centre, right, units) = App::desk_turns(&modules);
+        let (left, _, right) = App::desk_columns(&modules);
 
-        assert_eq!(units, 3);
-        assert_eq!(centre[0].0, 0, "the centre section takes the first turn");
-        assert!(
-            left[0].0 > centre[0].0 && right[0].0 > centre[0].0,
-            "both sides wait for the middle"
+        assert_eq!(
+            left,
+            vec![&ModuleName::Clock, &ModuleName::Memory],
+            "the left section is read towards the middle, so it is turned around"
+        );
+        assert_eq!(
+            right,
+            vec![&ModuleName::CpuTemp, &ModuleName::Battery],
+            "the right section already reads outwards"
         );
     }
 
     #[test]
-    fn every_module_of_a_group_takes_its_own_turn_and_its_own_pill() {
+    fn every_module_of_a_group_takes_its_own_place_and_its_own_pill() {
         use hydebar_core::config::ModuleName;
         use hydebar_proto::config::ModuleDef;
 
@@ -512,10 +463,13 @@ mod tests {
         });
         open(&mut app);
 
-        let (left, _, _, units) = App::desk_turns(&app.config.modules);
+        let (left, _, _) = App::desk_columns(&app.config.modules);
 
-        assert_eq!(units, 2, "the icons part, so each takes a turn of its own");
-        assert!(left[0].0 < left[1].0, "one after the other, not together");
+        assert_eq!(
+            left.len(),
+            2,
+            "the icons part, so each takes a place of its own"
+        );
 
         let far = simulator(app.desk_surface(surface()))
             .find("MEMORY")
@@ -563,46 +517,26 @@ mod tests {
     }
 
     #[test]
-    fn the_strip_stands_until_the_last_island_has_left_it() {
+    fn the_strip_stands_while_its_islands_are_on_it_and_not_after() {
         let mut app = test_app_with(|config| config.desk.enabled = true);
+
+        assert!(
+            app.strip_still_holds(None),
+            "the strip holds its islands while nothing has set off"
+        );
+
         set_off(&mut app);
 
-        let mut held_while_any_waited = true;
-        let mut left_once_all_had_gone = false;
-
         for _ in 0..256 {
-            let unfolding = app.desk_presence(None);
-            let units = App::desk_turns(&app.config.modules).3;
-            let waiting = (0..units).any(|turn| {
-                #[expect(clippy::cast_precision_loss, reason = "a handful of units")]
-                let place = if units > 1 {
-                    turn as f32 / (units - 1) as f32
-                } else {
-                    0.0
-                };
-
-                hydebar_core::animation::share(unfolding, place, units).0 <= 0.0
-            });
-
-            if waiting {
-                held_while_any_waited &= app.strip_still_holds(None);
-            } else {
-                left_once_all_had_gone |= !app.strip_still_holds(None);
-            }
+            assert!(
+                !app.strip_still_holds(None),
+                "the strip is empty from the frame the islands set off"
+            );
 
             if !tick(&mut app) {
                 break;
             }
         }
-
-        assert!(
-            held_while_any_waited,
-            "the strip stands while an island is still on it"
-        );
-        assert!(
-            left_once_all_had_gone,
-            "the strip leaves once the last island has set off"
-        );
     }
 
     #[test]
@@ -616,7 +550,7 @@ mod tests {
 
         for _ in 0..256 {
             for module in &watched {
-                let left = app.has_left_the_strip(module, None);
+                let left = app.has_left_the_strip(None);
                 let hour = app.clock.data().format(&app.config.clock.format);
                 let probe = if matches!(module, ModuleName::Clock) {
                     hour.as_str()
