@@ -17,6 +17,11 @@ impl App {
     /// arrived — because a spring nobody points at never travels, and the
     /// canvas is drawn out of exactly that travel.
     ///
+    /// The seats the strip's islands rest at are frozen the moment the canvas
+    /// takes the screen: every block then travels from the seat it held on
+    /// the strip to the one it takes on the canvas, which is what makes the
+    /// islands leave the bar rather than vanish from it.
+    ///
     /// The canvas travels out and snaps back. Unfolding happens on a screen
     /// nobody is using, so it can take its time; folding happens because a
     /// window has just taken the screen, and that window is on it already —
@@ -48,6 +53,12 @@ impl App {
                 .point(screen, unfolded, animated && unfolded, GENTLE);
 
             if unfolded != was_out {
+                if unfolded {
+                    self.flip.borrow_mut().depart();
+                } else {
+                    self.send_the_islands_home(surface);
+                }
+
                 tasks.push(set_input_region(
                     surface,
                     if unfolded { None } else { Some(Vec::new()) }
@@ -86,6 +97,42 @@ impl App {
         }
 
         self.desk_blooms.advance(elapsed)
+    }
+
+    /// Sends every island of `surface` off the screen and lets it fly back.
+    ///
+    /// The way home: the canvas is gone the moment a window takes the screen,
+    /// and the strip it left behind would otherwise be simply there. Instead
+    /// each island is seated beyond the edge it belongs to — the left hand
+    /// section past the left edge, the right hand one past the right — and
+    /// the strip's own travel carries them in to their places.
+    pub(crate) fn send_the_islands_home(&mut self, surface: iced::SurfaceId) {
+        if !self.config.appearance.animations.enabled {
+            return;
+        }
+
+        let beyond = self.screen_width.unwrap_or(1920.0);
+        let layout = std::sync::Arc::clone(&self.config);
+
+        {
+            let mut memo = self.flip.borrow_mut();
+
+            for (section, from) in [
+                (&layout.modules.left, -beyond),
+                (&layout.modules.center, -beyond),
+                (&layout.modules.right, beyond * 2.0)
+            ] {
+                for module in Self::desk_order(section, false) {
+                    memo.record(self.flip_key(module, surface), from);
+                }
+            }
+        }
+
+        self.flip.borrow_mut().depart();
+
+        self.relayout = hydebar_core::animation::Spring::new(0.0)
+            .with_response(hydebar_core::animation::STANDARD);
+        self.relayout.set_target(1.0);
     }
 
     /// Reports whether the blocks of `screen` have come to rest.

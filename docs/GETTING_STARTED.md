@@ -309,20 +309,24 @@ greeting = false   # turn it off
 
 The bar and the desk are one thing in two shapes. While a window is mapped on
 a screen the bar is the strip along its edge; the moment that workspace is
-cleared the strip fades out and the very same modules come down over the
-wallpaper, drawn several times larger, and they stay as clickable as they were
-on the strip. A window maps again and they fold straight back. Off by default:
+cleared the islands leave the strip and travel down the screen, and once they
+have come to rest each one writes out everything it knows. A window maps again
+and they fly back onto the strip from beyond the edges of the screen. They stay
+as clickable as they ever were. Off by default:
 
 ```toml
 [desk]
 enabled = true
-zoom = 2.0   # how much larger than the strip the modules are drawn
 ```
 
 There is no second layout to write: the three sections of `[modules]` become
-the three columns of the canvas — left section down the left edge, centre in
-the middle, right down the right edge — each keeping its own order, and a
-group staying a group. Rearranging the bar rearranges the desk with it.
+the three columns of the canvas, and the place a module takes in its column
+follows how near the middle of the strip it stood — the nearer the higher, so
+the far ends of the bar reach for the bottom corners. Rearranging the bar
+rearranges the desk with it.
+
+A floating window is a visitor: it sits over the canvas without folding it
+away. Only a window tiled into the workspace takes the screen back.
 
 Every screen answers for itself: a second monitor running a browser keeps its
 strip while the first one, cleared, unfolds. A special workspace pulled up

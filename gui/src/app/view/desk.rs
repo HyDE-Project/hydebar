@@ -10,10 +10,8 @@
 
 mod blocks;
 mod column;
-mod face;
 mod readings;
 
-use hydebar_core::outputs::HasOutput;
 use iced::{
     Alignment, Element, Length, Padding, SurfaceId as Id,
     widget::{Row, container}
@@ -68,7 +66,7 @@ impl App {
         .width(Length::Fill)
         .height(Length::Fill)
         .padding(Padding {
-            top:    margin * presence,
+            top:    self.strip_band().mul_add(presence, margin * presence),
             right:  margin,
             bottom: margin,
             left:   margin
@@ -77,18 +75,20 @@ impl App {
         canvas.into()
     }
 
-    /// How much larger than the strip the canvas of `id` is drawn.
+    /// The band along the top of the screen the strip itself occupies.
     ///
-    /// One for every surface but the desk: the modules are drawn from the
-    /// same views the strip uses, and the whole surface is magnified instead,
-    /// which is what lets one layout serve a thirty pixel strip and a whole
-    /// screen without a second set of sizes.
-    pub(crate) fn desk_magnification(&self, id: Id) -> f64 {
-        if !self.config.desk.enabled || !matches!(self.outputs.has(id), Some(HasOutput::Desk)) {
-            return 1.0;
-        }
-
-        f64::from(self.config.desk.magnification())
+    /// The canvas covers the whole screen so its blocks can leave the strip
+    /// without jumping, which means it also has to keep clear of the band the
+    /// strip stands in — but only once they have arrived. While they travel
+    /// the band is theirs: they are still in it.
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "the bar height constant is exactly representable in f32"
+    )]
+    fn strip_band(&self) -> f32 {
+        self.appearance()
+            .height
+            .unwrap_or(hydebar_core::HEIGHT as f32)
     }
 }
 
@@ -414,6 +414,50 @@ mod tests {
         assert!(
             edge.y - near.y > near.height * 4.0,
             "the far module is pushed well down the screen, not stacked under its neighbour"
+        );
+    }
+
+    #[test]
+    fn the_islands_leave_the_strip_from_the_seats_they_held_on_it() {
+        let app = test_app_with(|config| config.desk.enabled = true);
+
+        let mut ui = simulator(app.bar_surface(surface()));
+        let _ = ui.snapshot(&iced::Theme::Dark).expect("the strip draws");
+
+        app.flip.borrow_mut().depart();
+
+        assert!(
+            !app.flip.borrow().from_map().is_empty(),
+            "the seats the strip held are what the canvas travels from"
+        );
+    }
+
+    #[test]
+    fn a_screen_taken_by_a_window_sends_its_islands_beyond_the_edge() {
+        let mut app = test_app_with(|config| config.desk.enabled = true);
+        app.screen_width = Some(1920.0);
+        open(&mut app);
+
+        app.desk_fades.point(None, false, false, GENTLE);
+        app.send_the_islands_home(surface());
+
+        let seats: Vec<f32> = app.flip.borrow().from_map().values().copied().collect();
+
+        assert!(
+            !seats.is_empty(),
+            "every island is given a seat to fly from"
+        );
+        assert!(
+            seats.iter().any(|seat| *seat < 0.0),
+            "the left hand section flies in from past the left edge"
+        );
+        assert!(
+            seats.iter().any(|seat| *seat > 1920.0),
+            "the right hand section flies in from past the right edge"
+        );
+        assert!(
+            app.relayout.target() > 0.0,
+            "the strip's own travel carries them in"
         );
     }
 

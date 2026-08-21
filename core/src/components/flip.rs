@@ -26,7 +26,7 @@ mod tests {
     use std::cell::RefCell;
 
     use iced::{
-        Element, Point, Theme,
+        Element, Point, Theme, Vector,
         widget::{button, container, text}
     };
     use iced_test::simulator;
@@ -93,7 +93,7 @@ mod tests {
         let anchor: FlipAnchor<'_, Msg> =
             FlipAnchor::new(1, 1.0, &memo, text::<Theme, iced::Renderer>("Block"));
 
-        assert_eq!(anchor.offset(20.0), 0.0);
+        assert_eq!(anchor.offset(Point::new(20.0, 0.0)), Vector::ZERO);
     }
 
     #[test]
@@ -105,7 +105,7 @@ mod tests {
         let anchor: FlipAnchor<'_, Msg> =
             FlipAnchor::new(1, 0.25, &memo, text::<Theme, iced::Renderer>("Block"));
 
-        assert_eq!(anchor.offset(20.0), 60.0);
+        assert_eq!(anchor.offset(Point::new(20.0, 0.0)), Vector::new(60.0, 0.0));
     }
 
     #[test]
@@ -114,7 +114,36 @@ mod tests {
         let anchor: FlipAnchor<'_, Msg> =
             FlipAnchor::new(9, 0.5, &memo, text::<Theme, iced::Renderer>("Block"));
 
-        assert_eq!(anchor.offset(20.0), 0.0);
+        assert_eq!(anchor.offset(Point::new(20.0, 0.0)), Vector::ZERO);
+    }
+
+    #[test]
+    fn a_block_leaving_another_row_travels_down_as_well_as_along() {
+        let memo = RefCell::new(FlipMemo::default());
+        memo.borrow_mut().record(1, 100.0);
+        memo.borrow_mut().depart();
+
+        let anchor: FlipAnchor<'_, Msg> =
+            FlipAnchor::new(1, 0.25, &memo, text::<Theme, iced::Renderer>("Block"))
+                .departing_from(10.0);
+
+        assert_eq!(
+            anchor.offset(Point::new(20.0, 210.0)),
+            Vector::new(60.0, -150.0)
+        );
+    }
+
+    #[test]
+    fn a_block_that_has_arrived_is_left_alone_however_far_it_came() {
+        let memo = RefCell::new(FlipMemo::default());
+        memo.borrow_mut().record(1, 100.0);
+        memo.borrow_mut().depart();
+
+        let anchor: FlipAnchor<'_, Msg> =
+            FlipAnchor::new(1, 1.0, &memo, text::<Theme, iced::Renderer>("Block"))
+                .departing_from(10.0);
+
+        assert_eq!(anchor.offset(Point::new(20.0, 210.0)), Vector::ZERO);
     }
 
     #[test]

@@ -15,7 +15,7 @@ use iced::{
 use super::{
     super::super::state::{App, Message},
     blocks::{self, Ink, Side},
-    face, readings
+    readings
 };
 
 /// How far the clock has to have opened before its month stands under it.
@@ -41,7 +41,20 @@ impl App {
     ) -> Option<Element<'a, Message>> {
         let blocks: Vec<Element<'a, Message>> = order
             .iter()
-            .filter_map(|module| self.desk_block(module, id, side, ink, bloom))
+            .filter_map(|module| {
+                let block = self.desk_block(module, id, side, ink, bloom)?;
+
+                Some(
+                    hydebar_core::components::flip::FlipAnchor::new(
+                        self.flip_key(module, id),
+                        travel,
+                        &self.flip,
+                        block
+                    )
+                    .departing_from(self.strip_row())
+                    .into()
+                )
+            })
             .collect();
 
         if blocks.is_empty() {
@@ -79,7 +92,7 @@ impl App {
     /// an edge reaches for the corner below it. The centre section already
     /// reads outwards from the middle; the left one reads towards it, so it
     /// is turned around.
-    pub(super) fn desk_order(
+    pub(crate) fn desk_order(
         section: &[ModuleDef],
         reads_towards_the_centre: bool
     ) -> Vec<&ModuleName> {
@@ -98,6 +111,15 @@ impl App {
         order
     }
 
+    /// The height the strip's own islands stand at.
+    ///
+    /// Where every block departs from: the canvas covers the whole screen,
+    /// strip band included, so the row the modules leave is the top of the
+    /// canvas rather than somewhere above it.
+    fn strip_row(&self) -> f32 {
+        self.appearance().bar_padding()[0]
+    }
+
     /// Draws one module in the form the canvas has room for.
     fn desk_block<'a>(
         &'a self,
@@ -107,30 +129,31 @@ impl App {
         ink: Ink,
         bloom: f32
     ) -> Option<Element<'a, Message>> {
+        let island = self.desk_island(module, id)?;
+
         if bloom <= 0.0 {
-            return self.desk_reading(module, id);
+            return Some(island);
         }
 
-        if matches!(module, ModuleName::Clock) {
-            return Some(self.desk_clock(ink, side, bloom));
-        }
+        let opened: Vec<Element<'a, Message>> = if matches!(module, ModuleName::Clock) {
+            self.desk_month(bloom).into_iter().collect()
+        } else {
+            self.desk_panels(module)
+                .iter()
+                .map(|panel| blocks::panel(panel, side, ink, bloom))
+                .collect()
+        };
 
-        let panels = self.desk_panels(module);
-
-        if panels.is_empty() {
-            return self.desk_reading(module, id);
+        if opened.is_empty() {
+            return Some(island);
         }
 
         Some(
-            Column::with_children(
-                panels
-                    .iter()
-                    .map(|panel| blocks::panel(panel, side, ink, bloom))
-            )
-            .spacing(ink.size * 1.4)
-            .width(Length::Fill)
-            .align_x(side.alignment_x())
-            .into()
+            Column::with_children(std::iter::once(island).chain(opened))
+                .spacing(ink.size * 0.9)
+                .width(Length::Fill)
+                .align_x(side.alignment_x())
+                .into()
         )
     }
 
@@ -174,42 +197,29 @@ impl App {
         }
     }
 
-    /// The clock: its hour at the size of the canvas, its month under it.
+    /// The month the clock opens into, once it has opened far enough.
     ///
-    /// The month is the very grid its press opens on the strip — the same
-    /// widget, drawn straight onto the wallpaper instead of into a popup.
-    fn desk_clock(&self, ink: Ink, side: Side, bloom: f32) -> Element<'_, Message> {
-        let face = face::clock(
-            self.clock.data(),
-            &self.config.clock,
-            ink.size,
-            side.alignment_x()
-        );
-
-        let clock = Column::new().push(face);
-
-        let clock = if bloom >= MONTH_OPENS_AT {
-            clock.push(self.calendar.menu_view(self.icons()).map(Message::Calendar))
-        } else {
-            clock
-        };
-
-        clock
-            .spacing(ink.size)
-            .width(Length::Fill)
-            .align_x(side.alignment_x())
-            .into()
+    /// The very grid its press opens on the strip — the same widget, drawn
+    /// straight onto the wallpaper instead of into a popup. It waits for the
+    /// opening to be under way because it is six rows tall against the one
+    /// row of the island above it.
+    fn desk_month(&self, bloom: f32) -> Option<Element<'_, Message>> {
+        (bloom >= MONTH_OPENS_AT)
+            .then(|| self.calendar.menu_view(self.icons()).map(Message::Calendar))
     }
 
-    /// The strip's own view of a module, presses and all.
+    /// The island the module arrived on the canvas as.
     ///
-    /// What a module with nothing longer to say stands as: a launcher, a
-    /// picker, the workspace row.
-    fn desk_reading<'a>(&'a self, module: &'a ModuleName, id: Id) -> Option<Element<'a, Message>> {
+    /// The very thing that travelled: the strip's own view of the module, in
+    /// the pill the strip drew around it. It is not swapped for a heading
+    /// once the block opens — the block grows underneath it — because a
+    /// module that vanished at the end of its own journey would undo the
+    /// journey.
+    fn desk_island<'a>(&'a self, module: &'a ModuleName, id: Id) -> Option<Element<'a, Message>> {
         let opacity = self.appearance().opacity;
         let (content, action) = self.get_module_view(module, id, opacity)?;
         let actions = self.module_actions(module, action);
 
-        Some(self.module_element(content, actions, module, id, true))
+        Some(self.module_element(content, actions, module, id, false))
     }
 }

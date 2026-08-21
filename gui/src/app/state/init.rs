@@ -75,6 +75,7 @@ impl App {
                 .with_size(config.appearance.font_size_px()),
             auto_metrics: None,
             screen_height: None,
+            screen_width: None,
             magnification: hydebar_core::components::scale::screen_factor(),
             outputs,
             navigation_mode: false,

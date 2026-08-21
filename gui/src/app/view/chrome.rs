@@ -27,14 +27,9 @@ impl App {
         }
     }
 
-    /// The magnification a surface is drawn at.
-    ///
-    /// Every surface is drawn at the configured factor but the desk, which is
-    /// the bar's own modules over a whole screen and carries the desk
-    /// magnification on top: one layout, one set of views, two sizes.
     #[must_use]
-    pub fn scale_factor(&self, id: Id) -> f64 {
-        self.appearance().scale_factor * self.desk_magnification(id)
+    pub const fn scale_factor(&self, _id: Id) -> f64 {
+        self.appearance().scale_factor
     }
 
     /// The greeting shown mid-screen while the bar comes up.

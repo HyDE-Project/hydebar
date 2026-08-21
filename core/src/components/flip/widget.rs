@@ -13,6 +13,11 @@ use iced::{
 
 use super::anchor::FlipAnchor;
 
+/// Reports whether a journey has moved the block far enough to matter.
+fn travelled(offset: Vector) -> bool {
+    offset.x.abs() > f32::EPSILON || offset.y.abs() > f32::EPSILON
+}
+
 impl<Message, Theme, Renderer> Widget<Message, Theme, Renderer>
     for FlipAnchor<'_, Message, Theme, Renderer>
 where
@@ -70,10 +75,10 @@ where
         shell: &mut Shell<'_, Message>,
         viewport: &Rectangle
     ) {
-        let offset = self.offset(layout.position().x);
+        let offset = self.offset(layout.position());
         let shifted = match cursor {
-            mouse::Cursor::Available(point) if offset.abs() > f32::EPSILON => {
-                mouse::Cursor::Available(point - Vector::new(offset, 0.0))
+            mouse::Cursor::Available(point) if travelled(offset) => {
+                mouse::Cursor::Available(point - offset)
             }
             other => other
         };
@@ -93,22 +98,22 @@ where
         cursor: mouse::Cursor,
         viewport: &Rectangle
     ) {
-        let x = layout.position().x;
+        let at = layout.position();
 
-        self.memo.borrow_mut().record(self.key, x);
+        self.memo.borrow_mut().record(self.key, at.x);
 
-        let offset = self.offset(x);
+        let offset = self.offset(at);
 
-        if offset.abs() < f32::EPSILON {
-            self.content
-                .as_widget()
-                .draw(tree, renderer, theme, style, layout, cursor, viewport);
-        } else {
-            renderer.with_translation(Vector::new(offset, 0.0), |renderer| {
+        if travelled(offset) {
+            renderer.with_translation(offset, |renderer| {
                 self.content
                     .as_widget()
                     .draw(tree, renderer, theme, style, layout, cursor, viewport);
             });
+        } else {
+            self.content
+                .as_widget()
+                .draw(tree, renderer, theme, style, layout, cursor, viewport);
         }
     }
 
@@ -120,10 +125,10 @@ where
         viewport: &Rectangle,
         renderer: &Renderer
     ) -> mouse::Interaction {
-        let offset = self.offset(layout.position().x);
+        let offset = self.offset(layout.position());
         let shifted = match cursor {
-            mouse::Cursor::Available(point) if offset.abs() > f32::EPSILON => {
-                mouse::Cursor::Available(point - Vector::new(offset, 0.0))
+            mouse::Cursor::Available(point) if travelled(offset) => {
+                mouse::Cursor::Available(point - offset)
             }
             other => other
         };

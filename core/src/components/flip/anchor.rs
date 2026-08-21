@@ -12,6 +12,14 @@ where
     pub(super) key:      u64,
     /// How far the journey has travelled, one meaning at rest.
     pub(super) progress: f32,
+    /// The height the journey departs from, when it starts on another row.
+    ///
+    /// The book of seats records where a block stood along its row, which is
+    /// all a rearrangement within one row needs. A block leaving the strip
+    /// for the canvas below it also has a row to cross, and the row it left
+    /// is the same for all of them, so it is stated here rather than
+    /// remembered per block.
+    pub(super) from_y:   Option<f32>,
     pub(super) memo:     &'a RefCell<FlipMemo>,
     pub(super) content:  iced_core::Element<'a, Message, Theme, Renderer>
 }
@@ -30,22 +38,40 @@ where
         Self {
             key,
             progress,
+            from_y: None,
             memo,
             content: content.into()
         }
     }
 
+    /// States the height the journey departs from.
+    ///
+    /// Left unstated a block travels along its row and nowhere else, which is
+    /// what a rearrangement of the strip is.
+    #[must_use]
+    pub const fn departing_from(mut self, y: f32) -> Self {
+        self.from_y = Some(y);
+        self
+    }
+
     /// The drawing offset for the current frame, given the resting seat.
-    pub(super) fn offset(&self, x: f32) -> f32 {
+    pub(super) fn offset(&self, at: iced_core::Point) -> iced_core::Vector {
         if self.progress >= 1.0 {
-            return 0.0;
+            return iced_core::Vector::ZERO;
         }
 
-        self.memo
+        let left = 1.0 - self.progress;
+
+        let x = self
+            .memo
             .borrow()
             .from_map()
             .get(&self.key)
-            .map_or(0.0, |from| (from - x) * (1.0 - self.progress))
+            .map_or(0.0, |from| (from - at.x) * left);
+
+        let y = self.from_y.map_or(0.0, |from| (from - at.y) * left);
+
+        iced_core::Vector::new(x, y)
     }
 }
 

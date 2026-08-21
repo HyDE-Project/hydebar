@@ -128,6 +128,7 @@ impl App {
         let surface_scale = self.config.appearance.scale_factor as f32;
 
         self.screen_height = Some(geometry.pixels.1 / geometry.scale.max(f32::EPSILON));
+        self.screen_width = Some(geometry.pixels.0 / geometry.scale.max(f32::EPSILON));
 
         let metrics = auto_metrics(
             geometry.pixels.0,

@@ -65,6 +65,11 @@ pub struct App {
     pub(crate) auto_metrics: Option<AutoMetrics>,
     /// Logical height of the screen the bar stands on, once reported.
     pub(crate) screen_height: Option<f32>,
+    /// Logical width of the screen the bar stands on, once reported.
+    ///
+    /// What the islands are sent beyond when they fly back onto the strip:
+    /// off screen has to be off *this* screen, not a guessed distance.
+    pub(crate) screen_width: Option<f32>,
     pub config: Arc<Config>,
     pub outputs: Outputs,
     pub navigation_mode: bool,

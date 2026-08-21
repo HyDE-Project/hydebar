@@ -31,16 +31,19 @@ impl App {
         }
     }
 
-    /// The seat key of one module on one surface.
+    /// The seat key of one module on one screen.
     ///
-    /// The surface rides along because the same module stands on every
-    /// output's bar, and two outputs must not fight over one seat.
-    pub(crate) fn flip_key(module_name: &ModuleName, id: Id) -> u64 {
+    /// The screen rides along because the same module stands on every
+    /// output's bar, and two outputs must not fight over one seat. The
+    /// screen, not the surface: the strip and the canvas of one output are
+    /// two surfaces and one seat, which is what lets a module leave the strip
+    /// and arrive on the canvas as the same block rather than as two.
+    pub(crate) fn flip_key(&self, module_name: &ModuleName, id: Id) -> u64 {
         use std::hash::{Hash, Hasher};
 
         let mut hasher = std::collections::hash_map::DefaultHasher::new();
         module_name.hash(&mut hasher);
-        id.hash(&mut hasher);
+        self.outputs.screen_of(id).flatten().hash(&mut hasher);
         hasher.finish()
     }
 

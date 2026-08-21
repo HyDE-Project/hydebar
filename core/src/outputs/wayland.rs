@@ -177,8 +177,14 @@ pub fn tooltip_settings(output: Option<OutputId>) -> LayerShellSettings {
 /// Created input-free through [`draw_only`] and left on the background layer
 /// for its whole life: the desk is a drawing on the wallpaper, below every
 /// window, and it must neither rise over one nor take a press meant for the
-/// desktop underneath it. Its exclusive zone is the stock zero, so the
-/// compositor lays it out over the screen the bar's own strip leaves free.
+/// desktop underneath it.
+///
+/// Its exclusive zone is stated as -1, which asks the compositor to lay the
+/// surface out over the whole screen rather than over what the bar's own
+/// strip leaves free. The strip's band has to belong to the canvas too: the
+/// modules leave the strip by travelling out of it, and a canvas that began
+/// below the strip would have them jump the height of the bar before they
+/// started moving.
 pub fn desk_settings(output: Option<OutputId>) -> LayerShellSettings {
     LayerShellSettings {
         namespace: DESK_NAMESPACE.to_string(),
@@ -187,6 +193,7 @@ pub fn desk_settings(output: Option<OutputId>) -> LayerShellSettings {
         keyboard_interactivity: KeyboardInteractivity::None,
         output,
         anchor: Anchor::TOP | Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT,
+        exclusive_zone: -1,
         ..Default::default()
     }
 }
@@ -322,13 +329,14 @@ mod tests {
     }
 
     #[test]
-    fn the_desk_stays_on_the_wallpaper_and_reserves_nothing() {
-        // a canvas that reserved a zone would push every window off the
-        // screen, and one above the wallpaper layer would cover them
+    fn the_desk_stays_on_the_wallpaper_and_covers_the_whole_screen() {
+        // a canvas laid out below the strip would make every module jump the
+        // height of the bar before it started travelling, and one above the
+        // wallpaper layer would cover the windows
         let settings = desk_settings(None);
 
         assert!(matches!(settings.layer, Layer::Background));
-        assert_eq!(settings.exclusive_zone, 0);
+        assert_eq!(settings.exclusive_zone, -1);
     }
 
     #[test]

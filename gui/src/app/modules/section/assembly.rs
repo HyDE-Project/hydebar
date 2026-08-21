@@ -88,7 +88,7 @@ impl App {
                         .or_insert(0u64);
 
                     strip = strip.push(
-                        Self::flip_key(module_name, id).wrapping_add(occurrence),
+                        self.flip_key(module_name, id).wrapping_add(occurrence),
                         island_index,
                         self.entrance
                             .value()
