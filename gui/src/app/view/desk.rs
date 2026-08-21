@@ -141,7 +141,6 @@ impl App {
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
-    use hydebar_core::animation::SWEEP;
     use iced_test::simulator;
 
     use super::{
@@ -165,7 +164,26 @@ mod tests {
 
     /// Sends a bar's canvas all the way out: travelled and written out.
     fn open(app: &mut App) {
-        app.desk_fades.point(None, true, false, SWEEP);
+        app.desk_clocks.entry(None).or_default().open();
+    }
+
+    /// Starts a bar's canvas travelling, one frame in.
+    fn set_off(app: &mut App) {
+        let total = std::time::Duration::from_millis(900);
+        let clock = app.desk_clocks.entry(None).or_default();
+
+        *clock = hydebar_core::animation::Unfold::default();
+        clock.advance(std::time::Duration::from_millis(16), total);
+    }
+
+    /// Advances every canvas by one frame of a nine hundred millisecond
+    /// travel.
+    fn tick(app: &mut App) -> bool {
+        let total = std::time::Duration::from_millis(900);
+
+        app.desk_clocks.values_mut().fold(false, |running, clock| {
+            clock.advance(std::time::Duration::from_millis(16), total) | running
+        })
     }
 
     fn surface() -> Id {
@@ -261,7 +279,7 @@ mod tests {
         let (strip, canvas) = shapes_on_screen(&app);
         assert!(strip && !canvas, "the strip holds a screen with a window");
 
-        app.desk_fades.point(None, true, true, SWEEP);
+        set_off(&mut app);
 
         for frame in 0..96 {
             let (strip, canvas) = shapes_on_screen(&app);
@@ -271,7 +289,7 @@ mod tests {
                 "frame {frame}: strip {strip}, canvas {canvas} — one shape, never two and never none"
             );
 
-            if !app.desk_fades.advance(std::time::Duration::from_millis(16)) {
+            if !tick(&mut app) {
                 break;
             }
         }
@@ -288,7 +306,7 @@ mod tests {
         let (strip, canvas) = shapes_on_screen(&app);
         assert!(!strip && canvas, "the canvas holds the bare screen");
 
-        app.desk_fades.point(None, false, false, SWEEP);
+        app.desk_clocks.entry(None).or_default().fold();
 
         let (strip, canvas) = shapes_on_screen(&app);
         assert!(
@@ -298,48 +316,50 @@ mod tests {
     }
 
     #[test]
-    fn no_two_blocks_of_a_column_are_ever_in_flight_together() {
+    fn the_front_moves_without_a_pause_between_one_block_and_the_next() {
         for blocks in 2..8usize {
-            #[expect(
-                clippy::cast_precision_loss,
-                reason = "a column holds a handful of blocks"
-            )]
-            let places: Vec<f32> = (0..blocks)
-                .map(|index| index as f32 / (blocks - 1) as f32)
-                .collect();
-
-            for step in 0..=200 {
+            for step in 1..400 {
                 #[expect(clippy::cast_precision_loss, reason = "a fixed sample count")]
-                let unfolding = step as f32 / 200.0;
+                let unfolding = step as f32 / 400.0;
 
-                let flying = places
-                    .iter()
-                    .map(|place| super::column::journey(unfolding, *place, blocks).0)
-                    .filter(|travel| *travel > 0.0 && *travel < 1.0)
-                    .count();
+                let moving = (0..blocks).any(|index| {
+                    #[expect(clippy::cast_precision_loss, reason = "a handful of blocks")]
+                    let place = index as f32 / (blocks - 1) as f32;
+                    let (travel, bloom) = hydebar_core::animation::share(unfolding, place, blocks);
+
+                    (travel > 0.0 && travel < 1.0) || (bloom > 0.0 && bloom < 1.0)
+                });
 
                 assert!(
-                    flying <= 1,
-                    "{blocks} blocks, {unfolding:.3} of the way: {flying} in flight at once"
+                    moving,
+                    "{blocks} blocks: the front stands still at {unfolding:.3}"
                 );
             }
         }
     }
 
     #[test]
-    fn a_block_waits_for_the_one_before_it_to_arrive() {
-        for step in 0..=400 {
-            #[expect(clippy::cast_precision_loss, reason = "a fixed sample count")]
-            let unfolding = step as f32 / 400.0;
+    fn a_block_sets_off_after_the_one_before_it() {
+        for blocks in 2..8usize {
+            for step in 0..=400 {
+                #[expect(clippy::cast_precision_loss, reason = "a fixed sample count")]
+                let unfolding = step as f32 / 400.0;
 
-            let leader = super::column::journey(unfolding, 0.0, 3).0;
-            let follower = super::column::journey(unfolding, 0.5, 3).0;
+                let starts: Vec<f32> = (0..blocks)
+                    .map(|index| {
+                        #[expect(clippy::cast_precision_loss, reason = "a handful of blocks")]
+                        let place = index as f32 / (blocks - 1) as f32;
 
-            if follower > 0.0 {
-                assert!(
-                    leader >= 1.0,
-                    "the follower set off at {unfolding:.3} with the leader at {leader:.3}"
-                );
+                        hydebar_core::animation::share(unfolding, place, blocks).0
+                    })
+                    .collect();
+
+                for pair in starts.windows(2) {
+                    assert!(
+                        pair[0] >= pair[1],
+                        "{blocks} blocks at {unfolding:.3}: the leader is never behind"
+                    );
+                }
             }
         }
     }
@@ -347,13 +367,13 @@ mod tests {
     #[test]
     fn a_block_crosses_the_screen_before_it_writes_itself_out() {
         let mut app = test_app_with(|config| config.desk.enabled = true);
-        app.desk_fades.point(None, true, true, SWEEP);
+        set_off(&mut app);
 
         let mut wrote_while_crossing = false;
         let mut crossed = false;
 
         for _ in 0..256 {
-            let (travel, bloom) = super::column::journey(app.desk_presence(None), 0.0, 2);
+            let (travel, bloom) = hydebar_core::animation::share(app.desk_presence(None), 0.0, 2);
             let writing = simulator(app.desk_surface(surface()))
                 .find("MEMORY")
                 .is_ok();
@@ -363,7 +383,7 @@ mod tests {
 
             let _ = bloom;
 
-            if !app.desk_fades.advance(std::time::Duration::from_millis(16)) {
+            if !tick(&mut app) {
                 break;
             }
         }
@@ -384,7 +404,7 @@ mod tests {
     #[test]
     fn a_block_writes_itself_out_a_line_at_a_time() {
         let mut app = test_app_with(|config| config.desk.enabled = true);
-        app.desk_fades.point(None, true, true, SWEEP);
+        set_off(&mut app);
 
         let mut first = None;
         let mut last = 0usize;
@@ -401,7 +421,7 @@ mod tests {
 
             last = drawn;
 
-            if !app.desk_fades.advance(std::time::Duration::from_millis(16)) {
+            if !tick(&mut app) {
                 break;
             }
         }
@@ -488,7 +508,7 @@ mod tests {
         app.screen_width = Some(1920.0);
         open(&mut app);
 
-        app.desk_fades.point(None, false, false, SWEEP);
+        app.desk_clocks.entry(None).or_default().fold();
         app.send_the_islands_home(surface());
 
         let seated = app.flip.borrow().from_map().len();
@@ -502,7 +522,7 @@ mod tests {
     #[test]
     fn the_strip_stands_until_the_last_island_has_left_it() {
         let mut app = test_app_with(|config| config.desk.enabled = true);
-        app.desk_fades.point(None, true, true, SWEEP);
+        set_off(&mut app);
 
         let mut held_while_any_waited = true;
         let mut left_once_all_had_gone = false;
@@ -518,7 +538,7 @@ mod tests {
                     0.0
                 };
 
-                super::column::journey(unfolding, place, units).0 <= 0.0
+                hydebar_core::animation::share(unfolding, place, units).0 <= 0.0
             });
 
             if waiting {
@@ -527,7 +547,7 @@ mod tests {
                 left_once_all_had_gone |= !app.strip_still_holds(None);
             }
 
-            if !app.desk_fades.advance(std::time::Duration::from_millis(16)) {
+            if !tick(&mut app) {
                 break;
             }
         }
@@ -547,7 +567,7 @@ mod tests {
         use hydebar_core::config::ModuleName;
 
         let mut app = test_app_with(|config| config.desk.enabled = true);
-        app.desk_fades.point(None, true, true, SWEEP);
+        set_off(&mut app);
 
         let watched = [ModuleName::Clock, ModuleName::SystemInfo];
 
@@ -574,7 +594,7 @@ mod tests {
                 );
             }
 
-            if !app.desk_fades.advance(std::time::Duration::from_millis(16)) {
+            if !tick(&mut app) {
                 break;
             }
         }
@@ -674,7 +694,7 @@ mod tests {
         app.screen_width = Some(1920.0);
         open(&mut app);
 
-        app.desk_fades.point(None, false, false, SWEEP);
+        app.desk_clocks.entry(None).or_default().fold();
         app.send_the_islands_home(surface());
 
         let seats: Vec<f32> = app.flip.borrow().from_map().values().copied().collect();

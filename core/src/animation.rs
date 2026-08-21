@@ -9,13 +9,16 @@
 //! current value while building the view.
 //!
 //! The spring and the motion tokens live in [`spring`], the stagger that
-//! turns one travel into a front in [`wave`], and the per-item hover fades in
-//! [`hover`].
+//! turns one travel into a front in [`wave`], the per-item hover fades in
+//! [`hover`], and the even clock a sequence of blocks unfolds on in
+//! [`unfold`].
 
 mod hover;
 mod spring;
+mod unfold;
 mod wave;
 
 pub use hover::HoverFades;
 pub use spring::{GENTLE, SNAPPY, STANDARD, SWEEP, Spring};
+pub use unfold::{Unfold, share};
 pub use wave::sweep;

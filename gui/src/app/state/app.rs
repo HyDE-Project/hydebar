@@ -123,12 +123,17 @@ pub struct App {
     pub(crate) greeting_raised: Vec<Id>,
     /// The frame instant past which the greeting lets itself out.
     pub(crate) greeting_deadline: Option<Instant>,
-    /// Unfolding of the desk, one spring per screen it may unfold on.
+    /// Unfolding of the desk, one clock per screen it may unfold on.
     ///
-    /// A spring apiece because the screens answer for themselves: one monitor
+    /// A clock apiece because the screens answer for themselves: one monitor
     /// may be folding back under a window that just mapped while the other is
     /// still unfolding over a workspace that was cleared.
-    pub desk_fades: hydebar_core::animation::HoverFades<Option<String>>,
+    ///
+    /// Even, not sprung: the blocks leave one after another and every one of
+    /// them deserves the same slice of the travel. A spring driving the whole
+    /// sequence spends its tail on the last blocks, where it barely moves, and
+    /// they read as stalling. The easing belongs to each block's own slice.
+    pub desk_clocks: std::collections::HashMap<Option<String>, hydebar_core::animation::Unfold>,
     /// The one tooltip lifecycle: dwell, warmth and the fade either way.
     pub hints: hydebar_core::tooltip::Hints,
     /// The greeting line, composed once when the greeting is armed.

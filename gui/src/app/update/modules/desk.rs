@@ -56,10 +56,21 @@ impl App {
 
         for (surface, screen) in screens {
             let unfolded = enabled && self.desk.covers(screen.as_deref());
-            let was_out = self.desk_fades.progress(&screen) > 0.0;
+            let clock = self.desk_clocks.entry(screen).or_default();
+            let was_out = clock.is_out();
 
-            self.desk_fades
-                .point(screen, unfolded, animated && unfolded, unfolding);
+            if unfolded {
+                if !was_out {
+                    if animated {
+                        *clock = hydebar_core::animation::Unfold::default();
+                        clock.advance(std::time::Duration::from_millis(1), unfolding);
+                    } else {
+                        clock.open();
+                    }
+                }
+            } else {
+                clock.fold();
+            }
 
             if unfolded != was_out {
                 if unfolded {
@@ -139,7 +150,26 @@ impl App {
     /// How far the canvas of `screen` has unfolded, zero folded and one out.
     #[must_use]
     pub(crate) fn desk_presence(&self, screen: Option<&str>) -> f32 {
-        self.desk_fades.progress(&screen.map(ToOwned::to_owned))
+        self.desk_clocks
+            .get(&screen.map(ToOwned::to_owned))
+            .map_or(0.0, |clock| clock.progress())
+    }
+
+    /// Advances every screen's unfolding by one frame.
+    ///
+    /// Reports whether any of them is still travelling.
+    pub(crate) fn advance_desk(&mut self, elapsed: std::time::Duration) -> bool {
+        let total = self.unfolding_response();
+
+        self.desk_clocks.values_mut().fold(false, |running, clock| {
+            clock.advance(elapsed, total) | running
+        })
+    }
+
+    /// Reports whether any screen is in the middle of unfolding.
+    #[must_use]
+    pub(crate) fn desk_is_unfolding(&self) -> bool {
+        self.desk_clocks.values().any(|clock| clock.is_running())
     }
 
     /// Reports whether `module` has already left the strip of `screen`.
@@ -165,7 +195,7 @@ impl App {
             0.0
         };
 
-        crate::app::view::desk::column::journey(self.desk_presence(screen), place, units).0 > 0.0
+        hydebar_core::animation::share(self.desk_presence(screen), place, units).0 > 0.0
     }
 
     /// The turn `module` takes in the unfolding, and how many turns there are.

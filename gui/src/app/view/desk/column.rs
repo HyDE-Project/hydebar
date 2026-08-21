@@ -24,54 +24,6 @@ use super::{
 /// two edge sections never meet in the middle, where the centre one stands.
 const FAN: f32 = 0.16;
 
-/// The share of one block's journey spent crossing the screen.
-///
-/// The rest is spent writing itself out. Stated as one journey rather than
-/// two because a block that arrives and then waits for a second animation to
-/// be started reads as a stutter: the crossing runs into the opening with
-/// nothing in between.
-const CROSSING: f32 = 0.55;
-
-/// The stagger that keeps two blocks from ever being in flight together.
-///
-/// Blocks leave the strip from one row and arrive in a column, so their paths
-/// cross: whatever is still travelling would be drawn over whatever is
-/// already there. One at a time is the rule that removes the question — the
-/// block nearest the middle of the strip goes first and the next one starts
-/// when it has arrived.
-///
-/// The share is what makes each window disjoint: with `blocks` of them the
-/// windows are `1 - spread` wide and start `spread / (blocks - 1)` apart, so
-/// a spread of `(blocks - 1) / blocks` leaves them just touching.
-#[expect(
-    clippy::cast_precision_loss,
-    reason = "a column holds a handful of blocks, far below any precision limit"
-)]
-fn stagger(blocks: usize) -> f32 {
-    if blocks < 2 {
-        return 0.0;
-    }
-
-    let blocks = blocks as f32;
-
-    (blocks - 1.0) / blocks
-}
-
-/// How far one block has crossed and how far it has opened.
-///
-/// `place` is where the block stands in its column: zero leads the front, one
-/// trails it. `blocks` is how many share the column, which is what sets the
-/// stagger that keeps their flights apart.
-pub fn journey(unfolding: f32, place: f32, blocks: usize) -> (f32, f32) {
-    let own = hydebar_core::animation::sweep(unfolding, place, stagger(blocks));
-
-    if own <= CROSSING {
-        (own / CROSSING, 0.0)
-    } else {
-        (1.0, (own - CROSSING) / (1.0 - CROSSING))
-    }
-}
-
 /// How far the clock has to have opened before its month stands under it.
 ///
 /// The face is one line and the month is six: letting them arrive together
@@ -120,7 +72,7 @@ impl App {
                     reason = "a layout holds a handful of units"
                 )]
                 let place = if last > 0.0 { *turn as f32 / last } else { 0.0 };
-                let (travel, bloom) = journey(unfolding, place, units);
+                let (travel, bloom) = hydebar_core::animation::share(unfolding, place, units);
 
                 if travel <= 0.0 {
                     return None;

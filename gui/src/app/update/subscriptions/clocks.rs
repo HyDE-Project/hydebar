@@ -102,7 +102,7 @@ impl App {
         if self.outputs.menu_is_animating()
             || self.appearance_transition.is_animating()
             || self.hover.is_animating()
-            || self.desk_fades.is_animating()
+            || self.desk_is_unfolding()
             || self.entrance.is_animating()
             || self.relayout.is_animating()
             || self.greeting.is_animating()
