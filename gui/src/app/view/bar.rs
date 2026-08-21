@@ -43,38 +43,25 @@ impl App {
     )]
     pub(super) fn bar_surface(&self, id: Id) -> Element<'_, Message> {
         let screen = self.outputs.screen_of(id).flatten();
-        let emptying = self.desk_holds(screen);
 
-        if emptying && !self.strip_still_holds(screen) {
+        if self.desk_holds(screen) && !self.strip_still_holds(screen) {
             return iced::widget::Row::new().into();
         }
 
         let opacity = self.appearance().opacity;
-        let left = if emptying {
-            iced::widget::Row::new().into()
-        } else {
-            self.modules_section(&self.config.modules.left, id, opacity, 0)
-        };
-        let center = if emptying {
-            iced::widget::Row::new().into()
-        } else {
-            self.modules_section(
-                &self.config.modules.center,
-                id,
-                opacity,
-                self.config.modules.left.len()
-            )
-        };
-        let right = if emptying {
-            iced::widget::Row::new().into()
-        } else {
-            self.modules_section(
-                &self.config.modules.right,
-                id,
-                opacity,
-                self.config.modules.left.len() + self.config.modules.center.len()
-            )
-        };
+        let left = self.modules_section(&self.config.modules.left, id, opacity, 0);
+        let center = self.modules_section(
+            &self.config.modules.center,
+            id,
+            opacity,
+            self.config.modules.left.len()
+        );
+        let right = self.modules_section(
+            &self.config.modules.right,
+            id,
+            opacity,
+            self.config.modules.left.len() + self.config.modules.center.len()
+        );
 
         #[expect(
             clippy::cast_possible_truncation,

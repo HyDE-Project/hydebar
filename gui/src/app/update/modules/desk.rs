@@ -2,6 +2,8 @@
 
 use std::time::Duration;
 
+use hydebar_core::config::ModuleName;
+
 /// The briefest the whole unfolding is allowed to be.
 const SHORTEST_UNFOLDING: Duration = Duration::from_millis(600);
 
@@ -140,6 +142,43 @@ impl App {
         self.desk_fades.progress(&screen.map(ToOwned::to_owned))
     }
 
+    /// Reports whether `module` has already left the strip of `screen`.
+    ///
+    /// The one question the strip and the canvas both ask about a module, so
+    /// that exactly one of them draws it: the strip keeps what has not set
+    /// off yet, and the canvas takes it the moment it does. Asking it twice,
+    /// each in its own terms, is how a module came to be drawn on the canvas
+    /// underneath a strip that was still standing over it.
+    #[must_use]
+    pub(crate) fn has_left_the_strip(&self, module: &ModuleName, screen: Option<&str>) -> bool {
+        let Some((turn, units)) = self.strip_turn(module) else {
+            return true;
+        };
+
+        #[expect(
+            clippy::cast_precision_loss,
+            reason = "a layout holds a handful of units"
+        )]
+        let place = if units > 1 {
+            turn as f32 / (units - 1) as f32
+        } else {
+            0.0
+        };
+
+        crate::app::view::desk::column::journey(self.desk_presence(screen), place, units).0 > 0.0
+    }
+
+    /// The turn `module` takes in the unfolding, and how many turns there are.
+    fn strip_turn(&self, module: &ModuleName) -> Option<(usize, usize)> {
+        let (left, centre, right, units) = Self::desk_turns(&self.config.modules);
+
+        left.into_iter()
+            .chain(centre)
+            .chain(right)
+            .find(|(_, standing)| *standing == module)
+            .map(|(turn, _)| (turn, units))
+    }
+
     /// Reports whether the strip still has a module standing on it.
     ///
     /// The strip does not go the moment the first island leaves it: the
@@ -150,29 +189,11 @@ impl App {
     #[must_use]
     pub(crate) fn strip_still_holds(&self, screen: Option<&str>) -> bool {
         let layout = &self.config.modules;
-        let units = Self::desk_order(&layout.left, false).len()
-            + Self::desk_order(&layout.center, false).len()
-            + Self::desk_order(&layout.right, false).len();
 
-        if units == 0 {
-            return false;
-        }
-
-        let unfolding = self.desk_presence(screen);
-
-        (0..units).any(|turn| {
-            #[expect(
-                clippy::cast_precision_loss,
-                reason = "a layout holds a handful of units"
-            )]
-            let place = if units > 1 {
-                turn as f32 / (units - 1) as f32
-            } else {
-                0.0
-            };
-
-            crate::app::view::desk::column::journey(unfolding, place, units).0 <= 0.0
-        })
+        [&layout.left, &layout.center, &layout.right]
+            .into_iter()
+            .flat_map(|section| Self::desk_order(section, false))
+            .any(|module| !self.has_left_the_strip(module, screen))
     }
 
     /// Reports whether the canvas, not the strip, holds `screen`.

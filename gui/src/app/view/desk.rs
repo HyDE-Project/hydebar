@@ -88,7 +88,7 @@ impl App {
     /// then the sections either side of it, each unit waiting for the one
     /// before it. Numbering them here rather than per column is what lets the
     /// three sections share one queue instead of racing each other down.
-    fn desk_turns(modules: &hydebar_core::config::Modules) -> Turns<'_> {
+    pub(crate) fn desk_turns(modules: &hydebar_core::config::Modules) -> Turns<'_> {
         let centre = Self::desk_order(&modules.center, false);
         let left = Self::desk_order(&modules.left, true);
         let right = Self::desk_order(&modules.right, false);
@@ -540,6 +540,44 @@ mod tests {
             left_once_all_had_gone,
             "the strip leaves once the last island has set off"
         );
+    }
+
+    #[test]
+    fn a_module_is_drawn_by_one_shape_at_a_time_while_the_strip_empties() {
+        use hydebar_core::config::ModuleName;
+
+        let mut app = test_app_with(|config| config.desk.enabled = true);
+        app.desk_fades.point(None, true, true, SWEEP);
+
+        let watched = [ModuleName::Clock, ModuleName::SystemInfo];
+
+        for _ in 0..256 {
+            for module in &watched {
+                let left = app.has_left_the_strip(module, None);
+                let hour = app.clock.data().format(&app.config.clock.format);
+                let probe = if matches!(module, ModuleName::Clock) {
+                    hour.as_str()
+                } else {
+                    continue;
+                };
+
+                let on_strip = simulator(app.bar_surface(surface())).find(probe).is_ok();
+                let on_canvas = simulator(app.desk_surface(surface())).find(probe).is_ok();
+
+                assert!(
+                    on_strip != on_canvas,
+                    "the clock is drawn once: strip {on_strip}, canvas {on_canvas}, left {left}"
+                );
+                assert_eq!(
+                    on_canvas, left,
+                    "the canvas draws it exactly once it has left the strip"
+                );
+            }
+
+            if !app.desk_fades.advance(std::time::Duration::from_millis(16)) {
+                break;
+            }
+        }
     }
 
     #[test]

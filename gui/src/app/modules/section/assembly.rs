@@ -76,6 +76,10 @@ impl App {
             let mut seated = false;
 
             for module_name in names {
+                if self.has_left_the_strip(module_name, self.outputs.screen_of(id).flatten()) {
+                    continue;
+                }
+
                 if let Some((content, action)) = self.get_module_view(module_name, id, opacity) {
                     let actions = self.module_actions(module_name, action);
                     let element = self.module_element(content, actions, module_name, id, true);

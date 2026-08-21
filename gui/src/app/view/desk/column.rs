@@ -122,6 +122,10 @@ impl App {
                 let place = if last > 0.0 { *turn as f32 / last } else { 0.0 };
                 let (travel, bloom) = journey(unfolding, place, units);
 
+                if travel <= 0.0 {
+                    return None;
+                }
+
                 let block = self.desk_unit(unit, id, side, ink, bloom)?;
                 let inwards = if last > 0.0 {
                     #[expect(
