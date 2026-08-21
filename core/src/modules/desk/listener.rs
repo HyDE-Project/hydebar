@@ -3,7 +3,7 @@
 use std::{sync::Arc, time::Duration};
 
 use hydebar_proto::ports::hyprland::HyprlandPort;
-use iced::futures::StreamExt;
+use iced::futures::{StreamExt, future::Either, stream::Stream};
 use log::error;
 use tokio::time::sleep;
 
@@ -30,19 +30,47 @@ pub(super) async fn run(hyprland: Arc<dyn HyprlandPort>, sender: ModuleEventSend
     publish(&hyprland, &sender, &mut published).await;
 
     loop {
-        match hyprland.workspace_events() {
-            Ok(mut stream) => {
-                while let Some(event) = stream.next().await {
-                    match event {
-                        Ok(_) => publish(&hyprland, &sender, &mut published).await,
-                        Err(err) => error!("workspace event stream error: {err}")
-                    }
+        match stirrings(hyprland.as_ref()) {
+            Some(mut stirrings) => {
+                while stirrings.next().await.is_some() {
+                    publish(&hyprland, &sender, &mut published).await;
                 }
             }
-            Err(err) => error!("failed to start the desk event stream: {err}")
+            None => error!("failed to start the desk event streams")
         }
 
         sleep(EVENT_RETRY_DELAY).await;
+    }
+}
+
+/// Every compositor event that can change which screens are bare.
+///
+/// Two streams, merged: the workspace one carries windows opening, closing
+/// and moving between workspaces, and the window one carries the rest —
+/// a window taken out of the tiling and left floating above it among them.
+/// Following only the first left the desk standing while a window it should
+/// have folded for was dropped into the layout.
+///
+/// Every event is flattened to a nudge: the answer is read from a fresh
+/// snapshot either way, so what kind of stirring it was does not matter.
+fn stirrings(hyprland: &dyn HyprlandPort) -> Option<impl Stream<Item = ()> + Send + use<>> {
+    let workspaces = hyprland
+        .workspace_events()
+        .inspect_err(|err| error!("failed to follow the workspaces: {err}"))
+        .ok();
+    let windows = hyprland
+        .window_events()
+        .inspect_err(|err| error!("failed to follow the windows: {err}"))
+        .ok();
+
+    match (workspaces, windows) {
+        (Some(workspaces), Some(windows)) => Some(Either::Left(tokio_stream::StreamExt::merge(
+            workspaces.map(|_| ()),
+            windows.map(|_| ())
+        ))),
+        (Some(only), None) => Some(Either::Right(Either::Left(only.map(|_| ())))),
+        (None, Some(only)) => Some(Either::Right(Either::Right(only.map(|_| ())))),
+        (None, None) => None
     }
 }
 
@@ -82,19 +110,32 @@ async fn publish(
 
 /// Asks the compositor which of its screens are bare, off the async workers.
 ///
-/// The port call blocks on the compositor socket with retries, so it runs on
+/// Two questions in one trip: which workspace each screen shows, and which
+/// windows are mapped where. The second is what tells a window that tiled
+/// into the workspace from one that merely floats over it, and only the
+/// first kind takes a screen from the desk.
+///
+/// The port calls block on the compositor socket with retries, so they run on
 /// the blocking pool.
 async fn read(port: &Arc<dyn HyprlandPort>) -> Option<bareness::Bareness> {
     let port = Arc::clone(port);
 
-    match tokio::task::spawn_blocking(move || port.workspace_snapshot()).await {
-        Ok(Ok(snapshot)) => Some(bareness::read(&snapshot)),
+    let answered = tokio::task::spawn_blocking(move || {
+        let snapshot = port.workspace_snapshot()?;
+        let clients = port.clients_snapshot()?;
+
+        Ok::<_, hydebar_proto::ports::hyprland::HyprlandError>((snapshot, clients))
+    })
+    .await;
+
+    match answered {
+        Ok(Ok((snapshot, clients))) => Some(bareness::read(&snapshot, &clients)),
         Ok(Err(err)) => {
-            error!("failed to retrieve the workspace snapshot: {err}");
+            error!("failed to read the screens: {err}");
             None
         }
         Err(err) => {
-            error!("workspace snapshot task failed: {err}");
+            error!("the screen reading task failed: {err}");
             None
         }
     }

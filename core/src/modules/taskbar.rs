@@ -77,6 +77,7 @@ pub(crate) fn test_client(address: &str, focused: bool) -> HyprlandClientInfo {
         class: "kitty".to_owned(),
         title: "shell".to_owned(),
         workspace_id: 1,
-        focused
+        focused,
+        floating: false
     }
 }

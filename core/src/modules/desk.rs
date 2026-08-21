@@ -65,24 +65,19 @@ impl std::fmt::Debug for Desk {
 
 #[cfg(test)]
 pub(crate) fn test_bareness() -> Bareness {
-    use hydebar_proto::ports::hyprland::{
-        HyprlandMonitorInfo, HyprlandWorkspaceInfo, HyprlandWorkspaceSnapshot
-    };
+    use hydebar_proto::ports::hyprland::{HyprlandMonitorInfo, HyprlandWorkspaceSnapshot};
 
-    bareness::read(&HyprlandWorkspaceSnapshot {
-        monitors:            vec![HyprlandMonitorInfo {
-            id:                   0,
-            name:                 "DP-1".to_owned(),
-            active_workspace_id:  Some(1),
-            special_workspace_id: None
-        }],
-        workspaces:          vec![HyprlandWorkspaceInfo {
-            id:           1,
-            name:         "1".to_owned(),
-            monitor_id:   Some(0),
-            monitor_name: "DP-1".to_owned(),
-            window_count: 0
-        }],
-        active_workspace_id: Some(1)
-    })
+    bareness::read(
+        &HyprlandWorkspaceSnapshot {
+            monitors:            vec![HyprlandMonitorInfo {
+                id:                   0,
+                name:                 "DP-1".to_owned(),
+                active_workspace_id:  Some(1),
+                special_workspace_id: None
+            }],
+            workspaces:          Vec::new(),
+            active_workspace_id: Some(1)
+        },
+        &[]
+    )
 }

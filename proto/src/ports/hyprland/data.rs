@@ -63,7 +63,14 @@ pub struct HyprlandClientInfo {
     /// Identifier of the workspace hosting the window.
     pub workspace_id: i32,
     /// Whether the window holds the focus.
-    pub focused:      bool
+    pub focused:      bool,
+    /// Whether the window floats over the layout instead of tiling into it.
+    ///
+    /// A floating window is a visitor: a dialog, a calculator, a picture in
+    /// picture. It sits over whatever the workspace holds without taking the
+    /// screen from it, which is why it is not what decides that a screen is
+    /// occupied.
+    pub floating:     bool
 }
 
 /// Snapshot of the keyboard state known to Hyprland.
