@@ -7,6 +7,12 @@ const SHORTEST_UNFOLDING: Duration = Duration::from_millis(600);
 
 /// The longest the whole unfolding is allowed to be.
 const LONGEST_UNFOLDING: Duration = Duration::from_millis(2400);
+
+/// How far into the unfolding the strip's background has gone out.
+///
+/// Early: the strip is meant to be out of the way while the islands come
+/// down, not fading behind them for the whole journey.
+const WASH_GOES_OUT_BY: f32 = 0.22;
 use iced::{Task, set_input_region};
 
 use super::super::super::state::{App, Message};
@@ -206,6 +212,28 @@ impl App {
     #[must_use]
     pub(crate) fn strip_still_holds(&self, screen: Option<&str>) -> bool {
         !self.has_left_the_strip(screen)
+    }
+
+    /// How much of the strip's own background is still painted on `screen`.
+    ///
+    /// The compositor blurs what shows through the strip, and it decides that
+    /// from the pixels the strip paints: there is no half a blur to fade, only
+    /// a surface worth blurring or none. Dropping the whole background on the
+    /// frame the islands set off therefore switched the blur off like a
+    /// light. The background goes out over the first stretch of the unfolding
+    /// instead, so by the frame the compositor stops blurring there is nothing
+    /// left on the strip to see the difference on.
+    ///
+    /// The way back is not this: a strip returning under a window that has
+    /// already mapped takes its blur back at once, which is what it was asked
+    /// for.
+    #[must_use]
+    pub(crate) fn strip_wash(&self, screen: Option<&str>) -> f32 {
+        if !self.desk_holds(screen) {
+            return 1.0;
+        }
+
+        1.0 - (self.desk_presence(screen) / WASH_GOES_OUT_BY).clamp(0.0, 1.0)
     }
 
     /// Reports whether the canvas, not the strip, holds `screen`.

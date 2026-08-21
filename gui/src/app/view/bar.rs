@@ -44,7 +44,9 @@ impl App {
     pub(super) fn bar_surface(&self, id: Id) -> Element<'_, Message> {
         let screen = self.outputs.screen_of(id).flatten();
 
-        if self.desk_holds(screen) && !self.strip_still_holds(screen) {
+        let wash = self.strip_wash(screen);
+
+        if self.desk_holds(screen) && !self.strip_still_holds(screen) && wash <= 0.0 {
             return iced::widget::Row::new().into();
         }
 
@@ -84,13 +86,13 @@ impl App {
                 [0.0, 0.0]
             });
 
-        let bar = container(centerbox).style(|t| container::Style {
+        let bar = container(centerbox).style(move |t| container::Style {
             background: match self.appearance().style {
                 AppearanceStyle::Gradient => Some({
                     let start_color = t
                         .palette()
                         .background
-                        .scale_alpha(self.appearance().opacity);
+                        .scale_alpha(self.appearance().opacity * wash);
 
                     let start_color = if self.outputs.menu_is_open() {
                         darken_color(start_color, self.appearance().menu.backdrop)
@@ -127,7 +129,7 @@ impl App {
                     let bg = t
                         .palette()
                         .background
-                        .scale_alpha(self.appearance().opacity);
+                        .scale_alpha(self.appearance().opacity * wash);
                     if self.outputs.menu_is_open() {
                         darken_color(bg, self.appearance().menu.backdrop)
                     } else {
@@ -136,17 +138,17 @@ impl App {
                     .into()
                 }),
                 AppearanceStyle::Islands => {
-                    let wash = (self.appearance().bar_opacity > 0.0).then(|| {
+                    let painted = (self.appearance().bar_opacity * wash > 0.0).then(|| {
                         t.palette()
                             .background
-                            .scale_alpha(self.appearance().bar_opacity)
+                            .scale_alpha(self.appearance().bar_opacity * wash)
                     });
 
-                    match (wash, self.outputs.menu_is_open()) {
-                        (Some(wash), true) => {
-                            Some(darken_color(wash, self.appearance().menu.backdrop).into())
+                    match (painted, self.outputs.menu_is_open()) {
+                        (Some(painted), true) => {
+                            Some(darken_color(painted, self.appearance().menu.backdrop).into())
                         }
-                        (Some(wash), false) => Some(wash.into()),
+                        (Some(painted), false) => Some(painted.into()),
                         (None, true) => {
                             Some(backdrop_color(self.appearance().menu.backdrop).into())
                         }
@@ -164,6 +166,8 @@ impl App {
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
+    #![allow(clippy::float_cmp)]
+
     use iced_test::simulator;
 
     use super::{super::super::state::test_support::test_app_with, *};
@@ -200,6 +204,54 @@ mod tests {
                 "{position:?} paints"
             );
         }
+    }
+
+    #[test]
+    fn the_strip_keeps_its_background_a_while_after_its_islands_leave() {
+        let mut app = test_app_with(|config| config.desk.enabled = true);
+
+        assert_eq!(
+            app.strip_wash(None),
+            1.0,
+            "a strip with a window is painted"
+        );
+
+        let clock = app.desk_clocks.entry(None).or_default();
+        *clock = hydebar_core::animation::Unfold::default();
+        clock.advance(
+            std::time::Duration::from_millis(16),
+            std::time::Duration::from_millis(900)
+        );
+
+        let mut wash = app.strip_wash(None);
+
+        assert!(
+            wash > 0.0 && wash < 1.0,
+            "the background is on its way out, not gone: {wash}"
+        );
+
+        for _ in 0..256 {
+            let now = app.strip_wash(None);
+
+            assert!(now <= wash, "the background only ever goes out");
+            wash = now;
+
+            let running = app.desk_clocks.values_mut().fold(false, |running, clock| {
+                clock.advance(
+                    std::time::Duration::from_millis(16),
+                    std::time::Duration::from_millis(900)
+                ) | running
+            });
+
+            if !running {
+                break;
+            }
+        }
+
+        assert_eq!(
+            wash, 0.0,
+            "the strip is bare once the unfolding is under way"
+        );
     }
 
     #[test]
