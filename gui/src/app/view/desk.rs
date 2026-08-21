@@ -11,6 +11,7 @@
 mod blocks;
 mod column;
 mod face;
+mod probe;
 mod readings;
 
 use hydebar_core::outputs::HasOutput;
@@ -51,7 +52,7 @@ impl App {
             (&modules.right, blocks::Side::Trailing)
         ]
         .into_iter()
-        .filter_map(|(section, side)| self.desk_column(section, id, side, ink));
+        .filter_map(|(section, side)| self.desk_column(section, id, side, ink, presence));
 
         let canvas = container(
             Row::with_children(columns)
@@ -62,13 +63,13 @@ impl App {
         .width(Length::Fill)
         .height(Length::Fill)
         .padding(Padding {
-            top:    margin.mul_add(1.0 - presence, margin),
+            top:    margin * presence,
             right:  margin,
             bottom: margin,
             left:   margin
         });
 
-        self.faded_menu(canvas.into(), presence)
+        canvas.into()
     }
 
     /// How much larger than the strip the canvas of `id` is drawn.
@@ -83,5 +84,102 @@ impl App {
         }
 
         f64::from(self.config.desk.magnification())
+    }
+}
+
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
+mod tests {
+    use hydebar_core::animation::GENTLE;
+    use iced_test::simulator;
+
+    use super::{
+        super::super::state::{App, test_support::test_app_with},
+        *
+    };
+
+    /// The bar with the desk switched on, unfolded as far as `presence`.
+    ///
+    /// The spring is snapped rather than animated: a test asserting what the
+    /// canvas draws must not also wait for a frame clock.
+    fn unfolded(presence: f32) -> App {
+        let mut app = test_app_with(|config| config.desk.enabled = true);
+
+        if presence > 0.0 {
+            app.desk_fades.point(None, true, false, GENTLE);
+        }
+
+        app
+    }
+
+    fn surface() -> Id {
+        Id::unique()
+    }
+
+    #[test]
+    fn a_bare_screen_unfolds_the_bar_into_its_blocks() {
+        let app = unfolded(1.0);
+        let mut ui = simulator(app.desk_surface(surface()));
+
+        assert!(
+            ui.find("MEMORY").is_ok(),
+            "the memory block stands on the canvas"
+        );
+        assert!(
+            ui.find("PROCESSOR").is_ok(),
+            "the processor block stands on the canvas"
+        );
+    }
+
+    #[test]
+    fn a_screen_holding_a_window_draws_no_canvas() {
+        let app = unfolded(0.0);
+        let mut ui = simulator(app.desk_surface(surface()));
+
+        assert!(
+            ui.find("MEMORY").is_err(),
+            "nothing is drawn while a window holds the screen"
+        );
+    }
+
+    #[test]
+    fn the_desk_switched_off_draws_nothing_however_bare_the_screen() {
+        let mut app = test_app_with(|config| config.desk.enabled = false);
+        app.desk_fades.point(None, true, false, GENTLE);
+
+        let mut ui = simulator(app.desk_surface(surface()));
+
+        assert!(ui.find("MEMORY").is_err());
+    }
+
+    #[test]
+    fn the_strip_empties_the_moment_its_blocks_leave_it() {
+        let app = unfolded(1.0);
+        let mut ui = simulator(app.bar_surface(surface()));
+
+        assert!(
+            ui.snapshot(&iced::Theme::Dark).is_ok(),
+            "the strip still draws, empty"
+        );
+    }
+
+    #[test]
+    fn the_clock_stands_over_the_month_it_opens() {
+        let app = unfolded(1.0);
+        let month = app.clock.data().format("%B %Y");
+        let mut ui = simulator(app.desk_surface(surface()));
+
+        assert!(
+            ui.find(month.as_str()).is_ok(),
+            "the month grid stands under the hour"
+        );
+    }
+
+    #[test]
+    fn every_column_of_the_layout_reaches_the_canvas() {
+        let app = unfolded(1.0);
+        let mut ui = simulator(app.desk_surface(surface()));
+
+        assert!(ui.snapshot(&iced::Theme::Dark).is_ok());
     }
 }

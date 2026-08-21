@@ -44,7 +44,7 @@ impl App {
     pub(super) fn bar_surface(&self, id: Id) -> Element<'_, Message> {
         let unfolded = self.desk_presence(self.outputs.screen_of(id).flatten());
 
-        if unfolded >= 0.996 {
+        if unfolded > 0.004 {
             return iced::widget::Row::new().into();
         }
 
@@ -157,7 +157,7 @@ impl App {
             ..Default::default()
         });
 
-        self.dismisses_the_open_menu(self.faded_menu(bar.into(), 1.0 - unfolded))
+        self.dismisses_the_open_menu(bar.into())
     }
 }
 

@@ -25,7 +25,8 @@ impl App {
         section: &'a [ModuleDef],
         id: Id,
         side: Side,
-        ink: Ink
+        ink: Ink,
+        travel: f32
     ) -> Option<Element<'a, Message>> {
         let blocks: Vec<Element<'a, Message>> = section
             .iter()
@@ -42,7 +43,7 @@ impl App {
 
         Some(
             Column::with_children(blocks)
-                .spacing(ink.size * 1.8)
+                .spacing(ink.size * 1.8 * travel)
                 .width(Length::Fill)
                 .align_x(side.alignment_x())
                 .into()
