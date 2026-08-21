@@ -305,6 +305,41 @@ On by default:
 greeting = false   # turn it off
 ```
 
+## The desk
+
+A workspace with nothing on it has room for readouts no strip can hold, so
+the bar unfolds into them: the machine and its link down the left edge, the
+hour and the sky in the middle, the load and the mounts down the right,
+drawn straight onto the wallpaper. The moment a window maps on that screen
+the canvas folds back and the bar is a strip again. Off by default:
+
+```toml
+[desk]
+enabled = true
+```
+
+Each column is a list of panels, and any panel may stand in any column:
+
+```toml
+[desk]
+enabled = true
+left   = ["system", "network"]
+center = ["clock", "weather"]
+right  = ["processor", "graphics", "memory", "storage"]
+```
+
+The panels are `system` (kernel, processor, governor, microcode), `network`
+(address and transfer rates), `processor` (load, temperature, clock),
+`graphics`, `memory` (memory, swap and what is cached), `storage` (one line
+per filesystem), `clock` (the hour at the size a room away can read it) and
+`weather`. A panel the machine reports nothing for is left out rather than
+drawn empty, and the weather appears only once it has been read — which
+needs an API key, see [Weather](#weather) above.
+
+Every screen answers for itself: a second monitor running a browser keeps
+its strip while the first one, cleared, gets the whole wallpaper. A special
+workspace pulled up over a screen counts as something on it.
+
 ## Next Steps
 
 - [Theme Showcase](THEMES.md) - Preview all themes
