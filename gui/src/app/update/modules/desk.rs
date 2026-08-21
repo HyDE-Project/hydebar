@@ -121,10 +121,8 @@ impl App {
                 (&layout.modules.center, -beyond),
                 (&layout.modules.right, beyond * 2.0)
             ] {
-                for unit in Self::desk_order(section, false) {
-                    for module in Self::members(unit) {
-                        memo.record(self.flip_key(module, surface), from);
-                    }
+                for module in Self::desk_order(section, false) {
+                    memo.record(self.flip_key(module, surface), from);
                 }
             }
         }

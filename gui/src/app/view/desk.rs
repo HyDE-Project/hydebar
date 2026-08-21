@@ -12,14 +12,14 @@ mod blocks;
 pub(super) mod column;
 mod readings;
 
-use hydebar_core::config::ModuleDef;
+use hydebar_core::config::ModuleName;
 
 /// The three sections of the layout with the turn every unit takes, and how
 /// many turns there are in all.
 type Turns<'a> = (
-    Vec<(usize, &'a ModuleDef)>,
-    Vec<(usize, &'a ModuleDef)>,
-    Vec<(usize, &'a ModuleDef)>,
+    Vec<(usize, &'a ModuleName)>,
+    Vec<(usize, &'a ModuleName)>,
+    Vec<(usize, &'a ModuleName)>,
     usize
 );
 use iced::{
@@ -434,7 +434,7 @@ mod tests {
     }
 
     #[test]
-    fn a_group_of_modules_travels_as_the_one_island_the_strip_drew() {
+    fn every_module_of_a_group_takes_its_own_turn_and_its_own_pill() {
         use hydebar_core::config::ModuleName;
         use hydebar_proto::config::ModuleDef;
 
@@ -447,19 +447,27 @@ mod tests {
             config.modules.center = Vec::new();
             config.modules.right = Vec::new();
         });
-        app.desk_fades
-            .point(None, true, true, std::time::Duration::from_millis(600));
-        let _ = app.desk_fades.advance(std::time::Duration::from_millis(16));
+        open(&mut app);
 
-        let (_, _, _, units) = App::desk_turns(&app.config.modules);
+        let (left, _, _, units) = App::desk_turns(&app.config.modules);
 
-        assert_eq!(units, 1, "the group takes one turn, not one per module");
+        assert_eq!(units, 2, "the icons part, so each takes a turn of its own");
+        assert!(left[0].0 < left[1].0, "one after the other, not together");
 
-        let mut ui = simulator(app.desk_surface(surface()));
+        let far = simulator(app.desk_surface(surface()))
+            .find("MEMORY")
+            .expect("the member that stood further from the middle")
+            .bounds();
+        let near = simulator(app.desk_surface(surface()))
+            .find("CPU TEMPERATURE")
+            .expect("the member that stood nearer the middle")
+            .bounds();
 
         assert!(
-            ui.find("MEMORY").is_err(),
-            "the group is still an island while it travels"
+            far.y > near.y,
+            "each stands in its own place, the nearer one higher: {} against {}",
+            far.y,
+            near.y
         );
     }
 

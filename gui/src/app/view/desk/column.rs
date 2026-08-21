@@ -96,7 +96,7 @@ impl App {
     /// an empty section leaves no gap on the canvas.
     pub(super) fn desk_column<'a>(
         &'a self,
-        order: &[(usize, &'a ModuleDef)],
+        order: &[(usize, &'a ModuleName)],
         id: Id,
         side: Side,
         ink: Ink,
@@ -136,7 +136,7 @@ impl App {
                 };
 
                 let anchor = hydebar_core::components::flip::FlipAnchor::new(
-                    self.unit_key(unit, id),
+                    self.flip_key(unit, id),
                     travel,
                     &self.flip,
                     block
@@ -174,9 +174,9 @@ impl App {
 
     /// The units of one section, in the order the canvas stands them in.
     ///
-    /// A unit is what the strip drew as one island: a module on its own, or a
-    /// whole group under one pill. The group stays one thing until it opens,
-    /// because on the strip it is one thing.
+    /// A unit is one module. The modules of a group shared one pill on the
+    /// strip and each carries a pill of its own to its place on the canvas:
+    /// what parts is the icons, and the backing goes with both of them.
     ///
     /// The rule is the distance from the middle of the strip: a unit that
     /// stood near the centre stands high on the canvas, and one that stood at
@@ -186,22 +186,14 @@ impl App {
     pub(crate) fn desk_order(
         section: &[ModuleDef],
         reads_towards_the_centre: bool
-    ) -> Vec<&ModuleDef> {
-        let mut order: Vec<&ModuleDef> = section.iter().collect();
+    ) -> Vec<&ModuleName> {
+        let mut order: Vec<&ModuleName> = section.iter().flat_map(Self::members).collect();
 
         if reads_towards_the_centre {
             order.reverse();
         }
 
         order
-    }
-
-    /// The seat key of one unit, taken from the module that leads it.
-    pub(crate) fn unit_key(&self, unit: &ModuleDef, id: Id) -> u64 {
-        match unit {
-            ModuleDef::Single(module) => self.flip_key(module, id),
-            ModuleDef::Group(group) => group.first().map_or(0, |leader| self.flip_key(leader, id))
-        }
     }
 
     /// How far inwards the nearest unit of a section stands.
@@ -228,7 +220,7 @@ impl App {
     /// Draws one unit in the form the canvas has room for.
     fn desk_unit<'a>(
         &'a self,
-        unit: &'a ModuleDef,
+        unit: &'a ModuleName,
         id: Id,
         side: Side,
         ink: Ink,
@@ -240,10 +232,7 @@ impl App {
             return Some(island);
         }
 
-        let opened: Vec<Element<'a, Message>> = Self::members(unit)
-            .into_iter()
-            .flat_map(|module| self.desk_opened(module, side, ink, bloom))
-            .collect();
+        let opened: Vec<Element<'a, Message>> = self.desk_opened(unit, side, ink, bloom);
 
         if opened.is_empty() {
             return Some(island);
@@ -297,24 +286,12 @@ impl App {
     /// its own island fills the row it stands in, and a row of the canvas is
     /// as tall as the column: the island stretched down the screen and left
     /// its own readings behind.
-    fn desk_island<'a>(&'a self, unit: &'a ModuleDef, id: Id) -> Option<Element<'a, Message>> {
+    fn desk_island<'a>(&'a self, unit: &'a ModuleName, id: Id) -> Option<Element<'a, Message>> {
         let opacity = self.appearance().opacity;
+        let (content, action) = self.get_module_view(unit, id, opacity)?;
+        let actions = self.module_actions(unit, action);
 
-        let members: Vec<Element<'a, Message>> = Self::members(unit)
-            .into_iter()
-            .filter_map(|module| {
-                let (content, action) = self.get_module_view(module, id, opacity)?;
-                let actions = self.module_actions(module, action);
-
-                Some(self.module_element(content, actions, module, id, true))
-            })
-            .collect();
-
-        if members.is_empty() {
-            return None;
-        }
-
-        Some(self.desk_pill(members))
+        Some(self.desk_pill(vec![self.module_element(content, actions, unit, id, true)]))
     }
 
     /// The one pill a group of modules shares, as the strip paints it.
