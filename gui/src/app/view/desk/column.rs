@@ -104,6 +104,7 @@ impl App {
         units: usize
     ) -> Option<Element<'a, Message>> {
         let fan = self.fan_span();
+
         #[expect(
             clippy::cast_precision_loss,
             reason = "a layout holds a handful of units, far below any precision limit"
@@ -134,24 +135,27 @@ impl App {
                     0.0
                 };
 
-                let lane = container(block)
-                    .width(Length::Fill)
-                    .align_x(side.alignment_x())
-                    .padding(side.lane(inwards));
-
                 let anchor = hydebar_core::components::flip::FlipAnchor::new(
                     self.unit_key(unit, id),
                     travel,
                     &self.flip,
-                    lane
+                    block
                 )
                 .departing_from(self.strip_row());
 
-                Some(if side == Side::Middle {
+                let travelling: Element<'a, Message> = if side == Side::Middle {
                     anchor.into()
                 } else {
                     anchor.descending_first().into()
-                })
+                };
+
+                Some(
+                    container(travelling)
+                        .width(Length::Fill)
+                        .align_x(side.alignment_x())
+                        .padding(side.lane(inwards))
+                        .into()
+                )
             })
             .collect();
 
