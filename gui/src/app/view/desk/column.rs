@@ -234,58 +234,24 @@ impl App {
         ink: Ink,
         bloom: f32
     ) -> Option<Element<'a, Message>> {
+        let island = self.desk_island(unit, id)?;
+
         if bloom <= 0.0 {
-            return self.desk_island(unit, id);
+            return Some(island);
         }
 
         let opened: Vec<Element<'a, Message>> = Self::members(unit)
             .into_iter()
-            .filter_map(|module| self.desk_member(module, id, side, ink, bloom))
+            .flat_map(|module| self.desk_opened(module, side, ink, bloom))
             .collect();
 
         if opened.is_empty() {
-            return self.desk_island(unit, id);
+            return Some(island);
         }
 
         Some(
-            self.desk_pill(
-                Column::with_children(opened)
-                    .spacing(ink.size * 1.4 * bloom)
-                    .width(Length::Shrink)
-                    .align_x(side.alignment_x())
-                    .into()
-            )
-        )
-    }
-
-    /// One member of an opened unit: its icon, with its readings under it.
-    ///
-    /// The members of a group part as the unit opens — each takes its own
-    /// place down the block — and the pill they shared on the strip stretches
-    /// to hold both rather than splitting in two. What was one island stays
-    /// one island; it only grows to fit what its modules have to say.
-    fn desk_member<'a>(
-        &'a self,
-        module: &'a ModuleName,
-        id: Id,
-        side: Side,
-        ink: Ink,
-        bloom: f32
-    ) -> Option<Element<'a, Message>> {
-        let opacity = self.appearance().opacity;
-        let (content, action) = self.get_module_view(module, id, opacity)?;
-        let actions = self.module_actions(module, action);
-        let icon = self.module_element(content, actions, module, id, true);
-
-        let readings = self.desk_opened(module, side, ink, bloom);
-
-        if readings.is_empty() {
-            return Some(icon);
-        }
-
-        Some(
-            Column::with_children(std::iter::once(icon).chain(readings))
-                .spacing(ink.size * 0.7)
+            Column::with_children(std::iter::once(island).chain(opened))
+                .spacing(ink.size * 0.9)
                 .width(Length::Fill)
                 .align_x(side.alignment_x())
                 .into()
@@ -348,31 +314,27 @@ impl App {
             return None;
         }
 
-        Some(
-            self.desk_pill(
-                iced::widget::Row::with_children(members)
-                    .spacing(self.appearance().island_gap())
-                    .align_y(iced::Alignment::Center)
-                    .into()
-            )
-        )
+        Some(self.desk_pill(members))
     }
 
-    /// The one pill a unit stands on, as the strip paints it.
-    fn desk_pill<'a>(&'a self, held: Element<'a, Message>) -> Element<'a, Message> {
+    /// The one pill a group of modules shares, as the strip paints it.
+    fn desk_pill<'a>(&'a self, members: Vec<Element<'a, Message>>) -> Element<'a, Message> {
         use hydebar_proto::config::AppearanceStyle;
 
         let appearance = self.appearance();
+        let row = iced::widget::Row::with_children(members)
+            .spacing(appearance.island_gap())
+            .align_y(iced::Alignment::Center);
 
         if appearance.style != AppearanceStyle::Islands {
-            return held;
+            return row.into();
         }
 
         let opacity = appearance.opacity;
         let finish = hydebar_core::style::IslandFinish::of(appearance);
         let radius = appearance.pill_radius();
 
-        container(held)
+        container(row)
             .padding(appearance.island_padding())
             .style(move |theme: &iced::Theme| iced::widget::container::Style {
                 background: Some(theme.palette().background.scale_alpha(opacity).into()),
