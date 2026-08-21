@@ -109,7 +109,6 @@ impl App {
             attention: Attention::default(),
             hover: HoverFades::default(),
             desk_fades: HoverFades::default(),
-            desk_blooms: HoverFades::default(),
             sweep: hydebar_core::style::SweepStyle::default(),
             entrance: hydebar_core::animation::Spring::new(0.0),
             relayout: hydebar_core::animation::Spring::new(1.0),

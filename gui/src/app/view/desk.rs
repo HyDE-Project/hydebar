@@ -9,7 +9,7 @@
 //! One folder, one room so far: [`column`] stacks a section into a column.
 
 mod blocks;
-mod column;
+pub(super) mod column;
 mod readings;
 
 use iced::{
@@ -35,8 +35,7 @@ impl App {
             return Row::new().into();
         }
 
-        let presence = self.desk_presence(screen);
-        let bloom = self.desk_bloom(screen);
+        let unfolding = self.desk_presence(screen);
 
         let ink = blocks::Ink {
             value: self.theme_cache.palette().text,
@@ -55,7 +54,7 @@ impl App {
             (&right, blocks::Side::Trailing)
         ]
         .into_iter()
-        .filter_map(|(order, side)| self.desk_column(order, id, side, ink, presence, bloom));
+        .filter_map(|(order, side)| self.desk_column(order, id, side, ink, unfolding));
 
         let canvas = container(
             Row::with_children(columns)
@@ -66,7 +65,7 @@ impl App {
         .width(Length::Fill)
         .height(Length::Fill)
         .padding(Padding {
-            top:    self.strip_band().mul_add(presence, margin * presence),
+            top:    self.strip_band() + margin,
             right:  margin,
             bottom: margin,
             left:   margin
@@ -78,9 +77,8 @@ impl App {
     /// The band along the top of the screen the strip itself occupies.
     ///
     /// The canvas covers the whole screen so its blocks can leave the strip
-    /// without jumping, which means it also has to keep clear of the band the
-    /// strip stands in — but only once they have arrived. While they travel
-    /// the band is theirs: they are still in it.
+    /// without jumping, which means the places they land have to keep clear
+    /// of the band the strip stands in.
     #[expect(
         clippy::cast_possible_truncation,
         reason = "the bar height constant is exactly representable in f32"
@@ -95,7 +93,7 @@ impl App {
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
-    use hydebar_core::animation::{GENTLE, STANDARD};
+    use hydebar_core::animation::SWEEP;
     use iced_test::simulator;
 
     use super::{
@@ -119,8 +117,7 @@ mod tests {
 
     /// Sends a bar's canvas all the way out: travelled and written out.
     fn open(app: &mut App) {
-        app.desk_fades.point(None, true, false, GENTLE);
-        app.desk_blooms.point(None, true, false, STANDARD);
+        app.desk_fades.point(None, true, false, SWEEP);
     }
 
     fn surface() -> Id {
@@ -216,7 +213,7 @@ mod tests {
         let (strip, canvas) = shapes_on_screen(&app);
         assert!(strip && !canvas, "the strip holds a screen with a window");
 
-        app.desk_fades.point(None, true, true, GENTLE);
+        app.desk_fades.point(None, true, true, SWEEP);
 
         for frame in 0..96 {
             let (strip, canvas) = shapes_on_screen(&app);
@@ -226,10 +223,7 @@ mod tests {
                 "frame {frame}: strip {strip}, canvas {canvas} — one shape, never two and never none"
             );
 
-            let travelling = app.desk_fades.advance(std::time::Duration::from_millis(16));
-            let opening = app.advance_desk_blooms(std::time::Duration::from_millis(16));
-
-            if !travelling && !opening {
+            if !app.desk_fades.advance(std::time::Duration::from_millis(16)) {
                 break;
             }
         }
@@ -246,8 +240,7 @@ mod tests {
         let (strip, canvas) = shapes_on_screen(&app);
         assert!(!strip && canvas, "the canvas holds the bare screen");
 
-        app.desk_fades.point(None, false, false, GENTLE);
-        app.desk_blooms.point(None, false, false, STANDARD);
+        app.desk_fades.point(None, false, false, SWEEP);
 
         let (strip, canvas) = shapes_on_screen(&app);
         assert!(
@@ -257,80 +250,51 @@ mod tests {
     }
 
     #[test]
-    fn the_strip_takes_the_screen_back_the_moment_the_travel_ends() {
+    fn a_block_crosses_the_screen_before_it_writes_itself_out() {
         let mut app = test_app_with(|config| config.desk.enabled = true);
-        open(&mut app);
-        app.desk_fades.point(None, false, true, GENTLE);
-        app.desk_blooms.point(None, false, false, STANDARD);
+        app.desk_fades.point(None, true, true, SWEEP);
 
-        for frame in 0..64 {
-            let (strip, canvas) = shapes_on_screen(&app);
+        let mut wrote_while_crossing = false;
+        let mut crossed = false;
 
-            assert!(
-                strip != canvas,
-                "frame {frame} of the way back shows one shape"
-            );
+        for _ in 0..256 {
+            let (travel, bloom) = super::column::journey(app.desk_presence(None), 0.0);
+            let writing = simulator(app.desk_surface(surface()))
+                .find("MEMORY")
+                .is_ok();
+
+            crossed |= travel >= 1.0;
+            wrote_while_crossing |= writing && travel < 1.0;
+
+            let _ = bloom;
 
             if !app.desk_fades.advance(std::time::Duration::from_millis(16)) {
                 break;
             }
         }
 
-        let (strip, canvas) = shapes_on_screen(&app);
+        assert!(crossed, "the leading block reaches its place");
         assert!(
-            strip && !canvas,
-            "the strip is back once the blocks are home"
-        );
-    }
-
-    #[test]
-    fn the_blocks_travel_first_and_open_afterwards() {
-        let mut app = test_app_with(|config| config.desk.enabled = true);
-        app.desk_fades.point(None, true, true, GENTLE);
-
-        let mut opened_while_travelling = false;
-        let mut travelled = false;
-
-        for _ in 0..96 {
-            let landed = app.desk_presence(None) >= 1.0;
-            let writing = simulator(app.desk_surface(surface()))
-                .find("MEMORY")
-                .is_ok();
-
-            travelled |= landed;
-            opened_while_travelling |= writing && !landed;
-
-            let moving = app.desk_fades.advance(std::time::Duration::from_millis(16));
-            let opening = app.advance_desk_blooms(std::time::Duration::from_millis(16));
-
-            if !moving && !opening {
-                break;
-            }
-        }
-
-        assert!(travelled, "the blocks reach their places");
-        assert!(
-            !opened_while_travelling,
-            "no block writes itself out while it is still moving"
+            !wrote_while_crossing,
+            "no block writes itself out while it is still crossing"
         );
         assert!(
             simulator(app.desk_surface(surface()))
                 .find("MEMORY")
                 .is_ok(),
-            "the blocks are open once the travel is over"
+            "the blocks are open once the unfolding is over"
         );
     }
 
     #[test]
     fn a_block_writes_itself_out_a_line_at_a_time() {
         let mut app = test_app_with(|config| config.desk.enabled = true);
-        app.desk_fades.point(None, true, false, GENTLE);
-        app.desk_blooms.point(None, true, true, STANDARD);
+        app.desk_fades.point(None, true, true, SWEEP);
 
         let mut first = None;
         let mut last = 0usize;
 
-        for _ in 0..96 {
+        for _ in 0..256 {
             let drawn = ["in use", "available", "cached", "swap"]
                 .into_iter()
                 .filter(|row| simulator(app.desk_surface(surface())).find(*row).is_ok())
@@ -342,10 +306,7 @@ mod tests {
 
             last = drawn;
 
-            if !app
-                .desk_blooms
-                .advance(std::time::Duration::from_millis(16))
-            {
+            if !app.desk_fades.advance(std::time::Duration::from_millis(16)) {
                 break;
             }
         }
@@ -438,7 +399,7 @@ mod tests {
         app.screen_width = Some(1920.0);
         open(&mut app);
 
-        app.desk_fades.point(None, false, false, GENTLE);
+        app.desk_fades.point(None, false, false, SWEEP);
         app.send_the_islands_home(surface());
 
         let seats: Vec<f32> = app.flip.borrow().from_map().values().copied().collect();

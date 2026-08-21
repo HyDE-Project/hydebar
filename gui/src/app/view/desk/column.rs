@@ -18,6 +18,35 @@ use super::{
     readings
 };
 
+/// The share of one block's journey spent crossing the screen.
+///
+/// The rest is spent writing itself out. Stated as one journey rather than
+/// two because a block that arrives and then waits for a second animation to
+/// be started reads as a stutter: the crossing runs into the opening with
+/// nothing in between.
+const CROSSING: f32 = 0.55;
+
+/// How much of the unfolding is spent staggering one block behind the next.
+///
+/// The blocks nearest the middle of the strip leave first and the far ones
+/// follow, so the canvas opens as a front crossing the screen rather than as
+/// everything moving at once.
+const STAGGER: f32 = 0.45;
+
+/// How far one block has crossed and how far it has opened.
+///
+/// `place` is where the block stands in its column: zero leads the front, one
+/// trails it.
+pub(super) fn journey(unfolding: f32, place: f32) -> (f32, f32) {
+    let own = hydebar_core::animation::sweep(unfolding, place, STAGGER);
+
+    if own <= CROSSING {
+        (own / CROSSING, 0.0)
+    } else {
+        (1.0, (own - CROSSING) / (1.0 - CROSSING))
+    }
+}
+
 /// How far the clock has to have opened before its month stands under it.
 ///
 /// The face is one line and the month is six: letting them arrive together
@@ -28,6 +57,12 @@ const MONTH_OPENS_AT: f32 = 0.45;
 impl App {
     /// Stacks one section of the layout into a column of the canvas.
     ///
+    /// The places are the same on every frame of the unfolding: the blocks
+    /// are drawn away from them while they travel, by the journey each one
+    /// carries, and nothing else moves. A canvas whose own padding and gaps
+    /// also grew with the travel would be moving the places the blocks are
+    /// aiming at, which reads as a stagger rather than as a journey.
+    ///
     /// Returns nothing when no module of the section has anything to draw, so
     /// an empty section leaves no gap on the canvas.
     pub(super) fn desk_column<'a>(
@@ -36,12 +71,25 @@ impl App {
         id: Id,
         side: Side,
         ink: Ink,
-        travel: f32,
-        bloom: f32
+        unfolding: f32
     ) -> Option<Element<'a, Message>> {
+        #[expect(
+            clippy::cast_precision_loss,
+            reason = "a section holds a handful of modules, far below any precision limit"
+        )]
+        let last = (order.len().saturating_sub(1)) as f32;
+
         let blocks: Vec<Element<'a, Message>> = order
             .iter()
-            .filter_map(|module| {
+            .enumerate()
+            .filter_map(|(index, module)| {
+                #[expect(
+                    clippy::cast_precision_loss,
+                    reason = "a section holds a handful of modules"
+                )]
+                let place = if last > 0.0 { index as f32 / last } else { 0.0 };
+                let (travel, bloom) = journey(unfolding, place);
+
                 let block = self.desk_block(module, id, side, ink, bloom)?;
 
                 Some(
@@ -71,7 +119,7 @@ impl App {
                 column = if reaches_the_corner {
                     column.push(Space::new().height(Length::Fill))
                 } else {
-                    column.push(Space::new().height(Length::Fixed(ink.size * 1.8 * travel)))
+                    column.push(Space::new().height(Length::Fixed(ink.size * 1.8)))
                 };
             }
 

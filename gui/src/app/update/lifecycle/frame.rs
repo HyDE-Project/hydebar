@@ -97,7 +97,7 @@ impl App {
         let (theme_animating, palette_moved) =
             self.appearance_transition.advance_reporting(elapsed);
         let hover_animating = self.hover.advance(elapsed);
-        let desk_unfolding = self.desk_fades.advance(elapsed) | self.advance_desk_blooms(elapsed);
+        let desk_unfolding = self.desk_fades.advance(elapsed);
         let entering = self.entrance.advance(elapsed);
         let sliding = self.relayout.advance(elapsed);
         let greeting_animating = self.greeting.advance(elapsed);
