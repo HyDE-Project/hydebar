@@ -251,4 +251,41 @@ mod tests {
 
         assert!(ui.snapshot(&iced::Theme::Dark).is_ok());
     }
+
+    #[test]
+    fn a_module_of_the_right_hand_section_states_its_own_block() {
+        let mut app = test_app_with(|config| {
+            config.desk.enabled = true;
+            config.modules.right = vec![hydebar_proto::config::ModuleDef::Single(
+                hydebar_core::config::ModuleName::CpuTemp
+            )];
+        });
+        app.desk_fades.point(None, true, false, GENTLE);
+
+        let mut ui = simulator(app.desk_surface(surface()));
+
+        assert!(
+            ui.find("CPU TEMPERATURE").is_ok(),
+            "the right hand section carries a block of its own"
+        );
+    }
+
+    #[test]
+    fn a_module_with_nothing_longer_to_say_still_stands_on_the_canvas() {
+        let mut app = test_app_with(|config| {
+            config.desk.enabled = true;
+            config.modules.left = vec![hydebar_proto::config::ModuleDef::Single(
+                hydebar_core::config::ModuleName::Clock
+            )];
+            config.modules.center = Vec::new();
+            config.modules.right = vec![hydebar_proto::config::ModuleDef::Single(
+                hydebar_core::config::ModuleName::AppLauncher
+            )];
+        });
+        app.desk_fades.point(None, true, false, GENTLE);
+
+        let mut ui = simulator(app.desk_surface(surface()));
+
+        assert!(ui.snapshot(&iced::Theme::Dark).is_ok());
+    }
 }
