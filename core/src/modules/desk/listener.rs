@@ -17,8 +17,11 @@ const EVENT_RETRY_DELAY: Duration = Duration::from_secs(5);
 ///
 /// Closing the last window of a workspace and mapping the next one is one
 /// gesture to the user and two events to the bar; unfolding on the first of
-/// them would flash the whole canvas between them.
-const SETTLE_DELAY: Duration = Duration::from_millis(220);
+/// them would flash the whole canvas between them. Kept to the width of one
+/// such pair of events and no wider: every millisecond of it is a wait
+/// between clearing the screen and the bar moving, and a wait before a
+/// movement is read as the bar being slow to notice.
+const SETTLE_DELAY: Duration = Duration::from_millis(40);
 
 /// Follows the compositor's workspace events for as long as the desk runs.
 ///

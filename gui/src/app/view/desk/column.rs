@@ -24,6 +24,14 @@ use super::{
 /// two edge sections never meet in the middle, where the centre one stands.
 const FAN: f32 = 0.16;
 
+/// The share of the longest journey the block nearest the strip travels.
+///
+/// A block one row down has less way to go than one at the bottom corner, but
+/// not a seventh as much: the strip is a row above the first place, not at
+/// it. Below this the near blocks are over before the eye has them, which
+/// reads as appearing rather than arriving.
+const NEAREST: f32 = 0.4;
+
 impl App {
     /// Stacks one section of the layout into a column of the canvas.
     ///
@@ -115,7 +123,13 @@ impl App {
         reason = "a layout holds a handful of units"
     )]
     pub(crate) fn reach(within: usize, deepest: usize) -> f32 {
-        (within + 1) as f32 / (deepest.max(1)) as f32
+        if deepest < 2 {
+            return 1.0;
+        }
+
+        let depth = (within as f32 / (deepest - 1) as f32).clamp(0.0, 1.0);
+
+        (1.0 - NEAREST).mul_add(depth, NEAREST)
     }
 
     /// The units of one section, in the order the canvas stands them in.

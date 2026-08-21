@@ -10,14 +10,22 @@
 //! its own level and writes itself out from the instant it is on it, while
 //! the last of its journey — the move along its own lane — still runs under
 //! it. And the near blocks are on their level first: the way is shorter and
-//! the speed is the same, so the top of a column is open while the bottom of
-//! it is still coming down. Both acts leave quickly and settle slowly, which
-//! is what everything arriving somewhere does.
+//! the speed is the same, so the top of a column has finished opening while
+//! the bottom of it is still coming down. Both acts leave quickly and settle
+//! slowly, which is what everything arriving somewhere does.
 
 use std::time::Duration;
 
-/// Share of the clock spent crossing, the rest spent opening.
+/// Share of the clock the block with the furthest to go spends crossing.
 const CROSSING: f32 = 0.55;
+
+/// How long a block takes to write itself out, once it is down.
+///
+/// The same stretch for every block, which is what makes the near ones finish
+/// before the far ones start. Timing the opening to end with the clock
+/// instead had every block, near or far, finish writing on the same frame —
+/// so however early a block landed, the whole canvas still settled at once.
+const OPENING: f32 = 1.0 - CROSSING * crate::components::flip::DESCENT;
 
 /// The even clock one screen's unfolding runs on.
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
@@ -90,7 +98,7 @@ pub fn share(progress: f32, reach: f32) -> (f32, f32) {
     let arrival = crossing * crate::components::flip::DESCENT;
 
     let travel = eased(progress / crossing);
-    let bloom = eased((progress - arrival) / (1.0 - arrival));
+    let bloom = eased((progress - arrival) / OPENING);
 
     (travel, bloom)
 }
