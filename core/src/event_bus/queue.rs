@@ -52,6 +52,9 @@ impl BusEvent {
             Self::Module(ModuleEvent::Taskbar(modules::taskbar::Message::ClientsChanged(_))) => {
                 Some(SnapshotKind::Taskbar)
             }
+            Self::Module(ModuleEvent::Desk(modules::desk::Message::ScreensChanged(_))) => {
+                Some(SnapshotKind::Desk)
+            }
             _ => None
         }
     }
@@ -67,7 +70,8 @@ enum SnapshotKind {
     Workspaces,
     WindowTitle,
     SystemInfo,
-    Taskbar
+    Taskbar,
+    Desk
 }
 
 #[derive(Debug, Clone)]
@@ -80,6 +84,7 @@ pub enum ModuleEvent {
     KeyboardSubmap(modules::keyboard_submap::Message),
     Tray(modules::tray::TrayMessage),
     Taskbar(modules::taskbar::Message),
+    Desk(modules::desk::Message),
     Clock(modules::clock::Message),
     Battery(modules::battery::Message),
     Privacy(modules::privacy::PrivacyMessage),

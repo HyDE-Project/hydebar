@@ -14,6 +14,7 @@ pub mod control_center;
 pub mod cpu;
 pub mod cpu_temp;
 pub mod custom_module;
+pub mod desk;
 pub mod gpu_temp;
 pub mod hyde_button;
 pub mod hyde_menu;
