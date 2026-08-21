@@ -328,6 +328,18 @@ rearranges the desk with it.
 A floating window is a visitor: it sits over the canvas without folding it
 away. Only a window tiled into the workspace takes the screen back.
 
+The unfolding runs as one front. The middle of the strip comes down first and
+the sections either side follow, one island at a time — each waits for the one
+before it to arrive, so no island is ever drawn across another. An island that
+carried a group of modules travels whole, under the one pill the strip drew
+around it, and opens only once it has come to rest. How fast that goes is the
+theme's to say:
+
+```toml
+[appearance.animations]
+desk_block_ms = 260   # time one island is given to cross the screen and open
+```
+
 Every screen answers for itself: a second monitor running a browser keeps its
 strip while the first one, cleared, unfolds. A special workspace pulled up
 over a screen counts as something on it.

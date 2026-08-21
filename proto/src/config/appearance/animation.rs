@@ -10,7 +10,15 @@ pub struct AnimationConfig {
     #[serde(default = "default_menu_fade_duration_ms")]
     pub menu_fade_duration_ms: u64,
     #[serde(default = "default_hover_duration_ms")]
-    pub hover_duration_ms:     u64
+    pub hover_duration_ms:     u64,
+    /// Time one block of the desk is given to cross the screen and open.
+    ///
+    /// The whole unfolding is this once per block, so a theme sets the pace
+    /// of the desk without having to know how many modules the bar carries.
+    /// Left unset the built-in pace is used; a theme that wants the canvas to
+    /// unfold at a stroll or to snap open says so here.
+    #[serde(default = "default_desk_block_duration_ms")]
+    pub desk_block_ms:         u64
 }
 
 impl Default for AnimationConfig {
@@ -18,7 +26,8 @@ impl Default for AnimationConfig {
         Self {
             enabled:               default_animations_enabled(),
             menu_fade_duration_ms: default_menu_fade_duration_ms(),
-            hover_duration_ms:     default_hover_duration_ms()
+            hover_duration_ms:     default_hover_duration_ms(),
+            desk_block_ms:         default_desk_block_duration_ms()
         }
     }
 }
@@ -35,15 +44,37 @@ const fn default_hover_duration_ms() -> u64 {
     100
 }
 
+/// Time one block of the desk is given unless a theme says otherwise.
+///
+/// Long enough for the eye to follow one island across a whole screen and
+/// short enough that a bar of a dozen modules is open before the hand has
+/// left the keyboard.
+const fn default_desk_block_duration_ms() -> u64 {
+    260
+}
+
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
 
     #[test]
+    fn a_theme_sets_the_pace_of_the_desk() {
+        let config: AnimationConfig =
+            toml::from_str("desk_block_ms = 90").expect("animation config");
+
+        assert_eq!(config.desk_block_ms, 90);
+        assert_eq!(
+            config.menu_fade_duration_ms, 200,
+            "the other paces keep their defaults"
+        );
+    }
+
+    #[test]
     fn animation_config_default_values() {
         let config = AnimationConfig::default();
         assert!(config.enabled);
+        assert_eq!(config.desk_block_ms, 260);
         assert_eq!(config.menu_fade_duration_ms, 200);
         assert_eq!(config.hover_duration_ms, 100);
     }

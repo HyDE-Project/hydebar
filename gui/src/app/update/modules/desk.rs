@@ -2,9 +2,6 @@
 
 use std::time::Duration;
 
-/// Time one block is given to cross the screen and write itself out.
-const PER_BLOCK: Duration = Duration::from_millis(260);
-
 /// The briefest the whole unfolding is allowed to be.
 const SHORTEST_UNFOLDING: Duration = Duration::from_millis(600);
 
@@ -84,13 +81,13 @@ impl App {
     /// The blocks travel one at a time, so a layout of a dozen modules has a
     /// dozen flights to fit in: a fixed duration would either rush a full bar
     /// into a blur or leave a bar of three modules crawling. Each block is
-    /// given its own share and the whole is held between a quick unfolding
-    /// and one that outstays its welcome.
+    /// given the share the theme names, and the whole is held between a quick
+    /// unfolding and one that outstays its welcome.
     fn unfolding_response(&self) -> Duration {
         let layout = &self.config.modules;
         let blocks = layout.left.len() + layout.center.len() + layout.right.len();
 
-        PER_BLOCK
+        Duration::from_millis(self.config.appearance.animations.desk_block_ms)
             .saturating_mul(u32::try_from(blocks).unwrap_or(u32::MAX))
             .clamp(SHORTEST_UNFOLDING, LONGEST_UNFOLDING)
     }
