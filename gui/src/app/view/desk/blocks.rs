@@ -124,14 +124,14 @@ pub(super) fn awaited<'a>(title: &str, side: Side, ink: Ink, bloom: f32) -> Elem
     let lines = [0.62_f32, 0.38].into_iter().map(|share| {
         Row::with_children(match side {
             Side::Leading | Side::Middle => vec![
-                bar(ink.size * 4.0, ink).into(),
+                bar(ink.size * 4.0, ink),
                 Space::new().width(Length::Fill).into(),
-                bar(ink.size * 9.0 * share, ink).into(),
+                bar(ink.size * 9.0 * share, ink),
             ],
             Side::Trailing => vec![
-                bar(ink.size * 9.0 * share, ink).into(),
+                bar(ink.size * 9.0 * share, ink),
                 Space::new().width(Length::Fill).into(),
-                bar(ink.size * 4.0, ink).into(),
+                bar(ink.size * 4.0, ink),
             ]
         })
         .width(Length::Fill)
