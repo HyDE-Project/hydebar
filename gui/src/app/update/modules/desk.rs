@@ -91,18 +91,24 @@ impl App {
 
     /// How long the whole unfolding takes, given how much there is to unfold.
     ///
-    /// The blocks travel one at a time, so a layout of a dozen modules has a
-    /// dozen flights to fit in: a fixed duration would either rush a full bar
-    /// into a blur or leave a bar of three modules crawling. Each block is
-    /// given the share the theme names, and the whole is held between a quick
-    /// unfolding and one that outstays its welcome.
+    /// The theme names the time one block is given to cross the screen and
+    /// open, and the clock is that stretched by however much the sequence
+    /// adds on top of a single block. The blocks overlap deeply, so a bar of a
+    /// dozen modules adds far less than a dozen flights would: every block
+    /// gets the whole of its own time whatever else is coming down beside it,
+    /// which is what a fixed budget divided by the count cannot do.
+    ///
+    /// Counted in modules rather than in the entries of the layout, because a
+    /// module is what travels: a group of three comes down as three blocks and
+    /// wants the time for three.
     fn unfolding_response(&self) -> Duration {
-        let layout = &self.config.modules;
-        let blocks = layout.left.len() + layout.center.len() + layout.right.len();
+        let blocks = Self::desk_turns(&self.config.modules).3;
+        let block = self.config.appearance.animations.desk_block_ms;
 
-        Duration::from_millis(self.config.appearance.animations.desk_block_ms)
-            .saturating_mul(u32::try_from(blocks).unwrap_or(u32::MAX))
-            .clamp(SHORTEST_UNFOLDING, LONGEST_UNFOLDING)
+        Duration::from_secs_f32(
+            Duration::from_millis(block).as_secs_f32() * hydebar_core::animation::stretch(blocks)
+        )
+        .clamp(SHORTEST_UNFOLDING, LONGEST_UNFOLDING)
     }
 
     /// Sends every island of `surface` off the screen and lets it fly back.

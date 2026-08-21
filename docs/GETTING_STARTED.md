@@ -329,15 +329,18 @@ A floating window is a visitor: it sits over the canvas without folding it
 away. Only a window tiled into the workspace takes the screen back.
 
 The unfolding runs as one front. The middle of the strip comes down first and
-the sections either side follow, one island at a time — each waits for the one
-before it to arrive, so no island is ever drawn across another. An island that
+the sections either side follow close behind: an island sets off while the one
+before it is still crossing, so the bar comes down as a single movement rather
+than as a queue taking turns. They keep clear of one another by lane, not by
+waiting — each island travels down its own, the nearer the middle of the strip
+the nearer the middle of the screen. An island that
 carried a group of modules travels whole, under the one pill the strip drew
 around it, and opens only once it has come to rest. How fast that goes is the
 theme's to say:
 
 ```toml
 [appearance.animations]
-desk_block_ms = 260   # time one island is given to cross the screen and open
+desk_block_ms = 620   # time one island is given to cross the screen and open
 ```
 
 Every screen answers for itself: a second monitor running a browser keeps its

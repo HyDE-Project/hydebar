@@ -9,8 +9,9 @@
 //! everything that arrives somewhere does.
 //!
 //! So the whole travel runs on an even clock and every block eases within its
-//! own share of it, the shares overlapping just enough that the front never
-//! comes to a stop between one block and the next.
+//! own share of it, and the shares overlap deeply: a block sets off while the
+//! one before it is still crossing, so the column comes down as one movement
+//! rather than as a queue taking turns.
 
 use std::time::Duration;
 
@@ -19,11 +20,13 @@ const CROSSING: f32 = 0.55;
 
 /// How much of a block's slice the next block waits before it sets off.
 ///
-/// Under one the slices overlap: the next block leaves while the one before
-/// it is settling, which is what keeps the front moving. At one they would
-/// run strictly one after another, and the pause between them reads as a
-/// stutter.
-const LEAD: f32 = 0.62;
+/// Kept far below [`CROSSING`] on purpose: a block leaves while the one
+/// before it is still crossing, so what the eye follows is a single body of
+/// movement with the blocks fanning out inside it. Near one the blocks would
+/// hand the screen to one another instead, and a sequence of short flights
+/// separated by handovers is what reads as every block waiting its turn — the
+/// whole thing takes longer and none of it flows.
+const LEAD: f32 = 0.14;
 
 /// The even clock one screen's unfolding runs on.
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
@@ -93,6 +96,18 @@ pub fn share(progress: f32, place: f32, blocks: usize) -> (f32, f32) {
     } else {
         (1.0, (own - CROSSING) / (1.0 - CROSSING))
     }
+}
+
+/// How much longer a sequence of `blocks` takes than a single block does.
+///
+/// The overlap is what a clock is set by: give one block the time it needs to
+/// cross and open, multiply by this, and every block of the sequence has that
+/// same time to itself however many of them there are. Timing the whole by
+/// the count instead would hand each block a share of a fixed budget, and the
+/// fuller the bar the more each block would hurry.
+#[must_use]
+pub fn stretch(blocks: usize) -> f32 {
+    1.0 / slice(blocks)
 }
 
 /// The raw share of the travel one block has used, before it is eased.
@@ -198,6 +213,32 @@ mod tests {
                 assert!(moving, "{blocks} blocks: nothing moves at {progress:.3}");
             }
         }
+    }
+
+    #[test]
+    fn a_block_sets_off_while_the_one_before_it_is_still_crossing() {
+        for blocks in 2..8usize {
+            let slice = slice(blocks);
+
+            #[expect(clippy::cast_precision_loss, reason = "a handful of blocks")]
+            let second = (1.0 / (blocks - 1) as f32) * (1.0 - slice);
+            let (travel, _) = share(second, 0.0, blocks);
+
+            assert!(
+                travel > 0.0 && travel < 1.0,
+                "{blocks} blocks: the first is still crossing when the second sets off"
+            );
+        }
+    }
+
+    #[test]
+    fn a_sequence_takes_its_own_stretch_of_one_block() {
+        assert_eq!(stretch(1), 1.0);
+        assert!((stretch(2) - (1.0 + LEAD)).abs() < 1e-4);
+        assert!(
+            stretch(12) < 3.0,
+            "a full bar is not a dozen flights end to end"
+        );
     }
 
     #[test]

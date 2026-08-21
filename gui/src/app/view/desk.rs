@@ -85,9 +85,10 @@ impl App {
     /// The turn every unit of the layout takes, and how many there are.
     ///
     /// The middle of the strip goes first: the centre section comes down,
-    /// then the sections either side of it, each unit waiting for the one
-    /// before it. Numbering them here rather than per column is what lets the
-    /// three sections share one queue instead of racing each other down.
+    /// then the sections either side of it, each unit setting off a little
+    /// after the one before it and long before it has landed. Numbering them
+    /// here rather than per column is what lets the three sections share one
+    /// order instead of racing each other down.
     pub(crate) fn desk_turns(modules: &hydebar_core::config::Modules) -> Turns<'_> {
         let centre = Self::desk_order(&modules.center, false);
         let left = Self::desk_order(&modules.left, true);
@@ -341,16 +342,24 @@ mod tests {
                 #[expect(clippy::cast_precision_loss, reason = "a fixed sample count")]
                 let unfolding = step as f32 / 400.0;
 
-                let moving = (0..blocks).any(|index| {
-                    #[expect(clippy::cast_precision_loss, reason = "a handful of blocks")]
-                    let place = index as f32 / (blocks - 1) as f32;
-                    let (travel, bloom) = hydebar_core::animation::share(unfolding, place, blocks);
+                let shares: Vec<(f32, f32)> = (0..blocks)
+                    .map(|index| {
+                        #[expect(clippy::cast_precision_loss, reason = "a handful of blocks")]
+                        let place = index as f32 / (blocks - 1) as f32;
 
-                    (travel > 0.0 && travel < 1.0) || (bloom > 0.0 && bloom < 1.0)
+                        hydebar_core::animation::share(unfolding, place, blocks)
+                    })
+                    .collect();
+
+                let moving = shares.iter().any(|(travel, bloom)| {
+                    (*travel > 0.0 && *travel < 1.0) || (*bloom > 0.0 && *bloom < 1.0)
                 });
+                let arrived = shares
+                    .iter()
+                    .all(|(travel, bloom)| *travel >= 1.0 && *bloom >= 1.0);
 
                 assert!(
-                    moving,
+                    moving || arrived,
                     "{blocks} blocks: the front stands still at {unfolding:.3}"
                 );
             }

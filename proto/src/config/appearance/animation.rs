@@ -46,11 +46,12 @@ const fn default_hover_duration_ms() -> u64 {
 
 /// Time one block of the desk is given unless a theme says otherwise.
 ///
-/// Long enough for the eye to follow one island across a whole screen and
-/// short enough that a bar of a dozen modules is open before the hand has
-/// left the keyboard.
+/// Long enough for the eye to follow one island across a whole screen, which
+/// is what the desktop conventions ask of a movement that size. The blocks
+/// overlap heavily, so this is not paid once per module: a bar of a dozen of
+/// them is still open before the hand has left the keyboard.
 const fn default_desk_block_duration_ms() -> u64 {
-    260
+    620
 }
 
 #[cfg(test)]
@@ -74,7 +75,7 @@ mod tests {
     fn animation_config_default_values() {
         let config = AnimationConfig::default();
         assert!(config.enabled);
-        assert_eq!(config.desk_block_ms, 260);
+        assert_eq!(config.desk_block_ms, 620);
         assert_eq!(config.menu_fade_duration_ms, 200);
         assert_eq!(config.hover_duration_ms, 100);
     }
