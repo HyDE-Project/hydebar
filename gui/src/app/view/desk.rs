@@ -12,6 +12,16 @@ mod blocks;
 pub(super) mod column;
 mod readings;
 
+use hydebar_core::config::ModuleDef;
+
+/// The three sections of the layout with the turn every unit takes, and how
+/// many turns there are in all.
+type Turns<'a> = (
+    Vec<(usize, &'a ModuleDef)>,
+    Vec<(usize, &'a ModuleDef)>,
+    Vec<(usize, &'a ModuleDef)>,
+    usize
+);
 use iced::{
     Alignment, Element, Length, Padding, SurfaceId as Id,
     widget::{Row, container}
@@ -44,9 +54,7 @@ impl App {
         let margin = ink.size * 2.0;
         let modules = &self.config.modules;
 
-        let left = Self::desk_order(&modules.left, true);
-        let centre = Self::desk_order(&modules.center, false);
-        let right = Self::desk_order(&modules.right, false);
+        let (left, centre, right, units) = Self::desk_turns(modules);
 
         let columns = [
             (&left, blocks::Side::Leading),
@@ -54,7 +62,7 @@ impl App {
             (&right, blocks::Side::Trailing)
         ]
         .into_iter()
-        .filter_map(|(order, side)| self.desk_column(order, id, side, ink, unfolding));
+        .filter_map(|(order, side)| self.desk_column(order, id, side, ink, unfolding, units));
 
         let canvas = container(
             Row::with_children(columns)
@@ -72,6 +80,46 @@ impl App {
         });
 
         canvas.into()
+    }
+
+    /// The turn every unit of the layout takes, and how many there are.
+    ///
+    /// The middle of the strip goes first: the centre section comes down,
+    /// then the sections either side of it, each unit waiting for the one
+    /// before it. Numbering them here rather than per column is what lets the
+    /// three sections share one queue instead of racing each other down.
+    fn desk_turns(modules: &hydebar_core::config::Modules) -> Turns<'_> {
+        let centre = Self::desk_order(&modules.center, false);
+        let left = Self::desk_order(&modules.left, true);
+        let right = Self::desk_order(&modules.right, false);
+
+        let mut turn = 0;
+        let mut centre_turns = Vec::with_capacity(centre.len());
+
+        for unit in centre {
+            centre_turns.push((turn, unit));
+            turn += 1;
+        }
+
+        let sides = left.len().max(right.len());
+        let mut left = left.into_iter();
+        let mut right = right.into_iter();
+        let mut left_turns = Vec::new();
+        let mut right_turns = Vec::new();
+
+        for _ in 0..sides {
+            if let Some(unit) = left.next() {
+                left_turns.push((turn, unit));
+                turn += 1;
+            }
+
+            if let Some(unit) = right.next() {
+                right_turns.push((turn, unit));
+                turn += 1;
+            }
+        }
+
+        (left_turns, centre_turns, right_turns, turn)
     }
 
     /// The band along the top of the screen the strip itself occupies.
@@ -361,6 +409,57 @@ mod tests {
         assert!(
             first.is_some_and(|first| first < last),
             "the block starts with fewer lines than it ends with"
+        );
+    }
+
+    #[test]
+    fn the_middle_of_the_strip_comes_down_before_the_sides() {
+        use hydebar_core::config::{ModuleName, Modules};
+        use hydebar_proto::config::ModuleDef;
+
+        let modules = Modules {
+            left:   vec![ModuleDef::Single(ModuleName::Memory)],
+            center: vec![ModuleDef::Single(ModuleName::Clock)],
+            right:  vec![ModuleDef::Single(ModuleName::CpuTemp)]
+        };
+
+        let (left, centre, right, units) = App::desk_turns(&modules);
+
+        assert_eq!(units, 3);
+        assert_eq!(centre[0].0, 0, "the centre section takes the first turn");
+        assert!(
+            left[0].0 > centre[0].0 && right[0].0 > centre[0].0,
+            "both sides wait for the middle"
+        );
+    }
+
+    #[test]
+    fn a_group_of_modules_travels_as_the_one_island_the_strip_drew() {
+        use hydebar_core::config::ModuleName;
+        use hydebar_proto::config::ModuleDef;
+
+        let mut app = test_app_with(|config| {
+            config.desk.enabled = true;
+            config.modules.left = vec![ModuleDef::Group(vec![
+                ModuleName::Memory,
+                ModuleName::CpuTemp,
+            ])];
+            config.modules.center = Vec::new();
+            config.modules.right = Vec::new();
+        });
+        app.desk_fades
+            .point(None, true, true, std::time::Duration::from_millis(600));
+        let _ = app.desk_fades.advance(std::time::Duration::from_millis(16));
+
+        let (_, _, _, units) = App::desk_turns(&app.config.modules);
+
+        assert_eq!(units, 1, "the group takes one turn, not one per module");
+
+        let mut ui = simulator(app.desk_surface(surface()));
+
+        assert!(
+            ui.find("MEMORY").is_err(),
+            "the group is still an island while it travels"
         );
     }
 

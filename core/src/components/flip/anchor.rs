@@ -4,14 +4,24 @@ use std::cell::RefCell;
 
 use super::memo::FlipMemo;
 
+/// The share of a descending journey spent falling before it closes in.
+const DESCENT: f32 = 0.6;
+
 /// Wraps one block so it journeys between its recorded seats.
 pub struct FlipAnchor<'a, Message, Theme = iced::Theme, Renderer = iced::Renderer>
 where
     Renderer: iced_core::Renderer
 {
-    pub(super) key:      u64,
+    pub(super) key:            u64,
     /// How far the journey has travelled, one meaning at rest.
-    pub(super) progress: f32,
+    pub(super) progress:       f32,
+    /// Whether the journey drops to its level before it moves along.
+    ///
+    /// A block leaving the strip for a lane beside it would otherwise cut the
+    /// corner and cross whatever stands between. Falling first and closing in
+    /// afterwards keeps it in the lane it left and the lane it is going to,
+    /// and in nothing else.
+    pub(super) descends_first: bool,
     /// The height the journey departs from, when it starts on another row.
     ///
     /// The book of seats records where a block stood along its row, which is
@@ -19,9 +29,9 @@ where
     /// for the canvas below it also has a row to cross, and the row it left
     /// is the same for all of them, so it is stated here rather than
     /// remembered per block.
-    pub(super) from_y:   Option<f32>,
-    pub(super) memo:     &'a RefCell<FlipMemo>,
-    pub(super) content:  iced_core::Element<'a, Message, Theme, Renderer>
+    pub(super) from_y:         Option<f32>,
+    pub(super) memo:           &'a RefCell<FlipMemo>,
+    pub(super) content:        iced_core::Element<'a, Message, Theme, Renderer>
 }
 
 impl<'a, Message, Theme, Renderer> FlipAnchor<'a, Message, Theme, Renderer>
@@ -39,6 +49,7 @@ where
             key,
             progress,
             from_y: None,
+            descends_first: false,
             memo,
             content: content.into()
         }
@@ -54,22 +65,38 @@ where
         self
     }
 
+    /// Has the journey drop to its level first and close in afterwards.
+    #[must_use]
+    pub const fn descending_first(mut self) -> Self {
+        self.descends_first = true;
+        self
+    }
+
     /// The drawing offset for the current frame, given the resting seat.
     pub(super) fn offset(&self, at: iced_core::Point) -> iced_core::Vector {
         if self.progress >= 1.0 {
             return iced_core::Vector::ZERO;
         }
 
-        let left = 1.0 - self.progress;
+        let (fallen, closed) = if self.descends_first {
+            (
+                (self.progress / DESCENT).clamp(0.0, 1.0),
+                ((self.progress - DESCENT) / (1.0 - DESCENT)).clamp(0.0, 1.0)
+            )
+        } else {
+            (self.progress, self.progress)
+        };
 
         let x = self
             .memo
             .borrow()
             .from_map()
             .get(&self.key)
-            .map_or(0.0, |from| (from - at.x) * left);
+            .map_or(0.0, |from| (from - at.x) * (1.0 - closed));
 
-        let y = self.from_y.map_or(0.0, |from| (from - at.y) * left);
+        let y = self
+            .from_y
+            .map_or(0.0, |from| (from - at.y) * (1.0 - fallen));
 
         iced_core::Vector::new(x, y)
     }

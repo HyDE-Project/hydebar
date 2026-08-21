@@ -84,9 +84,7 @@ impl App {
     ///
     /// The places are the same on every frame of the unfolding: the blocks
     /// are drawn away from them while they travel, by the journey each one
-    /// carries, and nothing else moves. A canvas whose own padding and gaps
-    /// also grew with the travel would be moving the places the blocks are
-    /// aiming at, which reads as a stagger rather than as a journey.
+    /// carries, and nothing else moves.
     ///
     /// The gaps are the same size whatever the column holds. Pushing the far
     /// end of a short column down to the corner leaves a hole through the
@@ -94,51 +92,66 @@ impl App {
     /// runs off the bottom edge instead: one honest gap, filled from the top,
     /// is what reads as a column either way.
     ///
-    /// Returns nothing when no module of the section has anything to draw, so
+    /// Returns nothing when no unit of the section has anything to draw, so
     /// an empty section leaves no gap on the canvas.
     pub(super) fn desk_column<'a>(
         &'a self,
-        order: &[&'a ModuleName],
+        order: &[(usize, &'a ModuleDef)],
         id: Id,
         side: Side,
         ink: Ink,
-        unfolding: f32
+        unfolding: f32,
+        units: usize
     ) -> Option<Element<'a, Message>> {
+        let fan = self.fan_span();
         #[expect(
             clippy::cast_precision_loss,
-            reason = "a section holds a handful of modules, far below any precision limit"
+            reason = "a layout holds a handful of units, far below any precision limit"
         )]
-        let last = (order.len().saturating_sub(1)) as f32;
-
-        let fan = self.fan_span();
+        let last = units.saturating_sub(1) as f32;
 
         let blocks: Vec<Element<'a, Message>> = order
             .iter()
             .enumerate()
-            .filter_map(|(index, module)| {
+            .filter_map(|(within, (turn, unit))| {
                 #[expect(
                     clippy::cast_precision_loss,
-                    reason = "a section holds a handful of modules"
+                    reason = "a layout holds a handful of units"
                 )]
-                let place = if last > 0.0 { index as f32 / last } else { 0.0 };
-                let (travel, bloom) = journey(unfolding, place, order.len());
+                let place = if last > 0.0 { *turn as f32 / last } else { 0.0 };
+                let (travel, bloom) = journey(unfolding, place, units);
 
-                let block = self.desk_block(module, id, side, ink, bloom)?;
+                let block = self.desk_unit(unit, id, side, ink, bloom)?;
+                let inwards = if last > 0.0 {
+                    #[expect(
+                        clippy::cast_precision_loss,
+                        reason = "a section holds a handful of units"
+                    )]
+                    let depth = within as f32 / (order.len().max(2) - 1) as f32;
+
+                    fan * (1.0 - depth)
+                } else {
+                    0.0
+                };
+
                 let lane = container(block)
                     .width(Length::Fill)
                     .align_x(side.alignment_x())
-                    .padding(side.lane(fan * (1.0 - place)));
+                    .padding(side.lane(inwards));
 
-                Some(
-                    hydebar_core::components::flip::FlipAnchor::new(
-                        self.flip_key(module, id),
-                        travel,
-                        &self.flip,
-                        lane
-                    )
-                    .departing_from(self.strip_row())
-                    .into()
+                let anchor = hydebar_core::components::flip::FlipAnchor::new(
+                    self.unit_key(unit, id),
+                    travel,
+                    &self.flip,
+                    lane
                 )
+                .departing_from(self.strip_row());
+
+                Some(if side == Side::Middle {
+                    anchor.into()
+                } else {
+                    anchor.descending_first().into()
+                })
             })
             .collect();
 
@@ -155,9 +168,13 @@ impl App {
         )
     }
 
-    /// The modules of one section, in the order the canvas stands them in.
+    /// The units of one section, in the order the canvas stands them in.
     ///
-    /// The rule is the distance from the middle of the strip: a module that
+    /// A unit is what the strip drew as one island: a module on its own, or a
+    /// whole group under one pill. The group stays one thing until it opens,
+    /// because on the strip it is one thing.
+    ///
+    /// The rule is the distance from the middle of the strip: a unit that
     /// stood near the centre stands high on the canvas, and one that stood at
     /// an edge reaches for the corner below it. The centre section already
     /// reads outwards from the middle; the left one reads towards it, so it
@@ -165,14 +182,8 @@ impl App {
     pub(crate) fn desk_order(
         section: &[ModuleDef],
         reads_towards_the_centre: bool
-    ) -> Vec<&ModuleName> {
-        let mut order: Vec<&ModuleName> = section
-            .iter()
-            .flat_map(|module_def| match module_def {
-                ModuleDef::Single(module) => vec![module],
-                ModuleDef::Group(group) => group.iter().collect()
-            })
-            .collect();
+    ) -> Vec<&ModuleDef> {
+        let mut order: Vec<&ModuleDef> = section.iter().collect();
 
         if reads_towards_the_centre {
             order.reverse();
@@ -181,9 +192,17 @@ impl App {
         order
     }
 
-    /// How far inwards the nearest block of a section stands.
+    /// The seat key of one unit, taken from the module that leads it.
+    pub(crate) fn unit_key(&self, unit: &ModuleDef, id: Id) -> u64 {
+        match unit {
+            ModuleDef::Single(module) => self.flip_key(module, id),
+            ModuleDef::Group(group) => group.first().map_or(0, |leader| self.flip_key(leader, id))
+        }
+    }
+
+    /// How far inwards the nearest unit of a section stands.
     ///
-    /// The blocks of a section fan out as they come down: the one that stood
+    /// The units of a section fan out as they come down: the one that stood
     /// nearest the middle of the strip lands nearest the middle of the screen
     /// and the far one lands against the edge, each in a lane of its own.
     /// Falling straight down a single lane is what had them passing through
@@ -196,35 +215,31 @@ impl App {
     /// The height the strip's own islands stand at.
     ///
     /// Where every block departs from: the canvas covers the whole screen,
-    /// strip band included, so the row the modules leave is the top of the
+    /// strip band included, so the row the units leave is the top of the
     /// canvas rather than somewhere above it.
     fn strip_row(&self) -> f32 {
         self.appearance().bar_padding()[0]
     }
 
-    /// Draws one module in the form the canvas has room for.
-    fn desk_block<'a>(
+    /// Draws one unit in the form the canvas has room for.
+    fn desk_unit<'a>(
         &'a self,
-        module: &'a ModuleName,
+        unit: &'a ModuleDef,
         id: Id,
         side: Side,
         ink: Ink,
         bloom: f32
     ) -> Option<Element<'a, Message>> {
-        let island = self.desk_island(module, id)?;
+        let island = self.desk_island(unit, id)?;
 
         if bloom <= 0.0 {
             return Some(island);
         }
 
-        let opened: Vec<Element<'a, Message>> = if matches!(module, ModuleName::Clock) {
-            self.desk_month(bloom).into_iter().collect()
-        } else {
-            self.desk_panels(module)
-                .iter()
-                .map(|panel| blocks::panel(panel, side, ink, bloom))
-                .collect()
-        };
+        let opened: Vec<Element<'a, Message>> = Self::members(unit)
+            .into_iter()
+            .flat_map(|module| self.desk_opened(module, side, ink, bloom))
+            .collect();
 
         if opened.is_empty() {
             return Some(island);
@@ -237,6 +252,108 @@ impl App {
                 .align_x(side.alignment_x())
                 .into()
         )
+    }
+
+    /// What one module of an opened unit writes out.
+    fn desk_opened<'a>(
+        &'a self,
+        module: &'a ModuleName,
+        side: Side,
+        ink: Ink,
+        bloom: f32
+    ) -> Vec<Element<'a, Message>> {
+        if matches!(module, ModuleName::Clock) {
+            return self.desk_month(bloom).into_iter().collect();
+        }
+
+        self.desk_panels(module)
+            .iter()
+            .map(|panel| blocks::panel(panel, side, ink, bloom))
+            .collect()
+    }
+
+    /// The modules one unit carries.
+    fn members(unit: &ModuleDef) -> Vec<&ModuleName> {
+        match unit {
+            ModuleDef::Single(module) => vec![module],
+            ModuleDef::Group(group) => group.iter().collect()
+        }
+    }
+
+    /// The island the unit arrived on the canvas as.
+    ///
+    /// The very thing that travelled, and it travels as the strip drew it: a
+    /// module on its own carries its own pill, and a group carries the one
+    /// pill its modules shared. It is not swapped for a heading once the
+    /// block opens — the block grows underneath it — because a module that
+    /// vanished at the end of its own journey would undo the journey.
+    fn desk_island<'a>(&'a self, unit: &'a ModuleDef, id: Id) -> Option<Element<'a, Message>> {
+        let opacity = self.appearance().opacity;
+
+        match unit {
+            ModuleDef::Single(module) => {
+                let (content, action) = self.get_module_view(module, id, opacity)?;
+                let actions = self.module_actions(module, action);
+
+                Some(self.module_element(content, actions, module, id, false))
+            }
+            ModuleDef::Group(group) => {
+                let members: Vec<Element<'a, Message>> = group
+                    .iter()
+                    .filter_map(|module| {
+                        let (content, action) = self.get_module_view(module, id, opacity)?;
+                        let actions = self.module_actions(module, action);
+
+                        Some(self.module_element(content, actions, module, id, true))
+                    })
+                    .collect();
+
+                if members.is_empty() {
+                    return None;
+                }
+
+                Some(self.desk_pill(members))
+            }
+        }
+    }
+
+    /// The one pill a group of modules shares, as the strip paints it.
+    fn desk_pill<'a>(&'a self, members: Vec<Element<'a, Message>>) -> Element<'a, Message> {
+        use hydebar_proto::config::AppearanceStyle;
+
+        let appearance = self.appearance();
+        let row = iced::widget::Row::with_children(members)
+            .spacing(appearance.island_gap())
+            .align_y(iced::Alignment::Center);
+
+        if appearance.style != AppearanceStyle::Islands {
+            return row.into();
+        }
+
+        let opacity = appearance.opacity;
+        let finish = hydebar_core::style::IslandFinish::of(appearance);
+        let radius = appearance.pill_radius();
+
+        container(row)
+            .padding(appearance.island_padding())
+            .style(move |theme: &iced::Theme| iced::widget::container::Style {
+                background: Some(theme.palette().background.scale_alpha(opacity).into()),
+                border: finish.border(radius),
+                shadow: finish.shadow(),
+                ..iced::widget::container::Style::default()
+            })
+            .into()
+    }
+
+    /// The month the clock opens into, once it has opened far enough.
+    ///
+    /// The very grid its press opens on the strip — the same widget, drawn
+    /// straight onto the wallpaper instead of into a popup. It waits for the
+    /// opening to be under way because it is six rows tall against the one
+    /// row of the island above it.
+    fn desk_month(&self, bloom: f32) -> Option<Element<'_, Message>> {
+        (bloom >= MONTH_OPENS_AT)
+            .then(|| self.calendar.menu_view(self.icons()).map(Message::Calendar))
     }
 
     /// What a module has to say once it has the room to say all of it.
@@ -277,31 +394,5 @@ impl App {
             }
             _ => Vec::new()
         }
-    }
-
-    /// The month the clock opens into, once it has opened far enough.
-    ///
-    /// The very grid its press opens on the strip — the same widget, drawn
-    /// straight onto the wallpaper instead of into a popup. It waits for the
-    /// opening to be under way because it is six rows tall against the one
-    /// row of the island above it.
-    fn desk_month(&self, bloom: f32) -> Option<Element<'_, Message>> {
-        (bloom >= MONTH_OPENS_AT)
-            .then(|| self.calendar.menu_view(self.icons()).map(Message::Calendar))
-    }
-
-    /// The island the module arrived on the canvas as.
-    ///
-    /// The very thing that travelled: the strip's own view of the module, in
-    /// the pill the strip drew around it. It is not swapped for a heading
-    /// once the block opens — the block grows underneath it — because a
-    /// module that vanished at the end of its own journey would undo the
-    /// journey.
-    fn desk_island<'a>(&'a self, module: &'a ModuleName, id: Id) -> Option<Element<'a, Message>> {
-        let opacity = self.appearance().opacity;
-        let (content, action) = self.get_module_view(module, id, opacity)?;
-        let actions = self.module_actions(module, action);
-
-        Some(self.module_element(content, actions, module, id, false))
     }
 }
