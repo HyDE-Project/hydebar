@@ -11,7 +11,6 @@
 mod blocks;
 mod column;
 mod face;
-mod probe;
 mod readings;
 
 use hydebar_core::outputs::HasOutput;
@@ -33,11 +32,12 @@ impl App {
     /// untouched by it.
     pub(super) fn desk_surface(&self, id: Id) -> Element<'_, Message> {
         let screen = self.outputs.screen_of(id).flatten();
-        let presence = self.desk_presence(screen);
 
-        if !self.config.desk.enabled || presence <= 0.004 {
+        if !self.desk_holds(screen) {
             return Row::new().into();
         }
+
+        let presence = self.desk_presence(screen);
 
         let ink = blocks::Ink {
             value: self.theme_cache.palette().text,
@@ -172,6 +172,75 @@ mod tests {
         assert!(
             ui.find(month.as_str()).is_ok(),
             "the month grid stands under the hour"
+        );
+    }
+
+    /// The two probes that tell which shape holds the screen.
+    ///
+    /// One text apiece, each drawn by one shape only: a block heading stands
+    /// on the canvas alone, and the strip states the hour in the format the
+    /// configuration named, which the canvas never uses.
+    fn shapes_on_screen(app: &App) -> (bool, bool) {
+        let hour = app.clock.data().format(&app.config.clock.format);
+
+        let mut strip = simulator(app.bar_surface(surface()));
+        let mut canvas = simulator(app.desk_surface(surface()));
+
+        (
+            strip.find(hour.as_str()).is_ok(),
+            canvas.find("MEMORY").is_ok()
+        )
+    }
+
+    #[test]
+    fn one_shape_holds_the_screen_at_every_step_of_the_travel() {
+        let mut app = test_app_with(|config| config.desk.enabled = true);
+
+        let (strip, canvas) = shapes_on_screen(&app);
+        assert!(strip && !canvas, "the strip holds a screen with a window");
+
+        app.desk_fades.point(None, true, true, GENTLE);
+
+        for frame in 0..64 {
+            let (strip, canvas) = shapes_on_screen(&app);
+
+            assert!(
+                strip != canvas,
+                "frame {frame}: strip {strip}, canvas {canvas} — one shape, never two and never none"
+            );
+
+            if !app.desk_fades.advance(std::time::Duration::from_millis(16)) {
+                break;
+            }
+        }
+
+        let (strip, canvas) = shapes_on_screen(&app);
+        assert!(!strip && canvas, "the canvas holds a bare screen");
+    }
+
+    #[test]
+    fn the_strip_takes_the_screen_back_the_moment_the_travel_ends() {
+        let mut app = test_app_with(|config| config.desk.enabled = true);
+        app.desk_fades.point(None, true, false, GENTLE);
+        app.desk_fades.point(None, false, true, GENTLE);
+
+        for frame in 0..64 {
+            let (strip, canvas) = shapes_on_screen(&app);
+
+            assert!(
+                strip != canvas,
+                "frame {frame} of the way back shows one shape"
+            );
+
+            if !app.desk_fades.advance(std::time::Duration::from_millis(16)) {
+                break;
+            }
+        }
+
+        let (strip, canvas) = shapes_on_screen(&app);
+        assert!(
+            strip && !canvas,
+            "the strip is back once the blocks are home"
         );
     }
 

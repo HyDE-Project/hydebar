@@ -55,4 +55,20 @@ impl App {
     pub(crate) fn desk_presence(&self, screen: Option<&str>) -> f32 {
         self.desk_fades.progress(&screen.map(ToOwned::to_owned))
     }
+
+    /// Reports whether the canvas, not the strip, holds `screen`.
+    ///
+    /// The one question both surfaces ask, and the reason they ask the same
+    /// one: the strip and the canvas are two shapes of a single thing, so a
+    /// frame showing both of them, or neither, is a frame that lies. Deciding
+    /// it twice — once per surface, each against its own threshold on a
+    /// travelling spring — is exactly how such a frame gets drawn.
+    ///
+    /// The canvas holds the screen for as long as its blocks are anywhere but
+    /// home: from the first pixel of the travel out to the last of the travel
+    /// back. The strip draws whenever it does not.
+    #[must_use]
+    pub(crate) fn desk_holds(&self, screen: Option<&str>) -> bool {
+        self.config.desk.enabled && self.desk_presence(screen) > 0.0
+    }
 }

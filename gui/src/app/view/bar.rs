@@ -42,9 +42,7 @@ impl App {
         reason = "the backdrop of every appearance style is painted from one match"
     )]
     pub(super) fn bar_surface(&self, id: Id) -> Element<'_, Message> {
-        let unfolded = self.desk_presence(self.outputs.screen_of(id).flatten());
-
-        if unfolded > 0.004 {
+        if self.desk_holds(self.outputs.screen_of(id).flatten()) {
             return iced::widget::Row::new().into();
         }
 
