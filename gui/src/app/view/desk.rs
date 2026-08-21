@@ -83,7 +83,11 @@ impl App {
             DeskPanel::Clock => {
                 return Some(hour::clock(self.clock.data(), &self.config.clock, ink));
             }
-            DeskPanel::Weather => return Some(hour::weather(self.weather.data(), ink))
+            DeskPanel::Weather => {
+                let sky = self.weather.data();
+
+                return sky.has_reading().then(|| hour::weather(sky, ink));
+            }
         };
 
         reading.map(|reading| blocks::panel(&reading, side, ink))

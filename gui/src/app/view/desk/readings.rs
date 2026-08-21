@@ -4,7 +4,7 @@
 //! reading is settled here — before a single widget exists — and the drawing
 //! beside it only has to place what this file already decided.
 
-use hydebar_core::modules::system_info::{SystemInfoData, gigabytes, used_of_total};
+use hydebar_core::modules::system_info::{DiskData, SystemInfoData, gigabytes, used_of_total};
 
 /// One block of the canvas: a heading and the lines under it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -138,12 +138,35 @@ pub(super) fn memory(data: &SystemInfoData) -> Option<Panel> {
     Panel::of("memory", rows)
 }
 
-/// Every mounted filesystem, with what is left on it.
+/// Every filesystem, with what is left on it.
+///
+/// One line per filesystem rather than per mount point: a machine laid out
+/// in subvolumes mounts the same filesystem a dozen times over — `/`,
+/// `/home`, `/var/log` and the rest of them — and each of those mounts
+/// reports the same bytes. Listing them all would fill the column with one
+/// number repeated. The shortest mount stands for the filesystem, because
+/// that is the one the user thinks of it by.
 pub(super) fn storage(data: &SystemInfoData) -> Option<Panel> {
+    let mut filesystems: Vec<&DiskData> = Vec::new();
+
+    for disk in &data.disks {
+        match filesystems
+            .iter_mut()
+            .find(|seen| seen.used == disk.used && seen.total == disk.total)
+        {
+            Some(seen) => {
+                if disk.mount.len() < seen.mount.len() {
+                    *seen = disk;
+                }
+            }
+            None => filesystems.push(disk)
+        }
+    }
+
     Panel::of(
         "storage",
-        data.disks
-            .iter()
+        filesystems
+            .into_iter()
             .map(|disk| (disk.mount.clone(), used_of_total(disk.used, disk.total)))
             .collect()
     )
@@ -152,7 +175,7 @@ pub(super) fn storage(data: &SystemInfoData) -> Option<Panel> {
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
-    use hydebar_core::modules::system_info::{DiskData, NetworkData};
+    use hydebar_core::modules::system_info::NetworkData;
 
     use super::*;
 
@@ -239,6 +262,25 @@ mod tests {
             panel.rows[1],
             ("/home".to_owned(), "1.0 / 4.0 GiB".to_owned())
         );
+    }
+
+    #[test]
+    fn one_filesystem_mounted_many_times_takes_one_line() {
+        let mut data = sample();
+        data.disks = ["/var/log", "/", "/home"]
+            .into_iter()
+            .map(|mount| DiskData {
+                mount:         mount.to_owned(),
+                used:          1024 * 1024 * 1024,
+                total:         2 * 1024 * 1024 * 1024,
+                usage_percent: 50
+            })
+            .collect();
+
+        let panel = storage(&data).expect("one filesystem");
+
+        assert_eq!(panel.rows.len(), 1);
+        assert_eq!(panel.rows[0].0, "/");
     }
 
     #[test]

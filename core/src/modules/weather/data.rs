@@ -39,11 +39,18 @@ pub struct WeatherData {
     pub last_updated: chrono::DateTime<chrono::Local>
 }
 
+/// Temperature stood in for while no reading has arrived.
+///
+/// The one spelling of "nothing yet": a reading that failed, one still on
+/// its way and one the session has no key to ask for all wear it, and
+/// [`WeatherData::has_reading`] is what tells them apart from a real sky.
+const NO_READING: &str = "--";
+
 impl WeatherData {
     #[must_use]
     pub fn new(location: String, use_celsius: bool) -> Self {
         Self {
-            temperature: String::from("--"),
+            temperature: String::from(NO_READING),
             description: String::from("Loading..."),
             humidity: String::from("--"),
             wind_speed: String::from("--"),
@@ -79,6 +86,15 @@ impl WeatherData {
             use_celsius,
             last_updated: chrono::Local::now()
         }
+    }
+
+    /// Reports whether the sky was actually read.
+    ///
+    /// A surface with room to leave a block out — the desk above all — draws
+    /// nothing rather than a placeholder nobody asked for.
+    #[must_use]
+    pub fn has_reading(&self) -> bool {
+        self.temperature != NO_READING
     }
 
     #[must_use]
