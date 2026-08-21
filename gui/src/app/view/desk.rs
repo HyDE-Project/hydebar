@@ -492,6 +492,39 @@ mod tests {
     }
 
     #[test]
+    fn a_group_parts_inside_the_pill_it_shared() {
+        use hydebar_core::config::ModuleName;
+        use hydebar_proto::config::ModuleDef;
+
+        let mut app = test_app_with(|config| {
+            config.desk.enabled = true;
+            config.modules.left = vec![ModuleDef::Group(vec![
+                ModuleName::Memory,
+                ModuleName::CpuTemp,
+            ])];
+            config.modules.center = Vec::new();
+            config.modules.right = Vec::new();
+        });
+        open(&mut app);
+
+        let memory = simulator(app.desk_surface(surface()))
+            .find("MEMORY")
+            .expect("the first member opened")
+            .bounds();
+        let processor = simulator(app.desk_surface(surface()))
+            .find("CPU TEMPERATURE")
+            .expect("the second member opened")
+            .bounds();
+
+        assert!(
+            processor.y > memory.y,
+            "the members part down the block: {} against {}",
+            processor.y,
+            memory.y
+        );
+    }
+
+    #[test]
     fn each_block_of_a_section_stands_in_a_lane_of_its_own() {
         use hydebar_core::config::ModuleName;
         use hydebar_proto::config::ModuleDef;
