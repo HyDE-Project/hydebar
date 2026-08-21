@@ -133,6 +133,10 @@ impl App {
             self.register_modules();
         }
 
+        if impact.desk_changed {
+            self.unfold_desk();
+        }
+
         if (impact.layout_changed || impact.custom_modules_changed)
             && self.config.appearance.animations.enabled
         {

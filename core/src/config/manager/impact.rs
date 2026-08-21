@@ -32,7 +32,13 @@ pub struct ConfigImpact {
     /// Whether menu keyboard focus changed.
     pub menu_focus_changed:     bool,
     /// Whether custom module definitions changed.
-    pub custom_modules_changed: bool
+    pub custom_modules_changed: bool,
+    /// Whether the desk section changed.
+    ///
+    /// The desk is not a bar entry and owns no [`ModuleName`], so a section
+    /// of its own is what tells a reload that its listener has to start or
+    /// stop — and, with it, the sampler and the clock it draws from.
+    pub desk_changed:           bool
 }
 
 impl ConfigImpact {
@@ -51,7 +57,10 @@ impl ConfigImpact {
     /// every desktop theme switch amounts to — must leave the listeners alone.
     #[must_use]
     pub fn moves_module_registration(&self) -> bool {
-        self.layout_changed || self.custom_modules_changed || !self.affected_modules.is_empty()
+        self.layout_changed
+            || self.custom_modules_changed
+            || self.desk_changed
+            || !self.affected_modules.is_empty()
     }
 }
 
@@ -91,6 +100,10 @@ pub(super) fn compute_impact(previous: &Config, next: &Config) -> ConfigImpact {
         impact.menu_focus_changed = true;
     }
 
+    if previous.desk != next.desk {
+        impact.desk_changed = true;
+    }
+
     modules::mark_module_configs(&mut impact, previous, next);
 
     if previous.custom_modules != next.custom_modules {
@@ -124,6 +137,18 @@ mod tests {
 
         assert!(impact.appearance_changed);
         assert!(!impact.moves_module_registration());
+    }
+
+    #[test]
+    fn switching_the_desk_on_moves_module_registration() {
+        let previous = Config::default();
+        let mut next = Config::default();
+        next.desk.enabled = true;
+
+        let impact = compute_impact(&previous, &next);
+
+        assert!(impact.desk_changed);
+        assert!(impact.moves_module_registration());
     }
 
     #[test]

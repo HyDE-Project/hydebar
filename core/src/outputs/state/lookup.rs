@@ -93,6 +93,18 @@ impl Outputs {
         })
     }
 
+    /// Every screen the bar currently draws on, the fallback one included.
+    ///
+    /// The fallback group reads back as [`None`]: it is the surface the bar
+    /// runs on before the compositor reports its monitors, and it stands for
+    /// whichever screen holds the focus.
+    pub fn screens(&self) -> impl Iterator<Item = Option<&str>> {
+        self.0
+            .iter()
+            .filter(|(_, info, _)| info.is_some())
+            .map(|(name, _, _)| name.as_deref())
+    }
+
     /// Check whether an output with the provided name is already tracked.
     ///
     /// # Examples

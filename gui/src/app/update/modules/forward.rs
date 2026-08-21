@@ -63,6 +63,7 @@ impl App {
             }
             Message::Desk(msg) => {
                 self.desk.update(msg);
+                self.unfold_desk();
                 Task::none()
             }
             Message::Tray(msg) => {

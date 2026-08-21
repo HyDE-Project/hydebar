@@ -118,6 +118,12 @@ pub struct App {
     pub(crate) greeting_raised: Vec<Id>,
     /// The frame instant past which the greeting lets itself out.
     pub(crate) greeting_deadline: Option<Instant>,
+    /// Unfolding of the desk, one spring per screen it may unfold on.
+    ///
+    /// A spring apiece because the screens answer for themselves: one monitor
+    /// may be folding back under a window that just mapped while the other is
+    /// still unfolding over a workspace that was cleared.
+    pub desk_fades: hydebar_core::animation::HoverFades<Option<String>>,
     /// The one tooltip lifecycle: dwell, warmth and the fade either way.
     pub hints: hydebar_core::tooltip::Hints,
     /// The greeting line, composed once when the greeting is armed.

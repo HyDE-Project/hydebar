@@ -107,6 +107,7 @@ impl App {
             notification_popups: Vec::new(),
             attention: Attention::default(),
             hover: HoverFades::default(),
+            desk_fades: HoverFades::default(),
             sweep: hydebar_core::style::SweepStyle::default(),
             entrance: hydebar_core::animation::Spring::new(0.0),
             relayout: hydebar_core::animation::Spring::new(1.0),

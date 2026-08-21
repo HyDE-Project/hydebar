@@ -86,16 +86,22 @@ impl App {
                         appearance.height
                     );
 
+                    self.unfold_desk();
+
                     Task::batch([measure, add])
                 }
                 OutputEvent::Removed(id) => {
                     info!("Output destroyed");
-                    self.outputs.remove(
+
+                    let removed = self.outputs.remove(
                         self.config.appearance.style,
                         self.config.position,
                         id,
                         &self.config
-                    )
+                    );
+                    self.unfold_desk();
+
+                    removed
                 }
                 OutputEvent::InfoChanged(info) => measure_screen(info.name),
                 OutputEvent::SurfaceEnteredOutput {

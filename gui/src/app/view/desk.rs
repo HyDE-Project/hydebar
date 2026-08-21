@@ -24,18 +24,26 @@ use super::super::state::{App, Message};
 
 impl App {
     /// Draws the desk of one output, or nothing while a window holds it.
+    ///
+    /// The canvas unfolds rather than appears: it fades in over the wallpaper
+    /// and rises the last stretch into place, and folds back the same way the
+    /// moment a window maps. The travel is the screen's own spring, so a
+    /// second monitor still holding a window is untouched by it.
     pub(super) fn desk_surface(&self, id: Id) -> Element<'_, Message> {
         let screen = self.outputs.screen_of(id).flatten();
+        let presence = self.desk_presence(screen);
 
-        if !self.config.desk.enabled || !self.desk.covers(screen) {
+        if !self.config.desk.enabled || presence <= 0.004 {
             return Row::new().into();
         }
 
         let ink = Ink {
-            value: self.theme_cache.palette().text,
+            value: self.theme_cache.palette().text.scale_alpha(presence),
             size:  self.appearance().font_size_px()
         };
         let desk = &self.config.desk;
+        let margin = ink.size * 2.0;
+        let rise = margin.mul_add(1.0 - presence, margin);
 
         let columns = [
             (&desk.left, Side::Leading),
@@ -52,7 +60,12 @@ impl App {
         )
         .width(Length::Fill)
         .height(Length::Fill)
-        .padding(ink.size * 2.0)
+        .padding(iced::Padding {
+            top:    rise,
+            right:  margin,
+            bottom: margin,
+            left:   margin
+        })
         .into()
     }
 
