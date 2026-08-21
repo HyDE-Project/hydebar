@@ -5,6 +5,7 @@ mod battery;
 mod clock;
 mod control_center;
 mod custom_module;
+mod desk;
 mod icons;
 mod idle_inhibitor;
 mod keybindings;
@@ -36,6 +37,7 @@ pub use battery::BatteryModuleConfig;
 pub use clock::ClockModuleConfig;
 pub use control_center::ControlCenterModuleConfig;
 pub use custom_module::{CustomMenuEntry, CustomModuleDef, CustomModuleSource};
+pub use desk::{DeskConfig, DeskPanel};
 pub use icons::IconsConfig;
 pub use idle_inhibitor::IdleInhibitorModuleConfig;
 pub use keybindings::{GlobalKeybindings, Keybindings, MenuKeybindings};
@@ -106,7 +108,9 @@ pub struct Config {
     #[serde(default)]
     pub icons:               IconsConfig,
     #[serde(default)]
-    pub notifications:       NotificationsConfig
+    pub notifications:       NotificationsConfig,
+    #[serde(default)]
+    pub desk:                DeskConfig
 }
 
 impl Default for Config {
@@ -135,7 +139,8 @@ impl Default for Config {
             keybindings:         Keybindings::default(),
             weather:             WeatherModuleConfig::default(),
             icons:               IconsConfig::default(),
-            notifications:       NotificationsConfig::default()
+            notifications:       NotificationsConfig::default(),
+            desk:                DeskConfig::default()
         }
     }
 }
