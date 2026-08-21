@@ -9,7 +9,7 @@
 //! One folder, one room so far: [`column`] stacks a section into a column.
 
 mod blocks;
-pub(super) mod column;
+pub(crate) mod column;
 mod readings;
 
 use hydebar_core::config::ModuleName;
@@ -496,6 +496,49 @@ mod tests {
         assert!(
             seated >= 2,
             "both modules of the group are given a seat to fly from, not {seated}"
+        );
+    }
+
+    #[test]
+    fn the_strip_stands_until_the_last_island_has_left_it() {
+        let mut app = test_app_with(|config| config.desk.enabled = true);
+        app.desk_fades.point(None, true, true, SWEEP);
+
+        let mut held_while_any_waited = true;
+        let mut left_once_all_had_gone = false;
+
+        for _ in 0..256 {
+            let unfolding = app.desk_presence(None);
+            let units = App::desk_turns(&app.config.modules).3;
+            let waiting = (0..units).any(|turn| {
+                #[expect(clippy::cast_precision_loss, reason = "a handful of units")]
+                let place = if units > 1 {
+                    turn as f32 / (units - 1) as f32
+                } else {
+                    0.0
+                };
+
+                super::column::journey(unfolding, place, units).0 <= 0.0
+            });
+
+            if waiting {
+                held_while_any_waited &= app.strip_still_holds(None);
+            } else {
+                left_once_all_had_gone |= !app.strip_still_holds(None);
+            }
+
+            if !app.desk_fades.advance(std::time::Duration::from_millis(16)) {
+                break;
+            }
+        }
+
+        assert!(
+            held_while_any_waited,
+            "the strip stands while an island is still on it"
+        );
+        assert!(
+            left_once_all_had_gone,
+            "the strip leaves once the last island has set off"
         );
     }
 

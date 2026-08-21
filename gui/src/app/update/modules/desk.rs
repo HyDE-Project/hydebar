@@ -140,6 +140,41 @@ impl App {
         self.desk_fades.progress(&screen.map(ToOwned::to_owned))
     }
 
+    /// Reports whether the strip still has a module standing on it.
+    ///
+    /// The strip does not go the moment the first island leaves it: the
+    /// islands leave one at a time, and until the last one has set off there
+    /// is still something standing on the strip. The strip stays under them,
+    /// empty of everything that has already gone, and leaves once the last
+    /// has.
+    #[must_use]
+    pub(crate) fn strip_still_holds(&self, screen: Option<&str>) -> bool {
+        let layout = &self.config.modules;
+        let units = Self::desk_order(&layout.left, false).len()
+            + Self::desk_order(&layout.center, false).len()
+            + Self::desk_order(&layout.right, false).len();
+
+        if units == 0 {
+            return false;
+        }
+
+        let unfolding = self.desk_presence(screen);
+
+        (0..units).any(|turn| {
+            #[expect(
+                clippy::cast_precision_loss,
+                reason = "a layout holds a handful of units"
+            )]
+            let place = if units > 1 {
+                turn as f32 / (units - 1) as f32
+            } else {
+                0.0
+            };
+
+            crate::app::view::desk::column::journey(unfolding, place, units).0 <= 0.0
+        })
+    }
+
     /// Reports whether the canvas, not the strip, holds `screen`.
     ///
     /// The one question both surfaces ask, and the reason they ask the same

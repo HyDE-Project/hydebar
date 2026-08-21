@@ -2,7 +2,7 @@
 
 mod bar;
 mod chrome;
-mod desk;
+pub(crate) mod desk;
 mod measured;
 mod menu;
 mod pages;

@@ -62,7 +62,7 @@ fn stagger(blocks: usize) -> f32 {
 /// `place` is where the block stands in its column: zero leads the front, one
 /// trails it. `blocks` is how many share the column, which is what sets the
 /// stagger that keeps their flights apart.
-pub(super) fn journey(unfolding: f32, place: f32, blocks: usize) -> (f32, f32) {
+pub(crate) fn journey(unfolding: f32, place: f32, blocks: usize) -> (f32, f32) {
     let own = hydebar_core::animation::sweep(unfolding, place, stagger(blocks));
 
     if own <= CROSSING {
