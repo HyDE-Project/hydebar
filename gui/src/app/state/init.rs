@@ -12,7 +12,7 @@ use hydebar_core::{
     event_bus::{EventReceiver, EventSender},
     modules::{
         battery::Battery, calendar::Calendar, clock::Clock, command_button::CommandButton,
-        control_center::ControlCenter, custom_module::Custom, hyde_menu::HydeMenu,
+        control_center::ControlCenter, custom_module::Custom, desk::Desk, hyde_menu::HydeMenu,
         keyboard_layout::KeyboardLayout, keyboard_submap::KeyboardSubmap,
         media_player::MediaPlayer, notifications::Notifications, privacy::Privacy,
         screenshot::Screenshot, settings::Settings, system_info::SystemInfo, taskbar::Taskbar,
@@ -89,7 +89,8 @@ impl App {
             keyboard_layout: KeyboardLayout::new(Arc::clone(&hyprland_clone)),
             keyboard_submap: KeyboardSubmap::new(Arc::clone(&hyprland_clone)),
             tray: TrayModule::default(),
-            taskbar: Taskbar::new(hyprland_clone),
+            taskbar: Taskbar::new(Arc::clone(&hyprland_clone)),
+            desk: Desk::new(hyprland_clone),
             clock: Clock::default(),
             calendar: Calendar::default(),
             hyde_menu: HydeMenu::default(),

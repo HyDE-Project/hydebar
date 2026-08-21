@@ -88,6 +88,7 @@ pub enum Message {
     KeyboardSubmap(modules::keyboard_submap::Message),
     Tray(TrayMessage),
     Taskbar(modules::taskbar::Message),
+    Desk(modules::desk::Message),
     Clock(modules::clock::Message),
     Calendar(modules::calendar::Message),
     HydeMenu(modules::hyde_menu::Message),
@@ -121,6 +122,12 @@ impl From<modules::control_center::Message> for Message {
 impl From<modules::taskbar::Message> for Message {
     fn from(msg: modules::taskbar::Message) -> Self {
         Self::Taskbar(msg)
+    }
+}
+
+impl From<modules::desk::Message> for Message {
+    fn from(msg: modules::desk::Message) -> Self {
+        Self::Desk(msg)
     }
 }
 

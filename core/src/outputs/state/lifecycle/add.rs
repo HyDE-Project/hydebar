@@ -56,6 +56,7 @@ impl Outputs {
                 main_id,
                 menu_id,
                 tooltip_id,
+                desk_id,
                 notifications_id,
                 task
             } = create_layer_surfaces(
@@ -81,6 +82,7 @@ impl Outputs {
                             shell_info.id,
                             shell_info.menu.id,
                             shell_info.tooltip_id,
+                            shell_info.desk_id,
                             shell_info.notifications_id
                         ),
                         _ => Task::none()
@@ -100,6 +102,7 @@ impl Outputs {
                     height: config.appearance.height,
                     tooltip_id,
                     tooltip: None,
+                    desk_id,
                     notifications_id
                 }),
                 Some(wl_output)
@@ -114,6 +117,7 @@ impl Outputs {
                             shell_info.id,
                             shell_info.menu.id,
                             shell_info.tooltip_id,
+                            shell_info.desk_id,
                             shell_info.notifications_id
                         ),
                         _ => Task::none()
@@ -137,6 +141,7 @@ impl Outputs {
                             shell_info.id,
                             shell_info.menu.id,
                             shell_info.tooltip_id,
+                            shell_info.desk_id,
                             shell_info.notifications_id
                         ),
                         _ => Task::none()

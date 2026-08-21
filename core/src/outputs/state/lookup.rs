@@ -30,6 +30,8 @@ impl Outputs {
                     Some(HasOutput::Menu(info.menu.menu_info.as_ref()))
                 } else if info.notifications_id == id {
                     Some(HasOutput::Notifications)
+                } else if info.desk_id == id {
+                    Some(HasOutput::Desk)
                 } else if info.tooltip_id == id {
                     Some(HasOutput::Tooltip)
                 } else {
@@ -59,6 +61,35 @@ impl Outputs {
         self.0.iter().find_map(|(name, info, _)| {
             info.as_ref()
                 .and_then(|info| if info.id == id { name.as_deref() } else { None })
+        })
+    }
+
+    /// Retrieve the monitor name behind any surface of a tracked output.
+    ///
+    /// Unlike [`Outputs::get_monitor_name`], which answers for the bar surface
+    /// alone, this one answers for every surface of the group — the desk asks
+    /// what screen it is standing on, and it is not the bar surface asking.
+    ///
+    /// Returns [`None`] when the identifier does not belong to the bar, and
+    /// [`Some(None)`] for the fallback group the bar runs on before the
+    /// compositor reports its monitors.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use hydebar_core::outputs::Outputs;
+    /// # use hydebar_core::config::Config;
+    /// # use iced::SurfaceId as Id;
+    /// let config = Config::default();
+    /// let (outputs, _task) = Outputs::new::<()>(config.appearance.style, config.position, &config);
+    /// assert!(outputs.screen_of(Id::unique()).is_none());
+    /// ```
+    #[must_use]
+    pub fn screen_of(&self, id: Id) -> Option<Option<&str>> {
+        self.0.iter().find_map(|(name, info, _)| {
+            info.as_ref()
+                .filter(|info| info.owns(id) || info.notifications_id == id)
+                .map(|_| name.as_deref())
         })
     }
 

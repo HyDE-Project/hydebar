@@ -12,7 +12,7 @@ use hydebar_core::{
     event_bus::EventReceiver,
     modules::{
         battery::Battery, calendar::Calendar, clock::Clock, command_button::CommandButton,
-        control_center::ControlCenter, custom_module::Custom, hyde_menu::HydeMenu,
+        control_center::ControlCenter, custom_module::Custom, desk::Desk, hyde_menu::HydeMenu,
         keyboard_layout::KeyboardLayout, keyboard_submap::KeyboardSubmap,
         media_player::MediaPlayer, notifications::Notifications, privacy::Privacy,
         screenshot::Screenshot, settings::Settings, system_info::SystemInfo, taskbar::Taskbar,
@@ -80,6 +80,8 @@ pub struct App {
     pub keyboard_submap: KeyboardSubmap,
     pub tray: TrayModule,
     pub taskbar: Taskbar,
+    /// The canvas the bar unfolds into on a screen holding no window.
+    pub desk: Desk,
     pub clock: Clock,
     pub calendar: Calendar,
     pub hyde_menu: HydeMenu,

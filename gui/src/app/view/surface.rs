@@ -44,6 +44,7 @@ impl App {
                     |menu| self.faded_menu(menu, menu_progress)
                 )
             }
+            Some(HasOutput::Desk) => self.desk_surface(id),
             Some(HasOutput::Notifications) => notifications_popup::view(
                 &self.notification_popups,
                 self.appearance(),

@@ -25,11 +25,13 @@ pub(super) fn indicator_label(
     clippy::cast_precision_loss,
     reason = "byte totals are shown with one decimal; f64 keeps far more precision than the display"
 )]
+#[must_use]
 pub fn gigabytes(bytes: u64) -> String {
     format!("{:.1}", bytes as f64 / (1024.0 * 1024.0 * 1024.0))
 }
 
 /// A pool stated as the amount in use against the amount there is.
+#[must_use]
 pub fn used_of_total(used: u64, total: u64) -> String {
     format!("{} / {} GiB", gigabytes(used), gigabytes(total))
 }

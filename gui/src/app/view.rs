@@ -2,6 +2,7 @@
 
 mod bar;
 mod chrome;
+mod desk;
 mod measured;
 mod menu;
 mod pages;

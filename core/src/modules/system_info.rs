@@ -11,8 +11,9 @@ use iced::Element;
 pub use indicators::{IndicatorStatus, Unavailable};
 pub use runtime::REFRESH_INTERVAL;
 pub use sensors::{GpuPlacement, GpuReadings, GpuVendor, HardwareSensors};
-pub use view::{build_indicator_view, indicator_elements, single_indicator};
-pub(crate) use view::{gigabytes, used_of_total};
+pub use view::{
+    build_indicator_view, gigabytes, indicator_elements, single_indicator, used_of_total
+};
 pub use window::build_menu_view;
 
 use super::{Module, ModuleError, OnModulePress};

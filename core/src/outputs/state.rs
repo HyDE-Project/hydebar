@@ -34,6 +34,8 @@ struct ShellInfo {
     /// module's enter before the previous module's leave, and a leave that
     /// hid whatever is showing would take the fresh tooltip down with it.
     tooltip:          Option<(ModuleName, TooltipInfo)>,
+    /// Surface the desk of this output is drawn on.
+    desk_id:          Id,
     /// Surface the notification popups of this output are drawn on.
     notifications_id: Id
 }
@@ -41,7 +43,7 @@ struct ShellInfo {
 impl ShellInfo {
     /// Reports whether `id` names one of the surfaces of this output.
     fn owns(&self, id: Id) -> bool {
-        self.id == id || self.menu.id == id || self.tooltip_id == id
+        self.id == id || self.menu.id == id || self.tooltip_id == id || self.desk_id == id
     }
 }
 
@@ -79,6 +81,10 @@ pub enum HasOutput<'a> {
     ///
     /// What it shows is read back with [`Outputs::tooltip`].
     Tooltip,
+    /// The identifier refers to the surface the desk is drawn on.
+    ///
+    /// What screen it stands on is read back with [`Outputs::screen_of`].
+    Desk,
     /// The identifier refers to the surface the notification popups are drawn
     /// on.
     Notifications
@@ -112,6 +118,7 @@ impl Outputs {
             main_id,
             menu_id,
             tooltip_id,
+            desk_id,
             notifications_id,
             task
         } = create_layer_surfaces(
@@ -136,6 +143,7 @@ impl Outputs {
                     height: config.appearance.height,
                     tooltip_id,
                     tooltip: None,
+                    desk_id,
                     notifications_id
                 }),
                 None

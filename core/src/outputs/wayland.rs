@@ -28,6 +28,14 @@ const TOOLTIP_NAMESPACE: &str = "hydebar-tooltip-layer";
 /// as a menu surface covers it.
 const MENU_NAMESPACE: &str = "hydebar-menu-layer";
 
+/// Namespace of the surface the desk is drawn on.
+///
+/// Kept apart from the menus for the same reason as the tooltips: the desk
+/// covers the whole wallpaper for as long as the screen is bare, and a blur
+/// rule written for the menu backdrop must not fire because a workspace was
+/// cleared.
+const DESK_NAMESPACE: &str = "hydebar-desk-layer";
+
 /// Namespace of the surface the notification popups are drawn on.
 ///
 /// Kept apart from the menus for the same reason as the tooltips: a compositor
@@ -70,6 +78,7 @@ pub struct LayerSurfaceCreation<Message> {
     pub(crate) main_id:          Id,
     pub(crate) menu_id:          Id,
     pub(crate) tooltip_id:       Id,
+    pub(crate) desk_id:          Id,
     pub(crate) notifications_id: Id,
     pub(crate) task:             Task<Message>
 }
@@ -163,6 +172,25 @@ pub fn tooltip_settings(output: Option<OutputId>) -> LayerShellSettings {
     }
 }
 
+/// Settings of the surface the desk is drawn on.
+///
+/// Created input-free through [`draw_only`] and left on the background layer
+/// for its whole life: the desk is a drawing on the wallpaper, below every
+/// window, and it must neither rise over one nor take a press meant for the
+/// desktop underneath it. Its exclusive zone is the stock zero, so the
+/// compositor lays it out over the screen the bar's own strip leaves free.
+pub fn desk_settings(output: Option<OutputId>) -> LayerShellSettings {
+    LayerShellSettings {
+        namespace: DESK_NAMESPACE.to_string(),
+        size: Some((0, 0)),
+        layer: Layer::Background,
+        keyboard_interactivity: KeyboardInteractivity::None,
+        output,
+        anchor: Anchor::TOP | Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT,
+        ..Default::default()
+    }
+}
+
 /// Settings of the surface the notification popups are drawn on.
 ///
 /// Created input-free through [`draw_only`], stated as a follow-up task.
@@ -213,6 +241,7 @@ pub fn create_layer_surfaces<Message: 'static>(
     ));
     let (menu_id, menu_task) = new_layer_surface(menu_settings(output));
     let (tooltip_id, tooltip_task) = new_layer_surface(tooltip_settings(output));
+    let (desk_id, desk_task) = new_layer_surface(desk_settings(output));
     let (notifications_id, notifications_task) =
         new_layer_surface(notifications_settings(output, position));
 
@@ -220,12 +249,15 @@ pub fn create_layer_surfaces<Message: 'static>(
         main_id,
         menu_id,
         tooltip_id,
+        desk_id,
         notifications_id,
         task: Task::batch(vec![
             main_task,
             menu_task,
             tooltip_task,
             draw_only(tooltip_id),
+            desk_task,
+            draw_only(desk_id),
             notifications_task,
             draw_only(notifications_id),
         ])
@@ -236,12 +268,14 @@ pub fn destroy_layer_surfaces<Message: 'static>(
     main_id: Id,
     menu_id: Id,
     tooltip_id: Id,
+    desk_id: Id,
     notifications_id: Id
 ) -> Task<Message> {
     Task::batch(vec![
         destroy_layer_surface(main_id),
         destroy_layer_surface(menu_id),
         destroy_layer_surface(tooltip_id),
+        destroy_layer_surface(desk_id),
         destroy_layer_surface(notifications_id),
     ])
 }
@@ -280,10 +314,21 @@ mod tests {
         // whole desktop the moment a menu covers it
         assert_eq!(menu_settings(None).namespace, MENU_NAMESPACE);
         assert_eq!(tooltip_settings(None).namespace, TOOLTIP_NAMESPACE);
+        assert_eq!(desk_settings(None).namespace, DESK_NAMESPACE);
         assert_eq!(
             notifications_settings(None, Position::Top).namespace,
             NOTIFICATIONS_NAMESPACE
         );
+    }
+
+    #[test]
+    fn the_desk_stays_on_the_wallpaper_and_reserves_nothing() {
+        // a canvas that reserved a zone would push every window off the
+        // screen, and one above the wallpaper layer would cover them
+        let settings = desk_settings(None);
+
+        assert!(matches!(settings.layer, Layer::Background));
+        assert_eq!(settings.exclusive_zone, 0);
     }
 
     #[test]

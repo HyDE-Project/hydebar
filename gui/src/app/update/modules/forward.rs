@@ -61,6 +61,10 @@ impl App {
                 self.taskbar.update(msg);
                 Task::none()
             }
+            Message::Desk(msg) => {
+                self.desk.update(msg);
+                Task::none()
+            }
             Message::Tray(msg) => {
                 let close_tray = match &msg {
                     TrayMessage::Event(event) => {
