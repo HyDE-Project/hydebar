@@ -26,7 +26,7 @@ impl App {
         clippy::too_many_lines,
         reason = "one table naming what every menu shows, one arm per menu"
     )]
-    pub(super) fn menu_page(
+    pub(crate) fn menu_page(
         &self,
         menu_type: &MenuType,
         id: Id,

@@ -8,7 +8,10 @@
 //!
 //! One folder, one room so far: [`column`] stacks a section into a column.
 
+mod blocks;
 mod column;
+mod face;
+mod readings;
 
 use hydebar_core::outputs::HasOutput;
 use iced::{
@@ -35,21 +38,26 @@ impl App {
             return Row::new().into();
         }
 
-        let margin = self.appearance().font_size_px() * 1.5;
+        let ink = blocks::Ink {
+            value: self.theme_cache.palette().text,
+            size:  self.appearance().font_size_px()
+        };
+        let margin = ink.size * 2.0;
         let modules = &self.config.modules;
 
         let columns = [
-            (&modules.left, Alignment::Start),
-            (&modules.center, Alignment::Center),
-            (&modules.right, Alignment::End)
+            (&modules.left, blocks::Side::Leading),
+            (&modules.center, blocks::Side::Leading),
+            (&modules.right, blocks::Side::Trailing)
         ]
         .into_iter()
-        .filter_map(|(section, align)| self.desk_column(section, id, align));
+        .filter_map(|(section, side)| self.desk_column(section, id, side, ink));
 
         let canvas = container(
             Row::with_children(columns)
-                .spacing(margin * 2.0)
+                .spacing(margin)
                 .align_y(Alignment::Start)
+                .height(Length::Fill)
         )
         .width(Length::Fill)
         .height(Length::Fill)
