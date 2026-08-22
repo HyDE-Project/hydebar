@@ -2,7 +2,8 @@
 
 use hydebar_core::modules::system_info::{DiskData, SystemInfoData, gigabytes, used_of_total};
 
-use super::super::{Panel, push};
+use super::super::{Figure, Panel, push};
+use crate::app::state::history::Trail;
 
 /// The link: where it lands and what is crossing it.
 pub fn network(data: &SystemInfoData) -> Option<Panel> {
@@ -51,7 +52,7 @@ fn bytes(count: u64) -> String {
 }
 
 /// Memory and swap, each in use against what there is.
-pub fn memory(data: &SystemInfoData) -> Option<Panel> {
+pub fn memory(data: &SystemInfoData, trail: &Trail) -> Option<Panel> {
     let mut rows = vec![
         (
             "in use".to_owned(),
@@ -86,7 +87,18 @@ pub fn memory(data: &SystemInfoData) -> Option<Panel> {
         push(&mut rows, "backend", data.swap_backend.clone());
     }
 
-    Panel::of("memory", rows)
+    if !trail.is_drawable() {
+        return Panel::of("memory", rows);
+    }
+
+    Some(Panel::drawn(
+        "memory",
+        rows,
+        Figure::Trace {
+            readings: trail.seen(),
+            ceiling:  100.0
+        }
+    ))
 }
 
 /// Every filesystem, with what is left on it.

@@ -63,7 +63,14 @@ pub enum Figure {
     /// A picture the desktop already keeps.
     Picture(iced::widget::image::Handle),
     /// The workspaces of a screen, each with the windows standing on it.
-    Overview(Vec<Miniature>)
+    Overview(Vec<Miniature>),
+    /// The last few minutes of one reading, oldest first.
+    Trace {
+        /// The readings themselves.
+        readings: Vec<f32>,
+        /// What the top of the drawing stands for.
+        ceiling:  f32
+    }
 }
 
 /// One block of the canvas: a heading and the lines under it.
@@ -84,7 +91,7 @@ pub struct Panel {
 
 impl Panel {
     /// A panel with rows, or nothing at all when the source reported none.
-    fn of(
+    pub(super) fn of(
         title: impl Into<std::borrow::Cow<'static, str>>,
         rows: Vec<(String, String)>
     ) -> Option<Self> {
@@ -99,7 +106,7 @@ impl Panel {
     ///
     /// A drawing is a reading in its own right: a screen with one window on it
     /// has a miniature worth showing and next to nothing worth spelling out.
-    fn drawn(
+    pub(super) fn drawn(
         title: impl Into<std::borrow::Cow<'static, str>>,
         rows: Vec<(String, String)>,
         figure: Figure

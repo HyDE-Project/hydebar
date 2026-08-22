@@ -19,25 +19,29 @@ impl App {
                 readings::seat(self),
                 readings::system(machine),
                 readings::cooling(machine),
-                readings::processor(machine),
+                readings::processor(machine, &self.history.cpu),
                 readings::graphics(machine),
-                readings::memory(machine),
+                readings::memory(machine, &self.history.ram),
                 readings::storage(machine),
                 readings::network(machine)
             ]
             .into_iter()
             .flatten()
             .collect(),
-            ModuleName::Cpu => readings::processor(machine).into_iter().collect(),
+            ModuleName::Cpu => readings::processor(machine, &self.history.cpu)
+                .into_iter()
+                .collect(),
             ModuleName::CpuTemp => [
-                readings::cpu_temperature(machine),
+                readings::cpu_temperature(machine, &self.history.heat),
                 readings::cooling(machine)
             ]
             .into_iter()
             .flatten()
             .collect(),
             ModuleName::GpuTemp => readings::graphics(machine).into_iter().collect(),
-            ModuleName::Memory => readings::memory(machine).into_iter().collect(),
+            ModuleName::Memory => readings::memory(machine, &self.history.ram)
+                .into_iter()
+                .collect(),
             ModuleName::Battery => readings::battery(self).into_iter().collect(),
             ModuleName::Updates => readings::updates(self).into_iter().collect(),
             ModuleName::Notifications => readings::notifications(self).into_iter().collect(),

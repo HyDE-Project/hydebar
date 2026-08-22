@@ -153,7 +153,8 @@ mod tests {
         let mut data = sample();
         data.memory_swap_total = 0;
 
-        let panel = memory(&data).expect("memory is always reported");
+        let panel = memory(&data, &crate::app::state::history::Trail::default())
+            .expect("memory is always reported");
 
         assert!(!panel.rows.iter().any(|(label, _)| label == "swap"));
     }
@@ -219,7 +220,8 @@ mod tests {
         data.cpu_temperature = None;
         data.cpu_current_mhz = None;
 
-        let panel = processor(&data).expect("the load is always known");
+        let panel = processor(&data, &crate::app::state::history::Trail::default())
+            .expect("the load is always known");
 
         assert_eq!(panel.rows, vec![("load".to_owned(), "42%".to_owned())]);
     }

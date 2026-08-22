@@ -2,10 +2,11 @@
 
 use hydebar_core::modules::system_info::{SystemInfoData, used_of_total};
 
-use super::super::{Panel, push};
+use super::super::{Figure, Panel, push};
+use crate::app::state::history::Trail;
 
 /// The processor: what it is, how hard it is working, how hot and how fast.
-pub fn processor(data: &SystemInfoData) -> Option<Panel> {
+pub fn processor(data: &SystemInfoData, trail: &Trail) -> Option<Panel> {
     let mut rows = vec![("load".to_owned(), format!("{}%", data.cpu_usage))];
     push(&mut rows, "threads", spread(&data.cpu_per_core));
 
@@ -39,7 +40,7 @@ pub fn processor(data: &SystemInfoData) -> Option<Panel> {
         data.cpu_temperature.map(|degrees| format!("{degrees}°C"))
     );
 
-    Panel::of("processor", rows)
+    traced("processor", rows, trail, 100.0)
 }
 
 /// How the load is spread over the threads, in one line.
@@ -64,7 +65,7 @@ fn spread(cores: &[u32]) -> Option<String> {
 }
 
 /// The processor temperature on its own, with the sensor it is read from.
-pub fn cpu_temperature(data: &SystemInfoData) -> Option<Panel> {
+pub fn cpu_temperature(data: &SystemInfoData, trail: &Trail) -> Option<Panel> {
     let mut rows = Vec::new();
 
     push(
@@ -74,7 +75,7 @@ pub fn cpu_temperature(data: &SystemInfoData) -> Option<Panel> {
     );
     push(&mut rows, "sensor", data.cpu_temperature_source.clone());
 
-    Panel::of("cpu temperature", rows)
+    traced("cpu temperature", rows, trail, HOT)
 }
 
 /// The graphics device, on a machine that reports one.
@@ -103,4 +104,35 @@ pub fn graphics(data: &SystemInfoData) -> Option<Panel> {
     );
 
     Panel::of("graphics", rows)
+}
+
+/// What the top of a temperature trace stands for, in degrees.
+///
+/// A processor that reaches it is a processor that is throttling, so the
+/// ceiling is the line the shape is read against rather than a maximum
+/// anything is expected to touch.
+const HOT: f32 = 100.0;
+
+/// A panel with the last few minutes of its own reading drawn above the lines.
+///
+/// A trail of one reading is not a shape, so a block that has only just
+/// started keeping one is drawn as the table it has always been.
+fn traced(
+    title: &'static str,
+    rows: Vec<(String, String)>,
+    trail: &Trail,
+    ceiling: f32
+) -> Option<Panel> {
+    if !trail.is_drawable() {
+        return Panel::of(title, rows);
+    }
+
+    Some(Panel::drawn(
+        title,
+        rows,
+        Figure::Trace {
+            readings: trail.seen(),
+            ceiling
+        }
+    ))
 }

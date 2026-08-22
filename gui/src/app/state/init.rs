@@ -78,6 +78,7 @@ impl App {
             screen_width: None,
             strip_rows: std::collections::HashMap::new(),
             wallpaper_preview: None,
+            history: super::history::History::default(),
             magnification: hydebar_core::components::scale::screen_factor(),
             outputs,
             navigation_mode: false,

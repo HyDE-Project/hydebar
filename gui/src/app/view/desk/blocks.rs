@@ -1,13 +1,15 @@
 //! The drawing of one panel: a heading, a rule and the lines under it.
 //!
-//! Four rooms. Here are the blocks themselves — the three shapes a unit opens
+//! Five rooms. Here are the blocks themselves — the three shapes a unit opens
 //! into; [`room`] is how much of the column a block takes and how it is
 //! written into it, [`parts`] is the pieces every shape is built from, and
-//! [`overview`] draws the one reading that is a shape rather than a table.
+//! [`overview`] and [`trace`] draw the readings that are shapes rather than
+//! tables.
 
 mod overview;
 mod parts;
 mod room;
+mod trace;
 
 use iced::{Alignment, Color, Element};
 
@@ -88,6 +90,9 @@ pub(super) fn panel<'a>(panel: &Panel, side: Side, ink: Ink, bloom: f32) -> Elem
     let drawing = match panel.figure.as_ref() {
         Some(Figure::Picture(_)) => ink.size.mul_add(0.28, room::picture(ink)),
         Some(Figure::Overview(_)) => ink.size.mul_add(0.28, overview::room(ink)),
+        Some(Figure::Trace {
+            ..
+        }) => ink.size.mul_add(0.28, trace::room(ink)),
         None => 0.0
     };
 

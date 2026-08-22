@@ -70,6 +70,11 @@ pub struct App {
     /// What the islands are sent beyond when they fly back onto the strip:
     /// off screen has to be off *this* screen, not a guessed distance.
     pub(crate) screen_width: Option<f32>,
+    /// What the machine has been doing for the last few minutes.
+    ///
+    /// One reading is a number and a run of them is a shape; the canvas draws
+    /// the shape beside the number, and nothing else in the bar keeps one.
+    pub(crate) history: super::history::History,
     /// The wallpaper in force, decoded ready to draw, and where it was read.
     ///
     /// Held rather than read where it is drawn: the canvas is built on every

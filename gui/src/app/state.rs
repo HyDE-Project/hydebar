@@ -2,6 +2,7 @@
 
 mod app;
 mod appearance;
+pub mod history;
 mod init;
 mod message;
 #[cfg(test)]

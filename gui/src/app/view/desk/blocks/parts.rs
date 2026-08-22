@@ -11,7 +11,8 @@ use super::{
         readings::{Figure, Panel}
     },
     Ink, Side,
-    overview::overview
+    overview::overview,
+    trace::trace
 };
 
 /// The lines of a panel, in the ink they are drawn in.
@@ -48,7 +49,11 @@ fn drawn<'a>(figure: &Figure, ink: Ink) -> Element<'a, Message> {
         )
         .clip(true)
         .into(),
-        Figure::Overview(workspaces) => overview(workspaces, ink)
+        Figure::Overview(workspaces) => overview(workspaces, ink),
+        Figure::Trace {
+            readings,
+            ceiling
+        } => trace(readings, *ceiling, ink)
     }
 }
 

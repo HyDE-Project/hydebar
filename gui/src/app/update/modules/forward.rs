@@ -1,6 +1,10 @@
 //! The forwarding table handing each message to the module that owns it.
+//!
+//! Two rooms, by what the message is about: the compositor and the readings
+//! it drives are here, and [`desktop`] takes what the user works the desktop
+//! with — its look, its windows of its own, its bells.
 
-use std::sync::Arc;
+mod desktop;
 
 use hydebar_core::{
     menu::MenuType,
@@ -42,6 +46,8 @@ impl App {
             }
             Message::SystemInfo(message) => {
                 self.system_info.update(message, &self.config.system);
+                self.history.saw(self.system_info.data());
+
                 Task::none()
             }
             Message::KeyboardLayout(message) => {
@@ -128,35 +134,7 @@ impl App {
                 );
                 Task::none()
             }
-            Message::Settings(msg) => {
-                let config = Arc::clone(&self.config);
-
-                self.settings.update(msg, &config).map(Message::Settings)
-            }
-            Message::Themes(msg) => {
-                let config = Arc::clone(&self.config);
-
-                Task::batch([
-                    self.themes.update(msg, &config).map(Message::Themes),
-                    super::super::outputs::read_wallpaper()
-                ])
-            }
-            Message::BarLayout(msg) => self.update_bar_layout(msg),
-            Message::Wallpaper(msg) => Task::batch([
-                self.update_wallpaper(msg),
-                super::super::outputs::read_wallpaper()
-            ]),
-            Message::MediaPlayer(msg) => {
-                self.media_player.update(msg, &self.config.media_player);
-                Task::none()
-            }
-            Message::ExpirePopups => self.expire_popups(),
-            Message::Notifications(msg) => self.update_notifications(msg),
-            Message::Screenshot(msg) => {
-                self.screenshot.update(msg);
-                Task::none()
-            }
-            _ => Task::none()
+            other => self.update_desktop_modules(other)
         }
     }
 }

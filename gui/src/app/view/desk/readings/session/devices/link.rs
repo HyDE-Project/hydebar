@@ -50,6 +50,24 @@ pub fn link(app: &App) -> Option<Panel> {
         ));
     }
 
+    for tunnel in network
+        .active_connections
+        .iter()
+        .filter_map(|connection| match connection {
+            ActiveConnectionInfo::Vpn {
+                name, ..
+            } => Some(name.clone()),
+            ActiveConnectionInfo::WiFi {
+                ..
+            }
+            | ActiveConnectionInfo::Wired {
+                ..
+            } => None
+        })
+    {
+        rows.push(("tunnel".to_owned(), tunnel));
+    }
+
     if network.airplane_mode {
         rows.push(("airplane mode".to_owned(), "on".to_owned()));
     }
