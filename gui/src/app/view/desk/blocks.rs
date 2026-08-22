@@ -102,7 +102,9 @@ pub(in crate::app::view::desk) fn blank_room(ink: Ink) -> f32 {
 fn drawing_room(panel: &Panel, ink: Ink) -> f32 {
     match panel.figure.as_ref() {
         Some(Figure::Picture(_)) => ink.size.mul_add(0.28, room::picture(ink)),
-        Some(Figure::Overview(_)) => ink.size.mul_add(0.28, overview::room(ink)),
+        Some(Figure::Overview {
+            rooms, ..
+        }) => ink.size.mul_add(0.28, overview::room(ink, rooms.len())),
         Some(Figure::Accordion(_)) => ink.size.mul_add(0.28, accordion::room(ink)),
         Some(Figure::Trace {
             ..

@@ -68,7 +68,7 @@ impl Reel {
 /// wallpapers pays for seven pictures, not a hundred, and pays again only when
 /// the wallpaper moves.
 pub(super) fn reel(all: &[(String, PathBuf)], at: usize) -> Reel {
-    let shown = window(all.len(), at)
+    let shown = centred(all.len(), at, REACH)
         .into_iter()
         .filter_map(|index| {
             let (name, path) = all.get(index)?;
@@ -93,19 +93,24 @@ fn decode(path: &Path) -> Option<Handle> {
     crate::modules::wallpaper::current::thumbnail(path, SIDE)
 }
 
-/// Which of `total` pictures the row draws, with `at` in the middle of them.
+/// Which of `total` things a row of `reach` either side draws, with `at` in
+/// the middle of them.
 ///
-/// The row is a ring, so a picture near either end of the list is still drawn
-/// in the middle with neighbours either side — the list has no ends, the same
-/// way the desktop's next and previous keys have none. It never repeats a
-/// picture: a short list is drawn whole, rotated so the one in force stands in
-/// the middle of it.
-fn window(total: usize, at: usize) -> Vec<usize> {
+/// The row is a ring, so a thing near either end of the list is still drawn in
+/// the middle with neighbours either side — the list has no ends, the same way
+/// the desktop's own next and previous keys have none. It never repeats one: a
+/// short list is drawn whole, rotated so the one in force stands in the middle
+/// of it.
+///
+/// Answered here rather than at each drawing so every row of the canvas —
+/// themes, wallpapers, the workspaces of a screen — is centred the same way.
+#[must_use]
+pub fn centred(total: usize, at: usize, reach: usize) -> Vec<usize> {
     if total == 0 || at >= total {
         return Vec::new();
     }
 
-    let shown = (REACH * 2 + 1).min(total);
+    let shown = (reach * 2 + 1).min(total);
     let half = shown / 2;
     let first = (at + total - half) % total;
 
@@ -119,7 +124,7 @@ mod tests {
 
     #[test]
     fn the_one_in_force_stands_in_the_middle_of_a_long_list() {
-        let drawn = window(20, 10);
+        let drawn = centred(20, 10, REACH);
 
         assert_eq!(drawn.len(), REACH * 2 + 1);
         assert_eq!(drawn[REACH], 10);
@@ -128,7 +133,7 @@ mod tests {
     /// The list has no ends: the picture before the first is the last one.
     #[test]
     fn the_row_is_a_ring() {
-        let drawn = window(20, 0);
+        let drawn = centred(20, 0, REACH);
 
         assert_eq!(drawn[REACH], 0);
         assert_eq!(drawn[REACH - 1], 19);
@@ -137,7 +142,7 @@ mod tests {
 
     #[test]
     fn a_short_list_is_drawn_whole_and_never_twice() {
-        let drawn = window(4, 3);
+        let drawn = centred(4, 3, REACH);
         let mut seen = drawn.clone();
         seen.sort_unstable();
         seen.dedup();
@@ -149,12 +154,12 @@ mod tests {
 
     #[test]
     fn a_list_of_one_draws_that_one() {
-        assert_eq!(window(1, 0), vec![0]);
+        assert_eq!(centred(1, 0, REACH), vec![0]);
     }
 
     #[test]
     fn nothing_is_drawn_for_nothing() {
-        assert!(window(0, 0).is_empty());
-        assert!(window(3, 7).is_empty());
+        assert!(centred(0, 0, REACH).is_empty());
+        assert!(centred(3, 7, REACH).is_empty());
     }
 }

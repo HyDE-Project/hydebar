@@ -50,7 +50,10 @@ fn drawn<'a>(figure: &Figure, ink: Ink) -> Element<'a, Message> {
         )
         .clip(true)
         .into(),
-        Figure::Overview(workspaces) => overview(workspaces, ink),
+        Figure::Overview {
+            rooms,
+            ground
+        } => overview(rooms, ground.as_ref(), ink),
         Figure::Accordion(reel) => accordion(reel, ink),
         Figure::Trace {
             readings,

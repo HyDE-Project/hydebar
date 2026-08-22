@@ -17,7 +17,7 @@ mod reel;
 mod themes;
 mod wallpapers;
 
-pub use reel::{REACH, Reel, Slide};
+pub use reel::{REACH, Reel, Slide, centred};
 
 /// Everything the canvas shows of how the desktop looks.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]

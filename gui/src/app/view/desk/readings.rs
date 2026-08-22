@@ -63,7 +63,18 @@ pub enum Figure {
     /// A picture the desktop already keeps.
     Picture(iced::widget::image::Handle),
     /// The workspaces of a screen, each with the windows standing on it.
-    Overview(Vec<Miniature>),
+    Overview {
+        /// The workspaces themselves, in the compositor's own order.
+        rooms:  Vec<Miniature>,
+        /// The wallpaper they stand on, when the bar has read it.
+        ///
+        /// A room is what is in it and what it stands on: window shapes over
+        /// bare colour say how the workspace is laid out, and the same shapes
+        /// over the wallpaper say which desktop it is laid out on — which is
+        /// what makes it a preview of the workspace rather than a diagram of
+        /// it.
+        ground: Option<iced::widget::image::Handle>
+    },
     /// A row of pictures with the one in force big in the middle of it.
     Accordion(hydebar_core::modules::desk::looks::Reel),
     /// The last few minutes of one reading, oldest first.

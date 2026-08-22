@@ -29,7 +29,13 @@ pub fn workspaces(app: &App) -> Option<Panel> {
     Some(Panel::drawn(
         "workspaces",
         rows,
-        Figure::Overview(miniatures(app))
+        Figure::Overview {
+            rooms:  miniatures(app),
+            ground: app
+                .wallpaper_preview
+                .as_ref()
+                .map(|(_, picture)| picture.clone())
+        }
     ))
 }
 
