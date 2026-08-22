@@ -70,13 +70,11 @@ pub const NOTIFICATIONS_WIDTH: u32 = 520;
 ///
 /// The empty region is stated *after* creation because the settings carry no
 /// region of their own.
-
 fn draw_only<Message: 'static>(id: Id) -> Task<Message> {
     set_input_region(id, Some(Vec::new()))
 }
 
-/// Maps the configured bar layer onto the compositor layer it is created on.
-
+/// The surfaces one screen was given, and the task that creates them.
 pub struct LayerSurfaceCreation<Message> {
     pub(crate) main_id:          Id,
     pub(crate) menu_id:          Id,
@@ -86,13 +84,11 @@ pub struct LayerSurfaceCreation<Message> {
     pub(crate) task:             Task<Message>
 }
 
-/// Returns the height the bar layer-surface is created with, in physical
-/// pixels.
+/// Creates every surface an output is drawn on.
 ///
-/// `configured_height` is the height named by the configuration; left unset the
-/// built-in [`HEIGHT`] is used instead. Either way the solid and gradient
-/// styles trim the island margin and the result is scaled by `scale_factor`.
-
+/// The blur is asked for first: the compositor reads its layer rules when a
+/// surface is mapped, so a rule stated afterwards would only reach the surface
+/// the next time the bar is started.
 pub fn create_layer_surfaces<Message: 'static>(
     style: AppearanceStyle,
     output: Option<OutputId>,

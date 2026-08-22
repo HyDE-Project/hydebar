@@ -1,4 +1,20 @@
 //! The roster of modules wired to the event bus on every reload.
+//!
+//! Registration is what starts pollers, D-Bus listeners and scheduled
+//! commands, and none of them has a reader unless the module is rendered
+//! somewhere. Gating on placement is what keeps an idle bar idle: a session
+//! showing only a clock and workspaces pays for a clock and workspaces rather
+//! than for every module the binary happens to ship.
+//!
+//! The roster is one list, read in three parts by what a module is: [`desk`]
+//! is what the user does with the session, [`readings`] is what the bar keeps
+//! telling them, and [`services`] is what listens to the machine. The custom
+//! modules are a roster of their own, read from the configuration rather than
+//! written down here, so they are gated at the end.
+
+mod desk;
+mod readings;
+mod services;
 
 use hydebar_core::modules;
 use hydebar_proto::config::ModuleName;
@@ -6,153 +22,33 @@ use log::error;
 
 use super::{
     super::super::state::{App, Message},
-    gate::{CONTROL_CENTER_CONSUMERS, SYSTEM_INFO_CONSUMERS, gate, notifications_hosted}
+    gate::gate
 };
 
 impl App {
     /// Registers the background work of every module the layout draws, and
     /// releases it for every module it does not.
     ///
-    /// Registration is what starts pollers, D-Bus listeners and scheduled
-    /// commands, and none of them has a reader unless the module is rendered
-    /// somewhere. Gating on placement is what keeps an idle bar idle: a session
-    /// showing only a clock and workspaces pays for a clock and workspaces
-    /// rather than for every module the binary happens to ship.
-    ///
     /// Called again after every configuration reload, so a module added to or
     /// removed from the layout starts and stops with it.
-    #[expect(
-        clippy::too_many_lines,
-        reason = "one gate call per module, read as a single registration roster"
-    )]
     pub(crate) fn register_modules(&mut self) {
+        self.register_desk_modules();
+        self.register_readings();
+        self.register_services();
+        self.register_custom_modules();
+
+        self.place_pollable_modules();
+    }
+
+    /// Gates the modules the configuration declares by hand.
+    ///
+    /// A definition without runtime state is a bug in the loading, not in the
+    /// layout, so it is logged rather than gated; one whose definition is gone
+    /// is released whatever the layout says.
+    fn register_custom_modules(&mut self) {
         let ctx = &self.module_context;
-
         let layout = &self.config.modules;
-        let hosts = |name: ModuleName| layout.hosts(&name);
 
-        gate(
-            "app-launcher",
-            hosts(ModuleName::AppLauncher),
-            &mut self.app_launcher,
-            ctx,
-            ()
-        );
-        gate(
-            "clipboard",
-            hosts(ModuleName::Clipboard),
-            &mut self.clipboard,
-            ctx,
-            ()
-        );
-        gate(
-            "hyde-menu",
-            hosts(ModuleName::HydeMenu),
-            &mut self.hyde_menu,
-            ctx,
-            ()
-        );
-        gate(
-            "clock",
-            hosts(ModuleName::Clock),
-            &mut self.clock,
-            ctx,
-            &self.config.clock
-        );
-        gate(
-            "weather",
-            hosts(ModuleName::Weather)
-                || (hosts(ModuleName::Clock) && self.config.clock.show_weather),
-            &mut self.weather,
-            ctx,
-            &self.config.weather
-        );
-        gate(
-            "updates",
-            hosts(ModuleName::Updates),
-            &mut self.updates,
-            ctx,
-            self.config.updates.as_ref()
-        );
-        gate(
-            "workspaces",
-            hosts(ModuleName::Workspaces),
-            &mut self.workspaces,
-            ctx,
-            &self.config.workspaces
-        );
-        gate(
-            "window-title",
-            hosts(ModuleName::WindowTitle),
-            &mut self.window_title,
-            ctx,
-            ()
-        );
-        gate(
-            "system-info",
-            layout.hosts_any(&SYSTEM_INFO_CONSUMERS),
-            &mut self.system_info,
-            ctx,
-            (&self.config.system, layout.hosts(&ModuleName::SystemInfo))
-        );
-        gate(
-            "keyboard-layout",
-            hosts(ModuleName::KeyboardLayout),
-            &mut self.keyboard_layout,
-            ctx,
-            ()
-        );
-        gate(
-            "keyboard-submap",
-            hosts(ModuleName::KeyboardSubmap),
-            &mut self.keyboard_submap,
-            ctx,
-            ()
-        );
-        gate("tray", hosts(ModuleName::Tray), &mut self.tray, ctx, ());
-        gate(
-            "taskbar",
-            hosts(ModuleName::Taskbar),
-            &mut self.taskbar,
-            ctx,
-            ()
-        );
-        gate("desk", self.config.desk.enabled, &mut self.desk, ctx, ());
-        gate(
-            "privacy",
-            hosts(ModuleName::Privacy),
-            &mut self.privacy,
-            ctx,
-            ()
-        );
-        gate(
-            "hardware-services",
-            layout.hosts_any(&CONTROL_CENTER_CONSUMERS),
-            &mut self.control_center,
-            ctx,
-            ()
-        );
-        gate(
-            "media-player",
-            hosts(ModuleName::MediaPlayer),
-            &mut self.media_player,
-            ctx,
-            ()
-        );
-        gate(
-            "notifications",
-            notifications_hosted(&self.config),
-            &mut self.notifications,
-            ctx,
-            ()
-        );
-        gate(
-            "screenshot",
-            hosts(ModuleName::Screenshot),
-            &mut self.screenshot,
-            ctx,
-            ()
-        );
         for definition in &self.config.custom_modules {
             let placed = layout.hosts(&ModuleName::Custom(definition.name.clone()));
 
@@ -175,7 +71,5 @@ impl App {
                 modules::Module::<Message>::deregister(module);
             }
         }
-
-        self.place_pollable_modules();
     }
 }

@@ -17,7 +17,7 @@ use iced::{Element, SurfaceId as Id};
 use super::super::state::{App, Message};
 
 /// What one menu window shows: its content, its width and its measured height.
-pub(crate) type Page<'a> = (Element<'a, Message>, MenuSize, Option<f32>);
+pub type Page<'a> = (Element<'a, Message>, MenuSize, Option<f32>);
 
 impl App {
     /// Content, width and measured height of the window `menu_type` opens.

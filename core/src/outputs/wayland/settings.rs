@@ -11,6 +11,7 @@ use crate::{
     config::{AppearanceStyle, BarLayer, Position}
 };
 
+/// Maps the configured bar layer onto the compositor layer it is created on.
 const fn surface_layer(layer: BarLayer) -> Layer {
     match layer {
         BarLayer::Background => Layer::Background,
@@ -155,12 +156,6 @@ pub fn notifications_settings(output: Option<OutputId>, position: Position) -> L
         ..Default::default()
     }
 }
-
-/// Creates every surface an output is drawn on.
-///
-/// The blur is asked for first: the compositor reads its layer rules when a
-/// surface is mapped, so a rule stated afterwards would only reach the surface
-/// the next time the bar is started.
 
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
