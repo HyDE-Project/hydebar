@@ -34,7 +34,7 @@ const MENU_NAMESPACE: &str = "hydebar-menu-layer";
 /// covers the whole wallpaper for as long as the screen is bare, and a blur
 /// rule written for the menu backdrop must not fire because a workspace was
 /// cleared.
-const DESK_NAMESPACE: &str = "hydebar-desk-layer";
+pub const DESK_NAMESPACE: &str = "hydebar-desk-layer";
 
 /// Namespace of the surface the notification popups are drawn on.
 ///
@@ -174,10 +174,14 @@ pub fn tooltip_settings(output: Option<OutputId>) -> LayerShellSettings {
 
 /// Settings of the surface the desk is drawn on.
 ///
-/// Created input-free through [`draw_only`] and left on the background layer
-/// for its whole life: the desk is a drawing on the wallpaper, below every
-/// window, and it must neither rise over one nor take a press meant for the
-/// desktop underneath it.
+/// Created input-free through [`draw_only`], on the same level as the strip
+/// it unfolds out of. The two are one thing in two shapes, and a compositor
+/// blurs a layer surface by blurring whatever it finds behind it: a canvas
+/// laid below the strip had every module blurred and dimmed for the frames it
+/// spent crossing the strip's own band, so a block set off sharp, went to mush
+/// on the way out of the bar and came back sharp underneath it. Sharing the
+/// strip's level, and ordered to be drawn after it, is what leaves a departing
+/// block in front of the background it is leaving rather than behind it.
 ///
 /// Its exclusive zone is stated as -1, which asks the compositor to lay the
 /// surface out over the whole screen rather than over what the bar's own
@@ -185,11 +189,11 @@ pub fn tooltip_settings(output: Option<OutputId>) -> LayerShellSettings {
 /// modules leave the strip by travelling out of it, and a canvas that began
 /// below the strip would have them jump the height of the bar before they
 /// started moving.
-pub fn desk_settings(output: Option<OutputId>) -> LayerShellSettings {
+pub fn desk_settings(output: Option<OutputId>, layer: BarLayer) -> LayerShellSettings {
     LayerShellSettings {
         namespace: DESK_NAMESPACE.to_string(),
         size: Some((0, 0)),
-        layer: Layer::Background,
+        layer: surface_layer(layer),
         keyboard_interactivity: KeyboardInteractivity::None,
         output,
         anchor: Anchor::TOP | Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT,
@@ -248,7 +252,7 @@ pub fn create_layer_surfaces<Message: 'static>(
     ));
     let (menu_id, menu_task) = new_layer_surface(menu_settings(output));
     let (tooltip_id, tooltip_task) = new_layer_surface(tooltip_settings(output));
-    let (desk_id, desk_task) = new_layer_surface(desk_settings(output));
+    let (desk_id, desk_task) = new_layer_surface(desk_settings(output, layer));
     let (notifications_id, notifications_task) =
         new_layer_surface(notifications_settings(output, position));
 
@@ -321,7 +325,7 @@ mod tests {
         // whole desktop the moment a menu covers it
         assert_eq!(menu_settings(None).namespace, MENU_NAMESPACE);
         assert_eq!(tooltip_settings(None).namespace, TOOLTIP_NAMESPACE);
-        assert_eq!(desk_settings(None).namespace, DESK_NAMESPACE);
+        assert_eq!(desk_settings(None, BarLayer::Top).namespace, DESK_NAMESPACE);
         assert_eq!(
             notifications_settings(None, Position::Top).namespace,
             NOTIFICATIONS_NAMESPACE
@@ -329,14 +333,17 @@ mod tests {
     }
 
     #[test]
-    fn the_desk_stays_on_the_wallpaper_and_covers_the_whole_screen() {
+    fn the_desk_shares_the_strips_level_and_covers_the_whole_screen() {
         // a canvas laid out below the strip would make every module jump the
-        // height of the bar before it started travelling, and one above the
-        // wallpaper layer would cover the windows
-        let settings = desk_settings(None);
+        // height of the bar before it started travelling, and one on a level
+        // under the strip would have the strip's own blur eat every module
+        // crossing its band
+        for layer in [BarLayer::Background, BarLayer::Bottom, BarLayer::Top] {
+            let settings = desk_settings(None, layer);
 
-        assert!(matches!(settings.layer, Layer::Background));
-        assert_eq!(settings.exclusive_zone, -1);
+            assert_eq!(settings.layer, surface_layer(layer));
+            assert_eq!(settings.exclusive_zone, -1);
+        }
     }
 
     #[test]

@@ -24,7 +24,7 @@ use std::sync::atomic::{AtomicU8, Ordering};
 
 use hydebar_proto::compositor_ipc;
 
-use super::wayland::MAIN_NAMESPACE;
+use super::wayland::{DESK_NAMESPACE, MAIN_NAMESPACE};
 
 /// Marker for a session whose accepted spelling is not yet known.
 const SPELLING_UNKNOWN: u8 = u8::MAX;
@@ -89,6 +89,35 @@ fn rules(namespace: &str) -> [Rule; 2] {
             positional: format!("ignore_alpha {IGNORED_ALPHA:.1}, {matched}")
         }
     ]
+}
+
+/// Where the canvas is drawn in the pile of surfaces on the strip's level.
+///
+/// The compositor sorts one level by this and draws the highest first, so the
+/// lowest is the one left in front. Below every other surface of the level,
+/// which is where the canvas belongs: it is the shape the strip takes, and a
+/// canvas drawn before the strip is a canvas the strip's own blur reaches — a
+/// module crossing the bar's band went to mush for the frames it spent there
+/// and came back sharp below it, which reads as the bar changing layers
+/// mid-flight.
+const CANVAS_ORDER: i32 = -1;
+
+/// The rule that leaves the canvas in front of the strip it unfolds out of.
+///
+/// Stated whatever the desktop does about blur: the order is what keeps the
+/// two shapes of the bar in the right relation, and only the reason for it is
+/// about blur.
+fn stacking(namespace: &str) -> Rule {
+    let matched = format!("^({namespace})$");
+
+    Rule {
+        lua:        format!(
+            "hl.layer_rule({{ name = \"hydebar_canvas_order\", match = {{ namespace = \
+             \"{matched}\" }}, order = {CANVAS_ORDER} }})"
+        ),
+        keyword:    format!("order {CANVAS_ORDER}, match:namespace {matched}"),
+        positional: format!("order {CANVAS_ORDER}, {matched}")
+    }
 }
 
 /// Reads whether the compositor took a rule.
@@ -169,6 +198,8 @@ pub fn request() {
         return;
     }
 
+    state(&stacking(DESK_NAMESPACE));
+
     if hydebar_proto::compositor_look::CompositorLook::read().blur == Some(false) {
         return;
     }
@@ -182,6 +213,19 @@ pub fn request() {
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_canvas_asks_to_be_drawn_in_front_of_the_strip() {
+        let order = stacking("hydebar-desk-layer");
+
+        assert_eq!(
+            order.keyword,
+            "order -1, match:namespace ^(hydebar-desk-layer)$"
+        );
+        assert_eq!(order.positional, "order -1, ^(hydebar-desk-layer)$");
+        assert!(order.lua.contains("order = -1"));
+        assert!(order.lua.contains("hydebar-desk-layer"));
+    }
 
     #[test]
     fn the_bar_asks_for_blur_and_for_its_clear_background_to_be_left_alone() {
