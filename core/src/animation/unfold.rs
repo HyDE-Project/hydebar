@@ -6,11 +6,12 @@
 //! the bar stalling, and it is slower into the bargain — the whole unfolding
 //! then takes as long as the queue rather than as long as one flight.
 //!
-//! What a block does with the clock it does the moment it can. It drops to
-//! its own level and writes itself out from the instant it is on it, while
-//! the last of its journey — the move along its own lane — still runs under
-//! it. And the near blocks are on their level first: the way is shorter and
-//! the speed is the same, so the top of a column has finished opening while
+//! What a block does with the clock it does the moment it can. It falls out
+//! of the row it shared, closes in along its own lane while it is still
+//! falling, and comes straight down into its place; it writes itself out from
+//! the instant it is there. And the near blocks are on their level first: the
+//! way is shorter and the speed is the same, so the top of a column has
+//! finished opening while
 //! the bottom of it is still coming down. Both acts leave quickly and settle
 //! slowly, which is what everything arriving somewhere does.
 

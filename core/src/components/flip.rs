@@ -137,38 +137,65 @@ mod tests {
     }
 
     #[test]
-    fn a_descending_block_keeps_to_its_line_until_it_has_dropped() {
+    fn a_descending_block_finishes_its_journey_coming_straight_down() {
         let memo = RefCell::new(FlipMemo::default());
         memo.borrow_mut().record(1, 100.0);
         memo.borrow_mut().depart();
 
-        let mut sideways = Vec::new();
-
-        for step in 0..=100 {
-            #[expect(clippy::cast_precision_loss, reason = "a fixed sample count")]
-            let progress = step as f32 / 100.0;
-
+        let offset = |progress: f32| {
             let anchor: FlipAnchor<'_, Msg> =
                 FlipAnchor::new(1, progress, &memo, text::<Theme, iced::Renderer>("Block"))
                     .departing_from(10.0)
                     .descending_first();
 
-            let offset = anchor.offset(Point::new(20.0, 210.0));
+            anchor.offset(Point::new(20.0, 210.0))
+        };
 
-            if offset.y.abs() > 0.5 {
-                assert_eq!(
-                    offset.x, 80.0,
-                    "it is still dropping at {progress:.2}, so it has not moved along"
-                );
+        let mut moved_along = None;
+        let mut settled_along = 0.0_f32;
+        let mut before = offset(0.0);
+
+        for step in 1..=200 {
+            #[expect(clippy::cast_precision_loss, reason = "a fixed sample count")]
+            let progress = step as f32 / 200.0;
+            let now = offset(progress);
+
+            if (now.x - before.x).abs() > 0.001 {
+                moved_along.get_or_insert(progress);
+                settled_along = progress;
             }
 
-            sideways.push(offset.x);
+            before = now;
         }
 
+        let set_off = moved_along.expect("it closes in along its lane");
+
         assert!(
-            sideways.last().is_some_and(|last| *last == 0.0),
-            "it closes in once it is down"
+            offset(set_off).y.abs() < offset(0.0).y.abs() * 0.75,
+            "it falls out of the row it shared before it moves sideways at all"
         );
+        assert!(
+            offset(settled_along).y.abs() > 1.0,
+            "the sideways move is over while it is still on its way down"
+        );
+        assert_eq!(
+            offset(1.0),
+            Vector::ZERO,
+            "and the whole journey ends where the block sits"
+        );
+
+        for step in 0..=200 {
+            #[expect(clippy::cast_precision_loss, reason = "a fixed sample count")]
+            let progress = step as f32 / 200.0;
+
+            if progress > settled_along {
+                assert_eq!(
+                    offset(progress).x,
+                    0.0,
+                    "nothing moves along after the closing is over, at {progress:.3}"
+                );
+            }
+        }
     }
 
     #[test]

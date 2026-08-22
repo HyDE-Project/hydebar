@@ -4,12 +4,31 @@ use std::cell::RefCell;
 
 use super::memo::FlipMemo;
 
-/// The share of a descending journey spent falling before it closes in.
+/// The share of a descending journey spent falling.
 ///
-/// A block is on its own level once this much of its journey is done, and
-/// what is left is the move along. Stated for the whole crate because what a
-/// block does on arriving at its level — open — is timed off it.
-pub const DESCENT: f32 = 0.6;
+/// A block is on its own level once this much of its journey is done. Stated
+/// for the whole crate because what a block does on arriving at its level —
+/// open — is timed off it.
+pub const DESCENT: f32 = 0.8;
+
+/// When the move along the lane begins, as a share of the journey.
+///
+/// Not at the very start: every block of a column leaves the same row, so for
+/// the first instant they are all at one height and only their own widths
+/// keep them apart. The fall puts a level between them first — by this much
+/// of the journey the nearest pair is further apart than either is tall — and
+/// only then does anything move sideways.
+const CLOSING_FROM: f32 = 0.22;
+
+/// When the move along the lane is over, as a share of the journey.
+///
+/// Well before the fall is, and that is the whole point of the figure. A
+/// block that closed in after it had landed spent the last and most read
+/// stretch of its journey travelling sideways, and the bar came in from the
+/// edges of the screen instead of coming down off the strip. Ending the
+/// sideways move early leaves the descent as the last thing the eye follows,
+/// which is the one thing this journey is meant to say.
+const CLOSING_TO: f32 = 0.5;
 
 /// Wraps one block so it journeys between its recorded seats.
 pub struct FlipAnchor<'a, Message, Theme = iced::Theme, Renderer = iced::Renderer>
@@ -19,12 +38,13 @@ where
     pub(super) key:            u64,
     /// How far the journey has travelled, one meaning at rest.
     pub(super) progress:       f32,
-    /// Whether the journey drops to its level before it moves along.
+    /// Whether the journey closes in along its lane before it has landed.
     ///
     /// A block leaving the strip for a lane beside it would otherwise cut the
-    /// corner and cross whatever stands between. Falling first and closing in
-    /// afterwards keeps it in the lane it left and the lane it is going to,
-    /// and in nothing else.
+    /// corner and cross whatever stands between. It falls out of the row it
+    /// shared with its neighbours first, closes in along its lane while the
+    /// fall is still on, and finishes the journey coming straight down into
+    /// its place.
     pub(super) descends_first: bool,
     /// The height the journey departs from, when it starts on another row.
     ///
@@ -69,7 +89,7 @@ where
         self
     }
 
-    /// Has the journey drop to its level first and close in afterwards.
+    /// Has the journey close in along its lane early and land straight down.
     #[must_use]
     pub const fn descending_first(mut self) -> Self {
         self.descends_first = true;
@@ -85,7 +105,7 @@ where
         let (fallen, closed) = if self.descends_first {
             (
                 (self.progress / DESCENT).clamp(0.0, 1.0),
-                ((self.progress - DESCENT) / (1.0 - DESCENT)).clamp(0.0, 1.0)
+                ((self.progress - CLOSING_FROM) / (CLOSING_TO - CLOSING_FROM)).clamp(0.0, 1.0)
             )
         } else {
             (self.progress, self.progress)
