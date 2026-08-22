@@ -173,8 +173,17 @@ mod tests {
     }
 
     #[test]
-    fn a_miniature_is_as_tall_as_the_room_it_asks_for() {
-        assert_eq!(room(ink()), 14.0 * HEIGHT);
+    fn the_room_holds_the_miniature_and_the_name_under_it() {
+        let asked = room(ink());
+
+        assert!(
+            asked > 14.0 * HEIGHT,
+            "the name stands under the miniature, not on it"
+        );
+        assert!(
+            asked < 14.0 * (HEIGHT + CAPTION + 1.0),
+            "and it is one line, not a block of its own: {asked}"
+        );
     }
 
     #[test]
