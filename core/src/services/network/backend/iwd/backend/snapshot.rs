@@ -72,13 +72,15 @@ pub(super) async fn initialize_data(iwd: &IwdDbus<'_>) -> AppResult<NetworkData>
 
 /// Lists the known (provisioned) SSIDs.
 ///
-/// The device state and the working flag are placeholders — iwd does not
-/// expose them on known networks yet.
+/// Each entry carries the state of the station that can reach it, so a
+/// provisioned network the machine is currently on is drawn as connected
+/// rather than as one more entry in the list.
 ///
 /// # Errors
 ///
 /// Returns an error when a network's name, device, or type cannot be read.
 pub(super) async fn known_connections(iwd: &IwdDbus<'_>) -> AppResult<Vec<KnownConnection>> {
+    let states = iwd.station_states().await?;
     let nets = iwd.reachable_networks().await?;
     let mut networks = Vec::new();
     for (n, s) in nets {
@@ -95,18 +97,22 @@ pub(super) async fn known_connections(iwd: &IwdDbus<'_>) -> AppResult<Vec<KnownC
             .await
             .map_err(|e| AppError::internal(format!("Failed to get network device: {e}")))?
             .clone();
+        let state = states
+            .get(&device_path)
+            .copied()
+            .unwrap_or(DeviceState::Unknown);
+
         networks.push(KnownConnection::AccessPoint(AccessPoint {
             ssid,
             path,
             device_path,
             strength: queries::strength_from_rssi(s),
-            state: DeviceState::Unknown,
+            state,
             public: n
                 .type_()
                 .await
                 .map_err(|e| AppError::internal(format!("Failed to get network type: {e}")))?
-                == "open",
-            working: false
+                == "open"
         }));
     }
     Ok(networks)

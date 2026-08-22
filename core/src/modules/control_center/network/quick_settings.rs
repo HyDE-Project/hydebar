@@ -154,7 +154,6 @@ mod tests {
             strength,
             state: DeviceState::Activated,
             public: true,
-            working: false,
             path: path("/ap"),
             device_path: path("/device")
         }

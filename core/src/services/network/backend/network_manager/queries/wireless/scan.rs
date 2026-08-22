@@ -99,7 +99,6 @@ async fn read_access_point(
         strength,
         state,
         public: ap.flags().await.unwrap_or_default() == 0,
-        working: false,
         path: ap.inner().path().clone().into(),
         device_path: device.inner().path().clone().into()
     })

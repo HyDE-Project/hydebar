@@ -1,8 +1,13 @@
 //! Read only queries against the iwd daemon.
 
-use masterror::{AppError, AppResult};
+use std::collections::HashMap;
 
-use super::{IwdDbus, device::DeviceProxy, network::NetworkProxy};
+use masterror::{AppError, AppResult};
+use zbus::zvariant::OwnedObjectPath;
+
+use super::{
+    IwdDbus, device::DeviceProxy, network::NetworkProxy, station_state::state_from_station
+};
 use crate::services::network::{AccessPoint, ActiveConnectionInfo, DeviceState};
 
 /// Turns the raw RSSI iwd reports into the percentage the bar renders.
@@ -129,6 +134,7 @@ impl IwdDbus<'_> {
     pub async fn wireless_access_points(&self) -> AppResult<Vec<AccessPoint>> {
         let mut aps = Vec::new();
         {
+            let states = self.station_states().await?;
             let nets = self.reachable_networks().await?;
             for (net, s) in nets {
                 let ssid = net
@@ -145,12 +151,16 @@ impl IwdDbus<'_> {
                     .await
                     .map_err(|e| AppError::internal(format!("Failed to get network device: {e}")))?
                     .clone();
+                let state = states
+                    .get(&device_path)
+                    .copied()
+                    .unwrap_or(DeviceState::Unknown);
+
                 aps.push(AccessPoint {
                     ssid,
-                    state: DeviceState::Unknown, // TODO:
+                    state,
                     strength: strength_from_rssi(s),
                     public,
-                    working: false, // TODO:
                     path,
                     device_path
                 });
@@ -158,6 +168,35 @@ impl IwdDbus<'_> {
         }
         aps.sort_by_key(|ap| std::cmp::Reverse(ap.strength));
         Ok(aps)
+    }
+
+    /// Maps every station object onto the state iwd reports for it.
+    ///
+    /// A station and the device it belongs to are two interfaces on one object,
+    /// so the station's path is the `Device` property an access point carries
+    /// and the state lands on every network the station can reach — the same
+    /// rule the `NetworkManager` backend follows for the devices it scans.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the stations cannot be listed or one refuses to
+    /// report its state.
+    pub(super) async fn station_states(&self) -> AppResult<HashMap<OwnedObjectPath, DeviceState>> {
+        let mut states = HashMap::new();
+
+        for station in self.stations().await? {
+            let state = station
+                .state()
+                .await
+                .map_err(|e| AppError::internal(format!("Failed to get station state: {e}")))?;
+
+            states.insert(
+                station.inner().path().clone().into(),
+                state_from_station(&state)
+            );
+        }
+
+        Ok(states)
     }
 
     /// Return true if any wireless device is powered.

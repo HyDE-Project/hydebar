@@ -5,6 +5,7 @@ mod backend;
 mod events;
 mod proxies;
 mod queries;
+mod station_state;
 
 #[cfg(test)]
 mod tests;

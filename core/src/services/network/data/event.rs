@@ -60,7 +60,6 @@ pub enum NetworkEvent {
 ///     strength:    0,
 ///     state:       DeviceState::Unknown,
 ///     public:      true,
-///     working:     false,
 ///     path:        OwnedObjectPath::try_from("/").unwrap(),
 ///     device_path: OwnedObjectPath::try_from("/").unwrap()
 /// };

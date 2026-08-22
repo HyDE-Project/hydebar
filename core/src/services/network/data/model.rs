@@ -80,7 +80,6 @@ pub struct NetworkData {
 ///     strength:    42,
 ///     state:       DeviceState::Activated,
 ///     public:      true,
-///     working:     true,
 ///     path:        OwnedObjectPath::try_from("/").unwrap(),
 ///     device_path: OwnedObjectPath::try_from("/").unwrap()
 /// };
@@ -92,7 +91,6 @@ pub struct AccessPoint {
     pub strength:    u8,
     pub state:       DeviceState,
     pub public:      bool,
-    pub working:     bool,
     pub path:        OwnedObjectPath,
     pub device_path: OwnedObjectPath
 }
@@ -132,7 +130,6 @@ pub struct Vpn {
 ///     strength:    0,
 ///     state:       DeviceState::Unknown,
 ///     public:      true,
-///     working:     false,
 ///     path:        OwnedObjectPath::try_from("/").unwrap(),
 ///     device_path: OwnedObjectPath::try_from("/").unwrap()
 /// };
