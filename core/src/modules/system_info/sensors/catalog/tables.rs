@@ -98,8 +98,6 @@ pub const CORE_INPUT_RANK: u8 = 100;
 /// temperature.
 pub const UNNAMED_INPUT_RANK: u8 = 200;
 
-/// Folds a driver-supplied name into the spelling the tables carry.
-
 /// Rank of a chip as a stand-in for the processor, lower being better.
 #[must_use]
 #[expect(

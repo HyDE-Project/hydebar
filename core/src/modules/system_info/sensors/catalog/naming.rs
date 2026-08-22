@@ -1,5 +1,6 @@
 //! Folding the spellings the kernel uses for one thing into one.
 
+/// Folds a driver-supplied name into the spelling the tables carry.
 ///
 /// Kernels differ in case, in whether they separate words with a space,
 /// a dash or an underscore, and in the numeric suffix they
