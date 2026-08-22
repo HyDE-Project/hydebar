@@ -1858,7 +1858,6 @@ dependencies = [
  "iced_layershell",
  "libc",
  "log",
- "masterror",
  "serde_json",
  "tokio",
 ]
@@ -1888,12 +1887,10 @@ dependencies = [
  "masterror",
  "pipewire",
  "quick-xml",
- "regex",
  "reqwest",
  "resvg 0.48.1",
  "serde",
  "serde_json",
- "serde_with",
  "shellexpand",
  "signal-hook-registry",
  "sysinfo",
@@ -1923,7 +1920,6 @@ dependencies = [
  "iced_test",
  "log",
  "tokio",
- "wayland-client",
 ]
 
 [[package]]
@@ -1933,7 +1929,6 @@ dependencies = [
  "hex_color",
  "iced_layershell",
  "log",
- "masterror",
  "regex",
  "serde",
  "serde_json",

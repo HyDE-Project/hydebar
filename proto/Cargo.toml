@@ -8,7 +8,6 @@ rust-version.workspace = true
 log.workspace = true
 hex_color.workspace = true
 iced.workspace = true
-masterror.workspace = true
 regex.workspace = true
 serde.workspace = true
 serde_json.workspace = true

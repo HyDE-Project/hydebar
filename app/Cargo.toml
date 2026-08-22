@@ -14,7 +14,6 @@ hydebar-proto = { path = "../proto" }
 iced.workspace = true
 libc.workspace = true
 log.workspace = true
-masterror.workspace = true
 tokio.workspace = true
 
 [lints]
