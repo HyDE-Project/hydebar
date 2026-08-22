@@ -518,7 +518,16 @@ mod tests {
 
     #[test]
     fn a_block_opens_from_the_top_rather_than_a_line_at_a_time() {
-        let mut app = test_app_with(|config| config.desk.enabled = true);
+        // one module in the layout, so what is asserted is the block opening
+        // rather than how much of a full column a test surface has room for
+        let mut app = test_app_with(|config| {
+            config.desk.enabled = true;
+            config.modules.left = vec![hydebar_proto::config::ModuleDef::Single(
+                hydebar_core::config::ModuleName::Memory
+            )];
+            config.modules.center = Vec::new();
+            config.modules.right = Vec::new();
+        });
         set_off(&mut app);
 
         let shown = |app: &App| {
