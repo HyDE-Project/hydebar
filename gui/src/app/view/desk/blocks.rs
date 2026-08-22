@@ -206,7 +206,7 @@ pub(super) fn month(grid: Element<'_, Message>, ink: Ink, bloom: f32) -> Element
 /// with the grid's own padding around them — measured off the grid itself at
 /// the body size and left a little over, because a figure short of the truth
 /// does not merely open early, it clips the last week off for good.
-const MONTH_ROWS: f32 = 17.0;
+const MONTH_ROWS: f32 = 22.0;
 
 /// One blank where a reading will stand, `width` wide.
 fn bar<'a>(width: f32, ink: Ink) -> Element<'a, Message> {
