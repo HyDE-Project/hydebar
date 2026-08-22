@@ -34,18 +34,24 @@ impl Battery {
         }
     }
 
-    pub async fn percentage(&self) -> f64 {
+    /// The charge across every cell that answered, averaged.
+    ///
+    /// [`None`] when not one of them did. A machine whose cells all failed to
+    /// answer is not a machine on an empty battery, and averaging nothing over
+    /// nothing said exactly that — a flat zero, which the bar drew as a
+    /// critical charge and a warning nobody could act on.
+    pub async fn percentage(&self) -> Option<f64> {
         let mut percentage = 0.0;
-        let mut count = 0;
+        let mut count = 0_u32;
 
         for device in &self.0 {
-            if let Ok(p) = device.percentage().await {
-                percentage += p;
+            if let Ok(share) = device.percentage().await {
+                percentage += share;
                 count += 1;
             }
         }
 
-        percentage / f64::from(count)
+        (count > 0).then(|| percentage / f64::from(count))
     }
 
     /// Share of the design charge the cells can still hold, averaged.
@@ -116,24 +122,26 @@ impl Battery {
         (full > 0.0).then_some((now, full))
     }
 
+    /// How long the cells have left, added over every one that answered.
     pub async fn time_to_empty(&self) -> i64 {
-        let mut time = 0;
+        let mut time = 0_i64;
 
         for device in &self.0 {
-            if let Ok(t) = device.time_to_empty().await {
-                time += t;
+            if let Ok(left) = device.time_to_empty().await {
+                time = time.saturating_add(left);
             }
         }
 
         time
     }
 
+    /// How long the cells need, added over every one that answered.
     pub async fn time_to_full(&self) -> i64 {
-        let mut time = 0;
+        let mut time = 0_i64;
 
         for device in &self.0 {
-            if let Ok(t) = device.time_to_full().await {
-                time += t;
+            if let Ok(left) = device.time_to_full().await {
+                time = time.saturating_add(left);
             }
         }
 
