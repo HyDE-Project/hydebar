@@ -16,7 +16,7 @@ use iced::{
 use super::super::state::{App, Message};
 use crate::centerbox;
 
-/// How wide the edge of the parting is, as a share of the strip.
+/// How wide the edge of the parting grows to, as a share of the strip.
 ///
 /// The background does not end at a line: a hard edge crossing the strip
 /// reads as a wipe rather than as a background going out. It is also what
@@ -31,20 +31,28 @@ const FEATHER: f32 = 0.12;
 /// along the strip rather than as a flat colour, so what changes from frame
 /// to frame is where the two edges of the opening stand, and what is left of
 /// the two ends thins as they are driven into the corners.
+///
+/// The edge is no wider than the opening it edges. A parting that began with
+/// its full edge put a quarter of the strip into a soft ramp on the frame the
+/// opening was still nothing wide, which is a whole background stepping down
+/// in one frame and reads as the blur being switched rather than parting. Held
+/// to the opening it grows out of nothing, and a strip with nothing open is
+/// the flat colour it was — the same gradient, its stops fallen together.
 fn parting(ground: Color, wash: f32) -> iced::Background {
     let wash = wash.clamp(0.0, 1.0);
     let opened = (1.0 - wash) * 0.5;
-    let near = (0.5 - opened).clamp(FEATHER, 0.5);
-    let far = (0.5 + opened).clamp(0.5, 1.0 - FEATHER);
+    let feather = FEATHER.min(opened);
+    let near = (0.5 - opened).clamp(feather, 0.5);
+    let far = (0.5 + opened).clamp(0.5, 1.0 - feather);
     let left = ground.scale_alpha(wash);
 
     Gradient::Linear(
         Linear::new(Radians(PI / 2.0))
             .add_stop(0.0, left)
-            .add_stop(near - FEATHER, left)
+            .add_stop(near - feather, left)
             .add_stop(near, Color::TRANSPARENT)
             .add_stop(far, Color::TRANSPARENT)
-            .add_stop(far + FEATHER, left)
+            .add_stop(far + feather, left)
             .add_stop(1.0, left)
     )
     .into()
@@ -404,6 +412,69 @@ mod tests {
             ends(0.1).iter().all(|alpha| *alpha < 0.2),
             "what is left at the two ends thins as it is driven out: {:?}",
             ends(0.1)
+        );
+    }
+
+    #[test]
+    fn a_strip_with_nothing_open_is_painted_as_flatly_as_one_that_never_parted() {
+        let ground = Color::from_rgba(1.0, 1.0, 1.0, 1.0);
+
+        let stops = |wash: f32| match parting(ground, wash) {
+            iced::Background::Gradient(Gradient::Linear(linear)) => linear
+                .stops
+                .into_iter()
+                .flatten()
+                .map(|stop| (stop.offset, stop.color.a))
+                .collect::<Vec<(f32, f32)>>(),
+            iced::Background::Color(_) => panic!("the parting is painted as a gradient")
+        };
+
+        let painted = |wash: f32| {
+            let stops = stops(wash);
+
+            (0..=1000)
+                .map(|step| {
+                    #[expect(clippy::cast_precision_loss, reason = "a fixed sample count")]
+                    let along = step as f32 / 1000.0;
+                    let after = stops
+                        .iter()
+                        .position(|(offset, _)| *offset >= along)
+                        .unwrap_or(stops.len() - 1)
+                        .max(1);
+                    let (from, left) = stops[after - 1];
+                    let (to, right) = stops[after];
+                    let within = ((along - from) / (to - from).max(f32::EPSILON)).clamp(0.0, 1.0);
+
+                    (right - left).mul_add(within, left)
+                })
+                .sum::<f32>()
+                / 1001.0
+        };
+
+        assert_eq!(
+            painted(1.0),
+            1.0,
+            "a strip with nothing open is painted end to end"
+        );
+
+        let mut before = 1.0_f32;
+
+        for step in 0..=200 {
+            #[expect(clippy::cast_precision_loss, reason = "a fixed sample count")]
+            let wash = 1.0 - step as f32 / 200.0;
+            let now = painted(wash);
+
+            assert!(
+                before - now < 0.05,
+                "the background steps from {before:.3} to {now:.3} at a wash of {wash:.3}"
+            );
+
+            before = now;
+        }
+
+        assert!(
+            before < 0.01,
+            "nothing of the background is left at the end: {before:.3}"
         );
     }
 
