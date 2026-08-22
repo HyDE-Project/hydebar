@@ -52,7 +52,13 @@ impl App {
         bloom: f32
     ) -> Vec<Element<'a, Message>> {
         if matches!(module, ModuleName::Clock) {
-            return vec![blocks::month(self.desk_month(), ink, bloom)];
+            return std::iter::once(blocks::month(self.desk_month(), ink, bloom))
+                .chain(
+                    super::super::readings::seat(self)
+                        .into_iter()
+                        .map(|panel| blocks::panel(&panel, side, ink, bloom))
+                )
+                .collect();
         }
 
         let panels = self.desk_panels(module);
