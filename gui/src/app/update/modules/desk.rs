@@ -7,12 +7,6 @@ const SHORTEST_UNFOLDING: Duration = Duration::from_millis(600);
 
 /// The longest the whole unfolding is allowed to be.
 const LONGEST_UNFOLDING: Duration = Duration::from_millis(2400);
-
-/// How far into the unfolding the strip's background has gone out.
-///
-/// Early: the strip is meant to be out of the way while the islands come
-/// down, not fading behind them for the whole journey.
-const WASH_GOES_OUT_BY: f32 = 0.22;
 use iced::{Task, set_input_region};
 
 use super::super::super::state::{App, Message};
@@ -220,9 +214,15 @@ impl App {
     /// from the pixels the strip paints: there is no half a blur to fade, only
     /// a surface worth blurring or none. Dropping the whole background on the
     /// frame the islands set off therefore switched the blur off like a
-    /// light. The background goes out over the first stretch of the unfolding
-    /// instead, so by the frame the compositor stops blurring there is nothing
-    /// left on the strip to see the difference on.
+    /// light.
+    ///
+    /// It goes out behind the islands instead, never ahead of them: the
+    /// background is still standing where a module has yet to land, and the
+    /// place it held is bare from the moment it does. The near islands land
+    /// first and the ones from the ends of the bar last, so what the strip
+    /// does is open from the middle outwards at the pace its own islands come
+    /// down — and by the frame the compositor stops blurring, the last of it
+    /// has gone from under the last island.
     ///
     /// The way back is not this: a strip returning under a window that has
     /// already mapped takes its blur back at once, which is what it was asked
@@ -233,7 +233,11 @@ impl App {
             return 1.0;
         }
 
-        1.0 - (self.desk_presence(screen) / WASH_GOES_OUT_BY).clamp(0.0, 1.0)
+        let nearest = hydebar_core::animation::landed(Self::reach(0, self.deepest_column()));
+        let furthest = hydebar_core::animation::landed(1.0);
+        let span = (furthest - nearest).max(f32::EPSILON);
+
+        1.0 - ((self.desk_presence(screen) - nearest) / span).clamp(0.0, 1.0)
     }
 
     /// Reports whether the canvas, not the strip, holds `screen`.

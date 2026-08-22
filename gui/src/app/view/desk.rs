@@ -53,7 +53,7 @@ impl App {
         let modules = &self.config.modules;
 
         let (left, centre, right) = Self::desk_columns(modules);
-        let deepest = left.len().max(centre.len()).max(right.len());
+        let deepest = self.deepest_column();
 
         let columns = [
             (&left, blocks::Side::Leading),
@@ -94,6 +94,16 @@ impl App {
             Self::desk_order(&modules.center, false),
             Self::desk_order(&modules.right, false)
         )
+    }
+
+    /// How many places the longest column of the canvas stands.
+    ///
+    /// The measure every block's journey is stated against: the block at the
+    /// bottom of this column is the one with the furthest to go.
+    pub(crate) fn deepest_column(&self) -> usize {
+        let (left, centre, right) = Self::desk_columns(&self.config.modules);
+
+        left.len().max(centre.len()).max(right.len())
     }
 
     /// The band along the top of the screen the strip itself occupies.

@@ -261,7 +261,7 @@ mod tests {
     }
 
     #[test]
-    fn the_strip_keeps_its_background_a_while_after_its_islands_leave() {
+    fn the_background_goes_out_behind_the_islands_and_never_before_them() {
         let mut app = test_app_with(|config| config.desk.enabled = true);
 
         assert_eq!(
@@ -270,31 +270,39 @@ mod tests {
             "a strip with a window is painted"
         );
 
+        let total = std::time::Duration::from_millis(900);
         let clock = app.desk_clocks.entry(None).or_default();
         *clock = hydebar_core::animation::Unfold::default();
-        clock.advance(
-            std::time::Duration::from_millis(16),
-            std::time::Duration::from_millis(900)
+        clock.advance(std::time::Duration::from_millis(16), total);
+
+        assert_eq!(
+            app.strip_wash(None),
+            1.0,
+            "nothing of the background has gone while every island is still in the air"
         );
 
-        let mut wash = app.strip_wash(None);
-
-        assert!(
-            wash > 0.0 && wash < 1.0,
-            "the background is on its way out, not gone: {wash}"
-        );
+        let nearest = hydebar_core::animation::landed(App::reach(0, app.deepest_column()));
+        let furthest = hydebar_core::animation::landed(1.0);
+        let mut wash = 1.0;
 
         for _ in 0..256 {
             let now = app.strip_wash(None);
+            let progress = app.desk_presence(None);
 
             assert!(now <= wash, "the background only ever goes out");
+
+            if progress < nearest {
+                assert_eq!(now, 1.0, "it waits for the first island to land");
+            }
+
+            if progress < furthest {
+                assert!(now > 0.0, "it is still under the islands yet to land");
+            }
+
             wash = now;
 
             let running = app.desk_clocks.values_mut().fold(false, |running, clock| {
-                clock.advance(
-                    std::time::Duration::from_millis(16),
-                    std::time::Duration::from_millis(900)
-                ) | running
+                clock.advance(std::time::Duration::from_millis(16), total) | running
             });
 
             if !running {
@@ -302,10 +310,7 @@ mod tests {
             }
         }
 
-        assert_eq!(
-            wash, 0.0,
-            "the strip is bare once the unfolding is under way"
-        );
+        assert_eq!(wash, 0.0, "the strip is bare once the last island is down");
     }
 
     #[test]

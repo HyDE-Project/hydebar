@@ -103,6 +103,17 @@ pub fn share(progress: f32, reach: f32) -> (f32, f32) {
     (travel, bloom)
 }
 
+/// When a block whose journey is `reach` long is down on its level.
+///
+/// The share of the clock its drop takes, which is what anything timed off a
+/// block landing needs: the strip's own background goes out behind its
+/// islands rather than before them, so it has to be told when each of them
+/// has landed.
+#[must_use]
+pub fn landed(reach: f32) -> f32 {
+    CROSSING * reach.clamp(0.05, 1.0) * crate::components::flip::DESCENT
+}
+
 /// The curve an act runs on: away quickly, into place slowly.
 ///
 /// A cubic decelerate, which is what a thing arriving somewhere does
