@@ -153,6 +153,8 @@ impl App {
         }
 
         tasks.push(resize);
+        tasks.push(super::super::outputs::read_wallpaper());
+        tasks.push(super::super::outputs::read_looks());
 
         Task::batch(tasks)
     }

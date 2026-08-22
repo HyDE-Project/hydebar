@@ -35,6 +35,8 @@ pub enum Message {
     StripRowsMeasured(std::collections::HashMap<String, f32>),
     /// The wallpaper in force was read off the disk, ready to draw.
     WallpaperRead(Option<(std::path::PathBuf, iced::widget::image::Handle)>),
+    /// The pictures the desktop keeps of its own look were read off the disk.
+    LooksRead(Box<hydebar_core::modules::desk::looks::Looks>),
     ConfigChanged(ConfigApplied),
     ConfigDegraded(ConfigDegradation),
     /// The process was asked to quit, by a takeover or by the session.

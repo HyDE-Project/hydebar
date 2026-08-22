@@ -1,11 +1,12 @@
 //! The drawing of one panel: a heading, a rule and the lines under it.
 //!
-//! Five rooms. Here are the blocks themselves — the three shapes a unit opens
+//! Six rooms. Here are the blocks themselves — the three shapes a unit opens
 //! into; [`room`] is how much of the column a block takes and how it is
 //! written into it, [`parts`] is the pieces every shape is built from, and
-//! [`overview`] and [`trace`] draw the readings that are shapes rather than
-//! tables.
+//! [`accordion`], [`overview`] and [`trace`] draw the readings that are shapes
+//! rather than tables.
 
+mod accordion;
 mod overview;
 mod parts;
 mod room;
@@ -102,6 +103,7 @@ fn drawing_room(panel: &Panel, ink: Ink) -> f32 {
     match panel.figure.as_ref() {
         Some(Figure::Picture(_)) => ink.size.mul_add(0.28, room::picture(ink)),
         Some(Figure::Overview(_)) => ink.size.mul_add(0.28, overview::room(ink)),
+        Some(Figure::Accordion(_)) => ink.size.mul_add(0.28, accordion::room(ink)),
         Some(Figure::Trace {
             ..
         }) => ink.size.mul_add(0.28, trace::room(ink)),

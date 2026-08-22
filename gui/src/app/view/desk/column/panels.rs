@@ -50,6 +50,7 @@ impl App {
             ModuleName::Weather => readings::weather(self).into_iter().collect(),
             ModuleName::Tray => readings::tray(self).into_iter().collect(),
             ModuleName::Themes => readings::theme(self).into_iter().collect(),
+            ModuleName::Wallpaper => readings::wallpaper(self).into_iter().collect(),
             ModuleName::ControlCenter => [
                 readings::session_idle(self),
                 readings::sound(self),

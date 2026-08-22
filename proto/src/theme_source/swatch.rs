@@ -181,7 +181,7 @@ fn wallpaper_palette(dirs: &HydeDirs, theme: &str) -> Option<DcolPalette> {
 ///
 /// The read and the hash happen outside the lock: two themes pointing at two
 /// wallpapers hash in parallel, and the lock only guards the map itself.
-fn wallpaper_digest(image: &Path) -> Option<String> {
+pub(super) fn wallpaper_digest(image: &Path) -> Option<String> {
     let metadata = fs::metadata(image).ok()?;
     let len = metadata.len();
     let modified = metadata.modified().ok();

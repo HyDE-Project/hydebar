@@ -31,6 +31,7 @@ pub mod dcol;
 mod extract;
 mod font;
 mod length;
+mod preview;
 mod swatch;
 mod theme;
 mod waybar;
@@ -40,5 +41,6 @@ mod fixtures;
 
 pub use color::Rgba;
 pub use dcol::{DcolMode, DcolPalette};
+pub use preview::{picture_preview, theme_preview};
 pub use swatch::{ThemeSwatch, theme_swatch};
 pub use theme::{HydeTheme, load, load_from};

@@ -15,7 +15,7 @@ pub(super) use machine::{
 };
 pub(super) use session::{
     battery, keyboard, link, notifications, own, playing, privacy, radio, screen, seat,
-    session_idle, sound, submap, theme, tray, updates, weather, windows, workspaces
+    session_idle, sound, submap, theme, tray, updates, wallpaper, weather, windows, workspaces
 };
 
 /// One window of a screen, as a share of that screen.
@@ -64,6 +64,8 @@ pub enum Figure {
     Picture(iced::widget::image::Handle),
     /// The workspaces of a screen, each with the windows standing on it.
     Overview(Vec<Miniature>),
+    /// A row of pictures with the one in force big in the middle of it.
+    Accordion(hydebar_core::modules::desk::looks::Reel),
     /// The last few minutes of one reading, oldest first.
     Trace {
         /// The readings themselves.

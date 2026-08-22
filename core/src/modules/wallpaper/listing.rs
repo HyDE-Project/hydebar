@@ -5,26 +5,23 @@ use serde::Deserialize;
 use super::WallpaperEntry;
 
 /// One wallpaper as the desktop lists it.
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-struct ListedWallpaper {
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct ListedWallpaper {
     /// Full path of the picture, what a set command takes.
-    path:     String,
+    pub path:     String,
     /// File name, the tile's caption.
-    basename: String,
+    pub basename: String,
     /// Square thumbnail `HyDE` keeps in its cache.
-    sqre:     String
+    pub sqre:     String
 }
 
-/// Side the decoded thumbnails are scaled to, in pixels.
-const THUMB_SIDE: u32 = 256;
-
-/// Reads the wallpapers of the theme in force from the desktop.
+/// Asks the desktop which wallpapers the theme in force holds.
 ///
-/// A failure answers with an empty list and the picker says so; the desktop
-/// not being `HyDE` is not an error the bar can fix.
-pub(super) fn list_wallpapers(
-    known: &std::collections::HashMap<String, iced::widget::image::Handle>
-) -> Vec<WallpaperEntry> {
+/// The one place the question is asked, so the picker and the canvas list the
+/// same pictures in the same order. A desktop that is not `HyDE`, or a listing
+/// that fails, answers with nothing rather than an error: the bar has no
+/// wallpapers of its own to fall back on.
+pub fn listed() -> Vec<ListedWallpaper> {
     let listing = std::process::Command::new("timeout")
         .args(["10", "hydectl", "wallpaper", "list"])
         .output();
@@ -37,9 +34,20 @@ pub(super) fn list_wallpapers(
         return Vec::new();
     }
 
-    let listed: Vec<ListedWallpaper> = serde_json::from_slice(&output.stdout).unwrap_or_default();
+    serde_json::from_slice(&output.stdout).unwrap_or_default()
+}
 
-    listed
+/// Side the decoded thumbnails are scaled to, in pixels.
+const THUMB_SIDE: u32 = 256;
+
+/// Reads the wallpapers of the theme in force from the desktop.
+///
+/// A failure answers with an empty list and the picker says so; the desktop
+/// not being `HyDE` is not an error the bar can fix.
+pub(super) fn list_wallpapers(
+    known: &std::collections::HashMap<String, iced::widget::image::Handle>
+) -> Vec<WallpaperEntry> {
+    listed()
         .into_iter()
         .filter_map(|entry| {
             if let Some(thumbnail) = known.get(&entry.path) {

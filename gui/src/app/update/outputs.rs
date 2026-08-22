@@ -24,6 +24,23 @@ pub fn read_wallpaper() -> Task<Message> {
     )
 }
 
+/// Reads the pictures the desktop keeps of its own look, off the drawing
+/// thread.
+///
+/// Hashing wallpapers and decoding a row of crops costs far more than a frame,
+/// and the answer is wanted once per change of look rather than once per
+/// repaint.
+pub fn read_looks() -> Task<Message> {
+    Task::perform(
+        async {
+            tokio::task::spawn_blocking(hydebar_core::modules::desk::looks::looks)
+                .await
+                .unwrap_or_default()
+        },
+        |looks| Message::LooksRead(Box::new(looks))
+    )
+}
+
 /// Asks the compositor for the screen's geometry off the drawing thread.
 ///
 /// The question travels the compositor's own socket and the compositor may
@@ -75,6 +92,11 @@ impl App {
             }
             Message::WallpaperRead(read) => {
                 self.wallpaper_preview = read;
+
+                Task::none()
+            }
+            Message::LooksRead(looks) => {
+                self.looks = *looks;
 
                 Task::none()
             }

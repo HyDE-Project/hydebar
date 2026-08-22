@@ -105,6 +105,13 @@ pub struct App {
     /// decoded a hundred times for one that was wanted once. The path beside
     /// it is what tells one wallpaper from the next without decoding again.
     pub(crate) wallpaper_preview: Option<(std::path::PathBuf, iced::widget::image::Handle)>,
+    /// How the desktop looks, as the pictures it keeps of itself.
+    ///
+    /// The themes installed here and the wallpapers of the theme in force,
+    /// each already centred on the one in force and each already decoded.
+    /// Held for the same reason the wallpaper is: the canvas is rebuilt on
+    /// every frame of an unfolding and reads no files while it draws.
+    pub(crate) looks: hydebar_core::modules::desk::looks::Looks,
     /// The row the strip stands on, screen by screen, as last measured.
     ///
     /// The canvas covers the screen from its very top and the strip does not

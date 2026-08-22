@@ -6,10 +6,11 @@
 //! link, the mounts, the hour at the size a room away can read it — drawn
 //! straight onto the wallpaper for as long as no window wants the screen.
 //!
-//! One folder, four rooms: [`bareness`] reads the screens off a compositor
+//! One folder, five rooms: [`bareness`] reads the screens off a compositor
 //! snapshot, [`listener`] follows the compositor's workspace events in the
-//! background, [`state`] folds the answers in and [`module`] wires the desk to
-//! the bar. The root holds the state the rooms share.
+//! background, [`looks`] reads the pictures the desktop keeps of its own look,
+//! [`state`] folds the answers in and [`module`] wires the desk to the bar.
+//! The root holds the state the rooms share.
 
 use std::sync::Arc;
 
@@ -20,6 +21,7 @@ use crate::ModuleEventSender;
 
 mod bareness;
 mod listener;
+pub mod looks;
 mod module;
 mod state;
 

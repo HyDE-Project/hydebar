@@ -16,7 +16,7 @@
 //! to the bar. The root holds the state the rooms share.
 
 pub mod current;
-mod listing;
+pub(crate) mod listing;
 mod module;
 mod state;
 mod view;

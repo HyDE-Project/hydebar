@@ -57,9 +57,20 @@ fn cache_dir() -> Option<PathBuf> {
 
 /// Decodes one picture down to the side a preview needs.
 fn decode(path: &Path) -> Option<Handle> {
+    thumbnail(path, PREVIEW_SIDE)
+}
+
+/// Decodes the picture at `path` down to `side` pixels on its longest edge.
+///
+/// The one decoder the bar has, so a preview drawn on the canvas and a preview
+/// drawn in a menu are the same picture read the same way. A file that cannot
+/// be read, or read as a picture, answers [`None`] rather than a blank: a tile
+/// with nothing in it says the wallpaper is empty, which is never true.
+#[must_use]
+pub fn thumbnail(path: &Path, side: u32) -> Option<Handle> {
     let decoded = ::image::load_from_memory(&std::fs::read(path).ok()?)
         .ok()?
-        .thumbnail(PREVIEW_SIDE, PREVIEW_SIDE)
+        .thumbnail(side, side)
         .into_rgba8();
     let (width, height) = decoded.dimensions();
 

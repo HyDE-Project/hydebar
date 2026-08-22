@@ -78,6 +78,7 @@ impl App {
             screen_width: None,
             strip_rows: std::collections::HashMap::new(),
             wallpaper_preview: None,
+            looks: hydebar_core::modules::desk::looks::Looks::default(),
             history: super::history::History::default(),
             desk_leaving: hydebar_core::animation::Unfold::default(),
             desk_leaving_from: super::app::Leaving::Nothing,
@@ -149,7 +150,11 @@ impl App {
             app.control_center.set_idle_inhibited(true);
         }
 
-        let task = Task::batch([task, super::super::update::outputs::read_wallpaper()]);
+        let task = Task::batch([
+            task,
+            super::super::update::outputs::read_wallpaper(),
+            super::super::update::outputs::read_looks()
+        ]);
 
         (app, task)
     }

@@ -70,7 +70,8 @@ impl App {
                 ..
             }
             | Message::StripRowsMeasured(_)
-            | Message::WallpaperRead(_) => self.update_outputs(message),
+            | Message::WallpaperRead(_)
+            | Message::LooksRead(_) => self.update_outputs(message),
             other => self.update_modules(other)
         }
     }

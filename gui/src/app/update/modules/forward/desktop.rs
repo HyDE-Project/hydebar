@@ -20,13 +20,15 @@ impl App {
 
                 Task::batch([
                     self.themes.update(msg, &config).map(Message::Themes),
-                    crate::app::update::outputs::read_wallpaper()
+                    crate::app::update::outputs::read_wallpaper(),
+                    crate::app::update::outputs::read_looks()
                 ])
             }
             Message::BarLayout(msg) => self.update_bar_layout(msg),
             Message::Wallpaper(msg) => Task::batch([
                 self.update_wallpaper(msg),
-                crate::app::update::outputs::read_wallpaper()
+                crate::app::update::outputs::read_wallpaper(),
+                crate::app::update::outputs::read_looks()
             ]),
             Message::MediaPlayer(msg) => {
                 self.media_player.update(msg, &self.config.media_player);

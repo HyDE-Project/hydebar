@@ -11,6 +11,7 @@ use super::{
         readings::{Figure, Panel}
     },
     Ink, Side,
+    accordion::accordion,
     overview::overview,
     trace::trace
 };
@@ -50,6 +51,7 @@ fn drawn<'a>(figure: &Figure, ink: Ink) -> Element<'a, Message> {
         .clip(true)
         .into(),
         Figure::Overview(workspaces) => overview(workspaces, ink),
+        Figure::Accordion(reel) => accordion(reel, ink),
         Figure::Trace {
             readings,
             ceiling
