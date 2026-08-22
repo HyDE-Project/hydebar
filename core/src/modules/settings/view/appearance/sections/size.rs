@@ -15,7 +15,7 @@ use crate::{
 pub(super) const FALLBACK_HEIGHT: f32 = 34.0;
 
 /// Rows of the size section, with the sizes as the file spells them.
-pub(crate) fn size_rows(
+pub fn size_rows(
     config: &Config,
     magnification: f32,
     font_size: f32,

@@ -9,11 +9,7 @@ use crate::{
 };
 
 /// Rows of the placement section, against the running `config`.
-pub(crate) fn placement_rows(
-    config: &Config,
-    font_size: f32,
-    opacity: f32
-) -> Element<'_, Message> {
+pub fn placement_rows(config: &Config, font_size: f32, opacity: f32) -> Element<'_, Message> {
     row_stack(font_size)
         .push(choice_row(
             "Position",

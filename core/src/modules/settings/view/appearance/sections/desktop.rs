@@ -13,7 +13,7 @@ use crate::{
 };
 
 /// Rows of the desktop section, against the running `config`.
-pub(crate) fn desktop_rows(config: &Config, font_size: f32, opacity: f32) -> Element<'_, Message> {
+pub fn desktop_rows(config: &Config, font_size: f32, opacity: f32) -> Element<'_, Message> {
     row_stack(font_size)
         .push(choice_row(
             NOTIFICATIONS,
