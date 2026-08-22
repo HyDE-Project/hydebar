@@ -1,17 +1,17 @@
 //! How the dismiss area behaves inside the widget tree.
 //!
 //! Layout, drawing and interaction pass straight through to the wrapped
-//! content; the area's own work happens in `update`, where a press is
-//! reported before the children see it — so a child consuming the press
-//! cannot hide it — and its completion only once the same press releases
-//! over the area.
+//! content; the area's own work is in [`press`], which is given the event
+//! before the children and again after them.
+
+mod press;
 
 use iced::{
     Length, Rectangle, Size, Vector,
     core::{
         Clipboard, Layout, Shell, Widget,
         event::Event,
-        layout, mouse, renderer, touch,
+        layout, mouse, renderer,
         widget::{Operation, Tree, tree}
     }
 };
@@ -66,7 +66,6 @@ where
             .as_widget_mut()
             .operate(&mut tree.children[0], layout, renderer, operation);
     }
-
     fn update(
         &mut self,
         tree: &mut Tree,
@@ -78,18 +77,9 @@ where
         shell: &mut Shell<'_, Message>,
         viewport: &Rectangle
     ) {
-        let is_over = cursor.is_over(layout.bounds());
+        let is_over = Self::is_over(layout, cursor);
 
-        if matches!(
-            event,
-            Event::Mouse(mouse::Event::ButtonPressed(_))
-                | Event::Touch(touch::Event::FingerPressed { .. })
-        ) && is_over
-        {
-            let state = tree.state.downcast_mut::<State>();
-            state.pressed = true;
-            shell.publish(self.on_press.clone());
-        }
+        self.note_the_press(tree.state.downcast_mut::<State>(), event, is_over, shell);
 
         self.content.as_widget_mut().update(
             &mut tree.children[0],
@@ -102,25 +92,7 @@ where
             viewport
         );
 
-        let state = tree.state.downcast_mut::<State>();
-
-        match event {
-            Event::Mouse(mouse::Event::ButtonReleased(_))
-            | Event::Touch(touch::Event::FingerLifted {
-                ..
-            }) => {
-                if std::mem::take(&mut state.pressed) && is_over {
-                    shell.publish(self.on_release.clone());
-                }
-            }
-            Event::Mouse(mouse::Event::CursorLeft)
-            | Event::Touch(touch::Event::FingerLost {
-                ..
-            }) => {
-                state.pressed = false;
-            }
-            _ => {}
-        }
+        self.note_the_release(tree.state.downcast_mut::<State>(), event, is_over, shell);
     }
 
     fn draw(
