@@ -47,7 +47,13 @@ impl Default for TakeoverPolicy {
 
 /// Asks the process to quit, letting it destroy its surfaces on the way out.
 fn request_quit(pid: i32) -> io::Result<()> {
-    if unsafe { libc::kill(pid, libc::SIGTERM) } == 0 {
+    #[expect(
+        unsafe_code,
+        reason = "delivers one signal to an id read from the lock file; no caller memory is touched"
+    )]
+    let sent = unsafe { libc::kill(pid, libc::SIGTERM) };
+
+    if sent == 0 {
         return Ok(());
     }
 

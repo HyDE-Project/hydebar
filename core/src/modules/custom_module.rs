@@ -430,7 +430,13 @@ invalid
         assert_eq!(initial, vec!["1"]);
 
         let signal_number = real_time_signal(OFFSET).expect("real time signal");
-        assert_eq!(unsafe { libc::raise(signal_number) }, 0);
+        #[expect(
+            unsafe_code,
+            reason = "raises a signal in this process, which the module under test listens for"
+        )]
+        let raised = unsafe { libc::raise(signal_number) };
+
+        assert_eq!(raised, 0);
 
         let refreshed = timeout(
             Duration::from_secs(5),
@@ -558,7 +564,13 @@ invalid
         reason = "process identifiers fit in i32 on Linux"
     )]
     fn is_alive(pid: u32) -> bool {
-        unsafe { libc::kill(pid as i32, 0) == 0 }
+        #[expect(
+            unsafe_code,
+            reason = "signal zero delivers nothing; it only asks whether the id still exists"
+        )]
+        let probed = unsafe { libc::kill(pid as i32, 0) };
+
+        probed == 0
     }
 
     /// Waits until the process is gone for good.

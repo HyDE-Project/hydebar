@@ -29,6 +29,11 @@ pub fn start_orphan_reaper() {
                         continue;
                     }
 
+                    #[expect(
+                        unsafe_code,
+                        reason = "reaps a child of this process; the status pointer is null, so \
+                                  nothing is written back"
+                    )]
                     unsafe {
                         libc::waitpid(*pid, std::ptr::null_mut(), libc::WNOHANG);
                     }

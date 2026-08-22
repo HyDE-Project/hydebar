@@ -53,7 +53,13 @@ fn lock_dir() -> PathBuf {
 
 /// User id the fallback runtime directory is named after.
 pub(super) fn current_uid() -> u32 {
-    unsafe { libc::getuid() }
+    #[expect(
+        unsafe_code,
+        reason = "reads the calling process's own identity, touches no memory and cannot fail"
+    )]
+    unsafe {
+        libc::getuid()
+    }
 }
 
 /// Path of the lock file arbitrating the single instance slot.
@@ -80,6 +86,10 @@ fn open_lock_file(path: &Path) -> Result<File, InstanceError> {
 
 /// Takes the lock without blocking, reporting `false` when it is held.
 fn try_flock(file: &File) -> io::Result<bool> {
+    #[expect(
+        unsafe_code,
+        reason = "the descriptor belongs to the open file borrowed here and outlives the call"
+    )]
     let outcome = unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) };
 
     if outcome == 0 {

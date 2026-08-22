@@ -55,7 +55,13 @@ pub fn supervised(command: &mut Command) -> &mut Command {
 /// Returns the failure reported by the operating system, which on a kernel too
 /// old to know the request means the bar keeps the behaviour it had before.
 pub fn claim_orphans() -> io::Result<()> {
-    if unsafe { libc::prctl(libc::PR_SET_CHILD_SUBREAPER, 1) } != 0 {
+    #[expect(
+        unsafe_code,
+        reason = "the request carries an integer argument and reads no memory the caller owns"
+    )]
+    let claimed = unsafe { libc::prctl(libc::PR_SET_CHILD_SUBREAPER, 1) };
+
+    if claimed != 0 {
         return Err(io::Error::last_os_error());
     }
 

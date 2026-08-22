@@ -47,6 +47,10 @@ pub(super) fn kill_group(pid: u32) {
     #[expect(clippy::cast_possible_wrap, reason = "Linux PIDs fit in i32")]
     let group = -(pid as i32);
 
+    #[expect(
+        unsafe_code,
+        reason = "delivers two signals to a group the bar leads and touches no caller memory"
+    )]
     unsafe {
         libc::kill(group, libc::SIGTERM);
         libc::kill(group, libc::SIGKILL);
@@ -82,6 +86,10 @@ pub fn terminate_all() {
 
 /// Sends `signal` to the process group `group`, reporting failure.
 fn signal(group: i32, signal: i32) -> io::Result<()> {
+    #[expect(
+        unsafe_code,
+        reason = "delivers one signal to a group identifier and touches no caller memory"
+    )]
     let sent = unsafe { libc::kill(group, signal) };
 
     if sent == 0 || io::Error::last_os_error().raw_os_error() == Some(libc::ESRCH) {
@@ -123,6 +131,11 @@ pub fn install_termination_handler() -> io::Result<()> {
         .spawn(move || await_termination(reader))?;
 
     for number in TERMINATION_SIGNALS {
+        #[expect(
+            unsafe_code,
+            reason = "the handler only walks atomics and writes one byte to a pipe, which is all \
+                      a signal handler is allowed to do"
+        )]
         unsafe {
             signal_hook_registry::register(number, on_termination_signal)?;
         }
@@ -135,7 +148,13 @@ pub fn install_termination_handler() -> io::Result<()> {
 fn open_wake_pipe() -> io::Result<i32> {
     let mut ends = [0; 2];
 
-    if unsafe { libc::pipe2(ends.as_mut_ptr(), libc::O_CLOEXEC) } != 0 {
+    #[expect(
+        unsafe_code,
+        reason = "the array lives on this frame and holds the two descriptors the kernel writes"
+    )]
+    let opened = unsafe { libc::pipe2(ends.as_mut_ptr(), libc::O_CLOEXEC) };
+
+    if opened != 0 {
         return Err(io::Error::last_os_error());
     }
 
@@ -153,6 +172,10 @@ fn on_termination_signal() {
     if writer >= 0 {
         let wake = 1u8;
 
+        #[expect(
+            unsafe_code,
+            reason = "the byte lives on this frame for the whole call and one byte is read from it"
+        )]
         unsafe {
             libc::write(writer, ptr::addr_of!(wake).cast(), 1);
         }
@@ -179,6 +202,10 @@ fn wait_for_wake(reader: i32) -> bool {
     let mut wake = 0u8;
 
     loop {
+        #[expect(
+            unsafe_code,
+            reason = "the byte lives on this frame for the whole call and one byte is written to it"
+        )]
         let read = unsafe { libc::read(reader, ptr::addr_of_mut!(wake).cast(), 1) };
 
         if read == 1 {

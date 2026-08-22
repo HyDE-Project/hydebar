@@ -112,6 +112,28 @@ mod tests {
     /// The environment is process-wide, so the tests that set it take turns.
     static ENVIRONMENT: Mutex<()> = Mutex::new(());
 
+    /// States a variable for the test currently holding [`ENVIRONMENT`].
+    fn set_env(key: &str, value: impl AsRef<std::ffi::OsStr>) {
+        #[expect(
+            unsafe_code,
+            reason = "the ENVIRONMENT lock keeps every other test off the process environment"
+        )]
+        unsafe {
+            std::env::set_var(key, value);
+        }
+    }
+
+    /// Clears a variable for the test currently holding [`ENVIRONMENT`].
+    fn unset_env(key: &str) {
+        #[expect(
+            unsafe_code,
+            reason = "the ENVIRONMENT lock keeps every other test off the process environment"
+        )]
+        unsafe {
+            std::env::remove_var(key);
+        }
+    }
+
     /// Runs `body` with `XDG_DATA_HOME` pointing at a scratch directory that
     /// holds `definition` as the desktop's menu module, if given.
     fn with_data_home<T>(definition: Option<&str>, body: impl FnOnce() -> T) -> T {
@@ -131,15 +153,13 @@ mod tests {
         }
 
         let previous = std::env::var_os("XDG_DATA_HOME");
-        // SAFETY: the lock above keeps every other test off the environment.
-        unsafe { std::env::set_var("XDG_DATA_HOME", home.path()) };
+        set_env("XDG_DATA_HOME", home.path());
 
         let outcome = body();
 
         match previous {
-            // SAFETY: as above.
-            Some(value) => unsafe { std::env::set_var("XDG_DATA_HOME", value) },
-            None => unsafe { std::env::remove_var("XDG_DATA_HOME") }
+            Some(value) => set_env("XDG_DATA_HOME", value),
+            None => unset_env("XDG_DATA_HOME")
         }
 
         outcome
@@ -224,16 +244,14 @@ mod tests {
         let _guard = ENVIRONMENT
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
-        // SAFETY: the lock keeps every other test off the environment.
-        unsafe { std::env::set_var("HYDE_MENU_ROOT", "/opt/hyde") };
+        set_env("HYDE_MENU_ROOT", "/opt/hyde");
 
         assert_eq!(
             expand_path("${HYDE_MENU_ROOT}/menu.ui"),
             "/opt/hyde/menu.ui"
         );
 
-        // SAFETY: as above.
-        unsafe { std::env::remove_var("HYDE_MENU_ROOT") };
+        unset_env("HYDE_MENU_ROOT");
     }
 
     #[test]
@@ -241,8 +259,7 @@ mod tests {
         let _guard = ENVIRONMENT
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
-        // SAFETY: the lock keeps every other test off the environment.
-        unsafe { std::env::remove_var("HYDE_MENU_ROOT") };
+        unset_env("HYDE_MENU_ROOT");
 
         assert_eq!(
             expand_path("${HYDE_MENU_ROOT:-/etc/hyde}/menu.ui"),
@@ -255,16 +272,14 @@ mod tests {
         let _guard = ENVIRONMENT
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
-        // SAFETY: the lock keeps every other test off the environment.
-        unsafe { std::env::set_var("HYDE_MENU_ROOT", "") };
+        set_env("HYDE_MENU_ROOT", "");
 
         assert_eq!(
             expand_path("${HYDE_MENU_ROOT:-/etc/hyde}/menu.ui"),
             "/etc/hyde/menu.ui"
         );
 
-        // SAFETY: as above.
-        unsafe { std::env::remove_var("HYDE_MENU_ROOT") };
+        unset_env("HYDE_MENU_ROOT");
     }
 
     #[test]
@@ -272,8 +287,7 @@ mod tests {
         let _guard = ENVIRONMENT
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
-        // SAFETY: the lock keeps every other test off the environment.
-        unsafe { std::env::remove_var("HYDE_MENU_ROOT") };
+        unset_env("HYDE_MENU_ROOT");
 
         assert_eq!(expand_path("${HYDE_MENU_ROOT}/menu.ui"), "/menu.ui");
     }
@@ -297,13 +311,11 @@ mod tests {
         let _guard = ENVIRONMENT
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
-        // SAFETY: the lock keeps every other test off the environment.
-        unsafe { std::env::set_var("HYDE_MENU_ROOT", "/opt/hyde") };
+        set_env("HYDE_MENU_ROOT", "/opt/hyde");
 
         assert_eq!(expand_plain("$HYDE_MENU_ROOT/menu.ui"), "/opt/hyde/menu.ui");
 
-        // SAFETY: as above.
-        unsafe { std::env::remove_var("HYDE_MENU_ROOT") };
+        unset_env("HYDE_MENU_ROOT");
     }
 
     #[test]

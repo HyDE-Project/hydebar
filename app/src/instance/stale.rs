@@ -22,7 +22,13 @@ pub(super) fn process_is_alive(pid: i32) -> bool {
         return false;
     }
 
-    if unsafe { libc::kill(pid, 0) } == 0 {
+    #[expect(
+        unsafe_code,
+        reason = "signal zero delivers nothing; it only asks the kernel whether the id exists"
+    )]
+    let probed = unsafe { libc::kill(pid, 0) };
+
+    if probed == 0 {
         return true;
     }
 
