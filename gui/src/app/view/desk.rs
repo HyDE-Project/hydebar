@@ -42,12 +42,20 @@ impl App {
     /// untouched by it.
     pub(super) fn desk_surface(&self, id: Id) -> Element<'_, Message> {
         let screen = self.outputs.screen_of(id).flatten();
+        let leaving = self.desk_leaving(screen);
 
-        if !self.desk_holds(screen) {
+        if !self.desk_holds(screen) && leaving.is_none() {
             return Row::new().into();
         }
 
-        let unfolding = self.desk_presence(screen);
+        // a canvas on its way out is drawn whole and carried sideways: what
+        // was on the screen leaves by the edges rather than being switched off
+        let unfolding = if leaving.is_some() {
+            1.0
+        } else {
+            self.desk_presence(screen)
+        };
+        let leaving = leaving.unwrap_or_default();
 
         let ink = blocks::Ink {
             value: self.theme_cache.palette().text,
@@ -67,7 +75,7 @@ impl App {
         ]
         .into_iter()
         .filter_map(|(order, side)| {
-            self.desk_column(order, id, side, ink, unfolding, deepest, room)
+            self.desk_column(order, id, side, ink, unfolding, deepest, room, leaving)
         });
 
         let canvas = container(
@@ -85,7 +93,11 @@ impl App {
             left:   margin
         });
 
-        let ways = self.desk_ways(id, unfolding, deepest, ink, room);
+        let ways = if leaving > 0.0 {
+            Vec::new()
+        } else {
+            self.desk_ways(id, unfolding, deepest, ink, room)
+        };
 
         if ways.is_empty() {
             return canvas.into();
@@ -282,6 +294,61 @@ mod tests {
             iced::Size::new(1920.0, 1080.0),
             app.desk_surface(surface())
         )
+    }
+
+    #[test]
+    fn a_canvas_taken_off_the_screen_leaves_by_the_edges_rather_than_at_once() {
+        let mut app = test_app_with(|config| config.desk.enabled = true);
+        app.screen_width = Some(1920.0);
+        open(&mut app);
+
+        app.desk
+            .update(hydebar_core::modules::desk::Message::ScreensChanged(
+                hydebar_core::modules::desk::Bareness::default()
+            ));
+        let _ = app.unfold_desk();
+
+        assert!(
+            app.desk_leaving(None).is_some(),
+            "the canvas knows it is on its way out"
+        );
+        assert!(
+            simulator(app.desk_surface(surface()))
+                .find("MEMORY")
+                .is_ok(),
+            "and is still drawn while it goes, not switched off"
+        );
+
+        let beyond: Vec<f32> = app
+            .flip
+            .borrow()
+            .from_map()
+            .values()
+            .map(|seat| seat.x)
+            .collect();
+
+        assert!(!beyond.is_empty(), "every block has somewhere to leave for");
+        assert!(
+            beyond.iter().all(|x| *x < 0.0 || *x > 1920.0),
+            "and every one of them is past an edge of the screen: {beyond:?}"
+        );
+
+        for _ in 0..64 {
+            if !app.advance_desk(std::time::Duration::from_millis(16)) {
+                break;
+            }
+        }
+
+        assert!(
+            app.desk_leaving(None).is_none(),
+            "the canvas is gone once the leaving is over"
+        );
+        assert!(
+            simulator(app.desk_surface(surface()))
+                .find("MEMORY")
+                .is_err(),
+            "and nothing of it is drawn after"
+        );
     }
 
     #[test]

@@ -79,6 +79,8 @@ impl App {
             strip_rows: std::collections::HashMap::new(),
             wallpaper_preview: None,
             history: super::history::History::default(),
+            desk_leaving: hydebar_core::animation::Unfold::default(),
+            desk_leaving_from: super::app::Leaving::Nothing,
             magnification: hydebar_core::components::scale::screen_factor(),
             outputs,
             navigation_mode: false,

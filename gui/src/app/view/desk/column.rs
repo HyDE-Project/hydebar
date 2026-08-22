@@ -30,6 +30,13 @@ use super::{
     blocks::{Ink, Side}
 };
 
+/// The curve the leaving runs on: away quickly, off the edge slowly.
+fn eased(leaving: f32) -> f32 {
+    let left = 1.0 - leaving.clamp(0.0, 1.0);
+
+    left.mul_add(-(left * left), 1.0)
+}
+
 impl App {
     /// Stacks one section of the layout into a column of the canvas.
     ///
@@ -64,7 +71,8 @@ impl App {
         ink: Ink,
         unfolding: f32,
         deepest: usize,
-        room: f32
+        room: f32,
+        leaving: f32
     ) -> Option<Element<'a, Message>> {
         let fan = self.fan_span();
         let runs = self.desk_runs(order, id, ink, room);
@@ -85,6 +93,14 @@ impl App {
                             Self::reach(within, deepest)
                         );
                         let block = self.desk_unit(unit, id, side, ink, bloom)?;
+                        // on the way out every block leaves at one pace: they
+                        // are all bound for the same two edges, and a queue
+                        // out is the one thing this transition does not do
+                        let travel = if leaving > 0.0 {
+                            1.0 - eased(leaving)
+                        } else {
+                            travel
+                        };
 
                         #[expect(
                             clippy::cast_precision_loss,
@@ -98,9 +114,14 @@ impl App {
                             travel,
                             &self.flip,
                             block
-                        )
-                        .departing_from(self.strip_row(id))
-                        .descending_first();
+                        );
+                        let travelling = if leaving > 0.0 {
+                            travelling
+                        } else {
+                            travelling
+                                .departing_from(self.strip_row(id))
+                                .descending_first()
+                        };
 
                         Some(
                             container(travelling)
