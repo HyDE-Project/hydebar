@@ -1,6 +1,7 @@
 //! Handling of network messages: service events, radio toggles and
 //! connection picks.
 
+use iced::Task;
 use log::info;
 
 use super::super::super::{
@@ -16,13 +17,14 @@ use crate::{
 };
 
 impl ControlCenter {
+    #[must_use = "the shell work a menu asks for does not happen unless the task is run"]
     pub(super) fn handle_network(
         &mut self,
         msg: NetworkMessage,
         config: &ControlCenterModuleConfig,
         outputs: &mut Outputs,
         main_config: &crate::config::Config
-    ) {
+    ) -> Task<Message> {
         match msg {
             NetworkMessage::Event(event) => match *event {
                 ServiceEvent::Init(service) => {
@@ -61,7 +63,8 @@ impl ControlCenter {
             NetworkMessage::RequestWiFiPassword(id, ssid) => {
                 info!("Requesting password for {ssid}");
                 self.password_dialog = Some((ssid, String::new()));
-                let _ = outputs.request_keyboard::<Message>(id, main_config.menu_keyboard_focus);
+
+                return outputs.request_keyboard::<Message>(id, main_config.menu_keyboard_focus);
             }
             NetworkMessage::ScanNearByWiFi => {
                 let _spawned = self.spawn_network_command(NetworkCommand::ScanNearByWiFi);
@@ -69,18 +72,22 @@ impl ControlCenter {
             NetworkMessage::WiFiMore(id) => {
                 if let Some(cmd) = &config.wifi_more_cmd {
                     crate::utils::launcher::execute_command(cmd.clone());
-                    let _ = outputs.close_menu::<Message>(id, main_config);
+
+                    return outputs.close_menu::<Message>(id, main_config);
                 }
             }
             NetworkMessage::VpnMore(id) => {
                 if let Some(cmd) = &config.vpn_more_cmd {
                     crate::utils::launcher::execute_command(cmd.clone());
-                    let _ = outputs.close_menu::<Message>(id, main_config);
+
+                    return outputs.close_menu::<Message>(id, main_config);
                 }
             }
             NetworkMessage::ToggleVpn(vpn) => {
                 let _spawned = self.spawn_network_command(NetworkCommand::ToggleVpn(vpn));
             }
         }
+
+        Task::none()
     }
 }

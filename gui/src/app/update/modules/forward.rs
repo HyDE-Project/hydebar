@@ -125,15 +125,15 @@ impl App {
                 self.privacy.update(msg);
                 Task::none()
             }
-            Message::ControlCenter(message) => {
-                self.control_center.update(
+            Message::ControlCenter(message) => self
+                .control_center
+                .update(
                     message,
                     &self.config.control_center,
                     &mut self.outputs,
                     &self.config
-                );
-                Task::none()
-            }
+                )
+                .map(Message::ControlCenter),
             other => self.update_desktop_modules(other)
         }
     }

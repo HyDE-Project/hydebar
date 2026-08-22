@@ -1,6 +1,8 @@
 //! Handling of audio messages: service events, mute, volume and device
 //! switches.
 
+use iced::Task;
+
 use super::super::super::{
     ControlCenter, Message, SubMenu, audio::AudioMessage, commands::ControlCenterCommandExt
 };
@@ -14,13 +16,20 @@ use crate::{
 const WHEEL_VOLUME_STEP: i32 = 5;
 
 impl ControlCenter {
+    /// Answers one audio message, handing back whatever it asks the shell for.
+    ///
+    /// The task is a return value rather than a thing to drop: taking a menu
+    /// down destroys its surface and raises the successor, and a dropped task
+    /// does neither — the surface is left mapped and the menu is left pointing
+    /// at an identity nothing owns.
+    #[must_use = "the shell work a menu asks for does not happen unless the task is run"]
     pub(super) fn handle_audio(
         &mut self,
         msg: AudioMessage,
         config: &ControlCenterModuleConfig,
         outputs: &mut Outputs,
         main_config: &crate::config::Config
-    ) {
+    ) -> Task<Message> {
         match msg {
             AudioMessage::Event(event) => match *event {
                 ServiceEvent::Init(service) => {
@@ -72,15 +81,19 @@ impl ControlCenter {
             AudioMessage::SinksMore(id) => {
                 if let Some(cmd) = &config.audio_sinks_more_cmd {
                     crate::utils::launcher::execute_command(cmd.clone());
-                    let _ = outputs.close_menu::<Message>(id, main_config);
+
+                    return outputs.close_menu::<Message>(id, main_config);
                 }
             }
             AudioMessage::SourcesMore(id) => {
                 if let Some(cmd) = &config.audio_sources_more_cmd {
                     crate::utils::launcher::execute_command(cmd.clone());
-                    let _ = outputs.close_menu::<Message>(id, main_config);
+
+                    return outputs.close_menu::<Message>(id, main_config);
                 }
             }
         }
+
+        Task::none()
     }
 }

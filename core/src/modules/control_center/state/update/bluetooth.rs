@@ -1,6 +1,8 @@
 //! Handling of bluetooth messages: service events, the radio toggle and
 //! device connections.
 
+use iced::Task;
+
 use super::super::super::{
     ControlCenter, Message, SubMenu, bluetooth::BluetoothMessage,
     commands::ControlCenterCommandExt
@@ -12,13 +14,14 @@ use crate::{
 };
 
 impl ControlCenter {
+    #[must_use = "the shell work a menu asks for does not happen unless the task is run"]
     pub(super) fn handle_bluetooth(
         &mut self,
         msg: BluetoothMessage,
         config: &ControlCenterModuleConfig,
         outputs: &mut Outputs,
         main_config: &crate::config::Config
-    ) {
+    ) -> Task<Message> {
         match msg {
             BluetoothMessage::Event(event) => match *event {
                 ServiceEvent::Init(service) => {
@@ -56,9 +59,12 @@ impl ControlCenter {
             BluetoothMessage::More(id) => {
                 if let Some(cmd) = &config.bluetooth_more_cmd {
                     crate::utils::launcher::execute_command(cmd.clone());
-                    let _ = outputs.close_menu::<Message>(id, main_config);
+
+                    return outputs.close_menu::<Message>(id, main_config);
                 }
             }
         }
+
+        Task::none()
     }
 }

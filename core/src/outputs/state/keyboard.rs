@@ -12,7 +12,7 @@ impl Outputs {
     /// ```ignore
     /// outputs.request_keyboard(surface_id, true);
     /// ```
-    #[must_use]
+    #[must_use = "the keyboard grab is only asked for when the task is run"]
     pub fn request_keyboard<Message: 'static>(
         &self,
         id: Id,
@@ -36,7 +36,7 @@ impl Outputs {
     /// ```ignore
     /// outputs.release_keyboard(surface_id, false);
     /// ```
-    #[must_use]
+    #[must_use = "the keyboard grab is only asked for when the task is run"]
     pub fn release_keyboard<Message: 'static>(
         &self,
         id: Id,

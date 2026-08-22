@@ -18,6 +18,7 @@ impl Outputs {
     /// let task = outputs.toggle_menu(surface_id, MenuType::Tray("battery".into()), button_ref, &config);
     /// spawn(task);
     /// ```
+    #[must_use = "the shell work a menu asks for does not happen unless the task is run"]
     pub fn toggle_menu<Message: 'static>(
         &mut self,
         id: Id,
@@ -64,6 +65,7 @@ impl Outputs {
     /// ```ignore
     /// outputs.close_menu(surface_id, &config);
     /// ```
+    #[must_use = "the shell work a menu asks for does not happen unless the task is run"]
     pub fn close_menu<Message: 'static>(
         &mut self,
         id: Id,
@@ -90,6 +92,7 @@ impl Outputs {
         clippy::needless_pass_by_value,
         reason = "the owned menu type keeps the public signature stable for callers"
     )]
+    #[must_use = "the shell work a menu asks for does not happen unless the task is run"]
     pub fn close_menu_if<Message: 'static>(
         &mut self,
         id: Id,

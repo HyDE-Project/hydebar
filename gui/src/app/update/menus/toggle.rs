@@ -77,11 +77,15 @@ impl App {
             MenuType::Network => {
                 if self.outputs.open_menu() != Some(&MenuType::Network) {
                     self.control_center.close_submenu();
-                    self.control_center.update(
-                        modules::control_center::Message::ToggleSubMenu(SubMenu::Wifi),
-                        &self.config.control_center,
-                        &mut self.outputs,
-                        &self.config
+                    cmd.push(
+                        self.control_center
+                            .update(
+                                modules::control_center::Message::ToggleSubMenu(SubMenu::Wifi),
+                                &self.config.control_center,
+                                &mut self.outputs,
+                                &self.config
+                            )
+                            .map(Message::ControlCenter)
                     );
                 }
             }

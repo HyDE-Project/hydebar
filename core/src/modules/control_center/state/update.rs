@@ -1,5 +1,6 @@
 //! Handling of settings menu messages.
 
+use iced::Task;
 use tokio::runtime::Handle;
 
 use super::super::{ControlCenter, Message, SubMenu, commands::ControlCenterCommandExt};
@@ -42,18 +43,27 @@ impl ControlCenter {
         }));
     }
 
+    /// Answers one message, handing back whatever it asks the shell for.
+    ///
+    /// The task is a return value because the shell work is not optional: a
+    /// menu taken down destroys one layer surface and raises its successor,
+    /// and a task dropped where it was made leaves the old surface mapped and
+    /// the menu pointing at an identity nothing owns. The keyboard grabs are
+    /// the same — asked for and never made.
+    #[must_use = "the shell work a menu asks for does not happen unless the task is run"]
     pub fn update(
         &mut self,
         message: Message,
         config: &ControlCenterModuleConfig,
         outputs: &mut Outputs,
         main_config: &crate::config::Config
-    ) {
+    ) -> Task<Message> {
         match message {
             Message::ToggleMenu(id, button_ui_ref) => {
                 self.sub_menu = None;
                 self.password_dialog = None;
-                let _ = outputs.toggle_menu::<Message>(
+
+                return outputs.toggle_menu::<Message>(
                     id,
                     MenuType::ControlCenter,
                     button_ui_ref,
@@ -61,16 +71,16 @@ impl ControlCenter {
                 );
             }
             Message::Audio(msg) => {
-                self.handle_audio(msg, config, outputs, main_config);
+                return self.handle_audio(msg, config, outputs, main_config);
             }
             Message::UPower(msg) => {
                 self.handle_upower(msg);
             }
             Message::Network(msg) => {
-                self.handle_network(msg, config, outputs, main_config);
+                return self.handle_network(msg, config, outputs, main_config);
             }
             Message::Bluetooth(msg) => {
-                self.handle_bluetooth(msg, config, outputs, main_config);
+                return self.handle_bluetooth(msg, config, outputs, main_config);
             }
             Message::Brightness(msg) => {
                 self.handle_brightness(msg);
@@ -106,8 +116,10 @@ impl ControlCenter {
                 msg.update();
             }
             Message::PasswordDialog(msg) => {
-                self.handle_password_dialog(msg, outputs, main_config);
+                return self.handle_password_dialog(msg, outputs, main_config);
             }
         }
+
+        Task::none()
     }
 }
