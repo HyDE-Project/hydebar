@@ -1,33 +1,22 @@
 //! How the tooltip anchor behaves inside the widget tree.
 //!
 //! Layout, drawing and interaction all pass straight through to the wrapped
-//! module; the anchor's own work happens in `update`, where the hover is
-//! compared against what was last published and the change — entry with the
-//! element's placement, exit with [`None`] — is sent up.
+//! module; the anchor's own work is in [`hover`], where the pointer is
+//! compared against what was last published.
+
+mod hover;
 
 use iced::{
-    Length, Point, Rectangle, Size, Vector,
+    Length, Rectangle, Size, Vector,
     core::{
         Clipboard, Layout, Shell, Widget,
         event::Event,
-        layout, mouse, renderer, touch,
+        layout, mouse, renderer,
         widget::{Operation, Tree, tree}
     }
 };
 
 use super::element::{State, TooltipAnchor};
-use crate::position_button::ButtonUIRef;
-
-/// Describes the wrapped element the way a menu describes its button.
-fn anchor_of(layout: Layout<'_>, viewport: &Rectangle) -> ButtonUIRef {
-    ButtonUIRef {
-        position: Point::new(
-            layout.bounds().width / 2. + layout.position().x,
-            layout.bounds().height / 2. + layout.position().y
-        ),
-        viewport: (viewport.width, viewport.height)
-    }
-}
 
 impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
     for TooltipAnchor<'a, Message, Theme, Renderer>
@@ -77,7 +66,6 @@ where
             .as_widget_mut()
             .operate(&mut tree.children[0], layout, renderer, operation);
     }
-
     fn update(
         &mut self,
         tree: &mut Tree,
@@ -100,31 +88,14 @@ where
             viewport
         );
 
-        let state = tree.state.downcast_mut::<State>();
-
-        match event {
-            Event::Mouse(mouse::Event::CursorLeft)
-            | Event::Touch(touch::Event::FingerLost {
-                ..
-            }) => state.pointer_inside = false,
-            Event::Mouse(
-                mouse::Event::CursorEntered
-                | mouse::Event::CursorMoved {
-                    ..
-                }
-            ) => state.pointer_inside = true,
-            _ => {}
-        }
-
-        let is_hovered = state.pointer_inside && cursor.is_over(layout.bounds());
-
-        if state.is_hovered != is_hovered {
-            state.is_hovered = is_hovered;
-
-            shell.publish((self.on_hover)(
-                is_hovered.then(|| anchor_of(layout, viewport))
-            ));
-        }
+        self.note_the_hover(
+            tree.state.downcast_mut::<State>(),
+            event,
+            layout,
+            cursor,
+            shell,
+            viewport
+        );
     }
 
     fn draw(
@@ -186,11 +157,11 @@ where
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
-    use iced::{Theme, widget::Space};
+    use iced::{Point, Theme, widget::Space};
     use iced_core::layout::Limits;
 
     use super::*;
-    use crate::tooltip::anchor::tooltip_anchor;
+    use crate::{position_button::ButtonUIRef, tooltip::anchor::tooltip_anchor};
 
     type TestRenderer = ();
 
