@@ -109,6 +109,11 @@ impl App {
             attention: Attention::default(),
             hover: HoverFades::default(),
             desk_clocks: std::collections::HashMap::new(),
+            desk_returning: {
+                let mut painted = hydebar_core::animation::Unfold::default();
+                painted.open();
+                painted
+            },
             sweep: hydebar_core::style::SweepStyle::default(),
             entrance: hydebar_core::animation::Spring::new(0.0),
             relayout: hydebar_core::animation::Spring::new(1.0),

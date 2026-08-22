@@ -134,6 +134,14 @@ pub struct App {
     /// sequence spends its tail on the last blocks, where it barely moves, and
     /// they read as stalling. The easing belongs to each block's own slice.
     pub desk_clocks: std::collections::HashMap<Option<String>, hydebar_core::animation::Unfold>,
+    /// How far the strip's own background has come back from a folded canvas.
+    ///
+    /// A clock of its own rather than a reading off the islands' spring: the
+    /// spring is all but home in its first tenth of a second, and a
+    /// background painted on that schedule is back before the eye has it. The
+    /// islands ride the spring and the background runs ahead of them on this,
+    /// which is the order the two are wanted in.
+    pub desk_returning: hydebar_core::animation::Unfold,
     /// The one tooltip lifecycle: dwell, warmth and the fade either way.
     pub hints: hydebar_core::tooltip::Hints,
     /// The greeting line, composed once when the greeting is armed.

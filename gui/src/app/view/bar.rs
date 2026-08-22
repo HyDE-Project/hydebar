@@ -314,6 +314,49 @@ mod tests {
     }
 
     #[test]
+    fn the_background_comes_back_from_the_ends_inwards_ahead_of_the_islands() {
+        let mut app = test_app_with(|config| config.desk.enabled = true);
+
+        app.desk_clocks.entry(None).or_default().open();
+        app.screen_width = Some(1920.0);
+        app.desk_clocks.entry(None).or_default().fold();
+        app.send_the_islands_home(surface());
+
+        assert!(
+            app.desk_returning.is_running(),
+            "the strip knows it is on its way back"
+        );
+        assert!(
+            app.strip_wash(None) < 0.05,
+            "next to nothing of the background is painted as the islands set off"
+        );
+
+        let mut wash = 0.0;
+        let mut whole_before_they_land = false;
+
+        for _ in 0..256 {
+            let now = app.strip_wash(None);
+
+            assert!(now >= wash, "the background only ever comes back");
+            wash = now;
+
+            let sliding = app.relayout.advance(std::time::Duration::from_millis(16));
+            let _ = app.advance_desk(std::time::Duration::from_millis(16));
+
+            whole_before_they_land |= wash >= 1.0 && sliding;
+
+            if !sliding {
+                break;
+            }
+        }
+
+        assert!(
+            whole_before_they_land,
+            "the background is whole while the islands are still flying in"
+        );
+    }
+
+    #[test]
     fn the_background_leaves_the_middle_of_the_strip_before_its_ends() {
         let ground = Color::from_rgba(1.0, 1.0, 1.0, 1.0);
 

@@ -7,6 +7,14 @@ const SHORTEST_UNFOLDING: Duration = Duration::from_millis(600);
 
 /// The longest the whole unfolding is allowed to be.
 const LONGEST_UNFOLDING: Duration = Duration::from_millis(2400);
+
+/// How long the strip's background takes to close on the way back.
+///
+/// Shorter than the islands' own flight home, which settles a quarter of a
+/// second after it starts: the background is what they land on, so it is
+/// whole before they are, and long enough to be seen closing rather than
+/// simply appearing.
+const RETURN_WASH: Duration = Duration::from_millis(190);
 use iced::{Task, set_input_region};
 
 use super::super::super::state::{App, Message};
@@ -136,6 +144,9 @@ impl App {
 
         self.flip.borrow_mut().depart();
 
+        self.desk_returning = hydebar_core::animation::Unfold::default();
+        self.desk_returning
+            .advance(Duration::from_millis(1), RETURN_WASH);
         self.relayout = hydebar_core::animation::Spring::new(0.0)
             .with_response(hydebar_core::animation::STANDARD);
         self.relayout.set_target(1.0);
@@ -153,6 +164,7 @@ impl App {
     ///
     /// Reports whether any of them is still travelling.
     pub(crate) fn advance_desk(&mut self, elapsed: std::time::Duration) -> bool {
+        let returning = self.desk_returning.advance(elapsed, RETURN_WASH);
         let total = self.unfolding_response();
         let bare: Vec<Option<String>> = self
             .desk_clocks
@@ -161,7 +173,7 @@ impl App {
             .cloned()
             .collect();
 
-        bare.into_iter().fold(false, |running, screen| {
+        bare.into_iter().fold(returning, |running, screen| {
             self.desk_clocks
                 .get_mut(&screen)
                 .is_some_and(|clock| clock.advance(elapsed, total))
@@ -183,7 +195,8 @@ impl App {
     /// Reports whether any screen is in the middle of unfolding.
     #[must_use]
     pub(crate) fn desk_is_unfolding(&self) -> bool {
-        self.desk_clocks.values().any(|clock| clock.is_running())
+        self.desk_returning.is_running()
+            || self.desk_clocks.values().any(|clock| clock.is_running())
     }
 
     /// Reports whether the islands have left the strip of `screen`.
@@ -224,13 +237,15 @@ impl App {
     /// down — and by the frame the compositor stops blurring, the last of it
     /// has gone from under the last island.
     ///
-    /// The way back is not this: a strip returning under a window that has
-    /// already mapped takes its blur back at once, which is what it was asked
-    /// for.
+    /// The way back runs the same picture backwards: the two ends of the
+    /// strip are painted first and the opening closes towards the middle, so
+    /// the blur is back before the islands that fly in over it. It leads them
+    /// rather than arriving with them — a background still closing under a
+    /// module already in its place is the one order this must not have.
     #[must_use]
     pub(crate) fn strip_wash(&self, screen: Option<&str>) -> f32 {
         if !self.desk_holds(screen) {
-            return 1.0;
+            return self.desk_returning.progress();
         }
 
         let nearest = hydebar_core::animation::landed(Self::reach(0, self.deepest_column()));
