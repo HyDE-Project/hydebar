@@ -9,7 +9,7 @@ This project follows the [Rust Manifest](https://github.com/RAprogramm/RustManif
 - **Clear scope**: Define what changes and what doesn't
 - **Acceptance criteria**: DoD (Definition of Done) before starting work
 - **Plan first**: Present plan → Get ACK → Implement
-- **Quality gates**: All code must pass `cargo check && cargo test && cargo fmt && cargo clippy`
+- **Quality gates**: All code must pass `cargo +nightly fmt --all -- --check && cargo check && cargo test && cargo clippy --workspace --all-targets --all-features -- -D warnings`
 - **No version changes**: Don't modify crate versions, CHANGELOG, or Cargo.lock without separate task
 
 ## Code of Conduct
@@ -138,7 +138,7 @@ git checkout -b 123-feature-name
 Follow Rust conventions:
 
 ```bash
-# Format code
+# Format code — the only command that runs on nightly
 cargo +nightly fmt
 
 # Check for errors
@@ -147,9 +147,23 @@ cargo check
 # Run tests
 cargo test
 
-# Fix clippy warnings
-cargo clippy --all-targets --all-features
+# Fix clippy warnings; pedantic and nursery are on for the whole workspace
+cargo clippy --workspace --all-targets --all-features -- -D warnings
 ```
+
+### Toolchains
+
+`rust-toolchain.toml` pins the workspace to **stable**, so `check`, `test`
+and `clippy` all run there without being asked. Formatting is the single
+exception: every setting in `.rustfmt.toml` is nightly-only, and a stable
+`rustfmt` would accept the file, ignore them and reformat the tree its own
+way — so it is always `cargo +nightly fmt`.
+
+`clippy::pedantic` and `clippy::nursery` are enabled in the workspace
+manifest, alongside `missing_debug_implementations`, `unsafe_code` and a
+denied `let_underscore_future`. They apply to every invocation, so there is
+no flag to remember; CI runs the same command with `-D warnings`, and the
+tree is expected to be free of them.
 
 ### 3. Commit Changes
 

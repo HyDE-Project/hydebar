@@ -1,0 +1,18 @@
+# The toolchain every ordinary command in this workspace runs on.
+#
+# Building, testing and linting are stable work: a bar that only compiles on
+# a nightly compiler cannot be packaged by a distribution, and a lint that
+# only exists on nightly cannot be relied on in review.
+#
+# Formatting is the one exception. The settings in `.rustfmt.toml` — import
+# granularity, import grouping, field alignment, comment wrapping — are all
+# nightly-only, and a stable `rustfmt` accepts the file, ignores them and
+# reformats the tree its own way. It is therefore always invoked as
+# `cargo +nightly fmt`, in the contributing guide and in CI alike.
+#
+# The other toolchains CI uses — nightly for coverage, the minimum supported
+# version for its own job — are named explicitly at the call site for the
+# same reason: an exception should be visible where it is taken.
+[toolchain]
+channel = "stable"
+components = ["rustfmt", "clippy"]
