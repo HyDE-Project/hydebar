@@ -6,10 +6,13 @@
 //! columns, each keeping its own order and its own groups, and each module
 //! keeps the presses it answers to on the strip.
 //!
-//! One folder, one room so far: [`column`] stacks a section into a column.
+//! [`column`] stacks a section into a column, [`blocks`] draws what a unit
+//! opens into, [`readings`] settles what each block says, and [`fit`] sizes
+//! the writing so the deepest column ends on the screen.
 
 mod blocks;
 pub mod column;
+mod fit;
 mod readings;
 
 use hydebar_core::config::ModuleName;
@@ -47,7 +50,7 @@ impl App {
 
         let ink = blocks::Ink {
             value: self.theme_cache.palette().text,
-            size:  self.appearance().font_size_px()
+            size:  fit::ink_size(self, id, self.canvas_room(id))
         };
         let margin = ink.size * 2.0;
         let modules = &self.config.modules;
@@ -104,6 +107,22 @@ impl App {
         let (left, centre, right) = Self::desk_columns(&self.config.modules);
 
         left.len().max(centre.len()).max(right.len())
+    }
+
+    /// The height the columns have to end within.
+    ///
+    /// Everything below the strip's own band, less the margin the canvas keeps
+    /// around itself, on a screen the bar has been told the height of. A
+    /// screen it has not is answered with nothing to fit into, which leaves
+    /// the writing at the size the theme asked for.
+    fn canvas_room(&self, id: Id) -> f32 {
+        let margin = self.appearance().font_size_px() * 2.0;
+
+        self.screen_height
+            .map_or(f32::INFINITY, |height| {
+                height - self.strip_band(id) - margin * 2.0
+            })
+            .max(0.0)
     }
 
     /// The band along the top of the screen the strip itself occupies.

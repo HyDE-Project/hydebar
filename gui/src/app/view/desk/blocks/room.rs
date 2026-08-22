@@ -58,4 +58,4 @@ pub(super) fn picture(ink: Ink) -> f32 {
 /// with the grid's own padding around them — measured off the grid itself at
 /// the body size and left a little over, because a figure short of the truth
 /// does not merely open early, it clips the last week off for good.
-pub(super) const MONTH_ROWS: f32 = 22.0;
+pub(in crate::app::view::desk) const MONTH_ROWS: f32 = 22.0;

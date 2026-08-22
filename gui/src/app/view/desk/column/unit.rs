@@ -43,6 +43,63 @@ impl App {
         )
     }
 
+    /// Whether the unit draws anything at all on this screen.
+    ///
+    /// A unit whose module has nothing to draw takes no place in the column,
+    /// so it takes no room either.
+    pub(in crate::app::view::desk) fn desk_island_exists(
+        &self,
+        unit: &ModuleName,
+        id: Id
+    ) -> bool {
+        self.desk_island(unit, id).is_some()
+    }
+
+    /// The room one unit takes when it is open, at the given ink.
+    ///
+    /// Worked out from the same figures that reserve it, so what this says a
+    /// column needs is what the column takes: the island it arrived as, the
+    /// gap under it, and the room of every block it opens into.
+    pub(in crate::app::view::desk) fn desk_unit_room(&self, unit: &ModuleName, ink: Ink) -> f32 {
+        let island = self.appearance().height.unwrap_or(38.0);
+        let opened = self.desk_room(unit, ink);
+
+        if opened <= 0.0 {
+            return island;
+        }
+
+        ink.size.mul_add(0.9, island) + opened
+    }
+
+    /// The room the blocks of one unit take, without the island above them.
+    fn desk_room(&self, unit: &ModuleName, ink: Ink) -> f32 {
+        if matches!(unit, ModuleName::Clock) {
+            let seat = super::super::readings::seat(self).map_or(0.0, |panel| {
+                ink.size.mul_add(0.9, blocks::room_of(&panel, ink))
+            });
+
+            return ink.size.mul_add(blocks::MONTH_ROWS, seat);
+        }
+
+        let panels = self.desk_panels(unit);
+
+        if panels.is_empty() {
+            return blocks::blank_room(ink);
+        }
+
+        #[expect(
+            clippy::cast_precision_loss,
+            reason = "a unit opens into a handful of blocks"
+        )]
+        let gaps = (panels.len() - 1) as f32 * (ink.size * 0.9);
+
+        panels
+            .iter()
+            .map(|panel| blocks::room_of(panel, ink))
+            .sum::<f32>()
+            + gaps
+    }
+
     /// What one module of an opened unit writes out.
     fn desk_opened<'a>(
         &'a self,

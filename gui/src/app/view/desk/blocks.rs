@@ -13,9 +13,10 @@ mod trace;
 
 use iced::{Alignment, Color, Element};
 
+pub(in crate::app::view::desk) use self::room::MONTH_ROWS;
 use self::{
     parts::{blank, written},
-    room::{MONTH_ROWS, revealed, room}
+    room::{revealed, room}
 };
 use super::readings::{Figure, Panel};
 use crate::app::Message;
@@ -86,21 +87,30 @@ impl Ink {
 /// the top, the readings appearing as the room for them grows, rather than a
 /// line at a time: a line is a step, and a dozen steps in a fifth of a second
 /// is what the eye reads as juddering.
-pub(super) fn panel<'a>(panel: &Panel, side: Side, ink: Ink, bloom: f32) -> Element<'a, Message> {
-    let drawing = match panel.figure.as_ref() {
+/// The room one panel takes when it is open.
+pub(in crate::app::view::desk) fn room_of(panel: &Panel, ink: Ink) -> f32 {
+    room(panel.rows.len(), ink.size * 1.4, ink) + drawing_room(panel, ink)
+}
+
+/// The room the blank shape takes, which is a heading and two bars.
+pub(in crate::app::view::desk) fn blank_room(ink: Ink) -> f32 {
+    room(2, ink.size * 0.55, ink)
+}
+
+/// The room the drawing of a panel takes, nothing when it carries none.
+fn drawing_room(panel: &Panel, ink: Ink) -> f32 {
+    match panel.figure.as_ref() {
         Some(Figure::Picture(_)) => ink.size.mul_add(0.28, room::picture(ink)),
         Some(Figure::Overview(_)) => ink.size.mul_add(0.28, overview::room(ink)),
         Some(Figure::Trace {
             ..
         }) => ink.size.mul_add(0.28, trace::room(ink)),
         None => 0.0
-    };
+    }
+}
 
-    revealed(
-        written(panel, side, ink),
-        room(panel.rows.len(), ink.size * 1.4, ink) + drawing,
-        bloom
-    )
+pub(super) fn panel<'a>(panel: &Panel, side: Side, ink: Ink, bloom: f32) -> Element<'a, Message> {
+    revealed(written(panel, side, ink), room_of(panel, ink), bloom)
 }
 
 /// The block of a module that has nothing to say yet.
