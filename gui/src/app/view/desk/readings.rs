@@ -16,17 +16,68 @@ pub(super) use session::{
     sound, submap, theme, tray, updates, weather, windows, workspaces
 };
 
+/// One window of a screen, as a share of that screen.
+///
+/// Kept as shares rather than pixels so a miniature can be drawn at whatever
+/// size the column has room for, and so a reading taken on a four megapixel
+/// screen draws the same on a laptop panel.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Frame {
+    /// Left edge, as a share of the screen's width.
+    pub x:        f32,
+    /// Top edge, as a share of the screen's height.
+    pub y:        f32,
+    /// Width, as a share of the screen's width.
+    pub width:    f32,
+    /// Height, as a share of the screen's height.
+    pub height:   f32,
+    /// Whether this is the window the keyboard is talking to.
+    pub focused:  bool,
+    /// Whether the window floats over the layout instead of tiling into it.
+    pub floating: bool
+}
+
+/// One workspace as a miniature of the screen it would fill.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Miniature {
+    /// What the compositor calls it, which is what the user calls it.
+    pub name:    String,
+    /// Whether it is the one on screen.
+    pub active:  bool,
+    /// Whether something on it asked for attention.
+    pub urgent:  bool,
+    /// The windows standing on it, in the compositor's own order.
+    pub windows: Vec<Frame>
+}
+
+/// A drawing a block carries above its lines.
+///
+/// Most blocks are a table and nothing else, because most readings are
+/// numbers. Two are not: a wallpaper is a picture, and a set of workspaces is
+/// a shape — a room with things standing in it — and both say more drawn than
+/// they ever could spelled out.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Figure {
+    /// A picture the desktop already keeps.
+    Picture(iced::widget::image::Handle),
+    /// The workspaces of a screen, each with the windows standing on it.
+    Overview(Vec<Miniature>)
+}
+
 /// One block of the canvas: a heading and the lines under it.
 ///
 /// The heading is borrowed where the crate wrote it down and owned where the
 /// user did: every block but one is named here, and a module the user wrote
 /// carries the name their configuration gave it.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Panel {
     /// Heading, drawn in the small capitals the columns are ruled by.
-    pub title: std::borrow::Cow<'static, str>,
+    pub title:  std::borrow::Cow<'static, str>,
     /// Label and value of every line, in drawing order.
-    pub rows:  Vec<(String, String)>
+    pub rows:   Vec<(String, String)>,
+    /// What is drawn between the rule and the lines, on the blocks that carry
+    /// one.
+    pub figure: Option<Figure>
 }
 
 impl Panel {
@@ -37,8 +88,25 @@ impl Panel {
     ) -> Option<Self> {
         (!rows.is_empty()).then_some(Self {
             title: title.into(),
-            rows
+            rows,
+            figure: None
         })
+    }
+
+    /// A panel that carries a drawing, whether or not it carries rows.
+    ///
+    /// A drawing is a reading in its own right: a screen with one window on it
+    /// has a miniature worth showing and next to nothing worth spelling out.
+    fn drawn(
+        title: impl Into<std::borrow::Cow<'static, str>>,
+        rows: Vec<(String, String)>,
+        figure: Figure
+    ) -> Self {
+        Self {
+            title: title.into(),
+            rows,
+            figure: Some(figure)
+        }
     }
 }
 

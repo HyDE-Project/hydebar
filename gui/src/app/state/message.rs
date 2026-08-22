@@ -33,6 +33,8 @@ pub enum Message {
     },
     /// The compositor answered where the bar's own strip stands.
     StripRowsMeasured(std::collections::HashMap<String, f32>),
+    /// The wallpaper in force was read off the disk, ready to draw.
+    WallpaperRead(Option<(std::path::PathBuf, iced::widget::image::Handle)>),
     ConfigChanged(ConfigApplied),
     ConfigDegraded(ConfigDegradation),
     /// The process was asked to quit, by a takeover or by the session.

@@ -1,9 +1,11 @@
 //! The drawing of one panel: a heading, a rule and the lines under it.
 //!
-//! Three rooms. Here are the blocks themselves — the three shapes a unit
-//! opens into; [`room`] is how much of the column a block takes and how it is
-//! written into it, and [`parts`] is the pieces every shape is built from.
+//! Four rooms. Here are the blocks themselves — the three shapes a unit opens
+//! into; [`room`] is how much of the column a block takes and how it is
+//! written into it, [`parts`] is the pieces every shape is built from, and
+//! [`overview`] draws the one reading that is a shape rather than a table.
 
+mod overview;
 mod parts;
 mod room;
 
@@ -13,7 +15,7 @@ use self::{
     parts::{blank, written},
     room::{MONTH_ROWS, revealed, room}
 };
-use super::readings::Panel;
+use super::readings::{Figure, Panel};
 use crate::app::Message;
 
 /// Which edge of the canvas a column is pinned to.
@@ -83,9 +85,15 @@ impl Ink {
 /// line at a time: a line is a step, and a dozen steps in a fifth of a second
 /// is what the eye reads as juddering.
 pub(super) fn panel<'a>(panel: &Panel, side: Side, ink: Ink, bloom: f32) -> Element<'a, Message> {
+    let drawing = match panel.figure.as_ref() {
+        Some(Figure::Picture(_)) => ink.size.mul_add(0.28, room::picture(ink)),
+        Some(Figure::Overview(_)) => ink.size.mul_add(0.28, overview::room(ink)),
+        None => 0.0
+    };
+
     revealed(
         written(panel, side, ink),
-        room(panel.rows.len(), ink.size * 1.4, ink),
+        room(panel.rows.len(), ink.size * 1.4, ink) + drawing,
         bloom
     )
 }

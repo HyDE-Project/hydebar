@@ -136,10 +136,16 @@ impl App {
             Message::Themes(msg) => {
                 let config = Arc::clone(&self.config);
 
-                self.themes.update(msg, &config).map(Message::Themes)
+                Task::batch([
+                    self.themes.update(msg, &config).map(Message::Themes),
+                    super::super::outputs::read_wallpaper()
+                ])
             }
             Message::BarLayout(msg) => self.update_bar_layout(msg),
-            Message::Wallpaper(msg) => self.update_wallpaper(msg),
+            Message::Wallpaper(msg) => Task::batch([
+                self.update_wallpaper(msg),
+                super::super::outputs::read_wallpaper()
+            ]),
             Message::MediaPlayer(msg) => {
                 self.media_player.update(msg, &self.config.media_player);
                 Task::none()

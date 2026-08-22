@@ -69,7 +69,8 @@ impl App {
             | Message::RemeasureScreen {
                 ..
             }
-            | Message::StripRowsMeasured(_) => self.update_outputs(message),
+            | Message::StripRowsMeasured(_)
+            | Message::WallpaperRead(_) => self.update_outputs(message),
             other => self.update_modules(other)
         }
     }

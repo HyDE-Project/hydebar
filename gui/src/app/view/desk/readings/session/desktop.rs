@@ -86,6 +86,22 @@ pub fn theme(app: &App) -> Option<Panel> {
         }
         .to_owned()
     ));
+    push(
+        &mut rows,
+        "wallpaper",
+        app.wallpaper_preview.as_ref().and_then(|(path, _)| {
+            path.file_stem()
+                .map(|name| name.to_string_lossy().into_owned())
+        })
+    );
+    push(&mut rows, "shader", hyde.shader.clone());
 
-    Panel::of("theme", rows)
+    match app.wallpaper_preview.as_ref() {
+        Some((_, picture)) => Some(Panel::drawn(
+            "theme",
+            rows,
+            super::super::Figure::Picture(picture.clone())
+        )),
+        None => Panel::of("theme", rows)
+    }
 }

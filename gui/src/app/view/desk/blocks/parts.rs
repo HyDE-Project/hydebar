@@ -6,8 +6,12 @@ use iced::{
 };
 
 use super::{
-    super::{super::super::state::Message, readings::Panel},
-    Ink, Side
+    super::{
+        super::super::state::Message,
+        readings::{Figure, Panel}
+    },
+    Ink, Side,
+    overview::overview
 };
 
 /// The lines of a panel, in the ink they are drawn in.
@@ -24,12 +28,28 @@ pub(super) fn written<'a>(panel: &Panel, side: Side, ink: Ink) -> Element<'a, Me
     Column::with_children(
         std::iter::once(heading.into())
             .chain(std::iter::once(rule(ink)))
+            .chain(panel.figure.as_ref().map(|figure| drawn(figure, ink)))
             .chain(lines)
     )
     .spacing(ink.size * 0.28)
     .width(Length::Fill)
     .align_x(side.alignment_x())
     .into()
+}
+
+/// The drawing a panel carries, in the room its kind asks for.
+fn drawn<'a>(figure: &Figure, ink: Ink) -> Element<'a, Message> {
+    match figure {
+        Figure::Picture(handle) => container(
+            iced::widget::image(handle.clone())
+                .width(Length::Fill)
+                .height(Length::Fixed(super::room::picture(ink)))
+                .content_fit(iced::ContentFit::Cover)
+        )
+        .clip(true)
+        .into(),
+        Figure::Overview(workspaces) => overview(workspaces, ink)
+    }
 }
 
 /// The blank shape a module with nothing to say opens into.

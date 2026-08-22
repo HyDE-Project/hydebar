@@ -6,6 +6,6 @@ mod mapping;
 mod menus;
 mod modules;
 mod navigation;
-mod outputs;
+pub mod outputs;
 mod registration;
 mod subscriptions;

@@ -15,6 +15,7 @@
 //! commands, [`view`] draws the picker grid and [`module`] wires the module
 //! to the bar. The root holds the state the rooms share.
 
+pub mod current;
 mod listing;
 mod module;
 mod state;

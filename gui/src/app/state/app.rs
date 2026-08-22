@@ -70,6 +70,13 @@ pub struct App {
     /// What the islands are sent beyond when they fly back onto the strip:
     /// off screen has to be off *this* screen, not a guessed distance.
     pub(crate) screen_width: Option<f32>,
+    /// The wallpaper in force, decoded ready to draw, and where it was read.
+    ///
+    /// Held rather than read where it is drawn: the canvas is built on every
+    /// frame of an unfolding, and decoding a picture per frame is a picture
+    /// decoded a hundred times for one that was wanted once. The path beside
+    /// it is what tells one wallpaper from the next without decoding again.
+    pub(crate) wallpaper_preview: Option<(std::path::PathBuf, iced::widget::image::Handle)>,
     /// The row the strip stands on, screen by screen, as last measured.
     ///
     /// The canvas covers the screen from its very top and the strip does not

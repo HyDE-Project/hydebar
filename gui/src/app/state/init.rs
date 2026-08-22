@@ -77,6 +77,7 @@ impl App {
             screen_height: None,
             screen_width: None,
             strip_rows: std::collections::HashMap::new(),
+            wallpaper_preview: None,
             magnification: hydebar_core::components::scale::screen_factor(),
             outputs,
             navigation_mode: false,
@@ -144,6 +145,8 @@ impl App {
         if app.config.idle_inhibitor.start_activated {
             app.control_center.set_idle_inhibited(true);
         }
+
+        let task = Task::batch([task, super::super::update::outputs::read_wallpaper()]);
 
         (app, task)
     }

@@ -44,6 +44,14 @@ pub(super) fn revealed(
     .into()
 }
 
+/// How tall a picture stands in a block, at the given ink.
+///
+/// Six lines: a wallpaper says nothing at the height of one, and a block that
+/// is mostly picture stops being a reading.
+pub(super) fn picture(ink: Ink) -> f32 {
+    ink.size * 6.0
+}
+
 /// How many lines of the body ink the month grid stands.
 ///
 /// A heading, a row of weekday names and six weeks, each a line and a little,

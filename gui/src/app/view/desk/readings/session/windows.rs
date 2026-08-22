@@ -2,7 +2,7 @@
 
 use hydebar_core::services::mpris::PlaybackStatus;
 
-use super::super::{Panel, push};
+use super::super::{Frame, Miniature, Panel, push};
 use crate::app::state::App;
 
 /// Longest a window title is written out before it is cut.
@@ -35,25 +35,79 @@ pub fn workspaces(app: &App) -> Option<Panel> {
             .map(|space| space.name.clone())
     );
 
-    for space in items {
-        let mut said = match space.windows {
-            0 => "empty".to_owned(),
-            1 => "1 window".to_owned(),
-            count => format!("{count} windows")
-        };
+    Some(Panel::drawn(
+        "workspaces",
+        rows,
+        super::super::Figure::Overview(miniatures(app))
+    ))
+}
 
-        if space.urgent {
-            said.push_str(", urgent");
-        }
+/// Every workspace of this screen as a miniature of what stands on it.
+///
+/// The windows are placed by the compositor's own geometry, taken as shares of
+/// the screen: a window filling the left half is a shape filling the left half
+/// of the miniature, and one dropped in a corner is a shape in that corner.
+/// A screen the bar has not been told the size of yields empty rooms rather
+/// than a drawing laid out against a guess.
+fn miniatures(app: &App) -> Vec<Miniature> {
+    let width = app.screen_width.unwrap_or_default();
+    let height = app.screen_height.unwrap_or_default();
 
-        if space.active {
-            said.push_str(", in view");
-        }
+    app.workspaces
+        .items()
+        .iter()
+        .map(|space| Miniature {
+            name:    space.name.clone(),
+            active:  space.active,
+            urgent:  space.urgent,
+            windows: if width > 0.0 && height > 0.0 {
+                app.taskbar
+                    .clients()
+                    .iter()
+                    .filter(|client| client.workspace_id == space.id)
+                    .map(|client| frame_of(client, width, height))
+                    .collect()
+            } else {
+                Vec::new()
+            }
+        })
+        .collect()
+}
 
-        rows.push((space.name.clone(), said));
+/// One window as a share of the screen it stands on.
+///
+/// The compositor lays its screens out side by side on one plane, so a window
+/// on the second monitor stands beyond the first one's width; the share is
+/// taken within the screen it belongs to by folding the plane back onto one
+/// screen. Anything the fold leaves outside is clamped to the edge rather than
+/// drawn beyond it.
+fn frame_of(
+    client: &hydebar_proto::ports::hyprland::HyprlandClientInfo,
+    width: f32,
+    height: f32
+) -> Frame {
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "screen coordinates are far below any precision limit"
+    )]
+    let (left, top, across, down) = (
+        client.at.0 as f32,
+        client.at.1 as f32,
+        client.size.0 as f32,
+        client.size.1 as f32
+    );
+
+    let x = ((left % width) / width).clamp(0.0, 1.0);
+    let y = (top / height).clamp(0.0, 1.0);
+
+    Frame {
+        x,
+        y,
+        width: (across / width).clamp(0.0, 1.0 - x),
+        height: (down / height).clamp(0.0, 1.0 - y),
+        focused: client.focused,
+        floating: client.floating
     }
-
-    Panel::of("workspaces", rows)
 }
 
 /// The windows the compositor is holding, whichever screen they are on.

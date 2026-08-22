@@ -9,6 +9,21 @@ use log::info;
 
 use super::super::state::{App, Message};
 
+/// Reads the wallpaper in force off the drawing thread.
+///
+/// Decoding even a thumbnail costs more than a frame is worth, and the answer
+/// is wanted once per wallpaper rather than once per repaint.
+pub fn read_wallpaper() -> Task<Message> {
+    Task::perform(
+        async {
+            tokio::task::spawn_blocking(hydebar_core::modules::wallpaper::current::current)
+                .await
+                .unwrap_or_default()
+        },
+        Message::WallpaperRead
+    )
+}
+
 /// Asks the compositor for the screen's geometry off the drawing thread.
 ///
 /// The question travels the compositor's own socket and the compositor may
@@ -57,6 +72,11 @@ impl App {
                 } else {
                     Task::none()
                 }
+            }
+            Message::WallpaperRead(read) => {
+                self.wallpaper_preview = read;
+
+                Task::none()
             }
             Message::StripRowsMeasured(rows) => {
                 if !rows.is_empty() {
