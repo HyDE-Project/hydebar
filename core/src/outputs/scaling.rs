@@ -184,7 +184,7 @@ async fn query_geometry(name: &str) -> Option<ScreenGeometry> {
 /// The command line tool the bar used to spawn here is nothing but this
 /// exchange wrapped in a process; speaking to the socket directly costs a
 /// connection instead of a fork.
-async fn compositor_answer(request: &str) -> Option<String> {
+pub(super) async fn compositor_answer(request: &str) -> Option<String> {
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
     let signature = std::env::var_os("HYPRLAND_INSTANCE_SIGNATURE")?;

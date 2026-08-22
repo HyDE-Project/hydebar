@@ -31,6 +31,8 @@ pub enum Message {
         /// The answer, absent when the screen is gone or unnamed.
         geometry: Option<hydebar_core::outputs::scaling::ScreenGeometry>
     },
+    /// The compositor answered where the bar's own strip stands.
+    StripRowsMeasured(std::collections::HashMap<String, f32>),
     ConfigChanged(ConfigApplied),
     ConfigDegraded(ConfigDegradation),
     /// The process was asked to quit, by a takeover or by the session.

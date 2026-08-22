@@ -58,6 +58,13 @@ impl App {
                     Task::none()
                 }
             }
+            Message::StripRowsMeasured(rows) => {
+                if !rows.is_empty() {
+                    self.strip_rows = rows;
+                }
+
+                self.unfold_desk()
+            }
             Message::RemeasureScreen {
                 name
             } => {

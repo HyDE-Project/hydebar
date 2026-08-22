@@ -2,6 +2,7 @@
 
 mod blur;
 mod config;
+pub mod perch;
 pub mod scaling;
 mod state;
 pub(crate) mod wayland;

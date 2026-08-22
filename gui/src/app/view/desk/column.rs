@@ -86,7 +86,7 @@ impl App {
                     &self.flip,
                     block
                 )
-                .departing_from(self.strip_row())
+                .departing_from(self.strip_row(id))
                 .descending_first();
 
                 Some(
@@ -171,10 +171,30 @@ impl App {
     /// The height the strip's own islands stand at.
     ///
     /// Where every block departs from: the canvas covers the whole screen,
-    /// strip band included, so the row the units leave is the top of the
-    /// canvas rather than somewhere above it.
-    fn strip_row(&self) -> f32 {
-        self.appearance().bar_padding()[0]
+    /// strip band included, so the row the units leave is a row of the canvas
+    /// rather than somewhere above it.
+    ///
+    /// The strip is not at the top of the screen because it is a bar. It is
+    /// wherever the compositor put it, under whatever else reserved a band
+    /// above it, and a layer surface is never told its own place — so the row
+    /// is the measured one, with the padding the islands sit at inside the
+    /// strip on top of it. Taken as zero, every block leapt the height of
+    /// whatever stands above the bar before it began to move.
+    fn strip_row(&self, id: Id) -> f32 {
+        self.strip_top(id) + self.appearance().bar_padding()[0]
+    }
+
+    /// Where the strip's own surface begins on the screen it is drawn on.
+    ///
+    /// Zero until the compositor has answered, which is what a strip with
+    /// nothing above it stands at anyway.
+    pub(crate) fn strip_top(&self, id: Id) -> f32 {
+        self.outputs
+            .screen_of(id)
+            .flatten()
+            .and_then(|screen| self.strip_rows.get(screen))
+            .copied()
+            .unwrap_or_default()
     }
 
     /// Draws one unit in the form the canvas has room for.

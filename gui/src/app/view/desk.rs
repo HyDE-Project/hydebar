@@ -72,7 +72,7 @@ impl App {
         .width(Length::Fill)
         .height(Length::Fill)
         .padding(Padding {
-            top:    self.strip_band() + margin,
+            top:    self.strip_band(id) + margin,
             right:  margin,
             bottom: margin,
             left:   margin
@@ -110,15 +110,18 @@ impl App {
     ///
     /// The canvas covers the whole screen so its blocks can leave the strip
     /// without jumping, which means the places they land have to keep clear
-    /// of the band the strip stands in.
+    /// of the band the strip stands in — the strip's own height, and whatever
+    /// reserved a band above it before the strip was put there.
     #[expect(
         clippy::cast_possible_truncation,
         reason = "the bar height constant is exactly representable in f32"
     )]
-    fn strip_band(&self) -> f32 {
-        self.appearance()
-            .height
-            .unwrap_or(hydebar_core::HEIGHT as f32)
+    fn strip_band(&self, id: Id) -> f32 {
+        self.strip_top(id)
+            + self
+                .appearance()
+                .height
+                .unwrap_or(hydebar_core::HEIGHT as f32)
     }
 }
 

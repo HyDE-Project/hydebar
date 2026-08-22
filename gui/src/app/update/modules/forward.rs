@@ -64,7 +64,10 @@ impl App {
             Message::Desk(msg) => {
                 self.desk.update(msg);
 
-                self.unfold_desk()
+                Task::perform(
+                    hydebar_core::outputs::perch::strip_rows(),
+                    Message::StripRowsMeasured
+                )
             }
             Message::Tray(msg) => {
                 let close_tray = match &msg {

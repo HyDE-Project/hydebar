@@ -70,6 +70,13 @@ pub struct App {
     /// What the islands are sent beyond when they fly back onto the strip:
     /// off screen has to be off *this* screen, not a guessed distance.
     pub(crate) screen_width: Option<f32>,
+    /// The row the strip stands on, screen by screen, as last measured.
+    ///
+    /// The canvas covers the screen from its very top and the strip does not
+    /// have to: a layer surface is never told its own place, so the row the
+    /// modules leave is asked of the compositor rather than assumed. Absent
+    /// until the first answer, which reads as a strip at the top.
+    pub(crate) strip_rows: HashMap<String, f32>,
     pub config: Arc<Config>,
     pub outputs: Outputs,
     pub navigation_mode: bool,
