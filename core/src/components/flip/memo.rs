@@ -13,8 +13,13 @@ pub struct FlipMemo {
     /// a block came — the trail behind it above all — needs to know how big
     /// the block is as well as where it sits.
     live: HashMap<u64, Rectangle>,
-    /// Absolute positions the current journey departs from.
-    from: HashMap<u64, f32>
+    /// The whole seats the current journey departs from.
+    ///
+    /// The seat rather than its left edge: a block leaves the strip from the
+    /// place the layout gave it there, and anything drawing the way it came
+    /// has to start from that place — its middle, its width and all — rather
+    /// than from a corner of the very different shape it becomes.
+    from: HashMap<u64, Rectangle>
 }
 
 impl FlipMemo {
@@ -26,10 +31,7 @@ impl FlipMemo {
     /// nobody restates belonged to a surface or module that is gone —
     /// taking is what keeps the book from hoarding the dead.
     pub fn depart(&mut self) {
-        self.from = std::mem::take(&mut self.live)
-            .into_iter()
-            .map(|(key, seat)| (key, seat.x))
-            .collect();
+        self.from = std::mem::take(&mut self.live);
     }
 
     /// Writes the seat `key` rests at on the current frame.
@@ -45,7 +47,7 @@ impl FlipMemo {
 
     /// The departure seats of the journey in flight.
     #[must_use]
-    pub const fn from_map(&self) -> &HashMap<u64, f32> {
+    pub const fn from_map(&self) -> &HashMap<u64, Rectangle> {
         &self.from
     }
 }

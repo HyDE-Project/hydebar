@@ -136,7 +136,7 @@ impl App {
 
                         Some(trails::Way {
                             seat: *memo.seats().get(&key)?,
-                            from_x: *memo.from_map().get(&key)?,
+                            from: *memo.from_map().get(&key)?,
                             from_y: self.strip_row(id),
                             travel
                         })
@@ -920,7 +920,13 @@ mod tests {
         app.desk_clocks.entry(None).or_default().fold();
         app.send_the_islands_home(surface());
 
-        let seats: Vec<f32> = app.flip.borrow().from_map().values().copied().collect();
+        let seats: Vec<f32> = app
+            .flip
+            .borrow()
+            .from_map()
+            .values()
+            .map(|seat| seat.x)
+            .collect();
 
         assert!(
             !seats.is_empty(),

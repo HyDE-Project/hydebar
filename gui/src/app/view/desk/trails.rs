@@ -34,8 +34,8 @@ const INK: f32 = 0.3;
 pub(super) struct Way {
     /// Where the block rests once it has landed.
     pub seat:   Rectangle,
-    /// Where along the strip it set off from.
-    pub from_x: f32,
+    /// The place the layout gave it on the strip, its own size and all.
+    pub from:   Rectangle,
     /// The row of the strip it set off from.
     pub from_y: f32,
     /// How far along its own journey it is.
@@ -118,14 +118,15 @@ impl Wake {
 }
 
 /// The places the block stood on, from where it set off to where it is now.
+///
+/// Traced through the middle of the block rather than its corner, and the
+/// middle moves: on the strip the block is an island a few letters wide, on
+/// the canvas it is a table of readings, and the point the eye follows is the
+/// middle of whichever of the two it looks like at that moment. Taken from
+/// the corner alone the streak began half a block away from the module it
+/// belongs to, which is the one place it must not begin.
 fn walked(way: &Way) -> Vec<Point> {
     let at = Point::new(way.seat.x, way.seat.y);
-    let middle = |point: Point| {
-        Point::new(
-            point.x + way.seat.width / 2.0,
-            point.y + way.seat.height / 2.0
-        )
-    };
 
     (0..=STEPS)
         .map(|step| {
@@ -134,11 +135,19 @@ fn walked(way: &Way) -> Vec<Point> {
                 reason = "a trail is drawn in a few dozen steps"
             )]
             let progress = way.travel * (step as f32 / STEPS as f32);
-            let offset = offset_of(progress, true, Some(way.from_x), Some(way.from_y), at);
+            let offset = offset_of(progress, true, Some(way.from.x), Some(way.from_y), at);
+            let shape = grown(progress);
+            let across = (way.seat.width - way.from.width).mul_add(shape, way.from.width);
+            let down = (way.seat.height - way.from.height).mul_add(shape, way.from.height);
 
-            middle(Point::new(at.x + offset.x, at.y + offset.y))
+            Point::new(at.x + offset.x + across / 2.0, at.y + offset.y + down / 2.0)
         })
         .collect()
+}
+
+/// How much of the way from the strip's shape to the canvas's one is done.
+const fn grown(progress: f32) -> f32 {
+    progress.clamp(0.0, 1.0)
 }
 
 #[cfg(test)]
@@ -153,34 +162,54 @@ mod tests {
     fn way(travel: f32) -> Way {
         Way {
             seat: Rectangle::new(Point::new(40.0, 600.0), Size::new(300.0, 80.0)),
-            from_x: 900.0,
+            from: Rectangle::new(Point::new(900.0, 0.0), Size::new(120.0, 30.0)),
             from_y: 8.0,
             travel
         }
     }
 
     #[test]
-    fn the_way_begins_where_the_block_set_off_and_ends_where_it_stands() {
+    fn the_way_begins_in_the_middle_of_the_place_the_strip_gave_the_module() {
         let along = walked(&way(0.5));
-        let seat = way(0.5).seat;
+        let leaving = way(0.5).from;
 
         assert_eq!(
             along[0],
-            Point::new(900.0 + seat.width / 2.0, 8.0 + seat.height / 2.0),
-            "the first step is the seat it left on the strip"
+            Point::new(leaving.x + leaving.width / 2.0, 8.0 + leaving.height / 2.0),
+            "the first step is the middle of the island, not a corner of the block"
         );
+    }
 
+    #[test]
+    fn the_way_ends_in_the_middle_of_the_block_as_it_stands_now() {
+        let travelling = way(0.5);
+        let along = walked(&travelling);
         let last = along[along.len() - 1];
         let now = offset_of(
             0.5,
             true,
-            Some(900.0),
+            Some(travelling.from.x),
             Some(8.0),
-            Point::new(seat.x, seat.y)
+            Point::new(travelling.seat.x, travelling.seat.y)
         );
+        let grown_to = |from: f32, to: f32| from + (to - from) * 0.5;
 
-        assert_eq!(last.x, seat.x + now.x + seat.width / 2.0);
-        assert_eq!(last.y, seat.y + now.y + seat.height / 2.0);
+        assert!(
+            (last.x
+                - (travelling.seat.x
+                    + now.x
+                    + grown_to(travelling.from.width, travelling.seat.width) / 2.0))
+                .abs()
+                < 0.001
+        );
+        assert!(
+            (last.y
+                - (travelling.seat.y
+                    + now.y
+                    + grown_to(travelling.from.height, travelling.seat.height) / 2.0))
+                .abs()
+                < 0.001
+        );
     }
 
     #[test]

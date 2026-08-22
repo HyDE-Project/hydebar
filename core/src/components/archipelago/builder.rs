@@ -88,13 +88,18 @@ where
     }
 
     /// The drawing offset of the child at `index`, given its absolute `x`.
-    pub(super) fn offset(&self, from: &HashMap<u64, f32>, index: usize, x: f32) -> f32 {
+    pub(super) fn offset(
+        &self,
+        from: &HashMap<u64, iced_core::Rectangle>,
+        index: usize,
+        x: f32
+    ) -> f32 {
         if self.progress >= 1.0 {
             return 0.0;
         }
 
         from.get(&self.keys[index])
-            .map_or(0.0, |from| (from - x) * (1.0 - self.progress))
+            .map_or(0.0, |from| (from.x - x) * (1.0 - self.progress))
     }
 }
 

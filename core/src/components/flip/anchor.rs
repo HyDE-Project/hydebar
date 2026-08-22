@@ -130,7 +130,12 @@ where
 
     /// The drawing offset for the current frame, given the resting seat.
     pub(super) fn offset(&self, at: iced_core::Point) -> iced_core::Vector {
-        let from_x = self.memo.borrow().from_map().get(&self.key).copied();
+        let from_x = self
+            .memo
+            .borrow()
+            .from_map()
+            .get(&self.key)
+            .map(|seat| seat.x);
 
         offset_of(self.progress, self.descends_first, from_x, self.from_y, at)
     }

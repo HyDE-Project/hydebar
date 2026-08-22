@@ -70,7 +70,7 @@ mod tests {
         );
         memo.depart();
 
-        assert_eq!(memo.from_map().get(&1), Some(&120.0));
+        assert_eq!(memo.from_map().get(&1).map(|seat| seat.x), Some(120.0));
     }
 
     #[test]
@@ -108,7 +108,7 @@ mod tests {
         );
         memo.depart();
 
-        assert_eq!(memo.from_map().get(&1), Some(&90.0));
+        assert_eq!(memo.from_map().get(&1).map(|seat| seat.x), Some(90.0));
     }
 
     #[test]
