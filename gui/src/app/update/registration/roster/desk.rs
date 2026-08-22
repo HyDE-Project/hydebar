@@ -6,6 +6,12 @@ use super::super::{super::super::state::App, gate::gate};
 
 impl App {
     /// Gates the modules the user works the session through.
+    ///
+    /// The window list is gated on the canvas as well as on the strip: a
+    /// miniature of a workspace is the windows standing on it, so the list is
+    /// wanted whenever the canvas can unfold and not only when the strip
+    /// carries a taskbar. It is still a gate — a bar with neither the entry
+    /// nor the canvas starts nothing.
     pub(super) fn register_desk_modules(&mut self) {
         let ctx = &self.module_context;
 
@@ -49,7 +55,7 @@ impl App {
         );
         gate(
             "taskbar",
-            hosts(ModuleName::Taskbar),
+            hosts(ModuleName::Taskbar) || self.config.desk.enabled,
             &mut self.taskbar,
             ctx,
             ()
