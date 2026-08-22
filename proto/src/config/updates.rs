@@ -41,7 +41,9 @@ impl HydeBranch {
 /// Commands used to query and apply system package updates.
 #[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct UpdatesModuleConfig {
+    /// The command that reports what is waiting to be installed.
     pub check_cmd:      String,
+    /// The command that installs what is waiting.
     pub update_cmd:     String,
     /// Seconds between two scheduled checks.
     ///

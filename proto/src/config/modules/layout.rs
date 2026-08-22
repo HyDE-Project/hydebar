@@ -8,7 +8,9 @@ use super::name::ModuleName;
 #[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(untagged)]
 pub enum ModuleDef {
+    /// One module, standing on its own island.
     Single(ModuleName),
+    /// Several modules sharing one island.
     Group(Vec<ModuleName>)
 }
 
@@ -16,10 +18,13 @@ pub enum ModuleDef {
 #[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Modules {
     #[serde(default)]
+    /// What the section against the leading edge holds.
     pub left:   Vec<ModuleDef>,
     #[serde(default)]
+    /// What the middle section holds.
     pub center: Vec<ModuleDef>,
     #[serde(default)]
+    /// What the section against the trailing edge holds.
     pub right:  Vec<ModuleDef>
 }
 

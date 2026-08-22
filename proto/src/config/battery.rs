@@ -10,12 +10,16 @@ use serde::Deserialize;
 #[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct BatteryModuleConfig {
     #[serde(default = "default_show_percentage")]
+    /// Whether the charge is written out beside the icon.
     pub show_percentage:        bool,
     #[serde(default = "default_show_power_profile")]
+    /// Whether the power profile is drawn beside the charge.
     pub show_power_profile:     bool,
     #[serde(default = "default_open_settings_on_click")]
+    /// Whether a click opens the settings instead of the menu.
     pub open_settings_on_click: bool,
     #[serde(default)]
+    /// Whether the entry stays on a machine with no battery.
     pub show_when_unavailable:  bool
 }
 

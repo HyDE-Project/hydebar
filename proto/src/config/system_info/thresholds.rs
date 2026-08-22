@@ -8,8 +8,10 @@ use super::indicator::MemoryFormat;
 #[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct SystemInfoCpu {
     #[serde(default = "default_cpu_warn_threshold")]
+    /// Share of the processor in use, in percent, the reading warns at.
     pub warn_threshold:  u32,
     #[serde(default = "default_cpu_alert_threshold")]
+    /// Share of the processor in use, in percent, the reading alerts at.
     pub alert_threshold: u32
 }
 
@@ -26,8 +28,10 @@ impl Default for SystemInfoCpu {
 #[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct SystemInfoMemory {
     #[serde(default = "default_mem_warn_threshold")]
+    /// Share of the memory in use, in percent, the reading warns at.
     pub warn_threshold:  u32,
     #[serde(default = "default_mem_alert_threshold")]
+    /// Share of the memory in use, in percent, the reading alerts at.
     pub alert_threshold: u32,
     /// Readout the memory indicators show by default.
     #[serde(default)]
@@ -55,8 +59,10 @@ impl Default for SystemInfoMemory {
 #[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct SystemInfoTemperature {
     #[serde(default = "default_temp_warn_threshold")]
+    /// Temperature, in degrees Celsius, the reading warns at.
     pub warn_threshold:  i32,
     #[serde(default = "default_temp_alert_threshold")]
+    /// Temperature, in degrees Celsius, the reading alerts at.
     pub alert_threshold: i32
 }
 
@@ -73,8 +79,10 @@ impl Default for SystemInfoTemperature {
 #[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct SystemInfoDisk {
     #[serde(default = "default_disk_warn_threshold")]
+    /// Share of the disk in use, in percent, the reading warns at.
     pub warn_threshold:  u32,
     #[serde(default = "default_disk_alert_threshold")]
+    /// Share of the disk in use, in percent, the reading alerts at.
     pub alert_threshold: u32
 }
 

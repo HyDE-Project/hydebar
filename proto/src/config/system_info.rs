@@ -24,19 +24,26 @@ pub struct SystemModuleConfig {
     /// without anybody editing a file. Naming readouts here pins both the
     /// selection and the order instead.
     #[serde(default)]
+    /// The readouts drawn, in the order they are written.
     pub indicators:  Vec<SystemIndicator>,
     /// Readouts to leave out of the automatic selection.
     #[serde(default)]
+    /// The readouts left out, whatever else names them.
     pub hide:        Vec<SystemIndicator>,
     #[serde(default)]
+    /// When the processor load warns and when it alerts.
     pub cpu:         SystemInfoCpu,
     #[serde(default)]
+    /// When the memory warns, when it alerts, and how it reads.
     pub memory:      SystemInfoMemory,
     #[serde(default)]
+    /// When the temperature warns and when it alerts.
     pub temperature: SystemInfoTemperature,
     #[serde(default)]
+    /// When the graphics warns, when it alerts, and which device is read.
     pub gpu:         SystemInfoGpu,
     #[serde(default)]
+    /// When the disk warns and when it alerts.
     pub disk:        SystemInfoDisk
 }
 

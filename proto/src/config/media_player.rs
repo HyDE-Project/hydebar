@@ -6,6 +6,7 @@ use serde::Deserialize;
 #[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct MediaPlayerModuleConfig {
     #[serde(default = "default_media_player_max_title_length")]
+    /// How many characters of the title are drawn before it is cut.
     pub max_title_length: u32
 }
 

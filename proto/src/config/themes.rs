@@ -25,20 +25,32 @@ use super::appearance::Appearance;
 #[derive(Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub enum PresetTheme {
+    /// The darkest of the Catppuccin palettes.
     CatppuccinMocha,
+    /// A dark Catppuccin palette, warmer than mocha.
     CatppuccinMacchiato,
+    /// The lightest of the dark Catppuccin palettes.
     CatppuccinFrappe,
+    /// The light Catppuccin palette.
     CatppuccinLatte,
+    /// The Dracula palette.
     Dracula,
+    /// The Nord palette.
     Nord,
+    /// The dark Gruvbox palette.
     GruvboxDark,
+    /// The light Gruvbox palette.
     GruvboxLight,
+    /// The Tokyo Night palette.
     TokyoNight,
+    /// The Tokyo Night palette in its storm shade.
     TokyoNightStorm,
+    /// The light Tokyo Night palette.
     TokyoNightLight
 }
 
 impl PresetTheme {
+    /// The full appearance the named preset stands for.
     #[must_use]
     pub fn to_appearance(self) -> Appearance {
         match self {
@@ -57,6 +69,12 @@ impl PresetTheme {
     }
 }
 
+/// Accepts either a preset name or a whole appearance table.
+///
+/// # Errors
+///
+/// Returns the deserializer's own error when the value is neither a name the
+/// bar knows nor a readable appearance table.
 pub fn deserialize_theme_or_appearance<'de, D>(deserializer: D) -> Result<Appearance, D::Error>
 where
     D: Deserializer<'de>

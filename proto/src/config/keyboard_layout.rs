@@ -8,5 +8,6 @@ use serde::Deserialize;
 #[derive(Deserialize, Clone, Default, Debug, PartialEq, Eq)]
 pub struct KeyboardLayoutModuleConfig {
     #[serde(default)]
+    /// What each compositor layout name is drawn as.
     pub labels: HashMap<String, String>
 }

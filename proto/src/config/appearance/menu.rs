@@ -8,8 +8,10 @@ use super::defaults::{default_opacity, opacity_deserializer};
 #[derive(Deserialize, Clone, Debug, PartialEq)]
 pub struct MenuAppearance {
     #[serde(deserialize_with = "opacity_deserializer", default = "default_opacity")]
+    /// Opacity of the menu surface itself.
     pub opacity:  f32,
     #[serde(default)]
+    /// Opacity of the shade drawn over the screen behind a menu.
     pub backdrop: f32
 }
 

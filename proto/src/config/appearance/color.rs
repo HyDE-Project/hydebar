@@ -14,9 +14,13 @@ pub enum AppearanceColor {
     Simple(HexColor),
     /// Complete palette variant with additional semantic colors.
     Complete {
+        /// The shade the entry is drawn in by default.
         base:   HexColor,
+        /// The shade used where the entry has to stand out.
         strong: Option<HexColor>,
+        /// The shade used where the entry has to recede.
         weak:   Option<HexColor>,
+        /// The shade the text over the entry is written in.
         text:   Option<HexColor>
     }
 }

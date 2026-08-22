@@ -15,8 +15,11 @@ pub enum MemoryFormat {
 /// A single readout rendered by the system information module.
 #[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum SystemIndicator {
+    /// Share of the processor that is busy.
     Cpu,
+    /// Share of the memory in use.
     Memory,
+    /// Share of the swap in use.
     MemorySwap,
     /// Processor temperature.
     ///
@@ -28,8 +31,12 @@ pub enum SystemIndicator {
     GpuTemperature,
     /// Share of the graphics processor that is busy.
     GpuUsage,
+    /// Share of the named mount point in use.
     Disk(String),
+    /// The address the machine answers on.
     IpAddress,
+    /// How fast the link is receiving.
     DownloadSpeed,
+    /// How fast the link is sending.
     UploadSpeed
 }

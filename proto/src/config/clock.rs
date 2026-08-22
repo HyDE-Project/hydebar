@@ -14,6 +14,7 @@ pub struct ClockModuleConfig {
     #[serde(default, alias = "format-alt")]
     pub format_alt:   Vec<String>,
     #[serde(default)]
+    /// Whether the weather is written beside the time.
     pub show_weather: bool
 }
 

@@ -6,10 +6,13 @@ use serde::Deserialize;
 #[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct AnimationConfig {
     #[serde(default = "default_animations_enabled")]
+    /// Whether the bar moves at all, or snaps between states.
     pub enabled:               bool,
     #[serde(default = "default_menu_fade_duration_ms")]
+    /// How long a menu takes to fade in and out.
     pub menu_fade_duration_ms: u64,
     #[serde(default = "default_hover_duration_ms")]
+    /// How long a module takes to answer the pointer.
     pub hover_duration_ms:     u64,
     /// Time one block of the desk is given to cross the screen and open.
     ///

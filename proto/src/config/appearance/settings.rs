@@ -26,6 +26,7 @@ use super::{
 #[derive(Deserialize, Clone, Debug, PartialEq)]
 pub struct Appearance {
     #[serde(default)]
+    /// Family every widget is written in, taken from the desktop when unset.
     pub font_name:                Option<String>,
     /// Default text size, in pixels, applied to every widget that does not set
     /// its own.
@@ -38,6 +39,7 @@ pub struct Appearance {
         deserialize_with = "scale_factor_deserializer",
         default = "default_scale_factor"
     )]
+    /// Multiplier applied to every size the bar draws at.
     pub scale_factor:             f64,
     /// Corner radius of the island pills, in pixels.
     ///
@@ -80,8 +82,10 @@ pub struct Appearance {
     #[serde(default = "default_auto_scale")]
     pub auto_scale:               bool,
     #[serde(default)]
+    /// Whether the modules stand as islands, as one strip, or solid.
     pub style:                    AppearanceStyle,
     #[serde(deserialize_with = "opacity_deserializer", default = "default_opacity")]
+    /// Opacity of an island, behind the widgets it holds.
     pub opacity:                  f32,
     /// Opacity of the strip behind the whole bar.
     ///
@@ -94,28 +98,39 @@ pub struct Appearance {
     )]
     pub bar_opacity:              f32,
     #[serde(default)]
+    /// How an open menu is drawn, and how far it stands from the bar.
     pub menu:                     MenuAppearance,
     #[serde(default)]
+    /// How long the bar's motion takes, and how it eases.
     pub animations:               AnimationConfig,
     /// Whether the bar greets the user while it is born.
     #[serde(default = "default_greeting")]
     pub greeting:                 bool,
     #[serde(default = "default_background_color")]
+    /// Colour of the surface a module is drawn on.
     pub background_color:         AppearanceColor,
     #[serde(default = "default_primary_color")]
+    /// Colour marking what holds focus or is in force.
     pub primary_color:            AppearanceColor,
     #[serde(default = "default_secondary_color")]
+    /// Colour of the surfaces standing behind the primary one.
     pub secondary_color:          AppearanceColor,
     #[serde(default = "default_success_color")]
+    /// Colour of a reading that is in good order.
     pub success_color:            AppearanceColor,
     #[serde(default = "default_danger_color")]
+    /// Colour of a reading that calls for attention now.
     pub danger_color:             AppearanceColor,
     #[serde(default = "default_warning_color")]
+    /// Colour of a reading on its way to trouble.
     pub warning_color:            AppearanceColor,
     #[serde(default = "default_text_color")]
+    /// Colour every glyph is written in.
     pub text_color:               AppearanceColor,
     #[serde(default = "default_workspace_colors")]
+    /// Colours the workspaces are drawn in, taken in turn.
     pub workspace_colors:         Vec<AppearanceColor>,
+    /// Colours the special workspaces are drawn in, taken in turn.
     pub special_workspace_colors: Option<Vec<AppearanceColor>>,
     /// Whether the islands adopt the compositor's window border.
     ///

@@ -58,58 +58,84 @@ pub use weather::WeatherModuleConfig;
 pub use window_title::{WindowTitleConfig, WindowTitleMode};
 pub use workspaces::{WorkspaceVisibilityMode, WorkspacesModuleConfig};
 
+/// Where the bar looks for its configuration when nothing else names one.
 pub const DEFAULT_CONFIG_FILE_PATH: &str = "~/.config/hydebar/config.toml";
 
 /// Complete bar configuration.
 #[derive(Deserialize, Clone, Debug, PartialEq)]
 pub struct Config {
     #[serde(default = "default_log_level")]
+    /// How much the bar writes to its log.
     pub log_level:           String,
     #[serde(default)]
+    /// Which screen edge the bar stands on.
     pub position:            Position,
     #[serde(default)]
+    /// Which compositor layer the bar is drawn in.
     pub layer:               BarLayer,
     #[serde(default)]
+    /// Which monitors the bar appears on.
     pub outputs:             Outputs,
     #[serde(default)]
+    /// What is drawn in each of the bar's three sections.
     pub modules:             Modules,
+    /// The command the launcher entry runs.
     pub app_launcher_cmd:    Option<String>,
     #[serde(rename = "CustomModule", default)]
+    /// The modules the user wrote, each named by its own key.
     pub custom_modules:      Vec<CustomModuleDef>,
+    /// The command the clipboard entry runs.
     pub clipboard_cmd:       Option<String>,
     #[serde(default)]
+    /// How the update count is read, and what installs it.
     pub updates:             Option<UpdatesModuleConfig>,
     #[serde(default)]
+    /// How the compositor's workspaces are drawn.
     pub workspaces:          WorkspacesModuleConfig,
     #[serde(default)]
+    /// How the focused window is named.
     pub window_title:        WindowTitleConfig,
     #[serde(default)]
+    /// What the machine readout samples, and when it warns.
     pub system:              SystemModuleConfig,
     #[serde(default)]
+    /// How the charge and the power source are drawn.
     pub battery:             BatteryModuleConfig,
     #[serde(default)]
+    /// How the date and time are written.
     pub clock:               ClockModuleConfig,
     #[serde(default)]
+    /// How keeping the screen awake behaves.
     pub idle_inhibitor:      IdleInhibitorModuleConfig,
     #[serde(default, alias = "settings")]
+    /// What the quick settings hold and how they open.
     pub control_center:      ControlCenterModuleConfig,
     #[serde(default, deserialize_with = "themes::deserialize_theme_or_appearance")]
+    /// The palette, the sizes and the motion the bar is drawn with.
     pub appearance:          Appearance,
     #[serde(default)]
+    /// How what is playing is named and driven.
     pub media_player:        MediaPlayerModuleConfig,
     #[serde(default)]
+    /// How the keyboard layout is named and stepped.
     pub keyboard_layout:     KeyboardLayoutModuleConfig,
     #[serde(default)]
+    /// Whether an open menu takes the keyboard.
     pub menu_keyboard_focus: bool,
     #[serde(default)]
+    /// What the keyboard is bound to, in the bar and in its menus.
     pub keybindings:         Keybindings,
     #[serde(default)]
+    /// Where the weather is read for, and in what units.
     pub weather:             WeatherModuleConfig,
     #[serde(default)]
+    /// Which icon theme the bar draws with.
     pub icons:               IconsConfig,
     #[serde(default)]
+    /// Where the notices come from and how long they stand.
     pub notifications:       NotificationsConfig,
     #[serde(default)]
+    /// How the overview of the screens and their windows is drawn.
     pub desk:                DeskConfig
 }
 

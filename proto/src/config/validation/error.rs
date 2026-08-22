@@ -6,10 +6,16 @@
 #[derive(Debug, Clone, PartialEq)]
 pub enum ConfigValidationError {
     /// Duplicate custom module definitions were found.
-    DuplicateCustomModule { name: String },
+    DuplicateCustomModule {
+        /// The key written more than once.
+        name: String
+    },
 
     /// A module references a custom module definition that does not exist.
-    MissingCustomModule { name: String },
+    MissingCustomModule {
+        /// The key the layout names and no definition answers to.
+        name: String
+    },
 
     /// A numeric setting stands outside the range the bar can draw.
     ///

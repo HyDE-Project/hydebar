@@ -38,6 +38,7 @@ impl CustomMenuEntry {
 #[serde_as]
 #[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct CustomModuleDef {
+    /// The key the module is named and referenced by in the layout.
     pub name:           String,
     /// Command run when the module is pressed with the left mouse button.
     pub command:        String,
@@ -54,6 +55,7 @@ pub struct CustomModuleDef {
     /// Left unset the module ignores middle presses.
     #[serde(default)]
     pub command_middle: Option<String>,
+    /// Glyph drawn beside what the command prints.
     #[serde(default)]
     pub icon:           Option<String>,
     /// Ordered entries of the context menu opened by a right press.

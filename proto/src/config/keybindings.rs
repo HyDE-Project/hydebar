@@ -4,10 +4,13 @@ use serde::Deserialize;
 #[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Keybindings {
     #[serde(default = "default_enabled")]
+    /// Whether the bar answers the keyboard at all.
     pub enabled: bool,
     #[serde(default)]
+    /// What the keyboard is bound to while no menu is open.
     pub global:  GlobalKeybindings,
     #[serde(default)]
+    /// What the keyboard is bound to inside an open menu.
     pub menu:    MenuKeybindings
 }
 
@@ -29,6 +32,7 @@ const fn default_enabled() -> bool {
 #[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct GlobalKeybindings {
     #[serde(default = "default_activate_navigation")]
+    /// The chord that hands the keyboard to the bar.
     pub activate_navigation: String
 }
 
@@ -48,12 +52,16 @@ fn default_activate_navigation() -> String {
 #[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct MenuKeybindings {
     #[serde(default = "default_up")]
+    /// The key moving the selection towards the top.
     pub up:    String,
     #[serde(default = "default_down")]
+    /// The key moving the selection towards the bottom.
     pub down:  String,
     #[serde(default = "default_left")]
+    /// The key moving the selection towards the leading edge.
     pub left:  String,
     #[serde(default = "default_right")]
+    /// The key moving the selection towards the trailing edge.
     pub right: String
 }
 
