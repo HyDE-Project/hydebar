@@ -56,9 +56,12 @@
 └──────────────────────────────────────┘
 ```
 
-The four crates live at the workspace root: `proto/` (no GUI dependencies
-beyond shared types), `core/` (modules, services, event bus), `gui/` (the
-`App` state machine and bar composition) and `app/` (the binary).
+The four crates live at the workspace root: `proto/` (no dependency on the
+widget toolkit at all — colours are stated as `theme_source::Rgba` and read as
+the renderer's own only in `core/src/style/color.rs`), `core/` (modules,
+services, event bus), `gui/` (the `App` state machine and bar composition) and
+`app/` (the binary). Every item `proto` exports is documented: the crate warns
+on `missing_docs`, so a setting cannot be added without saying what it means.
 
 ## Module Design Pattern
 
@@ -154,7 +157,7 @@ burst is delivered immediately; no grace window taxes a user click.
 
 ### Clean Separation
 - `hydebar-proto` holds the schema and shared protocol types; it never depends
-  on the higher layers.
+  on the higher layers, and never on the widget toolkit.
 - Modules own their behaviour end to end; the GUI layer only wires and
   composes them.
 

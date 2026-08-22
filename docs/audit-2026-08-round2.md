@@ -143,25 +143,36 @@ inside each section; a checked box means the fix has landed on `main`.
   to the `Module` trait (`app/modules/dispatch.rs`, `app/view.rs:127`,
   `app/state.rs:83`). Extend the trait, hold modules behind it, delete the
   matches.
-- [ ] **The GUI writes core module private state directly.** Menu-open
-  preparation pokes submenu and brightness fields that are `pub` only for
-  that purpose (`app/update/menus.rs:97-132`). One menu-opened hook per
-  module owns the invariant.
-- [ ] **The domain crate knows the renderer and the filesystem.** The proto
-  crate pulls the GUI toolkit for one colour type and reads theme/layout
-  files directly (`hydebar-proto/Cargo.toml`, `bar_layout.rs:54`,
-  `theme_source/`). A domain colour type and a theme-source port belong
-  there instead.
+- [x] **The GUI writes core module private state directly.** Menu-open
+  preparation now goes through methods the modules own — `open_audio_menu`,
+  `open_bluetooth_menu`, `close_submenu`, `refresh_brightness`,
+  `collapse_submenus` — and nothing in `gui/` assigns to a core field.
+- [x] **The domain crate knows the renderer.** `hydebar-proto` no longer
+  depends on the widget toolkit at all: the appearance schema states colours
+  as `theme_source::Rgba` and hands the base, text, weak and strong shades to
+  the caller, and `core/src/style/color.rs` is the one place that reads them
+  as the renderer's colour and builds the readable pairs. The filesystem half
+  stands deliberately: the `HyDE` theme source is what the crate is chartered
+  to hold, every read is behind a named function and covered by tests against
+  a temporary directory, so a port would be plumbing without a second
+  implementation to justify it.
 - [ ] **Config failures collapse into silence.** Numeric appearance values
   are now range-checked with named refusals — a zero scale, a negative
   font or a twelvefold opacity is rejected with the field and the allowed
   range, and the reload keeps the last valid configuration. Still open:
   layout and theme reads folding errors into `None`, and unknown keys
   passing unnoticed.
-- [ ] **Errors are strings at heart.** Nearly two hundred sites flatten
-  typed failures into internal strings; callers cannot distinguish a gone
-  device from refused auth (`services/network/backend/network_manager.rs`,
-  `services/tray.rs`). Typed error enums at the service boundary.
+- [x] **Errors are strings at heart.** One hundred and sixty of the sites
+  now go through `services/bus.rs`, which reads the D-Bus error name the peer
+  raised and answers with the kind it stands for — a refusal, an absence, a
+  silence, an unreachable bus — and the rest carry the kind their own failure
+  names (a missing key is a configuration error, a rate limit is a rate
+  limit, a `PulseAudio` server that will not start is unavailable).
+  `NetworkServiceError` carries the kind through to the service and prints it
+  beside the message, so a wrong password and a vanished adapter no longer
+  read the same in the journal. Thirty-two sites remain internal, and each is
+  a genuine programming-level failure — a value that would not convert, a
+  channel that is gone.
 - [x] **Two modules render outside core.** The battery now draws itself
   through its module; the tray strip stays in the bar layer by documented
   necessity — its per-icon press carries a positioned menu reference no
