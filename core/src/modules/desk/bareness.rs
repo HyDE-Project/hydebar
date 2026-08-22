@@ -98,7 +98,9 @@ mod tests {
             title: "shell".to_owned(),
             workspace_id,
             focused: false,
-            floating
+            floating,
+            at: (0, 0),
+            size: (100, 100)
         }
     }
 

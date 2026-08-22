@@ -64,6 +64,14 @@ pub struct HyprlandClientInfo {
     pub workspace_id: i32,
     /// Whether the window holds the focus.
     pub focused:      bool,
+    /// Top left corner of the window on the compositor's own plane.
+    ///
+    /// The plane spans every screen, so a window on the second monitor stands
+    /// beyond the first one's width. A reader drawing a miniature of a screen
+    /// takes the monitor's own origin off it first.
+    pub at:           (i32, i32),
+    /// Width and height of the window, in the same plane.
+    pub size:         (i32, i32),
     /// Whether the window floats over the layout instead of tiling into it.
     ///
     /// A floating window is a visitor: a dialog, a calculator, a picture in

@@ -42,6 +42,8 @@ pub(super) fn client_info(client: hyprland::data::Client) -> HyprlandClientInfo 
         title:        client.title,
         workspace_id: client.workspace.id,
         focused:      client.focus_history_id == 0,
-        floating:     client.floating
+        floating:     client.floating,
+        at:           (i32::from(client.at.0), i32::from(client.at.1)),
+        size:         (i32::from(client.size.0), i32::from(client.size.1))
     }
 }
