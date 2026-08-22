@@ -15,6 +15,7 @@ mod metrics;
 mod network;
 mod sampler;
 pub(super) mod standing;
+pub mod who;
 
 /// Snapshot of network utilisation metrics captured during sampling.
 #[derive(Debug, Clone, PartialEq, Eq)]

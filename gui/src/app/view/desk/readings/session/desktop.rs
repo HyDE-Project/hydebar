@@ -105,3 +105,35 @@ pub fn theme(app: &App) -> Option<Panel> {
         None => Panel::of("theme", rows)
     }
 }
+
+/// Who is at the machine and what they are sitting in front of.
+///
+/// The header of any screen worth the name: a machine is not a list of
+/// readings, it is somebody's machine, and the first thing an overview says
+/// is whose and where.
+pub fn seat(app: &App) -> Option<Panel> {
+    let who = hydebar_core::modules::system_info::who::who();
+    let mut rows = Vec::new();
+
+    push(
+        &mut rows,
+        "session",
+        who.user.as_ref().map(|user| {
+            who.host
+                .as_ref()
+                .map_or_else(|| user.clone(), |host| format!("{user}@{host}"))
+        })
+    );
+    push(&mut rows, "desktop", who.desktop.clone());
+    push(&mut rows, "display", who.seat.clone());
+    push(&mut rows, "shell", who.shell.clone());
+    push(
+        &mut rows,
+        "screen",
+        app.screen_width
+            .zip(app.screen_height)
+            .map(|(width, height)| format!("{width:.0} × {height:.0}"))
+    );
+
+    Panel::of("seat", rows)
+}

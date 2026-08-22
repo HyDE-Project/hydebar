@@ -16,6 +16,7 @@ impl App {
 
         match module {
             ModuleName::SystemInfo => [
+                readings::seat(self),
                 readings::system(machine),
                 readings::cooling(machine),
                 readings::processor(machine),

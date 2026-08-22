@@ -5,7 +5,7 @@ pub mod sensors;
 mod view;
 mod window;
 
-pub use data::{DiskData, NetworkData, SystemInfoData, SystemInfoSampler};
+pub use data::{DiskData, NetworkData, SystemInfoData, SystemInfoSampler, who};
 use hydebar_proto::config::{Appearance, MemoryFormat, SystemModuleConfig};
 use iced::Element;
 pub use indicators::{IndicatorStatus, Unavailable};

@@ -14,8 +14,8 @@ pub(super) use machine::{
     cooling, cpu_temperature, graphics, memory, network, processor, storage, system
 };
 pub(super) use session::{
-    battery, keyboard, link, notifications, own, playing, privacy, radio, screen, session_idle,
-    sound, submap, theme, tray, updates, weather, windows, workspaces
+    battery, keyboard, link, notifications, own, playing, privacy, radio, screen, seat,
+    session_idle, sound, submap, theme, tray, updates, weather, windows, workspaces
 };
 
 /// One window of a screen, as a share of that screen.

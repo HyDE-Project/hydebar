@@ -17,7 +17,7 @@ mod own;
 mod power;
 mod windows;
 
-pub use desktop::{keyboard, theme, tray, weather};
+pub use desktop::{keyboard, seat, theme, tray, weather};
 pub use devices::{link, radio, screen, sound};
 pub use notices::{notifications, privacy, updates};
 pub use own::own;

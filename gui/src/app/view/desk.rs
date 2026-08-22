@@ -411,7 +411,17 @@ mod tests {
 
     #[test]
     fn a_block_drops_to_its_level_before_it_writes_itself_out() {
-        let mut app = test_app_with(|config| config.desk.enabled = true);
+        // a layout of two, so the block being watched is on the test surface
+        // whatever every other module grows into
+        let mut app = test_app_with(|config| {
+            config.desk.enabled = true;
+            config.modules.left = Vec::new();
+            config.modules.center = Vec::new();
+            config.modules.right = vec![
+                hydebar_proto::config::ModuleDef::Single(hydebar_core::config::ModuleName::Clock),
+                hydebar_proto::config::ModuleDef::Single(hydebar_core::config::ModuleName::Memory),
+            ];
+        });
         set_off(&mut app);
 
         let mut wrote_before_landing = false;
