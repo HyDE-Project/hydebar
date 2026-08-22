@@ -17,8 +17,37 @@ pub fn network(data: &SystemInfoData) -> Option<Panel> {
                 format!("{} KB/s", network.download_speed)
             ),
             ("up".to_owned(), format!("{} KB/s", network.upload_speed)),
+            ("taken in".to_owned(), bytes(network.received)),
+            ("sent out".to_owned(), bytes(network.transmitted)),
         ]
     )
+}
+
+/// A count of bytes, said in the unit a person would use for it.
+///
+/// Traffic since a machine came up runs from kilobytes on a fresh boot to
+/// tens of gigabytes a week later, and one unit cannot carry both.
+fn bytes(count: u64) -> String {
+    const STEPS: [(u64, &str); 4] = [
+        (1024 * 1024 * 1024 * 1024, "TiB"),
+        (1024 * 1024 * 1024, "GiB"),
+        (1024 * 1024, "MiB"),
+        (1024, "KiB")
+    ];
+
+    for (step, unit) in STEPS {
+        if count >= step {
+            #[expect(
+                clippy::cast_precision_loss,
+                reason = "a byte count is far below the precision limit of f64"
+            )]
+            let share = count as f64 / step as f64;
+
+            return format!("{share:.1} {unit}");
+        }
+    }
+
+    format!("{count} B")
 }
 
 /// Memory and swap, each in use against what there is.
@@ -85,11 +114,15 @@ pub fn storage(data: &SystemInfoData) -> Option<Panel> {
         }
     }
 
-    Panel::of(
-        "storage",
-        filesystems
-            .into_iter()
-            .map(|disk| (disk.mount.clone(), used_of_total(disk.used, disk.total)))
-            .collect()
-    )
+    let mut rows: Vec<(String, String)> = filesystems
+        .into_iter()
+        .map(|disk| (disk.mount.clone(), used_of_total(disk.used, disk.total)))
+        .collect();
+
+    if let Some((read, written)) = data.disk_traffic {
+        rows.push(("read".to_owned(), bytes(read)));
+        rows.push(("written".to_owned(), bytes(written)));
+    }
+
+    Panel::of("storage", rows)
 }

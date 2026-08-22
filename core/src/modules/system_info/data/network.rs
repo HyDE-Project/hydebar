@@ -76,6 +76,8 @@ impl NetworkSnapshot {
                 self.total_transmitted,
                 previous.map_or(0, |snapshot| snapshot.total_transmitted)
             ),
+            received:       self.total_received,
+            transmitted:    self.total_transmitted,
             last_check:     self.timestamp
         }
     }

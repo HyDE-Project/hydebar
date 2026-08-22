@@ -92,6 +92,13 @@ impl SystemInfoSampler {
             ..SystemInfoData::default()
         };
         data.cpu_per_core = per_core(&self.system);
+        data.disk_traffic = self.disks.as_ref().map(|disks| {
+            disks.iter().fold((0, 0), |(read, written), disk| {
+                let usage = disk.usage();
+
+                (read + usage.read_bytes, written + usage.written_bytes)
+            })
+        });
         stamp_environment(&mut data);
 
         data

@@ -144,7 +144,7 @@ mod tests {
         ));
 
         let panel = network(&data).expect("a link that answered");
-        assert_eq!(panel.rows.len(), 3);
+        assert_eq!(panel.rows.len(), 5, "address, both speeds and both totals");
         assert_eq!(panel.rows[0].1, "192.168.1.2");
     }
 

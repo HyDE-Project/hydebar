@@ -23,6 +23,10 @@ pub struct NetworkData {
     pub ip:             String,
     pub download_speed: u32,
     pub upload_speed:   u32,
+    /// Bytes taken in over every interface since the machine came up.
+    pub received:       u64,
+    /// Bytes sent out over every interface since the machine came up.
+    pub transmitted:    u64,
     last_check:         Instant
 }
 
@@ -39,6 +43,8 @@ impl NetworkData {
             ip,
             download_speed,
             upload_speed,
+            received: 0,
+            transmitted: 0,
             last_check
         }
     }
@@ -119,7 +125,9 @@ pub struct SystemInfoData {
     /// Share of each logical processor that is busy, in percent.
     pub cpu_per_core:           Vec<u32>,
     /// Every fan the machine reports, with its name and its speed.
-    pub fans:                   Vec<(String, u32)>
+    pub fans:                   Vec<(String, u32)>,
+    /// Bytes read and written across every disk since the last sample.
+    pub disk_traffic:           Option<(u64, u64)>
 }
 
 impl SystemInfoData {
