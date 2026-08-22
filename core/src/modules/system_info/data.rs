@@ -14,6 +14,7 @@ pub(super) mod hardware;
 mod metrics;
 mod network;
 mod sampler;
+pub(super) mod standing;
 
 /// Snapshot of network utilisation metrics captured during sampling.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -62,7 +63,7 @@ pub struct DiskData {
 }
 
 /// Aggregated system information consumed by the UI layer.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct SystemInfoData {
     pub cpu_usage:              u32,
     /// Logical processors the load is averaged over; zero before the
@@ -107,7 +108,17 @@ pub struct SystemInfoData {
     /// allocation could still claim back.
     pub memory_cached:          u64,
     /// The device swap lives on, with its compression when it is zram.
-    pub swap_backend:           Option<String>
+    pub swap_backend:           Option<String>,
+    /// How long the machine has been up.
+    pub uptime:                 Option<std::time::Duration>,
+    /// Runnable tasks over the last minute, five and fifteen.
+    pub load:                   Option<(f32, f32, f32)>,
+    /// Tasks wanting a core right now, and tasks the kernel holds at all.
+    pub tasks:                  Option<(u32, u32)>,
+    /// Share of each logical processor that is busy, in percent.
+    pub cpu_per_core:           Vec<u32>,
+    /// Every fan the machine reports, with its name and its speed.
+    pub fans:                   Vec<(String, u32)>
 }
 
 impl SystemInfoData {

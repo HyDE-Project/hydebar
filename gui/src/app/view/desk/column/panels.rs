@@ -17,6 +17,7 @@ impl App {
         match module {
             ModuleName::SystemInfo => [
                 readings::system(machine),
+                readings::cooling(machine),
                 readings::processor(machine),
                 readings::graphics(machine),
                 readings::memory(machine),
@@ -27,7 +28,13 @@ impl App {
             .flatten()
             .collect(),
             ModuleName::Cpu => readings::processor(machine).into_iter().collect(),
-            ModuleName::CpuTemp => readings::cpu_temperature(machine).into_iter().collect(),
+            ModuleName::CpuTemp => [
+                readings::cpu_temperature(machine),
+                readings::cooling(machine)
+            ]
+            .into_iter()
+            .flatten()
+            .collect(),
             ModuleName::GpuTemp => readings::graphics(machine).into_iter().collect(),
             ModuleName::Memory => readings::memory(machine).into_iter().collect(),
             ModuleName::Battery => readings::battery(self).into_iter().collect(),

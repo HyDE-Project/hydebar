@@ -14,8 +14,61 @@ pub fn system(data: &SystemInfoData) -> Option<Panel> {
 
     push(&mut rows, "kernel", data.kernel.clone());
     push(&mut rows, "microcode", data.cpu_microcode.clone());
+    push(&mut rows, "up", data.uptime.map(spelled));
+    push(
+        &mut rows,
+        "load",
+        data.load
+            .map(|(minute, five, quarter)| format!("{minute:.2} · {five:.2} · {quarter:.2}"))
+    );
+    push(
+        &mut rows,
+        "tasks",
+        data.tasks
+            .map(|(running, held)| format!("{running} running of {held}"))
+    );
 
     Panel::of("system", rows)
+}
+
+/// How long the machine has been up, said the way a person says it.
+///
+/// Days and hours on a machine that has been up for days, hours and minutes
+/// below that, and minutes alone in the first hour: the second a machine came
+/// up on is never the thing being asked about.
+fn spelled(uptime: std::time::Duration) -> String {
+    let minutes = uptime.as_secs() / 60;
+    let (days, hours, minutes) = (minutes / 1440, (minutes % 1440) / 60, minutes % 60);
+
+    match (days, hours) {
+        (0, 0) => format!("{minutes}m"),
+        (0, hours) => format!("{hours}h {minutes:02}m"),
+        (days, hours) => format!("{days}d {hours:02}h")
+    }
+}
+
+/// The fans, and how fast each of them is turning.
+///
+/// A fan reporting nothing is left in: a machine that is silent because it is
+/// cool and one that is silent because a fan stopped read the same on a
+/// temperature alone, and only this tells them apart.
+pub fn cooling(data: &SystemInfoData) -> Option<Panel> {
+    Panel::of(
+        "cooling",
+        data.fans
+            .iter()
+            .map(|(name, rpm)| {
+                (
+                    name.clone(),
+                    if *rpm == 0 {
+                        "stopped".to_owned()
+                    } else {
+                        format!("{rpm} rpm")
+                    }
+                )
+            })
+            .collect()
+    )
 }
 
 /// The link: where it lands and what is crossing it.
@@ -38,6 +91,7 @@ pub fn network(data: &SystemInfoData) -> Option<Panel> {
 /// The processor: what it is, how hard it is working, how hot and how fast.
 pub fn processor(data: &SystemInfoData) -> Option<Panel> {
     let mut rows = vec![("load".to_owned(), format!("{}%", data.cpu_usage))];
+    push(&mut rows, "threads", spread(&data.cpu_per_core));
 
     push(&mut rows, "model", data.cpu_model.clone());
     push(
@@ -70,6 +124,27 @@ pub fn processor(data: &SystemInfoData) -> Option<Panel> {
     );
 
     Panel::of("processor", rows)
+}
+
+/// How the load is spread over the threads, in one line.
+///
+/// Every thread as a block of eight heights, the way a monitor has drawn a
+/// load for as long as there have been monitors: the shape says at a glance
+/// whether the machine is working on one thing or on everything, which no
+/// single percentage can.
+fn spread(cores: &[u32]) -> Option<String> {
+    const STEPS: [char; 8] = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
+
+    (!cores.is_empty()).then(|| {
+        cores
+            .iter()
+            .map(|share| {
+                let step = (*share as usize * STEPS.len()) / 101;
+
+                STEPS[step.min(STEPS.len() - 1)]
+            })
+            .collect()
+    })
 }
 
 /// The processor temperature on its own, with the sensor it is read from.

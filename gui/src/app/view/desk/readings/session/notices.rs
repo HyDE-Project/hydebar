@@ -3,11 +3,37 @@
 use super::super::{Panel, push};
 use crate::app::state::App;
 
-/// What is waiting to be installed.
+/// Longest a list of pending packages is written out.
+///
+/// A machine left alone for a month has hundreds waiting, and a column of
+/// hundreds is a wall rather than a reading. The rest are counted instead.
+const LISTED: usize = 12;
+
+/// What is waiting to be installed, package by package.
 pub fn updates(app: &App) -> Option<Panel> {
+    let pending = app.updates.updates();
+    let behind = app.updates.hyde_pending();
     let mut rows = Vec::new();
 
-    push(&mut rows, "pending", app.updates.tooltip());
+    push(&mut rows, "state", app.updates.tooltip());
+    rows.push(("packages".to_owned(), pending.len().to_string()));
+
+    if behind > 0 {
+        rows.push(("desktop".to_owned(), format!("{behind} commits behind")));
+    }
+
+    for update in pending.iter().take(LISTED) {
+        let (from, to) = update.versions();
+
+        rows.push((update.package().to_owned(), format!("{from} → {to}")));
+    }
+
+    if pending.len() > LISTED {
+        rows.push((
+            String::new(),
+            format!("and {} more", pending.len() - LISTED)
+        ));
+    }
 
     Panel::of("updates", rows)
 }

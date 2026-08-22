@@ -4,7 +4,7 @@ use sysinfo::{Disks, Networks};
 
 use super::{
     SystemInfoData, SystemInfoSampler,
-    metrics::{cpu_counters, memory_share, stamp_environment}
+    metrics::{cpu_counters, memory_share, per_core, stamp_environment}
 };
 use crate::modules::system_info::sensors::{HardwareSensors, Readings};
 
@@ -79,6 +79,7 @@ impl SystemInfoSampler {
             memory_swap_total,
             ..SystemInfoData::default()
         };
+        data.cpu_per_core = per_core(&self.system);
         stamp_environment(&mut data);
 
         data

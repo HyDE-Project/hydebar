@@ -2,7 +2,7 @@
 
 use sysinfo::System;
 
-use super::{SystemInfoData, hardware};
+use super::{SystemInfoData, hardware, standing};
 
 /// Stamps the machine's identity and its living readings onto a sample.
 pub(super) fn stamp_environment(data: &mut SystemInfoData) {
@@ -17,6 +17,28 @@ pub(super) fn stamp_environment(data: &mut SystemInfoData) {
     data.cpu_current_mhz = hardware::current_mhz();
     data.cpu_governor = hardware::governor();
     data.memory_cached = hardware::cached_bytes();
+    data.uptime = standing::uptime();
+    data.load = standing::load();
+    data.tasks = standing::tasks();
+    data.fans = standing::fans();
+}
+
+/// The share of every logical processor that is busy, in whole percent.
+///
+/// The global figure says how hard the machine is working; this says how it
+/// is spread. A build using every thread and a single-threaded loop pinned to
+/// one core can report the same global load and look nothing alike.
+#[expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    reason = "a per-core load is bounded to 0..=100"
+)]
+pub(super) fn per_core(system: &System) -> Vec<u32> {
+    system
+        .cpus()
+        .iter()
+        .map(|cpu| cpu.cpu_usage().clamp(0.0, 100.0) as u32)
+        .collect()
 }
 
 /// Whole-percent processor load and the logical processor count.

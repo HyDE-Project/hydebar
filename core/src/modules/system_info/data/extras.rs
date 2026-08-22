@@ -7,7 +7,7 @@ use itertools::Itertools;
 
 use super::{
     DiskData, SystemInfoData, SystemInfoSampler,
-    metrics::{cpu_counters, memory_share, percentage, stamp_environment},
+    metrics::{cpu_counters, memory_share, per_core, percentage, stamp_environment},
     network::NetworkSnapshot
 };
 use crate::modules::system_info::sensors::Readings;
@@ -91,6 +91,7 @@ impl SystemInfoSampler {
             network,
             ..SystemInfoData::default()
         };
+        data.cpu_per_core = per_core(&self.system);
         stamp_environment(&mut data);
 
         data
