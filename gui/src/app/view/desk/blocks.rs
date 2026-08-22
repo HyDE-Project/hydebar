@@ -1,10 +1,18 @@
 //! The drawing of one panel: a heading, a rule and the lines under it.
+//!
+//! Three rooms. Here are the blocks themselves — the three shapes a unit
+//! opens into; [`room`] is how much of the column a block takes and how it is
+//! written into it, and [`parts`] is the pieces every shape is built from.
 
-use iced::{
-    Alignment, Color, Element, Length,
-    widget::{Column, Row, Space, container, text}
+mod parts;
+mod room;
+
+use iced::{Alignment, Color, Element};
+
+use self::{
+    parts::{blank, written},
+    room::{MONTH_ROWS, revealed, room}
 };
-
 use super::readings::Panel;
 use crate::app::Message;
 
@@ -82,64 +90,6 @@ pub(super) fn panel<'a>(panel: &Panel, side: Side, ink: Ink, bloom: f32) -> Elem
     )
 }
 
-/// The lines of a panel, in the ink they are drawn in.
-fn written<'a>(panel: &Panel, side: Side, ink: Ink) -> Element<'a, Message> {
-    let heading = text(panel.title.to_uppercase())
-        .size(ink.size * 1.05)
-        .color(ink.heading());
-
-    let lines = panel
-        .rows
-        .iter()
-        .map(|(label, value)| line(label, value, side, ink));
-
-    Column::with_children(
-        std::iter::once(heading.into())
-            .chain(std::iter::once(rule(ink)))
-            .chain(lines)
-    )
-    .spacing(ink.size * 0.28)
-    .width(Length::Fill)
-    .align_x(side.alignment_x())
-    .into()
-}
-
-/// The room a block of `rows` lines, each `line` tall, takes when it is open.
-///
-/// A heading, the rule under it and a line per reading, with the column's own
-/// gap between each of them. Stated rather than measured because the room has
-/// to be taken before there is anything in it: see [`revealed`].
-#[expect(
-    clippy::cast_precision_loss,
-    reason = "a block holds a handful of rows, far below any precision limit"
-)]
-fn room(rows: usize, line: f32, ink: Ink) -> f32 {
-    let heading = ink.size * 1.05 * 1.4;
-    let gaps = (rows + 1) as f32 * (ink.size * 0.28);
-
-    (rows as f32).mul_add(line, heading + 1.0 + gaps)
-}
-
-/// Opens `shown` from the top inside the room it will need when it is open.
-///
-/// A block that grew as it opened pushed everything below it down the column,
-/// one layout per frame, all the way through the opening — which is the
-/// juddering the whole canvas had, and it landed on the lower blocks worst
-/// because every block above them was growing at once. The room is taken in
-/// full from the first frame instead, and the opening changes only how much
-/// of it has been written into. Nothing on the canvas moves while a block
-/// opens.
-fn revealed(shown: Element<'_, Message>, full: f32, bloom: f32) -> Element<'_, Message> {
-    container(
-        container(shown)
-            .max_height(full * bloom.clamp(0.0, 1.0))
-            .clip(true)
-    )
-    .height(Length::Fixed(full))
-    .clip(true)
-    .into()
-}
-
 /// The block of a module that has nothing to say yet.
 ///
 /// Every module opens into the same shape — a heading, a rule and lines
@@ -155,42 +105,6 @@ pub(super) fn awaited<'a>(title: &str, side: Side, ink: Ink, bloom: f32) -> Elem
     )
 }
 
-/// The blank shape a module with nothing to say opens into.
-fn blank<'a>(title: &str, side: Side, ink: Ink) -> Element<'a, Message> {
-    let heading = text(title.to_uppercase())
-        .size(ink.size * 1.05)
-        .color(ink.heading());
-
-    let lines = [0.62_f32, 0.38].into_iter().map(|share| {
-        Row::with_children(match side {
-            Side::Leading | Side::Middle => vec![
-                bar(ink.size * 4.0, ink),
-                Space::new().width(Length::Fill).into(),
-                bar(ink.size * 9.0 * share, ink),
-            ],
-            Side::Trailing => vec![
-                bar(ink.size * 9.0 * share, ink),
-                Space::new().width(Length::Fill).into(),
-                bar(ink.size * 4.0, ink),
-            ]
-        })
-        .width(Length::Fill)
-        .spacing(ink.size)
-        .align_y(Alignment::Center)
-        .into()
-    });
-
-    Column::with_children(
-        std::iter::once(heading.into())
-            .chain(std::iter::once(rule(ink)))
-            .chain(lines)
-    )
-    .spacing(ink.size * 0.28)
-    .width(Length::Fill)
-    .align_x(side.alignment_x())
-    .into()
-}
-
 /// The month grid, opening the way every other block does.
 ///
 /// The grid is six rows against the one row of the island above it, so what
@@ -198,63 +112,4 @@ fn blank<'a>(title: &str, side: Side, ink: Ink) -> Element<'a, Message> {
 /// frame and the grid is written into it, the same as a panel of readings.
 pub(super) fn month(grid: Element<'_, Message>, ink: Ink, bloom: f32) -> Element<'_, Message> {
     revealed(grid, ink.size * MONTH_ROWS, bloom)
-}
-
-/// How many lines of the body ink the month grid stands.
-///
-/// A heading, a row of weekday names and six weeks, each a line and a little,
-/// with the grid's own padding around them — measured off the grid itself at
-/// the body size and left a little over, because a figure short of the truth
-/// does not merely open early, it clips the last week off for good.
-const MONTH_ROWS: f32 = 22.0;
-
-/// One blank where a reading will stand, `width` wide.
-fn bar<'a>(width: f32, ink: Ink) -> Element<'a, Message> {
-    container(
-        Space::new()
-            .width(Length::Fixed(width.max(ink.size)))
-            .height(Length::Fixed(ink.size * 0.55))
-    )
-    .style(move |_| container::Style {
-        background: Some(ink.value.scale_alpha(0.18).into()),
-        border: iced::Border::default().rounded(ink.size * 0.2),
-        ..container::Style::default()
-    })
-    .into()
-}
-
-/// The thin line a heading is underscored with.
-fn rule<'a>(ink: Ink) -> Element<'a, Message> {
-    container(Space::new().width(Length::Fill).height(Length::Fixed(1.0)))
-        .width(Length::Fill)
-        .style(move |_| container::Style {
-            background: Some(ink.label().into()),
-            ..container::Style::default()
-        })
-        .into()
-}
-
-/// One reading: its label and its value, pushed to opposite edges.
-fn line<'a>(label: &str, value: &str, side: Side, ink: Ink) -> Element<'a, Message> {
-    let label = text(label.to_owned()).size(ink.size).color(ink.label());
-    let value = text(value.to_owned()).size(ink.size).color(ink.value);
-
-    let children: Vec<Element<'a, Message>> = match side {
-        Side::Leading | Side::Middle => vec![
-            label.into(),
-            Space::new().width(Length::Fill).into(),
-            value.into(),
-        ],
-        Side::Trailing => vec![
-            value.into(),
-            Space::new().width(Length::Fill).into(),
-            label.into(),
-        ]
-    };
-
-    Row::with_children(children)
-        .width(Length::Fill)
-        .spacing(ink.size)
-        .align_y(Alignment::Center)
-        .into()
 }
