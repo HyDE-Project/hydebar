@@ -373,15 +373,21 @@ Check [ROADMAP.md](../ROADMAP.md) for:
 
 ### What license is hydebar under?
 
-MIT License. See [LICENSE](../LICENSE) for details.
+The GNU General Public License, version 3 or later. See
+[LICENSE](../LICENSE) for the full text. Parts of the code began in the ashell
+project under the MIT License, and that notice is kept in
+[LICENSE.MIT](../LICENSE.MIT).
 
 ### Can I use it commercially?
 
-Yes, MIT license allows commercial use.
+Yes. The licence says nothing about charging for the software; what it asks is
+that anyone you hand a binary to can get the source on the same terms.
 
 ### Can I fork/modify it?
 
-Yes! That's encouraged. Please keep the MIT license notice.
+Yes, and it is encouraged. A fork carries the same licence: publish your
+changes under the GPL, version 3 or later, and keep both notices with the
+code.
 
 ---
 

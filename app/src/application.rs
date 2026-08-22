@@ -18,8 +18,14 @@ use crate::{error::MainError, housekeeping, instance, logging, startup_scale};
 
 const ICON_FONT: &[u8] = include_bytes!("../../assets/SymbolsNerdFont-Regular.ttf");
 
+/// The notice the licence asks a program to state where it can be read.
+const LICENCE_NOTICE: &str = "hydebar is free software under the GNU General Public License, \
+                              version 3 or later, and comes with absolutely no warranty. See \
+                              the LICENSE file shipped with it, or \
+                              <https://www.gnu.org/licenses/gpl-3.0.html>.";
+
 #[derive(Parser, Debug)]
-#[command(version, about, long_about = None)]
+#[command(version, about, long_about = None, after_help = LICENCE_NOTICE)]
 struct Args {
     #[arg(short, long, value_parser = clap::value_parser!(PathBuf))]
     config_path: Option<PathBuf>

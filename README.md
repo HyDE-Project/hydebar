@@ -16,7 +16,21 @@ hydebar evolved from ideas initially explored in the ashell project. The current
 
 ## License
 
-Licensed under the MIT License. See [LICENSE](LICENSE) for details.
+Copyright (C) 2024-2026 RAprogramm
+
+hydebar is free software: you can redistribute it and/or modify it under the
+terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version. See [LICENSE](LICENSE) for the full text.
+
+It is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+A PARTICULAR PURPOSE.
+
+The bar links the `hyprland` crate, which is GPL-3.0-or-later, and it belongs
+to a desktop that is itself GPL-3.0, so this is the licence the whole work can
+be handed on under. Parts of the code began in the ashell project under the
+MIT License, whose notice is kept in [LICENSE.MIT](LICENSE.MIT).
 
 ---
 

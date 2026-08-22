@@ -556,7 +556,9 @@ Maintainers handle releases:
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the MIT License.
+By contributing, you agree that your contributions will be licensed under the
+GNU General Public License, version 3 or later, the licence the bar as a whole
+is distributed under.
 
 ---
 
