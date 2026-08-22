@@ -1,149 +1,49 @@
 //! The table naming what every menu window shows.
+//!
+//! One table, kept in one place: the wrapping, placement and fade around a
+//! menu are the same for all of them and live with the caller. What each of
+//! them shows is grouped by whose menu it is — [`control_centre`] for the
+//! machine's own switches, [`notices`] for what the session has to say and
+//! [`desktop`] for the desk's own windows — so a menu added to one owner
+//! leaves the others untouched.
 
-use hydebar_core::{
-    menu::{MenuSize, MenuType},
-    modules::{
-        control_center::{ControlCenterViewExt, audio::AudioMessage},
-        custom_module
-    }
-};
+mod control_centre;
+mod desktop;
+mod notices;
+
+use hydebar_core::menu::{MenuSize, MenuType};
 use iced::{Element, SurfaceId as Id};
 
-use super::super::{
-    modules::actions::custom_menu_message,
-    state::{App, Message}
-};
+use super::super::state::{App, Message};
+
+/// What one menu window shows: its content, its width and its measured height.
+pub(crate) type Page<'a> = (Element<'a, Message>, MenuSize, Option<f32>);
 
 impl App {
     /// Content, width and measured height of the window `menu_type` opens.
     ///
-    /// The one table naming what every menu shows: the wrapping, placement and
-    /// fade around it are the same for all of them and live with the caller.
     /// [`None`] stands for a menu whose owner is gone, such as a custom module
     /// the configuration no longer declares.
-    #[allow(clippy::type_complexity)]
-    #[expect(
-        clippy::too_many_lines,
-        reason = "one table naming what every menu shows, one arm per menu"
-    )]
     pub(crate) fn menu_page(
         &self,
         menu_type: &MenuType,
         id: Id,
         opacity: f32
-    ) -> Option<(Element<'_, Message>, MenuSize, Option<f32>)> {
+    ) -> Option<Page<'_>> {
         match menu_type {
-            MenuType::Updates => Some((
-                self.updates
-                    .menu_view(id, opacity, self.icons())
-                    .map(Message::Updates),
-                MenuSize::Small,
-                None
-            )),
-            MenuType::Tray(name) => Some((
-                self.tray
-                    .menu_view(name, opacity, self.icons())
-                    .map(Message::Tray),
-                MenuSize::Small,
-                None
-            )),
-            MenuType::ControlCenter => Some((
-                self.control_center
-                    .menu_view(
-                        id,
-                        &self.config.control_center,
-                        opacity,
-                        self.config.position,
-                        self.icons()
-                    )
-                    .map(Message::ControlCenter),
-                MenuSize::Medium,
-                None
-            )),
-            MenuType::Audio => Some((
-                iced::widget::mouse_area(
-                    self.control_center
-                        .audio_menu(
-                            id,
-                            &self.config.control_center,
-                            opacity,
-                            self.config.position,
-                            self.icons()
-                        )
-                        .map(Message::ControlCenter)
-                )
-                .on_scroll(|delta| {
-                    Message::ControlCenter(hydebar_core::modules::control_center::Message::Audio(
-                        AudioMessage::SinkVolumeWheel(
-                            hydebar_core::modules::control_center::audio::wheel_direction(delta)
-                        )
-                    ))
-                })
-                .into(),
-                MenuSize::Medium,
-                None
-            )),
-            MenuType::Network => Some((
-                self.control_center
-                    .network_menu(id, &self.config.control_center, opacity, self.icons())
-                    .map(Message::ControlCenter),
-                MenuSize::Medium,
-                None
-            )),
-            MenuType::Bluetooth => Some((
-                self.control_center
-                    .bluetooth_menu(id, &self.config.control_center, opacity, self.icons())
-                    .map(Message::ControlCenter),
-                MenuSize::Medium,
-                None
-            )),
-            MenuType::PowerProfile => Some((
-                self.control_center
-                    .power_profile_menu(opacity, &self.config.control_center, self.icons())
-                    .map(Message::ControlCenter),
-                MenuSize::Small,
-                None
-            )),
-            MenuType::HydeMenu => Some((
-                self.hyde_menu.menu_view(id, opacity).map(Message::HydeMenu),
-                MenuSize::Small,
-                None
-            )),
-            MenuType::MediaPlayer => Some((
-                self.media_player
-                    .menu_view(&self.config.media_player, opacity, self.icons())
-                    .map(Message::MediaPlayer),
-                MenuSize::Large,
-                None
-            )),
-            MenuType::Wallpaper => Some((
-                self.wallpaper
-                    .menu_view(self.appearance().font_size_px())
-                    .map(Message::Wallpaper),
-                MenuSize::Medium,
-                None
-            )),
-            MenuType::BarLayout => Some((
-                self.bar_layout
-                    .menu_view(self.appearance().font_size_px())
-                    .map(Message::BarLayout),
-                MenuSize::Small,
-                None
-            )),
-            MenuType::Notifications => Some((
-                self.notifications
-                    .menu_view(opacity, self.icons())
-                    .map(Message::Notifications),
-                MenuSize::Medium,
-                None
-            )),
-            MenuType::Screenshot => Some((
-                self.screenshot
-                    .menu_view(opacity, self.icons())
-                    .map(Message::Screenshot),
-                MenuSize::Small,
-                None
-            )),
+            MenuType::ControlCenter
+            | MenuType::Audio
+            | MenuType::Network
+            | MenuType::Bluetooth
+            | MenuType::PowerProfile => self.control_centre_page(menu_type, id, opacity),
+            MenuType::Updates
+            | MenuType::Tray(_)
+            | MenuType::Notifications
+            | MenuType::Screenshot
+            | MenuType::MediaPlayer => self.notice_page(menu_type, id, opacity),
+            MenuType::HydeMenu | MenuType::Wallpaper | MenuType::BarLayout => {
+                self.desktop_page(menu_type, id, opacity)
+            }
             MenuType::Settings
             | MenuType::Themes
             | MenuType::SystemInfo
@@ -152,20 +52,7 @@ impl App {
             | MenuType::CpuTemp
             | MenuType::Gpu
             | MenuType::Calendar => self.measured_page(menu_type, opacity),
-            MenuType::Custom(name) => self
-                .config
-                .custom_modules
-                .iter()
-                .find(|definition| &definition.name == name)
-                .map(|definition| {
-                    (
-                        custom_module::menu_view(definition, self.appearance(), opacity, {
-                            move |entry| custom_menu_message(id, entry)
-                        }),
-                        MenuSize::Small,
-                        None
-                    )
-                })
+            MenuType::Custom(name) => self.custom_page(name, id, opacity)
         }
     }
 }
