@@ -3,6 +3,10 @@ name = "hydebar-proto"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Configuration schema, ports and HyDE theme source shared by the bar"
 
 [dependencies]
 log.workspace = true

@@ -3,6 +3,10 @@ name = "hydebar-core"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Modules, services and event bus behind the hydebar status bar"
 
 [dependencies]
 quick-xml.workspace = true

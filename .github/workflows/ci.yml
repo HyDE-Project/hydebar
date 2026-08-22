@@ -94,6 +94,21 @@ jobs:
       - name: Test
         run: cargo test --workspace --all-features
 
+  supply-chain:
+    name: Supply chain
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      # Advisories, licences and dependency sources are answered by the policy
+      # in `deny.toml`, so a new advisory or an unfamiliar licence fails the
+      # build instead of joining a tally nobody reads.
+      - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
+        with:
+          command: check
+
   msrv:
     name: Minimum supported Rust
     runs-on: ubuntu-24.04

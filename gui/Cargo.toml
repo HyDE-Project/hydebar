@@ -3,6 +3,10 @@ name = "hydebar-gui"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Bar composition and application state machine for hydebar"
 
 [dependencies]
 hydebar-core = { path = "../core" }

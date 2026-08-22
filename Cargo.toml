@@ -6,6 +6,9 @@ resolver = "3"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.97"
+license = "MIT"
+repository = "https://github.com/HyDE-Project/hydebar"
+homepage = "https://github.com/HyDE-Project/hydebar"
 
 [workspace.dependencies]
 quick-xml = "0.41"
