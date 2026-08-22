@@ -12,7 +12,8 @@ mod session;
 
 pub(super) use machine::{cpu_temperature, graphics, memory, network, processor, storage, system};
 pub(super) use session::{
-    battery, keyboard, notifications, privacy, session_idle, theme, tray, updates, weather
+    battery, keyboard, link, notifications, playing, privacy, radio, screen, session_idle, sound,
+    submap, theme, tray, updates, weather, windows, workspaces
 };
 
 /// One block of the canvas: a heading and the lines under it.

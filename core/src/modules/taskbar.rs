@@ -58,6 +58,15 @@ impl std::fmt::Debug for Taskbar {
 }
 
 impl Taskbar {
+    /// The windows the compositor last reported, in the order it lists them.
+    ///
+    /// The same list the strip draws entries from, so a canvas naming the
+    /// open windows cannot disagree with the bar standing above it.
+    #[must_use]
+    pub fn clients(&self) -> &[HyprlandClientInfo] {
+        &self.clients
+    }
+
     #[must_use]
     pub fn new(hyprland: Arc<dyn HyprlandPort>) -> Self {
         Self {

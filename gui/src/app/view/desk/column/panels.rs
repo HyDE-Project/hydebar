@@ -38,9 +38,27 @@ impl App {
             ModuleName::Weather => readings::weather(self).into_iter().collect(),
             ModuleName::Tray => readings::tray(self).into_iter().collect(),
             ModuleName::Themes => readings::theme(self).into_iter().collect(),
-            ModuleName::ControlCenter | ModuleName::IdleInhibitor => {
-                readings::session_idle(self).into_iter().collect()
+            ModuleName::ControlCenter => [
+                readings::session_idle(self),
+                readings::sound(self),
+                readings::link(self),
+                readings::radio(self),
+                readings::screen(self)
+            ]
+            .into_iter()
+            .flatten()
+            .collect(),
+            ModuleName::IdleInhibitor => readings::session_idle(self).into_iter().collect(),
+            ModuleName::Audio => readings::sound(self).into_iter().collect(),
+            ModuleName::Network => readings::link(self).into_iter().collect(),
+            ModuleName::Bluetooth => readings::radio(self).into_iter().collect(),
+            ModuleName::Brightness => readings::screen(self).into_iter().collect(),
+            ModuleName::Workspaces => readings::workspaces(self).into_iter().collect(),
+            ModuleName::WindowTitle | ModuleName::Taskbar => {
+                readings::windows(self).into_iter().collect()
             }
+            ModuleName::MediaPlayer => readings::playing(self).into_iter().collect(),
+            ModuleName::KeyboardSubmap => readings::submap(self).into_iter().collect(),
             _ => Vec::new()
         }
     }

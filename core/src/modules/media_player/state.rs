@@ -6,6 +6,15 @@ use super::{MediaPlayer, Message};
 use crate::services::{ReadOnlyService, ServiceEvent, mpris::PlayerCommand};
 
 impl MediaPlayer {
+    /// The players the session is running, as the service last saw them.
+    ///
+    /// Empty on a session with no player at all and on one whose players
+    /// have nothing loaded, which have the same amount to say.
+    #[must_use]
+    pub fn players(&self) -> &[crate::services::mpris::MprisPlayerData] {
+        self.service.as_deref().map_or(&[], Vec::as_slice)
+    }
+
     pub fn update(
         &mut self,
         message: Message,

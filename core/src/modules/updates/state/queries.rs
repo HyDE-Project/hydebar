@@ -49,7 +49,8 @@ impl Updates {
     }
 
     /// How many upstream commits the `HyDE` clone has not taken yet.
-    pub(super) fn hyde_pending(&self) -> usize {
+    #[must_use]
+    pub fn hyde_pending(&self) -> usize {
         self.hyde
             .as_ref()
             .map_or(0, |snapshot| snapshot.commits.len())
@@ -71,7 +72,8 @@ impl Updates {
         view::menu_view(self, id, opacity, icons)
     }
 
-    pub(crate) fn updates(&self) -> &[Update] {
+    #[must_use]
+    pub fn updates(&self) -> &[Update] {
         &self.pending
     }
 

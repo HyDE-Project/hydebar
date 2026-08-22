@@ -41,6 +41,17 @@ pub struct Workspaces {
 }
 
 impl Workspaces {
+    /// The workspaces the compositor last reported, in drawing order.
+    ///
+    /// Handed out because a workspace is a fact about the session, not about
+    /// this module: the canvas says how many there are and which one is
+    /// under the pointer, and it must read the same list the strip draws
+    /// rather than ask the compositor a second time.
+    #[must_use]
+    pub fn items(&self) -> &[Workspace] {
+        &self.items
+    }
+
     pub fn new(hyprland: Arc<dyn HyprlandPort>, config: &WorkspacesModuleConfig) -> Self {
         let workspaces = snapshot::get_workspaces(hyprland.as_ref(), config);
 
@@ -52,11 +63,6 @@ impl Workspaces {
             runtime: None,
             task: None
         }
-    }
-
-    #[cfg(test)]
-    pub(crate) fn items(&self) -> &[Workspace] {
-        &self.items
     }
 }
 

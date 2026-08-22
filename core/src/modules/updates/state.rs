@@ -27,6 +27,20 @@ pub struct Update {
     pub(super) to:      String
 }
 
+impl Update {
+    /// Name of the package the update is for.
+    #[must_use]
+    pub fn package(&self) -> &str {
+        &self.package
+    }
+
+    /// Version installed now, and the one it is going to.
+    #[must_use]
+    pub fn versions(&self) -> (&str, &str) {
+        (&self.from, &self.to)
+    }
+}
+
 /// What one look at the `HyDE` clone reported.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HydeSnapshot {

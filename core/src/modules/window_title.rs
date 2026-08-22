@@ -51,6 +51,16 @@ pub enum Message {
 }
 
 impl WindowTitle {
+    /// The whole title of the focused window, as the client set it.
+    ///
+    /// Not the shortened spelling the strip draws: the canvas has a column
+    /// to write in and a title cut to fit a bar entry says less than nothing
+    /// there.
+    #[must_use]
+    pub fn full(&self) -> Option<&str> {
+        self.value.as_deref()
+    }
+
     pub fn new(hyprland: Arc<dyn HyprlandPort>, config: &WindowTitleConfig) -> Self {
         let init = state::get_window(hyprland.as_ref(), config);
         let shortened = init

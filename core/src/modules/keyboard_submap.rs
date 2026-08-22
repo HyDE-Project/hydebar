@@ -32,6 +32,12 @@ impl std::fmt::Debug for KeyboardSubmap {
 const SUBMAP_EVENT_RETRY_DELAY: Duration = Duration::from_millis(500);
 
 impl KeyboardSubmap {
+    /// The submap the compositor is in, empty while it is in none.
+    #[must_use]
+    pub fn active(&self) -> &str {
+        &self.submap
+    }
+
     pub fn new(hyprland: Arc<dyn HyprlandPort>) -> Self {
         let initial_submap = hyprland
             .keyboard_state()

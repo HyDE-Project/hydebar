@@ -34,6 +34,22 @@ impl Custom {
     /// somewhere, so this is the question a caller has to be able
     /// to ask to tell a module that is merely silent from one that
     /// was never started.
+    /// What the producing command last said.
+    ///
+    /// The same text the strip draws, and the tooltip beside it: a canvas
+    /// naming a custom module says what the module says, not a second
+    /// reading of its own.
+    #[must_use]
+    pub const fn readings(&self) -> &CustomListenData {
+        &self.data
+    }
+
+    /// The last failure of the producing command, if it failed.
+    #[must_use]
+    pub const fn failure(&self) -> Option<&CustomCommandError> {
+        self.last_error.as_ref()
+    }
+
     #[must_use]
     pub const fn is_listening(&self) -> bool {
         self.registration.is_some()
