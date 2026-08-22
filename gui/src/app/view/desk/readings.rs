@@ -12,24 +12,31 @@ mod session;
 
 pub(super) use machine::{cpu_temperature, graphics, memory, network, processor, storage, system};
 pub(super) use session::{
-    battery, keyboard, link, notifications, playing, privacy, radio, screen, session_idle, sound,
-    submap, theme, tray, updates, weather, windows, workspaces
+    battery, keyboard, link, notifications, own, playing, privacy, radio, screen, session_idle,
+    sound, submap, theme, tray, updates, weather, windows, workspaces
 };
 
 /// One block of the canvas: a heading and the lines under it.
+///
+/// The heading is borrowed where the crate wrote it down and owned where the
+/// user did: every block but one is named here, and a module the user wrote
+/// carries the name their configuration gave it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Panel {
     /// Heading, drawn in the small capitals the columns are ruled by.
-    pub title: &'static str,
+    pub title: std::borrow::Cow<'static, str>,
     /// Label and value of every line, in drawing order.
     pub rows:  Vec<(String, String)>
 }
 
 impl Panel {
     /// A panel with rows, or nothing at all when the source reported none.
-    fn of(title: &'static str, rows: Vec<(String, String)>) -> Option<Self> {
+    fn of(
+        title: impl Into<std::borrow::Cow<'static, str>>,
+        rows: Vec<(String, String)>
+    ) -> Option<Self> {
         (!rows.is_empty()).then_some(Self {
-            title,
+            title: title.into(),
             rows
         })
     }
