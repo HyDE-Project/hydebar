@@ -31,6 +31,7 @@ use std::{fs, path::PathBuf};
 
 pub use jsonc::plain_json;
 pub use labels::display_label;
+use log::{debug, warn};
 pub use parse::parse;
 
 use crate::{
@@ -76,10 +77,42 @@ pub fn load(custom_names: &[String]) -> Option<RestatedLayout> {
 /// and the caller keeps the layout it already has.
 #[must_use]
 pub fn load_from(dirs: &HydeDirs, custom_names: &[String]) -> Option<RestatedLayout> {
-    let staterc = fs::read_to_string(dirs.staterc()).ok()?;
-    let source = fs::read_to_string(layout_file(dirs, &staterc)?).ok()?;
+    let record = dirs.staterc();
+    let staterc = match fs::read_to_string(&record) {
+        Ok(staterc) => staterc,
+        Err(err) => {
+            debug!(
+                "no desktop layout to take: {} could not be read: {err}",
+                record.display()
+            );
 
-    parse(&source, custom_names)
+            return None;
+        }
+    };
+
+    let path = layout_file(dirs, &staterc)?;
+    let source = match fs::read_to_string(&path) {
+        Ok(source) => source,
+        Err(err) => {
+            warn!(
+                "the desktop names {} as its bar layout, and it could not be read: {err}",
+                path.display()
+            );
+
+            return None;
+        }
+    };
+
+    let restated = parse(&source, custom_names);
+
+    if restated.is_none() {
+        warn!(
+            "{} holds no entry this bar can place; the layout it already has is kept",
+            path.display()
+        );
+    }
+
+    restated
 }
 
 /// Resolves the layout file `staterc` points at.
@@ -94,12 +127,31 @@ fn layout_file(dirs: &HydeDirs, staterc: &str) -> Option<PathBuf> {
         if path.is_file() {
             return Some(path);
         }
+
+        debug!(
+            "the recorded layout path {} is gone; falling back to the recorded name",
+            path.display()
+        );
     }
 
-    let name = shell_vars::value_of(staterc, LAYOUT_NAME_KEY)?;
+    let Some(name) = shell_vars::value_of(staterc, LAYOUT_NAME_KEY) else {
+        debug!("the desktop records no bar layout to take");
+
+        return None;
+    };
+
     let path = dirs.bar_layouts_dir().join(format!("{name}.jsonc"));
 
-    path.is_file().then_some(path)
+    if !path.is_file() {
+        warn!(
+            "the desktop records the bar layout `{name}`, and no file answers to it at {}",
+            path.display()
+        );
+
+        return None;
+    }
+
+    Some(path)
 }
 
 #[cfg(test)]

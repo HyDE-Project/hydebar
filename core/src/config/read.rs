@@ -18,7 +18,10 @@ use hydebar_proto::{
     theme_source::{self, HydeTheme}
 };
 
+use self::unknown::read_naming_unknown;
 use super::hyde::follow_hyde;
+
+mod unknown;
 
 #[derive(Debug)]
 pub enum ConfigReadError {
@@ -105,8 +108,7 @@ where
         })?;
     let declared = declares_modules(&table);
 
-    table
-        .try_into()
+    read_naming_unknown(table, path)
         .map(|config| follow_hyde(config, declared, theme, layout))
         .map_err(|source| ConfigReadError::Parse {
             path: path.to_path_buf(),

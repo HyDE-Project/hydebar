@@ -2,6 +2,8 @@
 
 use std::fs;
 
+use log::{debug, warn};
+
 use super::{
     palette::DcolPalette,
     roles::BarColors,
@@ -40,7 +42,15 @@ fn read_palette(dirs: &HydeDirs) -> Option<DcolPalette> {
     let recolour = Recolour::parse(&staterc);
     let theme = shell_vars::value_of(&staterc, THEME_KEY);
 
-    let palette = DcolPalette::parse(&read_source(dirs, theme.as_deref(), recolour)?)?;
+    let source = read_source(dirs, theme.as_deref(), recolour)?;
+    let Some(palette) = DcolPalette::parse(&source) else {
+        warn!(
+            "the desktop palette at {} does not read as one; the bar keeps its own colours",
+            dirs.wall_dcol().display()
+        );
+
+        return None;
+    };
 
     if inverts(
         recolour,
@@ -67,7 +77,19 @@ fn read_source(dirs: &HydeDirs, theme: Option<&str>, recolour: Recolour) -> Opti
         return Some(source);
     }
 
-    fs::read_to_string(dirs.wall_dcol()).ok()
+    let wallpaper = dirs.wall_dcol();
+
+    match fs::read_to_string(&wallpaper) {
+        Ok(source) => Some(source),
+        Err(err) => {
+            debug!(
+                "no desktop palette to follow: {} could not be read: {err}",
+                wallpaper.display()
+            );
+
+            None
+        }
+    }
 }
 
 /// Resolves the light/dark preference that is in force.

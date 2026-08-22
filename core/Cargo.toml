@@ -33,6 +33,7 @@ masterror.workspace = true
 pipewire.workspace = true
 reqwest.workspace = true
 serde.workspace = true
+serde_ignored.workspace = true
 serde_json.workspace = true
 shellexpand.workspace = true
 signal-hook-registry.workspace = true
