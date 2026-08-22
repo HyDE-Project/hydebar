@@ -17,7 +17,7 @@ mod memo;
 mod widget;
 
 pub use self::{
-    anchor::{DESCENT, FlipAnchor},
+    anchor::{DESCENT, FlipAnchor, offset_of},
     memo::FlipMemo
 };
 
@@ -61,7 +61,13 @@ mod tests {
     #[test]
     fn departing_turns_the_live_seats_into_the_ones_to_travel_from() {
         let mut memo = FlipMemo::default();
-        memo.record(1, 120.0);
+        memo.record(
+            1,
+            iced_core::Rectangle::new(
+                iced_core::Point::new(120.0, 0.0),
+                iced_core::Size::new(0.0, 0.0)
+            )
+        );
         memo.depart();
 
         assert_eq!(memo.from_map().get(&1), Some(&120.0));
@@ -70,7 +76,13 @@ mod tests {
     #[test]
     fn a_seat_nobody_restates_is_dropped_at_the_next_departure() {
         let mut memo = FlipMemo::default();
-        memo.record(1, 120.0);
+        memo.record(
+            1,
+            iced_core::Rectangle::new(
+                iced_core::Point::new(120.0, 0.0),
+                iced_core::Size::new(0.0, 0.0)
+            )
+        );
         memo.depart();
         memo.depart();
 
@@ -80,8 +92,20 @@ mod tests {
     #[test]
     fn the_latest_seat_of_a_key_is_the_one_kept() {
         let mut memo = FlipMemo::default();
-        memo.record(1, 10.0);
-        memo.record(1, 90.0);
+        memo.record(
+            1,
+            iced_core::Rectangle::new(
+                iced_core::Point::new(10.0, 0.0),
+                iced_core::Size::new(0.0, 0.0)
+            )
+        );
+        memo.record(
+            1,
+            iced_core::Rectangle::new(
+                iced_core::Point::new(90.0, 0.0),
+                iced_core::Size::new(0.0, 0.0)
+            )
+        );
         memo.depart();
 
         assert_eq!(memo.from_map().get(&1), Some(&90.0));
@@ -90,7 +114,13 @@ mod tests {
     #[test]
     fn a_resting_anchor_leaves_its_block_where_it_sits() {
         let memo = RefCell::new(FlipMemo::default());
-        memo.borrow_mut().record(1, 500.0);
+        memo.borrow_mut().record(
+            1,
+            iced_core::Rectangle::new(
+                iced_core::Point::new(500.0, 0.0),
+                iced_core::Size::new(0.0, 0.0)
+            )
+        );
         memo.borrow_mut().depart();
 
         let anchor: FlipAnchor<'_, Msg> =
@@ -102,7 +132,13 @@ mod tests {
     #[test]
     fn a_travelling_anchor_draws_its_block_part_way_from_where_it_was() {
         let memo = RefCell::new(FlipMemo::default());
-        memo.borrow_mut().record(1, 100.0);
+        memo.borrow_mut().record(
+            1,
+            iced_core::Rectangle::new(
+                iced_core::Point::new(100.0, 0.0),
+                iced_core::Size::new(0.0, 0.0)
+            )
+        );
         memo.borrow_mut().depart();
 
         let anchor: FlipAnchor<'_, Msg> =
@@ -123,7 +159,13 @@ mod tests {
     #[test]
     fn a_block_leaving_another_row_travels_down_as_well_as_along() {
         let memo = RefCell::new(FlipMemo::default());
-        memo.borrow_mut().record(1, 100.0);
+        memo.borrow_mut().record(
+            1,
+            iced_core::Rectangle::new(
+                iced_core::Point::new(100.0, 0.0),
+                iced_core::Size::new(0.0, 0.0)
+            )
+        );
         memo.borrow_mut().depart();
 
         let anchor: FlipAnchor<'_, Msg> =
@@ -139,7 +181,13 @@ mod tests {
     #[test]
     fn a_descending_block_finishes_its_journey_coming_straight_down() {
         let memo = RefCell::new(FlipMemo::default());
-        memo.borrow_mut().record(1, 100.0);
+        memo.borrow_mut().record(
+            1,
+            iced_core::Rectangle::new(
+                iced_core::Point::new(100.0, 0.0),
+                iced_core::Size::new(0.0, 0.0)
+            )
+        );
         memo.borrow_mut().depart();
 
         let offset = |progress: f32| {
@@ -206,8 +254,20 @@ mod tests {
         const ISLAND: Size = Size::new(120.0, 38.0);
 
         let memo = RefCell::new(FlipMemo::default());
-        memo.borrow_mut().record(1, 940.0);
-        memo.borrow_mut().record(2, 1070.0);
+        memo.borrow_mut().record(
+            1,
+            iced_core::Rectangle::new(
+                iced_core::Point::new(940.0, 0.0),
+                iced_core::Size::new(0.0, 0.0)
+            )
+        );
+        memo.borrow_mut().record(
+            2,
+            iced_core::Rectangle::new(
+                iced_core::Point::new(1070.0, 0.0),
+                iced_core::Size::new(0.0, 0.0)
+            )
+        );
         memo.borrow_mut().depart();
 
         let resting = [Point::new(880.0, 120.0), Point::new(760.0, 300.0)];
@@ -247,7 +307,13 @@ mod tests {
     #[test]
     fn a_block_that_has_arrived_is_left_alone_however_far_it_came() {
         let memo = RefCell::new(FlipMemo::default());
-        memo.borrow_mut().record(1, 100.0);
+        memo.borrow_mut().record(
+            1,
+            iced_core::Rectangle::new(
+                iced_core::Point::new(100.0, 0.0),
+                iced_core::Size::new(0.0, 0.0)
+            )
+        );
         memo.borrow_mut().depart();
 
         let anchor: FlipAnchor<'_, Msg> =
@@ -289,7 +355,13 @@ mod tests {
                 .expect("a seated block is visible")
         };
 
-        memo.borrow_mut().record(1, 200.0);
+        memo.borrow_mut().record(
+            1,
+            iced_core::Rectangle::new(
+                iced_core::Point::new(200.0, 0.0),
+                iced_core::Size::new(0.0, 0.0)
+            )
+        );
         memo.borrow_mut().depart();
 
         let mut ui = simulator(block(&memo, 1, 0.5));
@@ -313,7 +385,13 @@ mod tests {
                 .expect("a seated block is visible")
         };
 
-        memo.borrow_mut().record(1, 400.0);
+        memo.borrow_mut().record(
+            1,
+            iced_core::Rectangle::new(
+                iced_core::Point::new(400.0, 0.0),
+                iced_core::Size::new(0.0, 0.0)
+            )
+        );
         memo.borrow_mut().depart();
 
         let mut ui = simulator(block(&memo, 1, 0.5));

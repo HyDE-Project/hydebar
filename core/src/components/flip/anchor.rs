@@ -30,6 +30,38 @@ const CLOSING_FROM: f32 = 0.22;
 /// which is the one thing this journey is meant to say.
 const CLOSING_TO: f32 = 0.5;
 
+/// Where a block stands on the way from `from` to `at`, at `progress`.
+///
+/// The one place the path is worked out, so anything that draws the way a
+/// block came — the trail behind it — traces the very line the block flies
+/// rather than a second guess at it.
+#[must_use]
+pub fn offset_of(
+    progress: f32,
+    descends_first: bool,
+    from_x: Option<f32>,
+    from_y: Option<f32>,
+    at: iced_core::Point
+) -> iced_core::Vector {
+    if progress >= 1.0 {
+        return iced_core::Vector::ZERO;
+    }
+
+    let (fallen, closed) = if descends_first {
+        (
+            (progress / DESCENT).clamp(0.0, 1.0),
+            ((progress - CLOSING_FROM) / (CLOSING_TO - CLOSING_FROM)).clamp(0.0, 1.0)
+        )
+    } else {
+        (progress, progress)
+    };
+
+    let x = from_x.map_or(0.0, |from| (from - at.x) * (1.0 - closed));
+    let y = from_y.map_or(0.0, |from| (from - at.y) * (1.0 - fallen));
+
+    iced_core::Vector::new(x, y)
+}
+
 /// Wraps one block so it journeys between its recorded seats.
 pub struct FlipAnchor<'a, Message, Theme = iced::Theme, Renderer = iced::Renderer>
 where
@@ -98,31 +130,9 @@ where
 
     /// The drawing offset for the current frame, given the resting seat.
     pub(super) fn offset(&self, at: iced_core::Point) -> iced_core::Vector {
-        if self.progress >= 1.0 {
-            return iced_core::Vector::ZERO;
-        }
+        let from_x = self.memo.borrow().from_map().get(&self.key).copied();
 
-        let (fallen, closed) = if self.descends_first {
-            (
-                (self.progress / DESCENT).clamp(0.0, 1.0),
-                ((self.progress - CLOSING_FROM) / (CLOSING_TO - CLOSING_FROM)).clamp(0.0, 1.0)
-            )
-        } else {
-            (self.progress, self.progress)
-        };
-
-        let x = self
-            .memo
-            .borrow()
-            .from_map()
-            .get(&self.key)
-            .map_or(0.0, |from| (from - at.x) * (1.0 - closed));
-
-        let y = self
-            .from_y
-            .map_or(0.0, |from| (from - at.y) * (1.0 - fallen));
-
-        iced_core::Vector::new(x, y)
+        offset_of(self.progress, self.descends_first, from_x, self.from_y, at)
     }
 }
 

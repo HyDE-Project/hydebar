@@ -175,7 +175,13 @@ mod tests {
     #[test]
     fn a_resting_strip_leaves_every_module_where_it_sits() {
         let memo = RefCell::new(FlipMemo::default());
-        memo.borrow_mut().record(1, 500.0);
+        memo.borrow_mut().record(
+            1,
+            iced_core::Rectangle::new(
+                iced_core::Point::new(500.0, 0.0),
+                iced_core::Size::new(0.0, 0.0)
+            )
+        );
         memo.borrow_mut().depart();
 
         let strip = Archipelago::new(GAP, PAD, 1.0, &memo, filled).push(1, 0, 1.0, module("A"));
@@ -186,7 +192,13 @@ mod tests {
     #[test]
     fn a_travelling_module_is_drawn_part_way_from_where_it_was() {
         let memo = RefCell::new(FlipMemo::default());
-        memo.borrow_mut().record(1, 100.0);
+        memo.borrow_mut().record(
+            1,
+            iced_core::Rectangle::new(
+                iced_core::Point::new(100.0, 0.0),
+                iced_core::Size::new(0.0, 0.0)
+            )
+        );
         memo.borrow_mut().depart();
 
         let strip = Archipelago::new(GAP, PAD, 0.25, &memo, filled).push(1, 0, 1.0, module("A"));
@@ -226,7 +238,13 @@ mod tests {
             seats(resting, &["A"])[0]
         };
 
-        memo.borrow_mut().record(1, settled.x + 200.0);
+        memo.borrow_mut().record(
+            1,
+            iced_core::Rectangle::new(
+                iced_core::Point::new(settled.x + 200.0, 0.0),
+                iced_core::Size::new(0.0, 0.0)
+            )
+        );
         memo.borrow_mut().depart();
 
         let travelling =
@@ -250,7 +268,13 @@ mod tests {
             seats(resting, &["A"])[0]
         };
 
-        memo.borrow_mut().record(1, settled.x + 400.0);
+        memo.borrow_mut().record(
+            1,
+            iced_core::Rectangle::new(
+                iced_core::Point::new(settled.x + 400.0, 0.0),
+                iced_core::Size::new(0.0, 0.0)
+            )
+        );
         memo.borrow_mut().depart();
 
         let travelling =

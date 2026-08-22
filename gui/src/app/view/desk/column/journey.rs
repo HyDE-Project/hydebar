@@ -6,12 +6,13 @@ use super::super::super::super::state::App;
 
 /// The share of the screen the fan of one section reaches across.
 ///
-/// The lanes only have to be apart, not far apart: a block falls out of the
-/// strip's row before it closes in, so what keeps two of them from touching
-/// is the level between them rather than the width of the fan. Wide enough
-/// and the column stops reading as a column — the blocks stand in a staircase
-/// with no left edge for the eye to run down.
-const FAN: f32 = 0.05;
+/// Nothing: the side sections stand on the edges of the screen they belong
+/// to, every block of them on the same line, so a column has an edge for the
+/// eye to run down. The lanes a fan once gave them are not what keeps two
+/// blocks apart in flight — a block falls out of the strip's row before it
+/// closes in, and it is the level between them that does — so the fan buys
+/// nothing and costs the column its edge.
+const FAN: f32 = 0.0;
 
 /// The share of the longest journey the block nearest the strip travels.
 ///
@@ -66,7 +67,7 @@ impl App {
     /// is the measured one, with the padding the islands sit at inside the
     /// strip on top of it. Taken as zero, every block leapt the height of
     /// whatever stands above the bar before it began to move.
-    pub(super) fn strip_row(&self, id: Id) -> f32 {
+    pub(in crate::app::view::desk) fn strip_row(&self, id: Id) -> f32 {
         self.strip_top(id) + self.appearance().bar_padding()[0]
     }
 

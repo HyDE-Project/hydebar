@@ -14,6 +14,7 @@ mod blocks;
 pub mod column;
 mod fit;
 mod readings;
+mod trails;
 
 use hydebar_core::config::ModuleName;
 
@@ -84,7 +85,65 @@ impl App {
             left:   margin
         });
 
-        canvas.into()
+        let ways = self.desk_ways(id, unfolding, deepest, ink, room);
+
+        if ways.is_empty() {
+            return canvas.into();
+        }
+
+        iced::widget::Stack::new()
+            .push(trails::trails(ways, ink.value, ink.size))
+            .push(canvas)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .into()
+    }
+
+    /// The way every block of this screen has come, for the trails behind them.
+    ///
+    /// Read off the seats the last frame recorded rather than measured again:
+    /// the places do not move while a block travels to them, and a canvas
+    /// that laid itself out twice a frame to draw a streak would pay for the
+    /// streak in the very smoothness it is there to show.
+    fn desk_ways(
+        &self,
+        id: Id,
+        unfolding: f32,
+        deepest: usize,
+        ink: blocks::Ink,
+        room: f32
+    ) -> Vec<trails::Way> {
+        if unfolding >= 1.0 {
+            return Vec::new();
+        }
+
+        let memo = self.flip.borrow();
+        let (left, centre, right) = Self::desk_columns(&self.config.modules);
+
+        [&left, &centre, &right]
+            .into_iter()
+            .flat_map(|order| {
+                self.desk_runs(order, id, ink, room)
+                    .into_iter()
+                    .flatten()
+                    .filter_map(|within| {
+                        let key = self.flip_key(order[within], id);
+                        let travel = hydebar_core::animation::share(
+                            unfolding,
+                            Self::reach(within, deepest)
+                        )
+                        .0;
+
+                        Some(trails::Way {
+                            seat: *memo.seats().get(&key)?,
+                            from_x: *memo.from_map().get(&key)?,
+                            from_y: self.strip_row(id),
+                            travel
+                        })
+                    })
+                    .collect::<Vec<trails::Way>>()
+            })
+            .collect()
     }
 
     /// The three columns of the canvas, each in the order it stands in.
@@ -765,7 +824,7 @@ mod tests {
     }
 
     #[test]
-    fn each_block_of_a_section_stands_in_a_lane_of_its_own() {
+    fn every_block_of_a_side_section_stands_on_the_same_edge() {
         use hydebar_core::config::ModuleName;
         use hydebar_proto::config::ModuleDef;
 
@@ -781,26 +840,26 @@ mod tests {
         app.screen_width = Some(1920.0);
         open(&mut app);
 
-        let edge = simulator(app.desk_surface(surface()))
+        let far = simulator(app.desk_surface(surface()))
             .find("CPU TEMPERATURE")
             .expect("the far module")
             .bounds();
-        let middle = simulator(app.desk_surface(surface()))
+        let near = simulator(app.desk_surface(surface()))
             .find("MEMORY")
             .expect("the near module")
             .bounds();
 
         assert!(
-            middle.y < edge.y,
+            near.y < far.y,
             "the near module stands higher: {} against {}",
-            middle.y,
-            edge.y
+            near.y,
+            far.y
         );
         assert!(
-            middle.x > edge.x,
-            "the near module stands further in: {} against {}",
-            middle.x,
-            edge.x
+            (near.x - far.x).abs() < 1.0,
+            "and both stand on the edge of the screen: {} against {}",
+            near.x,
+            far.x
         );
     }
 

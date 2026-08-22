@@ -100,7 +100,7 @@ where
     ) {
         let at = layout.position();
 
-        self.memo.borrow_mut().record(self.key, at.x);
+        self.memo.borrow_mut().record(self.key, layout.bounds());
 
         let offset = self.offset(at);
 

@@ -137,7 +137,13 @@ impl App {
                 (&layout.modules.right, beyond * 2.0)
             ] {
                 for module in Self::desk_order(section, false) {
-                    memo.record(self.flip_key(module, surface), from);
+                    memo.record(
+                        self.flip_key(module, surface),
+                        iced::Rectangle::new(
+                            iced::Point::new(from, 0.0),
+                            iced::Size::new(0.0, 0.0)
+                        )
+                    );
                 }
             }
         }

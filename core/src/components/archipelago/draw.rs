@@ -42,7 +42,13 @@ pub(super) fn draw<Message, Theme, Renderer>(
             let offset = strip.offset(memo.from_map(), index, child_bounds.x);
             let current = child_bounds.x + offset;
 
-            memo.record(strip.keys[index], current);
+            memo.record(
+                strip.keys[index],
+                iced_core::Rectangle {
+                    x: current,
+                    ..child_bounds
+                }
+            );
 
             offsets.push(offset);
             spans.push((
