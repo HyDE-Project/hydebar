@@ -39,6 +39,27 @@ pub fn battery(app: &App) -> Option<Panel> {
     push(&mut rows, "profile", profile_name(data.power_profile));
     push(
         &mut rows,
+        "health",
+        data.health.map(|share| format!("{share}% of new"))
+    );
+    push(
+        &mut rows,
+        "cycles",
+        data.cycles.map(|cycles| cycles.to_string())
+    );
+    push(
+        &mut rows,
+        "draw",
+        data.watts.map(|watts| format!("{watts:.1} W"))
+    );
+    push(
+        &mut rows,
+        "charge held",
+        data.watt_hours
+            .map(|(now, full)| format!("{now:.1} of {full:.1} Wh"))
+    );
+    push(
+        &mut rows,
         "condition",
         match data.indicator_state {
             IndicatorState::Danger => Some("critical".to_owned()),

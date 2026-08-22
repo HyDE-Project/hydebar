@@ -78,7 +78,19 @@ pub struct BatteryData {
     pub icon:            BatteryIcon,
     pub time_remaining:  Option<Duration>,
     pub power_profile:   PowerProfile,
-    pub indicator_state: IndicatorState
+    pub indicator_state: IndicatorState,
+    /// What the cell can still hold against what it was sold with.
+    ///
+    /// A worn cell reports a full charge of a smaller cell, so a machine that
+    /// runs half as long as it did is telling the truth twice over. Absent on
+    /// firmware that does not report it.
+    pub health:          Option<u32>,
+    /// How many times the cell has been charged through.
+    pub cycles:          Option<i32>,
+    /// What the cell is giving or taking right now, in watts.
+    pub watts:           Option<f64>,
+    /// What the cell holds now and what it holds full, in watt hours.
+    pub watt_hours:      Option<(f64, f64)>
 }
 
 impl BatteryData {
@@ -115,8 +127,28 @@ impl BatteryData {
             icon,
             time_remaining,
             power_profile,
-            indicator_state
+            indicator_state,
+            health: None,
+            cycles: None,
+            watts: None,
+            watt_hours: None
         }
+    }
+
+    /// The same reading with what the cell knows about its own wear.
+    #[must_use]
+    pub const fn worn(
+        mut self,
+        health: Option<u32>,
+        cycles: Option<i32>,
+        watts: Option<f64>,
+        watt_hours: Option<(f64, f64)>
+    ) -> Self {
+        self.health = health;
+        self.cycles = cycles;
+        self.watts = watts;
+        self.watt_hours = watt_hours;
+        self
     }
 }
 

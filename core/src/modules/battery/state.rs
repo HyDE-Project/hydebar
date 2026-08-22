@@ -81,7 +81,12 @@ impl Battery {
             crate::services::upower::BatteryStatus::Charging(_)
         );
 
-        let data = BatteryData::new(capacity, charging, None, power_profile);
+        let data = BatteryData::new(capacity, charging, None, power_profile).worn(
+            upower_data.health,
+            upower_data.cycles,
+            upower_data.watts,
+            upower_data.watt_hours
+        );
 
         self.data = Some(data);
     }

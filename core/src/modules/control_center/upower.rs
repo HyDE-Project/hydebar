@@ -165,7 +165,11 @@ mod tests {
     fn battery(capacity: i64, status: BatteryStatus) -> BatteryData {
         BatteryData {
             capacity,
-            status
+            status,
+            health: None,
+            cycles: None,
+            watts: None,
+            watt_hours: None
         }
     }
 

@@ -6,8 +6,16 @@ use crate::{components::icons::Icons, utils::IndicatorState};
 
 #[derive(Clone, Copy, Debug)]
 pub struct BatteryData {
-    pub capacity: i64,
-    pub status:   BatteryStatus
+    pub capacity:   i64,
+    pub status:     BatteryStatus,
+    /// Share of the design charge the cell can still hold, in percent.
+    pub health:     Option<u32>,
+    /// How many times the cell has been charged through.
+    pub cycles:     Option<i32>,
+    /// What the cell is giving or taking right now, in watts.
+    pub watts:      Option<f64>,
+    /// What the cell holds now and what it holds full, in watt hours.
+    pub watt_hours: Option<(f64, f64)>
 }
 
 impl BatteryData {
@@ -20,7 +28,8 @@ impl BatteryData {
             } => IndicatorState::Success,
             Self {
                 status: BatteryStatus::Discharging(_),
-                capacity
+                capacity,
+                ..
             } if *capacity < 20 => IndicatorState::Danger,
             _ => IndicatorState::Normal
         }
@@ -35,19 +44,23 @@ impl BatteryData {
             } => Icons::BatteryCharging,
             Self {
                 status: BatteryStatus::Discharging(_),
-                capacity
+                capacity,
+                ..
             } if *capacity < 20 => Icons::Battery0,
             Self {
                 status: BatteryStatus::Discharging(_),
-                capacity
+                capacity,
+                ..
             } if *capacity < 40 => Icons::Battery1,
             Self {
                 status: BatteryStatus::Discharging(_),
-                capacity
+                capacity,
+                ..
             } if *capacity < 60 => Icons::Battery2,
             Self {
                 status: BatteryStatus::Discharging(_),
-                capacity
+                capacity,
+                ..
             } if *capacity < 80 => Icons::Battery3,
             _ => Icons::Battery4
         }

@@ -94,11 +94,19 @@ impl UPowerService {
                     _ => BatteryStatus::Discharging(Duration::from_secs(0))
                 };
                 let percentage = battery.percentage().await as i64;
+                let health = battery.health().await;
+                let cycles = battery.cycles().await;
+                let watts = battery.watts().await;
+                let watt_hours = battery.watt_hours().await;
 
                 Ok(Some((
                     BatteryData {
                         capacity: percentage,
-                        status:   state
+                        status: state,
+                        health,
+                        cycles,
+                        watts,
+                        watt_hours
                     },
                     battery
                 )))

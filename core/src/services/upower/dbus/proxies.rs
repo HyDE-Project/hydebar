@@ -37,6 +37,30 @@ pub trait Device {
 
     #[zbus(property)]
     fn state(&self) -> Result<u32>;
+
+    /// Share of the design charge the cell can still hold.
+    ///
+    /// A battery wears out, and a machine that reports ninety percent of a
+    /// cell that holds seventy of what it was sold with is not the machine it
+    /// was. Nothing else on the bar says so.
+    #[zbus(property)]
+    fn capacity(&self) -> Result<f64>;
+
+    /// How many times the cell has been charged through.
+    #[zbus(property)]
+    fn charge_cycles(&self) -> Result<i32>;
+
+    /// What the cell is giving or taking right now, in watts.
+    #[zbus(property, name = "EnergyRate")]
+    fn energy_rate(&self) -> Result<f64>;
+
+    /// What the cell holds now, in watt hours.
+    #[zbus(property)]
+    fn energy(&self) -> Result<f64>;
+
+    /// What the cell holds when it is full, in watt hours.
+    #[zbus(property, name = "EnergyFull")]
+    fn energy_full(&self) -> Result<f64>;
 }
 
 #[proxy(
