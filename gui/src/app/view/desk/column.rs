@@ -8,12 +8,15 @@
 //!
 //! Four rooms. Here is the column itself, the stack a section becomes;
 //! [`journey`] is where a block leaves from and how far it has to go,
+//! [`runs`] breaks a section too deep for the screen into runs that stand
+//! side by side,
 //! [`order`] is what stands where in the stack, [`unit`] is the shape one
 //! module takes on the canvas and [`panels`] is what each of them has to say.
 
 mod journey;
 mod order;
 mod panels;
+mod runs;
 mod unit;
 
 use hydebar_core::config::ModuleName;
@@ -49,6 +52,10 @@ impl App {
     ///
     /// Returns nothing when no unit of the section has anything to draw, so
     /// an empty section leaves no gap on the canvas.
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "a column is drawn from what it holds, where it stands and how far it has come"
+    )]
     pub(super) fn desk_column<'a>(
         &'a self,
         order: &[&'a ModuleName],
@@ -56,53 +63,68 @@ impl App {
         side: Side,
         ink: Ink,
         unfolding: f32,
-        deepest: usize
+        deepest: usize,
+        room: f32
     ) -> Option<Element<'a, Message>> {
         let fan = self.fan_span();
+        let runs = self.desk_runs(order, id, ink, room);
 
-        let blocks: Vec<Element<'a, Message>> = order
-            .iter()
-            .enumerate()
-            .filter_map(|(within, unit)| {
-                let (travel, bloom) =
-                    hydebar_core::animation::share(unfolding, Self::reach(within, deepest));
-                let block = self.desk_unit(unit, id, side, ink, bloom)?;
-
-                #[expect(
-                    clippy::cast_precision_loss,
-                    reason = "a section holds a handful of units"
-                )]
-                let depth = within as f32 / (order.len().max(2) - 1) as f32;
-                let inwards = fan * (1.0 - depth);
-
-                let travelling = hydebar_core::components::flip::FlipAnchor::new(
-                    self.flip_key(unit, id),
-                    travel,
-                    &self.flip,
-                    block
-                )
-                .departing_from(self.strip_row(id))
-                .descending_first();
-
-                Some(
-                    container(travelling)
-                        .width(Length::Fill)
-                        .align_x(side.alignment_x())
-                        .padding(side.lane(inwards))
-                        .into()
-                )
-            })
-            .collect();
-
-        if blocks.is_empty() {
+        if runs.is_empty() {
             return None;
         }
 
+        let drawn: Vec<Element<'a, Message>> = runs
+            .into_iter()
+            .map(|run| {
+                let blocks: Vec<Element<'a, Message>> = run
+                    .into_iter()
+                    .filter_map(|within| {
+                        let unit = order[within];
+                        let (travel, bloom) = hydebar_core::animation::share(
+                            unfolding,
+                            Self::reach(within, deepest)
+                        );
+                        let block = self.desk_unit(unit, id, side, ink, bloom)?;
+
+                        #[expect(
+                            clippy::cast_precision_loss,
+                            reason = "a section holds a handful of units"
+                        )]
+                        let depth = within as f32 / (order.len().max(2) - 1) as f32;
+                        let inwards = fan * (1.0 - depth);
+
+                        let travelling = hydebar_core::components::flip::FlipAnchor::new(
+                            self.flip_key(unit, id),
+                            travel,
+                            &self.flip,
+                            block
+                        )
+                        .departing_from(self.strip_row(id))
+                        .descending_first();
+
+                        Some(
+                            container(travelling)
+                                .width(Length::Fill)
+                                .align_x(side.alignment_x())
+                                .padding(side.lane(inwards))
+                                .into()
+                        )
+                    })
+                    .collect();
+
+                Column::with_children(blocks)
+                    .spacing(ink.size * 1.8)
+                    .width(Length::Fill)
+                    .align_x(side.alignment_x())
+                    .into()
+            })
+            .collect();
+
         Some(
-            Column::with_children(blocks)
-                .spacing(ink.size * 1.8)
+            iced::widget::Row::with_children(drawn)
+                .spacing(ink.size * 2.0)
                 .width(Length::Fill)
-                .align_x(side.alignment_x())
+                .align_y(iced::Alignment::Start)
                 .into()
         )
     }

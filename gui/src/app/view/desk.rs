@@ -53,6 +53,7 @@ impl App {
             size:  fit::ink_size(self, id, self.canvas_room(id))
         };
         let margin = ink.size * 2.0;
+        let room = self.canvas_room(id);
         let modules = &self.config.modules;
 
         let (left, centre, right) = Self::desk_columns(modules);
@@ -64,7 +65,9 @@ impl App {
             (&right, blocks::Side::Trailing)
         ]
         .into_iter()
-        .filter_map(|(order, side)| self.desk_column(order, id, side, ink, unfolding, deepest));
+        .filter_map(|(order, side)| {
+            self.desk_column(order, id, side, ink, unfolding, deepest, room)
+        });
 
         let canvas = container(
             Row::with_children(columns)

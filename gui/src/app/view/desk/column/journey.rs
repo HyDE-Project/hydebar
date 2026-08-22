@@ -6,9 +6,12 @@ use super::super::super::super::state::App;
 
 /// The share of the screen the fan of one section reaches across.
 ///
-/// Wide enough that the lanes are plainly apart and narrow enough that the
-/// two edge sections never meet in the middle, where the centre one stands.
-const FAN: f32 = 0.16;
+/// The lanes only have to be apart, not far apart: a block falls out of the
+/// strip's row before it closes in, so what keeps two of them from touching
+/// is the level between them rather than the width of the fan. Wide enough
+/// and the column stops reading as a column — the blocks stand in a staircase
+/// with no left edge for the eye to run down.
+const FAN: f32 = 0.05;
 
 /// The share of the longest journey the block nearest the strip travels.
 ///

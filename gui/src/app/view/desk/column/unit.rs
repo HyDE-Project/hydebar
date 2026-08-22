@@ -11,6 +11,16 @@ use super::super::{
     blocks::{self, Ink, Side}
 };
 
+/// How wide a block is written, in body letters.
+///
+/// A reading is a label and a figure, and the eye pairs them by how close
+/// they are. Given the whole third of a screen a column has, the label ends
+/// up an arm's length from its figure and the pair stops being a pair — which
+/// is why every table ever printed has a measure. This is that measure: wide
+/// enough for the longest value the bar shows, narrow enough that the two
+/// halves of a line still read as one line.
+const MEASURE: f32 = 30.0;
+
 impl App {
     /// Draws one unit in the form the canvas has room for.
     ///
@@ -35,11 +45,14 @@ impl App {
         }
 
         Some(
-            Column::with_children(std::iter::once(island).chain(opened))
-                .spacing(ink.size * 0.9)
-                .width(Length::Fill)
-                .align_x(side.alignment_x())
-                .into()
+            container(
+                Column::with_children(std::iter::once(island).chain(opened))
+                    .spacing(ink.size * 0.9)
+                    .width(Length::Fill)
+                    .align_x(side.alignment_x())
+            )
+            .max_width(ink.size * MEASURE)
+            .into()
         )
     }
 
