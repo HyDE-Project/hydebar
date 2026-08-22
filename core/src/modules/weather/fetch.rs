@@ -33,7 +33,7 @@ pub(super) async fn fetch_weather(
     api_key: Option<&String>
 ) -> AppResult<WeatherResponse> {
     let api_key = api_key
-        .ok_or_else(|| AppError::internal("Weather API key not configured in config.toml"))?;
+        .ok_or_else(|| AppError::config("Weather API key not configured in config.toml"))?;
 
     let url = format!(
         "https://api.openweathermap.org/data/2.5/weather?q={}&appid={}",
@@ -47,9 +47,9 @@ pub(super) async fn fetch_weather(
         .await
         .map_err(|e| {
             if e.is_timeout() {
-                AppError::internal(format!("Weather API timeout for location '{location}'"))
+                AppError::timeout(format!("Weather API timeout for location '{location}'"))
             } else if e.is_connect() {
-                AppError::internal("No internet connection - cannot fetch weather")
+                AppError::service_unavailable("No internet connection - cannot fetch weather")
             } else {
                 AppError::external_api(format!("Network error fetching weather: {e}"))
             }
@@ -57,13 +57,19 @@ pub(super) async fn fetch_weather(
 
     let status = response.status();
     if !status.is_success() {
-        return Err(AppError::internal(match status.as_u16() {
-            401 => format!("Invalid weather API key ({status})"),
-            404 => format!("Location '{location}' not found in weather database"),
-            429 => "Weather API rate limit exceeded - try again later".to_string(),
-            500..=599 => format!("Weather API server error ({status})"),
-            _ => format!("Weather API returned error {status} for location '{location}'")
-        }));
+        return Err(match status.as_u16() {
+            401 => AppError::unauthorized(format!("Invalid weather API key ({status})")),
+            404 => AppError::not_found(format!(
+                "Location '{location}' not found in weather database"
+            )),
+            429 => AppError::rate_limited("Weather API rate limit exceeded - try again later"),
+            500..=599 => {
+                AppError::service_unavailable(format!("Weather API server error ({status})"))
+            }
+            _ => AppError::external_api(format!(
+                "Weather API returned error {status} for location '{location}'"
+            ))
+        });
     }
 
     let weather = response.json::<WeatherResponse>().await.map_err(|e| {

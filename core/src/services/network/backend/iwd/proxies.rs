@@ -7,9 +7,10 @@ use zbus::fdo::ObjectManagerProxy;
 macro_rules! list_proxies {
     ($manager:expr, $interface:expr, $proxy_type:ty) => {
         async {
-            let objects = $manager.get_managed_objects().await.map_err(|e| {
-                AppError::internal(format!("Failed to get managed objects: {}", e))
-            })?;
+            let objects = $manager
+                .get_managed_objects()
+                .await
+                .map_err(|e| fdo_failure("Failed to get managed objects", &e))?;
             let mut proxies = Vec::new();
             for (path, ifs) in objects {
                 if ifs.contains_key($interface) {
@@ -23,14 +24,10 @@ macro_rules! list_proxies {
                                 ))
                             })?
                             .path(path.clone())
-                            .map_err(|e| {
-                                AppError::internal(format!("Failed to set proxy path: {}", e))
-                            })?
+                            .map_err(|e| bus_failure("Failed to set proxy path", &e))?
                             .build()
                             .await
-                            .map_err(|e| {
-                                AppError::internal(format!("Failed to build proxy: {}", e))
-                            })?
+                            .map_err(|e| bus_failure("Failed to build proxy", &e))?
                     );
                 }
             }
@@ -44,7 +41,7 @@ use super::{
     agent_manager::AgentManagerProxy, device::DeviceProxy, known_network::KnownNetworkProxy,
     network::NetworkProxy, station::StationProxy
 };
-use crate::services::bus::bus_failure;
+use crate::services::bus::{bus_failure, fdo_failure};
 
 impl IwdDbus<'_> {
     /// Connect to the system bus and the IWD service
@@ -115,7 +112,7 @@ impl IwdDbus<'_> {
         .await?
         .first()
         .cloned()
-        .ok_or_else(|| AppError::internal("No AgentManagerProxy found"))
+        .ok_or_else(|| AppError::not_found("No AgentManagerProxy found"))
     }
 
     /// Lists a proxy for every network iwd already knows.

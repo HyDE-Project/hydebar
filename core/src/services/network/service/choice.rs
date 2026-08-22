@@ -1,6 +1,6 @@
 //! Selection between the `NetworkManager` and iwd backends.
 
-use masterror::{AppError, AppResult};
+use masterror::{AppError, AppErrorKind, AppResult};
 use zbus::zvariant::OwnedObjectPath;
 
 use super::super::{
@@ -127,7 +127,10 @@ impl NetworkBackend for BackendChoiceWithConnection {
                     .await
             }
             // IWD does not handle VPNs directly
-            BackendChoice::Iwd => Err(AppError::internal("IWD does not support VPN management"))
+            BackendChoice::Iwd => Err(AppError::new(
+                AppErrorKind::NotImplemented,
+                "IWD does not support VPN management"
+            ))
         }
     }
 

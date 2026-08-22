@@ -24,7 +24,7 @@ impl PulseAudioServer {
             match self.mainloop.iterate(true) {
                 IterateResult::Quit(_) | IterateResult::Err(_) => {
                     error!("PulseAudio iterate failure");
-                    return Err(AppError::internal("PulseAudio iterate failure"));
+                    return Err(AppError::service_unavailable("PulseAudio iterate failure"));
                 }
                 IterateResult::Success(_) => {
                     if operation.get_state() == operation::State::Done {

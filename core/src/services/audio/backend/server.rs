@@ -32,17 +32,17 @@ impl Drop for PulseAudioServer {
 impl PulseAudioServer {
     pub(super) fn new() -> AppResult<Self> {
         let name = format!("{:?}", TypeId::of::<Self>());
-        let mut proplist =
-            Proplist::new().ok_or_else(|| AppError::internal("create PulseAudio properties"))?;
+        let mut proplist = Proplist::new()
+            .ok_or_else(|| AppError::service_unavailable("create PulseAudio properties"))?;
         proplist
             .set_str(APPLICATION_NAME, name.as_str())
             .map_err(|()| AppError::internal("failed to set application name"))?;
 
-        let mut mainloop =
-            Mainloop::new().ok_or_else(|| AppError::internal("create PulseAudio mainloop"))?;
+        let mut mainloop = Mainloop::new()
+            .ok_or_else(|| AppError::service_unavailable("create PulseAudio mainloop"))?;
 
         let mut context = Context::new_with_proplist(&mainloop, name.as_str(), &proplist)
-            .ok_or_else(|| AppError::internal("create PulseAudio context"))?;
+            .ok_or_else(|| AppError::service_unavailable("create PulseAudio context"))?;
 
         context.connect(None, FlagSet::NOFLAGS, None).map_err(|e| {
             AppError::service_unavailable(format!("connect PulseAudio context: {e}"))
@@ -51,7 +51,9 @@ impl PulseAudioServer {
         loop {
             match mainloop.iterate(true) {
                 IterateResult::Quit(_) | IterateResult::Err(_) => {
-                    return Err(AppError::internal("PulseAudio mainloop failed during init"));
+                    return Err(AppError::service_unavailable(
+                        "PulseAudio mainloop failed during init"
+                    ));
                 }
                 IterateResult::Success(_) => {
                     if context.get_state() == context::State::Ready {
