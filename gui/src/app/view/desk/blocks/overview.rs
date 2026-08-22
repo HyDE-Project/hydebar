@@ -7,11 +7,12 @@
 //! stands, so nothing is guessed here — the shapes are the layout, to scale.
 
 use iced::{
-    Color, Element, Length, Point, Rectangle, Renderer, Size, Theme,
+    Alignment, Color, Element, Length, Point, Rectangle, Renderer, Size, Theme,
     mouse::Cursor,
     widget::{
-        Row,
-        canvas::{self, Canvas, Frame as Sheet, Geometry, Path, Stroke}
+        Column, Row,
+        canvas::{self, Canvas, Frame as Sheet, Geometry, Path, Stroke},
+        text
     }
 };
 
@@ -34,23 +35,43 @@ const CORNER: f32 = 2.0;
 /// Gap kept between two miniatures, as a share of the body ink.
 const GAP: f32 = 0.5;
 
+/// How tall the caption under a miniature stands, as a share of the body ink.
+const CAPTION: f32 = 1.4;
+
 /// The room a row of miniatures takes, at the given ink.
+///
+/// The miniature and the name under it, with the gap the column keeps between
+/// two lines between them.
 pub(super) fn room(ink: Ink) -> f32 {
-    ink.size * HEIGHT
+    ink.size.mul_add(HEIGHT + CAPTION, ink.size * 0.28)
 }
 
 /// Draws one miniature per workspace, side by side.
 pub(super) fn overview<'a>(workspaces: &[Miniature], ink: Ink) -> Element<'a, Message> {
-    let height = room(ink);
+    let height = ink.size * HEIGHT;
 
     Row::with_children(workspaces.iter().map(|workspace| {
-        Canvas::new(Screen {
-            workspace: workspace.clone(),
-            ink
-        })
-        .width(Length::Fixed(height * ASPECT))
-        .height(Length::Fixed(height))
-        .into()
+        let name = text(workspace.name.clone())
+            .size(ink.size * 0.9)
+            .color(if workspace.active {
+                ink.value
+            } else {
+                ink.label()
+            });
+
+        Column::new()
+            .push(
+                Canvas::new(Screen {
+                    workspace: workspace.clone(),
+                    ink
+                })
+                .width(Length::Fixed(height * ASPECT))
+                .height(Length::Fixed(height))
+            )
+            .push(name)
+            .spacing(ink.size * 0.28)
+            .align_x(Alignment::Center)
+            .into()
     }))
     .spacing(ink.size * GAP)
     .into()

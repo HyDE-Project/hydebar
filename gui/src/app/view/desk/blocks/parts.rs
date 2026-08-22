@@ -115,7 +115,18 @@ pub(super) fn rule<'a>(ink: Ink) -> Element<'a, Message> {
 }
 
 /// One reading: its label and its value, pushed to opposite edges.
+///
+/// A line with no label is not a reading but a continuation — a line of a
+/// tooltip, the name of a tray item — and it stands on the column's own edge
+/// instead of being flung across the block to where a value would sit.
 fn line<'a>(label: &str, value: &str, side: Side, ink: Ink) -> Element<'a, Message> {
+    if label.is_empty() {
+        return container(text(value.to_owned()).size(ink.size).color(ink.value))
+            .width(Length::Fill)
+            .align_x(side.alignment_x())
+            .into();
+    }
+
     let label = text(label.to_owned()).size(ink.size).color(ink.label());
     let value = text(value.to_owned()).size(ink.size).color(ink.value);
 
