@@ -192,7 +192,7 @@ mod tests {
             Some(8.0),
             Point::new(travelling.seat.x, travelling.seat.y)
         );
-        let grown_to = |from: f32, to: f32| from + (to - from) * 0.5;
+        let grown_to = |from: f32, to: f32| (to - from).mul_add(0.5, from);
 
         assert!(
             (last.x
