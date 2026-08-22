@@ -5,8 +5,18 @@
 //! stands on the canvas as the whole of what it knows: a heading, a rule
 //! under it and a line per reading, which is the shape a desktop monitor has
 //! always had.
+//!
+//! Four rooms. Here is the column itself, the stack a section becomes;
+//! [`journey`] is where a block leaves from and how far it has to go,
+//! [`order`] is what stands where in the stack, [`unit`] is the shape one
+//! module takes on the canvas and [`panels`] is what each of them has to say.
 
-use hydebar_core::config::{ModuleDef, ModuleName};
+mod journey;
+mod order;
+mod panels;
+mod unit;
+
+use hydebar_core::config::ModuleName;
 use iced::{
     Element, Length, SurfaceId as Id,
     widget::{Column, container}
@@ -14,23 +24,8 @@ use iced::{
 
 use super::{
     super::super::state::{App, Message},
-    blocks::{self, Ink, Side},
-    readings
+    blocks::{Ink, Side}
 };
-
-/// The share of the screen the fan of one section reaches across.
-///
-/// Wide enough that the lanes are plainly apart and narrow enough that the
-/// two edge sections never meet in the middle, where the centre one stands.
-const FAN: f32 = 0.16;
-
-/// The share of the longest journey the block nearest the strip travels.
-///
-/// A block one row down has less way to go than one at the bottom corner, but
-/// not a seventh as much: the strip is a row above the first place, not at
-/// it. Below this the near blocks are over before the eye has them, which
-/// reads as appearing rather than arriving.
-const NEAREST: f32 = 0.4;
 
 impl App {
     /// Stacks one section of the layout into a column of the canvas.
@@ -110,254 +105,5 @@ impl App {
                 .align_x(side.alignment_x())
                 .into()
         )
-    }
-
-    /// How far the block standing `within` places down a column has to go.
-    ///
-    /// Against the block that goes furthest, which is the last place of the
-    /// longest column: the places of a column are a row apart, so how many
-    /// places down a block stands is how far down the screen it is bound.
-    /// A block half as far down is there in half the time and opens then.
-    #[expect(
-        clippy::cast_precision_loss,
-        reason = "a layout holds a handful of units"
-    )]
-    pub(crate) fn reach(within: usize, deepest: usize) -> f32 {
-        if deepest < 2 {
-            return 1.0;
-        }
-
-        let depth = (within as f32 / (deepest - 1) as f32).clamp(0.0, 1.0);
-
-        (1.0 - NEAREST).mul_add(depth, NEAREST)
-    }
-
-    /// The units of one section, in the order the canvas stands them in.
-    ///
-    /// A unit is one module. The modules of a group shared one pill on the
-    /// strip and each carries a pill of its own to its place on the canvas:
-    /// what parts is the icons, and the backing goes with both of them.
-    ///
-    /// The rule is the distance from the middle of the strip: a unit that
-    /// stood near the centre stands high on the canvas, and one that stood at
-    /// an edge reaches for the corner below it. The centre section already
-    /// reads outwards from the middle; the left one reads towards it, so it
-    /// is turned around.
-    pub(crate) fn desk_order(
-        section: &[ModuleDef],
-        reads_towards_the_centre: bool
-    ) -> Vec<&ModuleName> {
-        let mut order: Vec<&ModuleName> = section.iter().flat_map(Self::members).collect();
-
-        if reads_towards_the_centre {
-            order.reverse();
-        }
-
-        order
-    }
-
-    /// How far inwards the nearest unit of a section stands.
-    ///
-    /// The units of a section fan out as they come down: the one that stood
-    /// nearest the middle of the strip lands nearest the middle of the screen
-    /// and the far one lands against the edge, each in a lane of its own.
-    /// Falling straight down a single lane is what had them passing through
-    /// one another — a block on its way to the fourth place crossed the three
-    /// already standing.
-    fn fan_span(&self) -> f32 {
-        self.screen_width.unwrap_or(1920.0) * FAN
-    }
-
-    /// The height the strip's own islands stand at.
-    ///
-    /// Where every block departs from: the canvas covers the whole screen,
-    /// strip band included, so the row the units leave is a row of the canvas
-    /// rather than somewhere above it.
-    ///
-    /// The strip is not at the top of the screen because it is a bar. It is
-    /// wherever the compositor put it, under whatever else reserved a band
-    /// above it, and a layer surface is never told its own place — so the row
-    /// is the measured one, with the padding the islands sit at inside the
-    /// strip on top of it. Taken as zero, every block leapt the height of
-    /// whatever stands above the bar before it began to move.
-    fn strip_row(&self, id: Id) -> f32 {
-        self.strip_top(id) + self.appearance().bar_padding()[0]
-    }
-
-    /// Where the strip's own surface begins on the screen it is drawn on.
-    ///
-    /// Zero until the compositor has answered, which is what a strip with
-    /// nothing above it stands at anyway.
-    pub(crate) fn strip_top(&self, id: Id) -> f32 {
-        self.outputs
-            .screen_of(id)
-            .flatten()
-            .and_then(|screen| self.strip_rows.get(screen))
-            .copied()
-            .unwrap_or_default()
-    }
-
-    /// Draws one unit in the form the canvas has room for.
-    ///
-    /// The opened block is built on every frame of the unfolding, empty of
-    /// writing or full of it: it is what takes the unit's room in the column,
-    /// and a unit that stood as a bare island until it began to open would
-    /// take its room only then, moving everything below it down the screen
-    /// mid-flight.
-    fn desk_unit<'a>(
-        &'a self,
-        unit: &'a ModuleName,
-        id: Id,
-        side: Side,
-        ink: Ink,
-        bloom: f32
-    ) -> Option<Element<'a, Message>> {
-        let island = self.desk_island(unit, id)?;
-        let opened: Vec<Element<'a, Message>> = self.desk_opened(unit, side, ink, bloom);
-
-        if opened.is_empty() {
-            return Some(island);
-        }
-
-        Some(
-            Column::with_children(std::iter::once(island).chain(opened))
-                .spacing(ink.size * 0.9)
-                .width(Length::Fill)
-                .align_x(side.alignment_x())
-                .into()
-        )
-    }
-
-    /// What one module of an opened unit writes out.
-    fn desk_opened<'a>(
-        &'a self,
-        module: &'a ModuleName,
-        side: Side,
-        ink: Ink,
-        bloom: f32
-    ) -> Vec<Element<'a, Message>> {
-        if matches!(module, ModuleName::Clock) {
-            return vec![blocks::month(self.desk_month(), ink, bloom)];
-        }
-
-        let panels = self.desk_panels(module);
-
-        if panels.is_empty() {
-            return vec![blocks::awaited(module.label(), side, ink, bloom)];
-        }
-
-        panels
-            .iter()
-            .map(|panel| blocks::panel(panel, side, ink, bloom))
-            .collect()
-    }
-
-    /// The modules one unit carries.
-    pub(crate) fn members(unit: &ModuleDef) -> Vec<&ModuleName> {
-        match unit {
-            ModuleDef::Single(module) => vec![module],
-            ModuleDef::Group(group) => group.iter().collect()
-        }
-    }
-
-    /// The island the unit arrived on the canvas as.
-    ///
-    /// The very thing that travelled, and it travels as the strip drew it: a
-    /// module on its own carries its own pill, and a group carries the one
-    /// pill its modules shared. It is not swapped for a heading once the
-    /// block opens — the block grows underneath it — because a module that
-    /// vanished at the end of its own journey would undo the journey.
-    ///
-    /// Its members are drawn as the strip draws a grouped module, which is
-    /// the one that owns the height its own content needs. A module drawn as
-    /// its own island fills the row it stands in, and a row of the canvas is
-    /// as tall as the column: the island stretched down the screen and left
-    /// its own readings behind.
-    fn desk_island<'a>(&'a self, unit: &'a ModuleName, id: Id) -> Option<Element<'a, Message>> {
-        let opacity = self.appearance().opacity;
-        let (content, action) = self.get_module_view(unit, id, opacity)?;
-        let actions = self.module_actions(unit, action);
-
-        Some(self.desk_pill(vec![self.module_element(content, actions, unit, id, true)]))
-    }
-
-    /// The one pill a group of modules shares, as the strip paints it.
-    fn desk_pill<'a>(&'a self, members: Vec<Element<'a, Message>>) -> Element<'a, Message> {
-        use hydebar_proto::config::AppearanceStyle;
-
-        let appearance = self.appearance();
-        let row = iced::widget::Row::with_children(members)
-            .spacing(appearance.island_gap())
-            .align_y(iced::Alignment::Center);
-
-        if appearance.style != AppearanceStyle::Islands {
-            return row.into();
-        }
-
-        let opacity = appearance.opacity;
-        let finish = hydebar_core::style::IslandFinish::of(appearance);
-        let radius = appearance.pill_radius();
-
-        container(row)
-            .padding(appearance.island_padding())
-            .style(move |theme: &iced::Theme| iced::widget::container::Style {
-                background: Some(theme.palette().background.scale_alpha(opacity).into()),
-                border: finish.border(radius),
-                shadow: finish.shadow(),
-                ..iced::widget::container::Style::default()
-            })
-            .into()
-    }
-
-    /// The month the clock opens into.
-    ///
-    /// The very grid its press opens on the strip — the same widget, drawn
-    /// straight onto the wallpaper instead of into a popup. Its room is taken
-    /// from the first frame of the unfolding and it is written into that room
-    /// as the clock lands, the same as every other block: standing there
-    /// whole from the first frame was the one thing on the canvas that did
-    /// not open.
-    fn desk_month(&self) -> Element<'_, Message> {
-        self.calendar.menu_view(self.icons()).map(Message::Calendar)
-    }
-
-    /// What a module has to say once it has the room to say all of it.
-    ///
-    /// One arm per module, and every arm answers from the state that module
-    /// already keeps: the desk samples nothing of its own. A module that has
-    /// not answered yet, or has nothing longer to say than its strip entry,
-    /// yields no panel and stands on the canvas as it stands on the strip.
-    fn desk_panels(&self, module: &ModuleName) -> Vec<readings::Panel> {
-        let machine = self.system_info.data();
-
-        match module {
-            ModuleName::SystemInfo => [
-                readings::system(machine),
-                readings::processor(machine),
-                readings::graphics(machine),
-                readings::memory(machine),
-                readings::storage(machine),
-                readings::network(machine)
-            ]
-            .into_iter()
-            .flatten()
-            .collect(),
-            ModuleName::Cpu => readings::processor(machine).into_iter().collect(),
-            ModuleName::CpuTemp => readings::cpu_temperature(machine).into_iter().collect(),
-            ModuleName::GpuTemp => readings::graphics(machine).into_iter().collect(),
-            ModuleName::Memory => readings::memory(machine).into_iter().collect(),
-            ModuleName::Battery => readings::battery(self).into_iter().collect(),
-            ModuleName::Updates => readings::updates(self).into_iter().collect(),
-            ModuleName::Notifications => readings::notifications(self).into_iter().collect(),
-            ModuleName::Privacy => readings::privacy(self).into_iter().collect(),
-            ModuleName::KeyboardLayout => readings::keyboard(self).into_iter().collect(),
-            ModuleName::Weather => readings::weather(self).into_iter().collect(),
-            ModuleName::Tray => readings::tray(self).into_iter().collect(),
-            ModuleName::Themes => readings::theme(self).into_iter().collect(),
-            ModuleName::ControlCenter | ModuleName::IdleInhibitor => {
-                readings::session_idle(self).into_iter().collect()
-            }
-            _ => Vec::new()
-        }
     }
 }
