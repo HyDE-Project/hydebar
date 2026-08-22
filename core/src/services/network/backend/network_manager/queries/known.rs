@@ -1,11 +1,14 @@
 //! Connection profiles already stored by `NetworkManager`.
 
 use log::warn;
-use masterror::{AppError, AppResult};
+use masterror::AppResult;
 use zbus::zvariant::Value;
 
 use super::super::{NetworkDbus, NetworkSettingsDbus, proxies::ConnectionSettingsProxy};
-use crate::services::network::{AccessPoint, KnownConnection, Vpn};
+use crate::services::{
+    bus::bus_failure,
+    network::{AccessPoint, KnownConnection, Vpn}
+};
 
 impl NetworkDbus<'_> {
     /// Lists the stored connection profiles as known connections.
@@ -28,14 +31,10 @@ impl NetworkDbus<'_> {
         for c in known_connections {
             let cs = ConnectionSettingsProxy::builder(self.0.inner().connection())
                 .path(c.clone())
-                .map_err(|e| {
-                    AppError::internal(format!("Failed to set ConnectionSettingsProxy path: {e}"))
-                })?
+                .map_err(|e| bus_failure("Failed to set ConnectionSettingsProxy path", &e))?
                 .build()
                 .await
-                .map_err(|e| {
-                    AppError::internal(format!("Failed to build ConnectionSettingsProxy: {e}"))
-                })?;
+                .map_err(|e| bus_failure("Failed to build ConnectionSettingsProxy", &e))?;
             let Ok(s) = cs.get_settings().await else {
                 warn!("Failed to get settings for connection {c}");
                 continue;

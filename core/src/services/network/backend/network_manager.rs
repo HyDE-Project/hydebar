@@ -2,7 +2,7 @@
 
 use std::ops::Deref;
 
-use masterror::{AppError, AppResult};
+use masterror::AppResult;
 use zbus::zvariant::OwnedObjectPath;
 
 mod connect;
@@ -20,7 +20,10 @@ use proxies::NetworkManagerProxy;
 pub use settings_dbus::NetworkSettingsDbus;
 
 use super::DeviceType;
-use crate::services::network::{AccessPoint, KnownConnection, NetworkBackend, NetworkData};
+use crate::services::{
+    bus::bus_failure,
+    network::{AccessPoint, KnownConnection, NetworkBackend, NetworkData}
+};
 
 #[derive(Clone)]
 pub struct NetworkDbus<'a>(NetworkManagerProxy<'a>);
@@ -51,7 +54,7 @@ impl NetworkBackend for NetworkDbus<'_> {
     async fn set_wifi_enabled(&self, enable: bool) -> AppResult<()> {
         self.set_wireless_enabled(enable)
             .await
-            .map_err(|e| AppError::internal(format!("Failed to set WiFi enabled state: {e}")))
+            .map_err(|e| bus_failure("Failed to set WiFi enabled state", &e))
     }
 
     async fn select_access_point(
@@ -92,9 +95,9 @@ impl NetworkDbus<'_> {
     ///
     /// Returns an error when the `NetworkManager` proxy cannot be created.
     pub async fn new(conn: &zbus::Connection) -> AppResult<Self> {
-        let nm = NetworkManagerProxy::new(conn).await.map_err(|e| {
-            AppError::internal(format!("Failed to create NetworkManagerProxy: {e}"))
-        })?;
+        let nm = NetworkManagerProxy::new(conn)
+            .await
+            .map_err(|e| bus_failure("Failed to create NetworkManagerProxy", &e))?;
 
         Ok(Self(nm))
     }

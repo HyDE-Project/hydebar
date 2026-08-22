@@ -5,6 +5,8 @@ use iced::{
     futures::{SinkExt, channel::mpsc::Sender}
 };
 
+pub(crate) mod bus;
+
 pub mod audio;
 pub mod bluetooth;
 pub mod brightness;

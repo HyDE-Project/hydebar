@@ -11,7 +11,10 @@ use super::{
     },
     EventStream
 };
-use crate::services::network::{AccessPoint, DeviceState, NetworkEvent};
+use crate::services::{
+    bus::bus_failure,
+    network::{AccessPoint, DeviceState, NetworkEvent}
+};
 
 impl<'a> NetworkDbus<'a> {
     /// One stream per access point surfacing password requests on its device.
@@ -29,10 +32,10 @@ impl<'a> NetworkDbus<'a> {
         for access_point in wireless_access_points {
             let device_proxy = DeviceProxy::builder(conn)
                 .path(access_point.device_path.clone())
-                .map_err(|e| AppError::internal(format!("Failed to set DeviceProxy path: {e}")))?
+                .map_err(|e| bus_failure("Failed to set DeviceProxy path", &e))?
                 .build()
                 .await
-                .map_err(|e| AppError::internal(format!("Failed to build DeviceProxy: {e}")))?;
+                .map_err(|e| bus_failure("Failed to build DeviceProxy", &e))?;
 
             let ssid = access_point.ssid.clone();
             device_state_changes.push(
@@ -84,14 +87,10 @@ impl<'a> NetworkDbus<'a> {
             let ssid = access_point.ssid.clone();
             let proxy = AccessPointProxy::builder(conn)
                 .path(access_point.path.clone())
-                .map_err(|e| {
-                    AppError::internal(format!("Failed to set AccessPointProxy path: {e}"))
-                })?
+                .map_err(|e| bus_failure("Failed to set AccessPointProxy path", &e))?
                 .build()
                 .await
-                .map_err(|e| {
-                    AppError::internal(format!("Failed to build AccessPointProxy: {e}"))
-                })?;
+                .map_err(|e| bus_failure("Failed to build AccessPointProxy", &e))?;
 
             strength_changes_streams.push(
                 proxy

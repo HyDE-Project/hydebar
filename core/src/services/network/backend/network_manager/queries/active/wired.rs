@@ -1,9 +1,9 @@
 //! Description of an active wired connection.
 
-use masterror::{AppError, AppResult};
+use masterror::AppResult;
 
 use super::super::super::proxies::{ActiveConnectionProxy, DeviceProxy, WiredDeviceProxy};
-use crate::services::network::ActiveConnectionInfo;
+use crate::services::{bus::bus_failure, network::ActiveConnectionInfo};
 
 /// Reads the name and link speed of a wired connection.
 pub(super) async fn describe(
@@ -13,19 +13,19 @@ pub(super) async fn describe(
 ) -> AppResult<ActiveConnectionInfo> {
     let wired_device = WiredDeviceProxy::builder(conn)
         .path(device.inner().path())
-        .map_err(|e| AppError::internal(format!("Failed to set WiredDeviceProxy path: {e}")))?
+        .map_err(|e| bus_failure("Failed to set WiredDeviceProxy path", &e))?
         .build()
         .await
-        .map_err(|e| AppError::internal(format!("Failed to build WiredDeviceProxy: {e}")))?;
+        .map_err(|e| bus_failure("Failed to build WiredDeviceProxy", &e))?;
 
     Ok(ActiveConnectionInfo::Wired {
         name:  connection
             .id()
             .await
-            .map_err(|e| AppError::internal(format!("Failed to get wired connection ID: {e}")))?,
+            .map_err(|e| bus_failure("Failed to get wired connection ID", &e))?,
         speed: wired_device
             .speed()
             .await
-            .map_err(|e| AppError::internal(format!("Failed to get wired device speed: {e}")))?
+            .map_err(|e| bus_failure("Failed to get wired device speed", &e))?
     })
 }

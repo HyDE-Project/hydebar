@@ -6,7 +6,10 @@ use tokio::process::Command;
 use zbus::zvariant::OwnedObjectPath;
 
 use super::{IwdDbus, adapter::AdapterProxy};
-use crate::services::network::{AccessPoint, KnownConnection, NetworkBackend, NetworkData};
+use crate::services::{
+    bus::bus_failure,
+    network::{AccessPoint, KnownConnection, NetworkBackend, NetworkData}
+};
 
 mod connect;
 mod snapshot;
@@ -31,7 +34,7 @@ impl NetworkBackend for IwdDbus<'_> {
             if station
                 .scanning()
                 .await
-                .map_err(|e| AppError::internal(format!("Failed to check scanning state: {e}")))?
+                .map_err(|e| bus_failure("Failed to check scanning state", &e))?
             {
                 debug!("Already scanning");
                 continue;
@@ -39,7 +42,7 @@ impl NetworkBackend for IwdDbus<'_> {
             station
                 .scan()
                 .await
-                .map_err(|e| AppError::internal(format!("Failed to start scan: {e}")))?;
+                .map_err(|e| bus_failure("Failed to start scan", &e))?;
         }
         Ok(())
     }
@@ -47,10 +50,10 @@ impl NetworkBackend for IwdDbus<'_> {
     async fn set_wifi_enabled(&self, enabled: bool) -> AppResult<()> {
         AdapterProxy::new(self.inner().connection())
             .await
-            .map_err(|e| AppError::internal(format!("Failed to create AdapterProxy: {e}")))?
+            .map_err(|e| bus_failure("Failed to create AdapterProxy", &e))?
             .set_powered(enabled)
             .await
-            .map_err(|e| AppError::internal(format!("Failed to set WiFi enabled state: {e}")))?;
+            .map_err(|e| bus_failure("Failed to set WiFi enabled state", &e))?;
         Ok(())
     }
 

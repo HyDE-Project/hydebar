@@ -3,7 +3,7 @@
 use std::{pin::Pin, sync::Arc};
 
 use futures::{Stream, StreamExt, stream::SelectAll};
-use masterror::{AppError, AppResult};
+use masterror::AppResult;
 use zbus::{Connection, fdo::DBusProxy};
 
 use super::data::{MprisPlayerMetadata, PlaybackStatus};
@@ -11,6 +11,8 @@ use super::data::{MprisPlayerMetadata, PlaybackStatus};
 mod players;
 
 pub use players::{collect_players, fetch_players, is_mpris_service};
+
+use crate::services::bus::bus_failure;
 
 /// Stream item emitted by [`build_event_stream`].
 #[derive(Debug)]
@@ -32,14 +34,14 @@ pub type EventStream = SelectAll<Pin<Box<dyn Stream<Item = IpcEvent> + Send>>>;
 pub async fn build_event_stream(conn: &Connection) -> AppResult<EventStream> {
     let dbus = DBusProxy::new(conn)
         .await
-        .map_err(|e| AppError::internal(format!("Failed to create DBusProxy: {e}")))?;
+        .map_err(|e| bus_failure("Failed to create DBusProxy", &e))?;
     let data = collect_players(conn).await?;
     let mut combined = SelectAll::new();
 
     combined.push(Box::pin(
         dbus.receive_name_owner_changed()
             .await
-            .map_err(|e| AppError::internal(format!("Failed to receive name owner changed: {e}")))?
+            .map_err(|e| bus_failure("Failed to receive name owner changed", &e))?
             .filter_map(|signal| async move {
                 match signal.args() {
                     Ok(args) if is_mpris_service(&args.name) => Some(IpcEvent::NameOwner),

@@ -51,7 +51,7 @@ pub(super) async fn fetch_weather(
             } else if e.is_connect() {
                 AppError::internal("No internet connection - cannot fetch weather")
             } else {
-                AppError::internal(format!("Network error fetching weather: {e}"))
+                AppError::external_api(format!("Network error fetching weather: {e}"))
             }
         })?;
 
@@ -66,10 +66,9 @@ pub(super) async fn fetch_weather(
         }));
     }
 
-    let weather = response
-        .json::<WeatherResponse>()
-        .await
-        .map_err(|e| AppError::internal(format!("Invalid weather data format from API: {e}")))?;
+    let weather = response.json::<WeatherResponse>().await.map_err(|e| {
+        AppError::deserialization(format!("Invalid weather data format from API: {e}"))
+    })?;
 
     Ok(weather)
 }

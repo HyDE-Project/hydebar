@@ -44,6 +44,7 @@ use super::{
     agent_manager::AgentManagerProxy, device::DeviceProxy, known_network::KnownNetworkProxy,
     network::NetworkProxy, station::StationProxy
 };
+use crate::services::bus::bus_failure;
 
 impl IwdDbus<'_> {
     /// Connect to the system bus and the IWD service
@@ -55,18 +56,12 @@ impl IwdDbus<'_> {
     pub async fn new(conn: &zbus::Connection) -> AppResult<Self> {
         let manager = ObjectManagerProxy::builder(conn)
             .destination("net.connman.iwd")
-            .map_err(|e| {
-                AppError::internal(format!("Failed to set ObjectManagerProxy destination: {e}"))
-            })?
+            .map_err(|e| bus_failure("Failed to set ObjectManagerProxy destination", &e))?
             .path("/")
-            .map_err(|e| {
-                AppError::internal(format!("Failed to set ObjectManagerProxy path: {e}"))
-            })?
+            .map_err(|e| bus_failure("Failed to set ObjectManagerProxy path", &e))?
             .build()
             .await
-            .map_err(|e| {
-                AppError::internal(format!("Failed to build ObjectManagerProxy for IWD: {e}"))
-            })?;
+            .map_err(|e| bus_failure("Failed to build ObjectManagerProxy for IWD", &e))?;
 
         Ok(Self {
             inner: manager
@@ -174,24 +169,19 @@ impl IwdDbus<'_> {
         let mut networks = Vec::new();
 
         for station in stations {
-            let networks_proxies = station.get_ordered_networks().await.map_err(|e| {
-                AppError::internal(format!("Failed to get ordered networks from station: {e}"))
-            })?;
+            let networks_proxies = station
+                .get_ordered_networks()
+                .await
+                .map_err(|e| bus_failure("Failed to get ordered networks from station", &e))?;
             for (path, strength) in networks_proxies {
                 let network = NetworkProxy::builder(self.inner().connection())
                     .destination("net.connman.iwd")
-                    .map_err(|e| {
-                        AppError::internal(format!("Failed to set NetworkProxy destination: {e}"))
-                    })?
+                    .map_err(|e| bus_failure("Failed to set NetworkProxy destination", &e))?
                     .path(path.clone())
-                    .map_err(|e| {
-                        AppError::internal(format!("Failed to set NetworkProxy path: {e}"))
-                    })?
+                    .map_err(|e| bus_failure("Failed to set NetworkProxy path", &e))?
                     .build()
                     .await
-                    .map_err(|e| {
-                        AppError::internal(format!("Failed to build NetworkProxy: {e}"))
-                    })?;
+                    .map_err(|e| bus_failure("Failed to build NetworkProxy", &e))?;
                 networks.push((network, strength));
             }
         }

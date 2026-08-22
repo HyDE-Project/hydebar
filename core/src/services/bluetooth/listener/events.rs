@@ -7,6 +7,7 @@ use super::super::{
     BluetoothService,
     dbus::{BatteryProxy, BluetoothDbus}
 };
+use crate::services::bus::bus_failure;
 
 impl BluetoothService {
     #[expect(
@@ -48,14 +49,10 @@ impl BluetoothService {
                 for device in devices.iter().filter(|d| d.battery.is_some()) {
                     let battery = BatteryProxy::builder(bluetooth.bluez.inner().connection())
                         .path(device.path.clone())
-                        .map_err(|e| {
-                            AppError::internal(format!("Failed to set battery path: {e}"))
-                        })?
+                        .map_err(|e| bus_failure("Failed to set battery path", &e))?
                         .build()
                         .await
-                        .map_err(|e| {
-                            AppError::internal(format!("Failed to build battery proxy: {e}"))
-                        })?;
+                        .map_err(|e| bus_failure("Failed to build battery proxy", &e))?;
                     batteries.push(battery.receive_percentage_changed().await.map(|_| {}));
                 }
 

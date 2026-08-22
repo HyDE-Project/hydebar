@@ -8,6 +8,7 @@ use super::{
     dbus::{self, DBusMenuProxy, Layout, StatusNotifierItemProxy},
     icon
 };
+use crate::services::bus::bus_failure;
 
 #[derive(Debug, Clone)]
 pub struct StatusNotifierItem {
@@ -39,14 +40,10 @@ impl StatusNotifierItem {
                 ))
             })?
             .path(path.to_owned())
-            .map_err(|e| {
-                AppError::internal(format!("Failed to set StatusNotifierItemProxy path: {e}"))
-            })?
+            .map_err(|e| bus_failure("Failed to set StatusNotifierItemProxy path", &e))?
             .build()
             .await
-            .map_err(|e| {
-                AppError::internal(format!("Failed to build StatusNotifierItemProxy: {e}"))
-            })?;
+            .map_err(|e| bus_failure("Failed to build StatusNotifierItemProxy", &e))?;
 
         debug!("item_proxy {item_proxy:?}");
 
@@ -74,22 +71,20 @@ impl StatusNotifierItem {
         let menu_path = item_proxy
             .menu()
             .await
-            .map_err(|e| AppError::internal(format!("Failed to get menu path: {e}")))?;
+            .map_err(|e| bus_failure("Failed to get menu path", &e))?;
         let menu_proxy = dbus::DBusMenuProxy::builder(conn)
             .destination(dest.to_owned())
-            .map_err(|e| {
-                AppError::internal(format!("Failed to set DBusMenuProxy destination: {e}"))
-            })?
+            .map_err(|e| bus_failure("Failed to set DBusMenuProxy destination", &e))?
             .path(menu_path.clone())
-            .map_err(|e| AppError::internal(format!("Failed to set DBusMenuProxy path: {e}")))?
+            .map_err(|e| bus_failure("Failed to set DBusMenuProxy path", &e))?
             .build()
             .await
-            .map_err(|e| AppError::internal(format!("Failed to build DBusMenuProxy: {e}")))?;
+            .map_err(|e| bus_failure("Failed to build DBusMenuProxy", &e))?;
 
         let (_, menu) = menu_proxy
             .get_layout(0, -1, &[])
             .await
-            .map_err(|e| AppError::internal(format!("Failed to get menu layout: {e}")))?;
+            .map_err(|e| bus_failure("Failed to get menu layout", &e))?;
 
         Ok(Self {
             name,

@@ -4,14 +4,14 @@ use std::{any::TypeId, time::Duration};
 
 use iced::{Subscription, stream::channel};
 use log::warn;
-use masterror::{AppError, AppResult};
+use masterror::AppResult;
 use zbus::zvariant::ObjectPath;
 
 use super::{
     BatteryData, BatteryStatus, PowerProfile, UPowerService,
     dbus::{Battery, PowerProfilesProxy, UPowerDbus}
 };
-use crate::services::ServiceEvent;
+use crate::services::{ServiceEvent, bus::bus_failure};
 
 impl UPowerService {
     pub fn subscription_with_id(id: TypeId) -> Subscription<ServiceEvent<Self>> {
@@ -56,14 +56,14 @@ impl UPowerService {
     pub(super) async fn initialize_power_profile_data(
         conn: &zbus::Connection
     ) -> AppResult<PowerProfile> {
-        let powerprofiles = PowerProfilesProxy::new(conn).await.map_err(|e| {
-            AppError::internal(format!("Failed to create PowerProfilesProxy: {e}"))
-        })?;
+        let powerprofiles = PowerProfilesProxy::new(conn)
+            .await
+            .map_err(|e| bus_failure("Failed to create PowerProfilesProxy", &e))?;
 
         let profile = powerprofiles
             .active_profile()
             .await
-            .map_err(|e| AppError::internal(format!("Failed to get active power profile: {e}")))
+            .map_err(|e| bus_failure("Failed to get active power profile", &e))
             .map(PowerProfile::from)?;
 
         Ok(profile)

@@ -13,7 +13,7 @@ use super::{
     PowerProfile, State, UPowerEvent, UPowerService,
     dbus::{PowerProfilesProxy, UPowerDbus}
 };
-use crate::services::{ServiceEvent, ServiceEventPublisher};
+use crate::services::{ServiceEvent, ServiceEventPublisher, bus::bus_failure};
 
 impl UPowerService {
     #[expect(
@@ -91,7 +91,7 @@ impl UPowerService {
         match state {
             State::Init => match zbus::Connection::system()
                 .await
-                .map_err(|e| AppError::internal(format!("Failed to connect to system bus: {e}")))
+                .map_err(|e| bus_failure("Failed to connect to system bus", &e))
             {
                 Ok(conn) => {
                     let (battery, battery_path, power_profile) =

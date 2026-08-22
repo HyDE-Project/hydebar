@@ -22,8 +22,9 @@ impl BluetoothService {
             .output()
             .await?;
 
-        let output = String::from_utf8(output.stdout)
-            .map_err(|e| AppError::internal(format!("Failed to parse rfkill output: {e}")))?;
+        let output = String::from_utf8(output.stdout).map_err(|e| {
+            AppError::deserialization(format!("Failed to parse rfkill output: {e}"))
+        })?;
 
         Ok(output.contains("Soft blocked: yes"))
     }

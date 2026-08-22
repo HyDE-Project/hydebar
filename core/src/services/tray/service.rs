@@ -11,7 +11,7 @@ use super::{
     dbus::{DBusMenuProxy, Layout},
     watcher
 };
-use crate::services::{ReadOnlyService, Service, ServiceEvent};
+use crate::services::{ReadOnlyService, Service, ServiceEvent, bus::bus_failure};
 
 #[derive(Debug, Default, Clone)]
 pub struct TrayData(pub(super) Vec<StatusNotifierItem>);
@@ -81,12 +81,12 @@ impl TrayService {
                 chrono::offset::Local::now().timestamp_subsec_micros()
             )
             .await
-            .map_err(|e| AppError::internal(format!("Failed to trigger menu event: {e}")))?;
+            .map_err(|e| bus_failure("Failed to trigger menu event", &e))?;
 
         let (_, layout) = menu_proxy
             .get_layout(0, -1, &[])
             .await
-            .map_err(|e| AppError::internal(format!("Failed to get menu layout: {e}")))?;
+            .map_err(|e| bus_failure("Failed to get menu layout", &e))?;
 
         Ok(layout)
     }

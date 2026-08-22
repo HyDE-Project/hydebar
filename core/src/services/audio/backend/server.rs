@@ -44,9 +44,9 @@ impl PulseAudioServer {
         let mut context = Context::new_with_proplist(&mainloop, name.as_str(), &proplist)
             .ok_or_else(|| AppError::internal("create PulseAudio context"))?;
 
-        context
-            .connect(None, FlagSet::NOFLAGS, None)
-            .map_err(|e| AppError::internal(format!("connect PulseAudio context: {e}")))?;
+        context.connect(None, FlagSet::NOFLAGS, None).map_err(|e| {
+            AppError::service_unavailable(format!("connect PulseAudio context: {e}"))
+        })?;
 
         loop {
             match mainloop.iterate(true) {

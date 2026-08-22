@@ -2,13 +2,16 @@
 
 use std::collections::HashMap;
 
-use masterror::{AppError, AppResult};
+use masterror::AppResult;
 use zbus::zvariant::OwnedObjectPath;
 
 use super::{
     IwdDbus, device::DeviceProxy, network::NetworkProxy, station_state::state_from_station
 };
-use crate::services::network::{AccessPoint, ActiveConnectionInfo, DeviceState};
+use crate::services::{
+    bus::bus_failure,
+    network::{AccessPoint, ActiveConnectionInfo, DeviceState}
+};
 
 /// Turns the raw RSSI iwd reports into the percentage the bar renders.
 ///
@@ -36,7 +39,7 @@ impl IwdDbus<'_> {
             let state = s
                 .state()
                 .await
-                .map_err(|e| AppError::internal(format!("Failed to get station state: {e}")))?;
+                .map_err(|e| bus_failure("Failed to get station state", &e))?;
             states.push(state);
         }
         Ok(states)
@@ -52,9 +55,10 @@ impl IwdDbus<'_> {
         let devices = self.wireless_devices().await?;
 
         for d in devices {
-            if d.powered().await.map_err(|e| {
-                AppError::internal(format!("Failed to get device powered state: {e}"))
-            })? {
+            if d.powered()
+                .await
+                .map_err(|e| bus_failure("Failed to get device powered state", &e))?
+            {
                 return Ok(true);
             }
         }
@@ -70,9 +74,11 @@ impl IwdDbus<'_> {
     pub async fn active_connections(&self) -> AppResult<Vec<(NetworkProxy, i16)>> {
         let mut networks = Vec::new();
         for (net, strength) in self.reachable_networks().await? {
-            if net.connected().await.map_err(|e| {
-                AppError::internal(format!("Failed to check network connected state: {e}"))
-            })? {
+            if net
+                .connected()
+                .await
+                .map_err(|e| bus_failure("Failed to check network connected state", &e))?
+            {
                 networks.push((net, strength));
             }
         }
@@ -94,7 +100,7 @@ impl IwdDbus<'_> {
             let ssid = net
                 .name()
                 .await
-                .map_err(|e| AppError::internal(format!("Failed to get network name: {e}")))?;
+                .map_err(|e| bus_failure("Failed to get network name", &e))?;
             info.push(ActiveConnectionInfo::WiFi {
                 id:       ssid.clone(),
                 name:     ssid,
@@ -116,7 +122,7 @@ impl IwdDbus<'_> {
         for d in devices {
             if d.mode()
                 .await
-                .map_err(|e| AppError::internal(format!("Failed to get device mode: {e}")))?
+                .map_err(|e| bus_failure("Failed to get device mode", &e))?
                 == "station"
             {
                 devs.push(d);
@@ -140,16 +146,17 @@ impl IwdDbus<'_> {
                 let ssid = net
                     .name()
                     .await
-                    .map_err(|e| AppError::internal(format!("Failed to get network name: {e}")))?;
-                let public =
-                    net.type_().await.map_err(|e| {
-                        AppError::internal(format!("Failed to get network type: {e}"))
-                    })? == "open";
+                    .map_err(|e| bus_failure("Failed to get network name", &e))?;
+                let public = net
+                    .type_()
+                    .await
+                    .map_err(|e| bus_failure("Failed to get network type", &e))?
+                    == "open";
                 let path = net.inner().path().clone().into();
                 let device_path = net
                     .device()
                     .await
-                    .map_err(|e| AppError::internal(format!("Failed to get network device: {e}")))?
+                    .map_err(|e| bus_failure("Failed to get network device", &e))?
                     .clone();
                 let state = states
                     .get(&device_path)
@@ -188,7 +195,7 @@ impl IwdDbus<'_> {
             let state = station
                 .state()
                 .await
-                .map_err(|e| AppError::internal(format!("Failed to get station state: {e}")))?;
+                .map_err(|e| bus_failure("Failed to get station state", &e))?;
 
             states.insert(
                 station.inner().path().clone().into(),
@@ -208,9 +215,10 @@ impl IwdDbus<'_> {
     pub async fn wireless_enabled(&self) -> AppResult<bool> {
         let devs = self.wireless_devices().await?;
         for d in devs {
-            if d.powered().await.map_err(|e| {
-                AppError::internal(format!("Failed to get device powered state: {e}"))
-            })? {
+            if d.powered()
+                .await
+                .map_err(|e| bus_failure("Failed to get device powered state", &e))?
+            {
                 return Ok(true);
             }
         }

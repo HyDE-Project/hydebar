@@ -7,7 +7,7 @@ use masterror::{AppError, AppResult};
 use zbus::zvariant::{self, OwnedObjectPath, Value};
 
 use super::{NetworkDbus, NetworkSettingsDbus, proxies::ConnectionSettingsProxy};
-use crate::services::network::AccessPoint;
+use crate::services::{bus::bus_failure, network::AccessPoint};
 
 /// Joins `access_point`, reusing a stored connection when one exists.
 ///
@@ -48,7 +48,7 @@ async fn join_known(
 
     nm.activate_connection(connection.clone(), access_point.device_path.clone(), root)
         .await
-        .map_err(|e| AppError::internal(format!("Failed to activate connection: {e}")))?;
+        .map_err(|e| bus_failure("Failed to activate connection", &e))?;
 
     Ok(())
 }
@@ -61,19 +61,15 @@ async fn replace_password(
 ) -> AppResult<()> {
     let stored = ConnectionSettingsProxy::builder(nm.inner().connection())
         .path(connection)
-        .map_err(|e| {
-            AppError::internal(format!("Failed to set ConnectionSettingsProxy path: {e}"))
-        })?
+        .map_err(|e| bus_failure("Failed to set ConnectionSettingsProxy path", &e))?
         .build()
         .await
-        .map_err(|e| {
-            AppError::internal(format!("Failed to build ConnectionSettingsProxy: {e}"))
-        })?;
+        .map_err(|e| bus_failure("Failed to build ConnectionSettingsProxy", &e))?;
 
     let mut settings = stored
         .get_settings()
         .await
-        .map_err(|e| AppError::internal(format!("Failed to get connection settings: {e}")))?;
+        .map_err(|e| bus_failure("Failed to get connection settings", &e))?;
 
     if let Some(security) = settings.get_mut("802-11-wireless-security") {
         let key = zvariant::Value::from(password)
@@ -86,7 +82,7 @@ async fn replace_password(
     stored
         .update(settings)
         .await
-        .map_err(|e| AppError::internal(format!("Failed to update connection settings: {e}")))
+        .map_err(|e| bus_failure("Failed to update connection settings", &e))
 }
 
 /// Creates a connection for an access point nothing is stored for, and raises
@@ -103,7 +99,7 @@ async fn join_new(
 
     nm.add_and_activate_connection(settings, &access_point.device_path, &access_point.path)
         .await
-        .map_err(|e| AppError::internal(format!("Failed to add and activate connection: {e}")))?;
+        .map_err(|e| bus_failure("Failed to add and activate connection", &e))?;
 
     Ok(())
 }

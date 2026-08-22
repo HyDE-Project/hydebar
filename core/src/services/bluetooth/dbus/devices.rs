@@ -1,13 +1,13 @@
 //! Device enumeration and connection handling over bluez.
 
-use masterror::{AppError, AppResult};
+use masterror::AppResult;
 use zbus::zvariant::OwnedObjectPath;
 
 use super::{
     BluetoothDbus,
     proxies::{BatteryProxy, DeviceProxy}
 };
-use crate::services::bluetooth::BluetoothDevice;
+use crate::services::{bluetooth::BluetoothDevice, bus::bus_failure};
 
 impl BluetoothDbus<'_> {
     pub async fn devices(&self) -> AppResult<Vec<BluetoothDevice>> {
@@ -15,9 +15,7 @@ impl BluetoothDbus<'_> {
             .bluez
             .get_managed_objects()
             .await
-            .map_err(|e| {
-                AppError::internal(format!("Failed to get managed objects for devices: {e}"))
-            })?
+            .map_err(|e| bus_failure("Failed to get managed objects for devices", &e))?
             .into_iter()
             .filter_map(|(key, item)| {
                 if item.contains_key("org.bluez.Device1") {
@@ -32,36 +30,36 @@ impl BluetoothDbus<'_> {
         for (device_path, has_battery) in devices_proxy {
             let device = DeviceProxy::builder(self.bluez.inner().connection())
                 .path(device_path.clone())
-                .map_err(|e| AppError::internal(format!("Failed to set device path: {e}")))?
+                .map_err(|e| bus_failure("Failed to set device path", &e))?
                 .build()
                 .await
-                .map_err(|e| AppError::internal(format!("Failed to build DeviceProxy: {e}")))?;
+                .map_err(|e| bus_failure("Failed to build DeviceProxy", &e))?;
 
             let name = device
                 .alias()
                 .await
-                .map_err(|e| AppError::internal(format!("Failed to get device alias: {e}")))?;
-            let connected = device.connected().await.map_err(|e| {
-                AppError::internal(format!("Failed to get device connected state: {e}"))
-            })?;
+                .map_err(|e| bus_failure("Failed to get device alias", &e))?;
+            let connected = device
+                .connected()
+                .await
+                .map_err(|e| bus_failure("Failed to get device connected state", &e))?;
             let paired = device.paired().await.unwrap_or(false);
 
             if paired {
                 let battery = if connected && has_battery {
                     let battery_proxy = BatteryProxy::builder(self.bluez.inner().connection())
                         .path(&device_path)
-                        .map_err(|e| {
-                            AppError::internal(format!("Failed to set battery path: {e}"))
-                        })?
+                        .map_err(|e| bus_failure("Failed to set battery path", &e))?
                         .build()
                         .await
-                        .map_err(|e| {
-                            AppError::internal(format!("Failed to build BatteryProxy: {e}"))
-                        })?;
+                        .map_err(|e| bus_failure("Failed to build BatteryProxy", &e))?;
 
-                    Some(battery_proxy.percentage().await.map_err(|e| {
-                        AppError::internal(format!("Failed to get battery percentage: {e}"))
-                    })?)
+                    Some(
+                        battery_proxy
+                            .percentage()
+                            .await
+                            .map_err(|e| bus_failure("Failed to get battery percentage", &e))?
+                    )
                 } else {
                     None
                 };
@@ -81,38 +79,30 @@ impl BluetoothDbus<'_> {
     pub async fn connect_device(&self, device_path: &OwnedObjectPath) -> AppResult<()> {
         let device = DeviceProxy::builder(self.bluez.inner().connection())
             .path(device_path)
-            .map_err(|e| {
-                AppError::internal(format!("Failed to set device path for connect: {e}"))
-            })?
+            .map_err(|e| bus_failure("Failed to set device path for connect", &e))?
             .build()
             .await
-            .map_err(|e| {
-                AppError::internal(format!("Failed to build DeviceProxy for connect: {e}"))
-            })?;
+            .map_err(|e| bus_failure("Failed to build DeviceProxy for connect", &e))?;
 
         device
             .connect()
             .await
-            .map_err(|e| AppError::internal(format!("Failed to connect device: {e}")))?;
+            .map_err(|e| bus_failure("Failed to connect device", &e))?;
         Ok(())
     }
 
     pub async fn disconnect_device(&self, device_path: &OwnedObjectPath) -> AppResult<()> {
         let device = DeviceProxy::builder(self.bluez.inner().connection())
             .path(device_path)
-            .map_err(|e| {
-                AppError::internal(format!("Failed to set device path for disconnect: {e}"))
-            })?
+            .map_err(|e| bus_failure("Failed to set device path for disconnect", &e))?
             .build()
             .await
-            .map_err(|e| {
-                AppError::internal(format!("Failed to build DeviceProxy for disconnect: {e}"))
-            })?;
+            .map_err(|e| bus_failure("Failed to build DeviceProxy for disconnect", &e))?;
 
         device
             .disconnect()
             .await
-            .map_err(|e| AppError::internal(format!("Failed to disconnect device: {e}")))?;
+            .map_err(|e| bus_failure("Failed to disconnect device", &e))?;
         Ok(())
     }
 }

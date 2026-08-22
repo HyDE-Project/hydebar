@@ -2,11 +2,12 @@
 
 use iced::futures::future::join_all;
 use log::debug;
-use masterror::{AppError, AppResult};
+use masterror::AppResult;
 
 use super::super::{IwdDbus, queries, station::StationProxy};
 use crate::services::{
     bluetooth::BluetoothService,
+    bus::bus_failure,
     network::{
         AccessPoint, ConnectivityState, DeviceState, KnownConnection, LinkDetails, NetworkData
     }
@@ -90,12 +91,12 @@ pub(super) async fn known_connections(iwd: &IwdDbus<'_>) -> AppResult<Vec<KnownC
         let ssid = n
             .name()
             .await
-            .map_err(|e| AppError::internal(format!("Failed to get network name: {e}")))?;
+            .map_err(|e| bus_failure("Failed to get network name", &e))?;
         let path = n.inner().path().clone().into();
         let device_path = n
             .device()
             .await
-            .map_err(|e| AppError::internal(format!("Failed to get network device: {e}")))?
+            .map_err(|e| bus_failure("Failed to get network device", &e))?
             .clone();
         let state = states
             .get(&device_path)
@@ -111,7 +112,7 @@ pub(super) async fn known_connections(iwd: &IwdDbus<'_>) -> AppResult<Vec<KnownC
             public: n
                 .type_()
                 .await
-                .map_err(|e| AppError::internal(format!("Failed to get network type: {e}")))?
+                .map_err(|e| bus_failure("Failed to get network type", &e))?
                 == "open"
         }));
     }

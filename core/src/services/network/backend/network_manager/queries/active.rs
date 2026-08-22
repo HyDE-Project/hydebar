@@ -10,7 +10,7 @@ use super::super::{
     DeviceType, NetworkDbus,
     proxies::{ActiveConnectionProxy, DeviceProxy}
 };
-use crate::services::network::ActiveConnectionInfo;
+use crate::services::{bus::bus_failure, network::ActiveConnectionInfo};
 
 impl NetworkDbus<'_> {
     /// Lists the object paths of the currently active connections.
@@ -22,7 +22,7 @@ impl NetworkDbus<'_> {
         self.0
             .active_connections()
             .await
-            .map_err(|e| AppError::internal(format!("Failed to get active connections: {e}")))
+            .map_err(|e| bus_failure("Failed to get active connections", &e))
     }
 
     /// Describes every active connection with its device details.
@@ -39,14 +39,10 @@ impl NetworkDbus<'_> {
         for path in self.active_connections().await? {
             let connection = ActiveConnectionProxy::builder(conn)
                 .path(&path)
-                .map_err(|e| {
-                    AppError::internal(format!("Failed to set ActiveConnectionProxy path: {e}"))
-                })?
+                .map_err(|e| bus_failure("Failed to set ActiveConnectionProxy path", &e))?
                 .build()
                 .await
-                .map_err(|e| {
-                    AppError::internal(format!("Failed to build ActiveConnectionProxy: {e}"))
-                })?;
+                .map_err(|e| bus_failure("Failed to build ActiveConnectionProxy", &e))?;
 
             if connection.vpn().await.unwrap_or_default() {
                 info.push(vpn_info(&connection, "VPN").await?);
@@ -56,9 +52,7 @@ impl NetworkDbus<'_> {
             for device_path in connection.devices().await.unwrap_or_default() {
                 let device = DeviceProxy::builder(conn)
                     .path(device_path)
-                    .map_err(|e| {
-                        AppError::internal(format!("Failed to set DeviceProxy path: {e}"))
-                    })?
+                    .map_err(|e| bus_failure("Failed to set DeviceProxy path", &e))?
                     .build()
                     .await
                     .map_err(|e| {
@@ -93,13 +87,13 @@ impl NetworkDbus<'_> {
 /// Builds the entry describing a tunnelled connection.
 async fn vpn_info(
     connection: &ActiveConnectionProxy<'_>,
-    kind: &str
+    _kind: &str
 ) -> AppResult<ActiveConnectionInfo> {
     Ok(ActiveConnectionInfo::Vpn {
         name:        connection
             .id()
             .await
-            .map_err(|e| AppError::internal(format!("Failed to get {kind} connection ID: {e}")))?,
+            .map_err(|e| bus_failure("Failed to get {kind} connection ID", &e))?,
         object_path: connection.inner().path().to_owned().into()
     })
 }

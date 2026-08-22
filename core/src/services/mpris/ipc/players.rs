@@ -1,12 +1,15 @@
 //! Discovery of MPRIS player services on the session bus.
 
 use futures::future::join_all;
-use masterror::{AppError, AppResult};
+use masterror::AppResult;
 use zbus::{Connection, fdo::DBusProxy};
 
-use crate::services::mpris::{
-    data::{MprisPlayerData, MprisPlayerMetadata, PlaybackStatus},
-    dbus::MprisPlayerProxy
+use crate::services::{
+    bus::{bus_failure, fdo_failure},
+    mpris::{
+        data::{MprisPlayerData, MprisPlayerMetadata, PlaybackStatus},
+        dbus::MprisPlayerProxy
+    }
 };
 
 /// Prefix applied to all MPRIS-compliant player service names on the session
@@ -27,11 +30,11 @@ pub async fn collect_players(conn: &Connection) -> AppResult<Vec<MprisPlayerData
 async fn list_mpris_service_names(conn: &Connection) -> AppResult<Vec<String>> {
     let dbus = DBusProxy::new(conn)
         .await
-        .map_err(|e| AppError::internal(format!("Failed to create DBusProxy: {e}")))?;
+        .map_err(|e| bus_failure("Failed to create DBusProxy", &e))?;
     let names = dbus
         .list_names()
         .await
-        .map_err(|e| AppError::internal(format!("failed to list D-Bus names: {e}")))?
+        .map_err(|e| fdo_failure("failed to list D-Bus names", &e))?
         .iter()
         .filter(|name| is_mpris_service(name))
         .map(ToString::to_string)

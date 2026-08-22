@@ -3,12 +3,12 @@
 use std::collections::HashMap;
 
 use log::debug;
-use masterror::{AppError, AppResult};
+use masterror::AppResult;
 use tokio::process::Command;
 use zbus::zvariant::{self, OwnedObjectPath};
 
 use super::{NetworkDbus, proxies::WirelessDeviceProxy};
-use crate::services::network::KnownConnection;
+use crate::services::{bus::bus_failure, network::KnownConnection};
 
 /// Blocks or unblocks every radio the bar can reach.
 ///
@@ -34,7 +34,7 @@ pub(super) async fn set_airplane_mode(nm: &NetworkDbus<'_>, enable: bool) -> App
 
     nm.set_wireless_enabled(!enable)
         .await
-        .map_err(|e| AppError::internal(format!("Failed to set wireless enabled: {e}")))
+        .map_err(|e| bus_failure("Failed to set wireless enabled", &e))
 }
 
 /// Asks every wireless device to look for access points again.
@@ -51,19 +51,15 @@ pub(super) async fn scan_nearby_wifi(nm: &NetworkDbus<'_>) -> AppResult<()> {
     {
         let device = WirelessDeviceProxy::builder(nm.inner().connection())
             .path(device_path)
-            .map_err(|e| {
-                AppError::internal(format!("Failed to set WirelessDeviceProxy path: {e}"))
-            })?
+            .map_err(|e| bus_failure("Failed to set WirelessDeviceProxy path", &e))?
             .build()
             .await
-            .map_err(|e| {
-                AppError::internal(format!("Failed to build WirelessDeviceProxy: {e}"))
-            })?;
+            .map_err(|e| bus_failure("Failed to build WirelessDeviceProxy", &e))?;
 
         device
             .request_scan(HashMap::new())
             .await
-            .map_err(|e| AppError::internal(format!("Failed to request WiFi scan: {e}")))?;
+            .map_err(|e| bus_failure("Failed to request WiFi scan", &e))?;
     }
 
     Ok(())
@@ -87,13 +83,13 @@ pub(super) async fn set_vpn(
 
         nm.activate_connection(connection, root(), root())
             .await
-            .map_err(|e| AppError::internal(format!("Failed to activate VPN connection: {e}")))?;
+            .map_err(|e| bus_failure("Failed to activate VPN connection", &e))?;
     } else {
         debug!("Deactivating VPN: {connection:?}");
 
-        nm.deactivate_connection(connection).await.map_err(|e| {
-            AppError::internal(format!("Failed to deactivate VPN connection: {e}"))
-        })?;
+        nm.deactivate_connection(connection)
+            .await
+            .map_err(|e| bus_failure("Failed to deactivate VPN connection", &e))?;
     }
 
     let access_points = nm.wireless_access_points().await?;

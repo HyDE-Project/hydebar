@@ -4,7 +4,7 @@ use log::error;
 use masterror::AppError;
 
 use super::{PowerProfile, UPowerEvent, UPowerService, dbus::PowerProfilesProxy};
-use crate::services::{Service, ServiceEvent};
+use crate::services::{Service, ServiceEvent, bus::bus_failure};
 
 impl UPowerService {
     pub async fn run_command(self, command: PowerProfileCommand) -> ServiceEvent<Self> {
@@ -13,7 +13,7 @@ impl UPowerService {
 
         let powerprofiles = match PowerProfilesProxy::new(&conn)
             .await
-            .map_err(|e| AppError::internal(format!("Failed to create PowerProfilesProxy: {e}")))
+            .map_err(|e| bus_failure("Failed to create PowerProfilesProxy", &e))
         {
             Ok(proxy) => proxy,
             Err(err) => {

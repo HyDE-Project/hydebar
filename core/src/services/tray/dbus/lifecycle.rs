@@ -11,6 +11,7 @@ use zbus::{
 };
 
 use super::server::{NAME, OBJECT_PATH, StatusNotifierWatcher};
+use crate::services::bus::{bus_failure, fdo_failure};
 
 impl StatusNotifierWatcher {
     /// Registers the watcher on the session bus and claims its well known
@@ -27,14 +28,12 @@ impl StatusNotifierWatcher {
     pub async fn start_server() -> AppResult<(Connection, tokio::task::JoinHandle<()>)> {
         let connection = zbus::connection::Connection::session()
             .await
-            .map_err(|e| AppError::internal(format!("Failed to connect to session bus: {e}")))?;
+            .map_err(|e| bus_failure("Failed to connect to session bus", &e))?;
         connection
             .object_server()
             .at(OBJECT_PATH, Self::default())
             .await
-            .map_err(|e| {
-                AppError::internal(format!("Failed to register StatusNotifierWatcher: {e}"))
-            })?;
+            .map_err(|e| bus_failure("Failed to register StatusNotifierWatcher", &e))?;
         let interface = connection
             .object_server()
             .interface::<_, Self>(OBJECT_PATH)
@@ -47,17 +46,17 @@ impl StatusNotifierWatcher {
 
         let dbus_proxy = DBusProxy::new(&connection)
             .await
-            .map_err(|e| AppError::internal(format!("Failed to create DBusProxy: {e}")))?;
-        let mut name_owner_changed_stream =
-            dbus_proxy.receive_name_owner_changed().await.map_err(|e| {
-                AppError::internal(format!("Failed to receive name owner changed signal: {e}"))
-            })?;
+            .map_err(|e| bus_failure("Failed to create DBusProxy", &e))?;
+        let mut name_owner_changed_stream = dbus_proxy
+            .receive_name_owner_changed()
+            .await
+            .map_err(|e| bus_failure("Failed to receive name owner changed signal", &e))?;
 
         let flags = RequestNameFlags::AllowReplacement.into();
         if dbus_proxy
             .request_name(NAME, flags)
             .await
-            .map_err(|e| AppError::internal(format!("Failed to request bus name: {e}")))?
+            .map_err(|e| fdo_failure("Failed to request bus name", &e))?
             == RequestNameReply::InQueue
         {
             warn!("Bus name '{NAME}' already owned");

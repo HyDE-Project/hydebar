@@ -8,7 +8,10 @@ use uuid::Uuid;
 use zbus::zvariant::OwnedObjectPath;
 
 use super::{IwdDbus, agents::SignalAgent};
-use crate::services::network::{ConnectivityState, NetworkBackend, NetworkEvent};
+use crate::services::{
+    bus::bus_failure,
+    network::{ConnectivityState, NetworkBackend, NetworkEvent}
+};
 
 impl IwdDbus<'_> {
     /// Assembles one stream carrying every network event iwd signals.
@@ -137,9 +140,7 @@ impl IwdDbus<'_> {
                 .object_server()
                 .at(&agent_path, agent)
                 .await
-                .map_err(|e| {
-                    AppError::internal(format!("Failed to register signal level agent: {e}"))
-                })?;
+                .map_err(|e| bus_failure("Failed to register signal level agent", &e))?;
             // 6) turn receiver into a Stream
             signal_level_updates.push(
                 UnboundedReceiverStream::new(rx)

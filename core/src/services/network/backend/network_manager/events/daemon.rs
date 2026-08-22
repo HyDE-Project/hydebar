@@ -2,13 +2,16 @@
 
 use iced::futures::StreamExt;
 use log::debug;
-use masterror::{AppError, AppResult};
+use masterror::AppResult;
 
 use super::{
     super::{NetworkBackend, NetworkDbus, NetworkSettingsDbus},
     EventStream
 };
-use crate::services::network::{ConnectivityState, NetworkEvent};
+use crate::services::{
+    bus::bus_failure,
+    network::{ConnectivityState, NetworkEvent}
+};
 
 impl<'a> NetworkDbus<'a> {
     /// Stream of Wi-Fi radio enablement changes.
@@ -17,9 +20,10 @@ impl<'a> NetworkDbus<'a> {
             .receive_wireless_enabled_changed()
             .await
             .then(|signal| async move {
-                let value = signal.get().await.map_err(|e| {
-                    AppError::internal(format!("Failed to get wireless enabled state: {e}"))
-                })?;
+                let value = signal
+                    .get()
+                    .await
+                    .map_err(|e| bus_failure("Failed to get wireless enabled state", &e))?;
 
                 debug!("WiFi enabled changed: {value}");
                 Ok(NetworkEvent::WiFiEnabled(value))
@@ -33,9 +37,12 @@ impl<'a> NetworkDbus<'a> {
             .receive_connectivity_changed()
             .await
             .then(|signal| async move {
-                let value = ConnectivityState::from(signal.get().await.map_err(|e| {
-                    AppError::internal(format!("Failed to get connectivity state: {e}"))
-                })?);
+                let value = ConnectivityState::from(
+                    signal
+                        .get()
+                        .await
+                        .map_err(|e| bus_failure("Failed to get connectivity state", &e))?
+                );
 
                 debug!("Connectivity changed: {value:?}");
                 Ok(NetworkEvent::Connectivity(value))

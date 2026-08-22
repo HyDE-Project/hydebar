@@ -5,7 +5,7 @@ use masterror::{AppError, AppResult};
 use zbus::zvariant::{ObjectPath, OwnedObjectPath};
 
 use super::super::{IwdDbus, agents::PWAgent, network::NetworkProxy};
-use crate::services::network::AccessPoint;
+use crate::services::{bus::bus_failure, network::AccessPoint};
 
 /// Connects to `ap`, provisioning the given password first when one is given.
 ///
@@ -44,12 +44,12 @@ pub(super) async fn select_access_point(
             .object_server()
             .at(path.clone(), pw_agent)
             .await
-            .map_err(|e| AppError::internal(format!("Failed to register password agent: {e}")))?;
+            .map_err(|e| bus_failure("Failed to register password agent", &e))?;
 
         agent_manager
             .register_agent(&path)
             .await
-            .map_err(|e| AppError::internal(format!("Failed to register agent with IWD: {e}")))?;
+            .map_err(|e| bus_failure("Failed to register agent with IWD", &e))?;
 
         tx.send(p)
             .map_err(|e| AppError::internal(format!("Failed to send password to agent: {e}")))?;
@@ -57,14 +57,14 @@ pub(super) async fn select_access_point(
 
     let net = NetworkProxy::builder(iwd.inner().connection())
         .destination("net.connman.iwd")
-        .map_err(|e| AppError::internal(format!("Failed to set NetworkProxy destination: {e}")))?
+        .map_err(|e| bus_failure("Failed to set NetworkProxy destination", &e))?
         .path(ap.path.clone())
-        .map_err(|e| AppError::internal(format!("Failed to set NetworkProxy path: {e}")))?
+        .map_err(|e| bus_failure("Failed to set NetworkProxy path", &e))?
         .build()
         .await
-        .map_err(|e| AppError::internal(format!("Failed to build NetworkProxy: {e}")))?;
+        .map_err(|e| bus_failure("Failed to build NetworkProxy", &e))?;
     net.connect()
         .await
-        .map_err(|e| AppError::internal(format!("Failed to connect to network: {e}")))?;
+        .map_err(|e| bus_failure("Failed to connect to network", &e))?;
     Ok(())
 }
