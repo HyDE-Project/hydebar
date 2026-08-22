@@ -12,7 +12,8 @@ use std::{
 use hex_color::HexColor;
 use hydebar_proto::{
     config::{AppearanceColor, Config},
-    hyde_dirs::HydeDirs
+    hyde_dirs::HydeDirs,
+    theme_source::Rgba
 };
 use iced::futures::{StreamExt, channel::mpsc};
 use inotify::EventMask;
@@ -288,7 +289,7 @@ async fn a_palette_switch_repaints_the_bar_from_the_hyde_cache() {
     };
     assert_eq!(
         first.config.appearance.background_color.get_base(),
-        iced::Color::from_rgb8(0x48, 0x38, 0x28)
+        Rgba::rgb(0x48, 0x38, 0x28)
     );
     assert_eq!(first.config.appearance.opacity, 0.8);
 
@@ -315,7 +316,7 @@ async fn a_palette_switch_repaints_the_bar_from_the_hyde_cache() {
     );
     assert_eq!(
         second.config.appearance.background_color.get_base(),
-        iced::Color::from_rgb8(0x1B, 0x1D, 0x1C)
+        Rgba::rgb(0x1B, 0x1D, 0x1C)
     );
 }
 

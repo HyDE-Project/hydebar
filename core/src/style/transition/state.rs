@@ -220,8 +220,8 @@ mod tests {
         let _ = transition.advance(Duration::from_millis(60));
 
         let midway = transition.current().background_color.get_base();
-        assert!(midway.r > 0.0);
-        assert!(midway.r < 200.0 / 255.0);
+        assert!(midway.r > 0);
+        assert!(midway.r < 200);
 
         drain(&mut transition);
 

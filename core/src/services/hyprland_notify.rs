@@ -53,14 +53,11 @@ impl Notice {
 )]
 pub fn compositor_color(color: AppearanceColor) -> String {
     let base = color.get_base();
-    let channel = |value: f32| (value.clamp(0.0, 1.0) * 255.0).round() as u8;
+    let alpha = (base.a.clamp(0.0, 1.0) * 255.0).round() as u8;
 
     format!(
         "rgba({:02x}{:02x}{:02x}{:02x})",
-        channel(base.r),
-        channel(base.g),
-        channel(base.b),
-        channel(base.a)
+        base.r, base.g, base.b, alpha
     )
 }
 

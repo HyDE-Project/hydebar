@@ -1,4 +1,5 @@
 mod buttons;
+pub(crate) mod color;
 mod finish;
 mod menus;
 mod sweep;
@@ -10,6 +11,7 @@ pub use buttons::{
     outline_button_style, quick_settings_button_style, quick_settings_submenu_button_style,
     settings_button_style, workspace_button_style
 };
+pub use color::{painted, readable_pair};
 pub use finish::IslandFinish;
 pub use menus::{menu_backdrop_style, menu_container_style, tooltip_container_style};
 pub use sweep::SweepStyle;

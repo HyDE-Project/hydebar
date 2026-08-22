@@ -2,8 +2,9 @@
 //! bar falls back to.
 
 use hex_color::HexColor;
-use iced::{Color, theme::palette};
 use serde::Deserialize;
+
+use crate::theme_source::Rgba;
 
 /// Color palette configuration used to render UI elements.
 #[derive(Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -20,66 +21,66 @@ pub enum AppearanceColor {
     }
 }
 
+/// Reads a configured hex value as the colour the rest of the bar speaks in.
+const fn opaque(color: HexColor) -> Rgba {
+    Rgba::rgb(color.r, color.g, color.b)
+}
+
 impl AppearanceColor {
-    /// Returns the base [`Color`] representation for the configured palette.
+    /// Returns the base colour of the configured palette entry.
     #[must_use]
-    pub const fn get_base(&self) -> Color {
+    pub const fn get_base(&self) -> Rgba {
         match self {
-            Self::Simple(color) => Color::from_rgb8(color.r, color.g, color.b),
+            Self::Simple(color) => opaque(*color),
             Self::Complete {
                 base, ..
-            } => Color::from_rgb8(base.r, base.g, base.b)
+            } => opaque(*base)
         }
     }
 
-    /// Returns the text [`Color`] if configured.
+    /// Returns the text colour of the entry, when it names one.
     #[must_use]
-    pub fn get_text(&self) -> Option<Color> {
+    pub const fn get_text(&self) -> Option<Rgba> {
         match self {
             Self::Simple(_) => None,
             Self::Complete {
                 text, ..
-            } => text.map(|color| Color::from_rgb8(color.r, color.g, color.b))
+            } => match text {
+                Some(color) => Some(opaque(*color)),
+                None => None
+            }
         }
     }
 
-    /// Builds the weak [`palette::Pair`] variant if available.
+    /// Returns the weak variant of the entry, when it names one.
+    ///
+    /// The text colour that goes with it is [`AppearanceColor::get_text`]; the
+    /// two are paired by the renderer, which is the layer that knows how to
+    /// keep a text colour readable over a background.
     #[must_use]
-    pub fn get_weak_pair(&self, text_fallback: Color) -> Option<palette::Pair> {
+    pub const fn get_weak(&self) -> Option<Rgba> {
         match self {
             Self::Simple(_) => None,
             Self::Complete {
-                weak,
-                text,
-                ..
-            } => weak.map(|color| {
-                palette::Pair::new(
-                    Color::from_rgb8(color.r, color.g, color.b),
-                    text.map_or(text_fallback, |color| {
-                        Color::from_rgb8(color.r, color.g, color.b)
-                    })
-                )
-            })
+                weak, ..
+            } => match weak {
+                Some(color) => Some(opaque(*color)),
+                None => None
+            }
         }
     }
 
-    /// Builds the strong [`palette::Pair`] variant if available.
+    /// Returns the strong variant of the entry, when it names one.
     #[must_use]
-    pub fn get_strong_pair(&self, text_fallback: Color) -> Option<palette::Pair> {
+    pub const fn get_strong(&self) -> Option<Rgba> {
         match self {
             Self::Simple(_) => None,
             Self::Complete {
-                strong,
-                text,
-                ..
-            } => strong.map(|color| {
-                palette::Pair::new(
-                    Color::from_rgb8(color.r, color.g, color.b),
-                    text.map_or(text_fallback, |color| {
-                        Color::from_rgb8(color.r, color.g, color.b)
-                    })
-                )
-            })
+                strong, ..
+            } => match strong {
+                Some(color) => Some(opaque(*color)),
+                None => None
+            }
         }
     }
 }
@@ -148,8 +149,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn appearance_color_pairs_use_text_fallback() {
-        let fallback = Color::from_rgb8(255, 255, 255);
+    fn an_entry_naming_no_text_leaves_the_shade_to_the_renderer() {
         let color = AppearanceColor::Complete {
             base:   HexColor::rgb(1, 2, 3),
             strong: Some(HexColor::rgb(4, 5, 6)),
@@ -157,10 +157,18 @@ mod tests {
             text:   None
         };
 
-        let strong = color.get_strong_pair(fallback).expect("strong pair");
-        assert_eq!(strong.text, fallback);
+        assert_eq!(color.get_strong(), Some(Rgba::rgb(4, 5, 6)));
+        assert_eq!(color.get_weak(), Some(Rgba::rgb(7, 8, 9)));
+        assert_eq!(color.get_text(), None);
+    }
 
-        let weak = color.get_weak_pair(fallback).expect("weak pair");
-        assert_eq!(weak.text, fallback);
+    #[test]
+    fn a_simple_entry_names_nothing_but_its_base() {
+        let color = AppearanceColor::Simple(HexColor::rgb(1, 2, 3));
+
+        assert_eq!(color.get_base(), Rgba::rgb(1, 2, 3));
+        assert_eq!(color.get_strong(), None);
+        assert_eq!(color.get_weak(), None);
+        assert_eq!(color.get_text(), None);
     }
 }

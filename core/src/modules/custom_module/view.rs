@@ -16,7 +16,8 @@ use crate::{
         icons::{IconTheme, Icons, icon, icon_raw},
         text::text
     },
-    config::{Appearance, CustomModuleDef}
+    config::{Appearance, CustomModuleDef},
+    style::color::painted
 };
 
 /// Small circle drawn over the icon while the module is in an alert state.
@@ -65,9 +66,11 @@ pub(super) fn state_color(module: &Custom, config: &CustomModuleDef) -> Option<C
     )]
     let colors = config.colors.as_ref()?;
 
-    colors
-        .iter()
-        .find_map(|(pattern, color)| pattern.is_match(&module.data.alt).then(|| color.get_base()))
+    colors.iter().find_map(|(pattern, color)| {
+        pattern
+            .is_match(&module.data.alt)
+            .then(|| painted(color.get_base()))
+    })
 }
 
 /// Builds the bar content for a custom module.

@@ -9,7 +9,7 @@
 
 use std::time::Duration;
 
-use crate::config::Appearance;
+use crate::{config::Appearance, style::color::painted};
 
 /// How the palette of one theme enters the bar.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -79,14 +79,14 @@ impl SweepStyle {
     /// than a light one, a saturated accent moves with more spring — and the
     /// name decides the corner, so the same theme always enters the same way.
     fn derived(theme: Option<&str>, appearance: &Appearance) -> Self {
-        let background = appearance.background_color.get_base();
+        let background = painted(appearance.background_color.get_base());
         let luminance = 0.0722f32.mul_add(
             background.b,
             0.7152f32.mul_add(background.g, 0.2126 * background.r)
         );
         let dark = luminance < 0.5;
 
-        let primary = appearance.primary_color.get_base();
+        let primary = painted(appearance.primary_color.get_base());
         let low = primary.r.min(primary.g).min(primary.b);
         let high = primary.r.max(primary.g).max(primary.b);
         let vivid = high - low > 0.375;

@@ -1927,7 +1927,6 @@ name = "hydebar-proto"
 version = "0.1.0"
 dependencies = [
  "hex_color",
- "iced_layershell",
  "log",
  "regex",
  "serde",

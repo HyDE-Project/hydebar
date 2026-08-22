@@ -2,7 +2,6 @@
 //! configuration.
 
 use hex_color::HexColor;
-use iced::Color;
 
 use super::{
     color::{
@@ -41,7 +40,7 @@ impl Appearance {
 
         if let Some(module_background) = theme.module_background {
             if self.background_color == default_background_color() {
-                let island = hex_to_color(opaque_hex(module_background));
+                let island = module_background;
 
                 self.background_color = AppearanceColor::Complete {
                     base:   opaque_hex(module_background),
@@ -111,11 +110,6 @@ const fn opaque_hex(color: Rgba) -> HexColor {
     HexColor::rgb(color.r, color.g, color.b)
 }
 
-/// Reads a palette entry back as a [`Color`].
-const fn hex_to_color(color: HexColor) -> Color {
-    Color::from_rgb8(color.r, color.g, color.b)
-}
-
 /// Composites a translucent `HyDE` color over the surface it is painted on.
 ///
 /// The stylesheets state their accents with an alpha channel: the focused
@@ -125,15 +119,16 @@ const fn hex_to_color(color: HexColor) -> Color {
 /// value is blended over `backdrop` first, which is the island the widget sits
 /// on. The island keeps its own translucency through [`Appearance::opacity`];
 /// only the tint is resolved here.
-fn blend_hex(color: Rgba, backdrop: Color) -> HexColor {
+fn blend_hex(color: Rgba, backdrop: Rgba) -> HexColor {
     let alpha = color.a.clamp(0.0, 1.0);
     #[expect(
         clippy::cast_possible_truncation,
         clippy::cast_sign_loss,
         reason = "the value is clamped to 0.0..=255.0 before the cast"
     )]
-    let mix = |channel: u8, under: f32| -> u8 {
+    let mix = |channel: u8, under: u8| -> u8 {
         let over = f32::from(channel) / 255.0;
+        let under = f32::from(under) / 255.0;
         let blended = over.mul_add(alpha, under * (1.0 - alpha));
 
         (blended * 255.0).round().clamp(0.0, 255.0) as u8
@@ -269,11 +264,11 @@ mod tests {
     #[test]
     fn an_opaque_theme_color_survives_compositing_unchanged() {
         assert_eq!(
-            blend_hex(Rgba::rgb(195, 172, 118), Color::from_rgb8(27, 29, 28)),
+            blend_hex(Rgba::rgb(195, 172, 118), Rgba::rgb(27, 29, 28)),
             HexColor::rgb(195, 172, 118)
         );
         assert_eq!(
-            blend_hex(Rgba::rgba(195, 172, 118, 0.0), Color::from_rgb8(27, 29, 28)),
+            blend_hex(Rgba::rgba(195, 172, 118, 0.0), Rgba::rgb(27, 29, 28)),
             HexColor::rgb(27, 29, 28)
         );
     }

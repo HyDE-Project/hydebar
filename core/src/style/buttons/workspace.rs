@@ -6,7 +6,7 @@ use iced::{
     widget::button::{self, Status}
 };
 
-use crate::config::AppearanceColor;
+use crate::{config::AppearanceColor, style::color::painted};
 
 /// Base and strong colour pairs a workspace indicator paints with.
 ///
@@ -37,9 +37,11 @@ fn indicator_colors(theme: &Theme, colors: Option<Option<AppearanceColor>>) -> I
         },
         Some(Some(color)) => {
             let generated = palette::Primary::generate(
-                color.get_base(),
+                painted(color.get_base()),
                 theme.palette().background,
-                color.get_text().unwrap_or_else(|| theme.palette().text)
+                color
+                    .get_text()
+                    .map_or_else(|| theme.palette().text, painted)
             );
 
             IndicatorColors {

@@ -10,7 +10,24 @@ use iced::{
     theme::{Palette, palette}
 };
 
-use crate::config::{Appearance, AppearanceColor};
+use crate::{
+    config::{Appearance, AppearanceColor},
+    style::color::{painted, readable_pair}
+};
+
+/// The weak shade of an entry, paired with the text that has to read on it.
+fn weak_pair(color: &AppearanceColor, text_fallback: Color) -> Option<palette::Pair> {
+    color
+        .get_weak()
+        .map(|weak| readable_pair(weak, color.get_text(), text_fallback))
+}
+
+/// The strong shade of an entry, paired with the text that has to read on it.
+fn strong_pair(color: &AppearanceColor, text_fallback: Color) -> Option<palette::Pair> {
+    color
+        .get_strong()
+        .map(|strong| readable_pair(strong, color.get_text(), text_fallback))
+}
 
 /// Builds the `HyDEbar` [`Theme`] from the configured [`Appearance`].
 ///
@@ -24,12 +41,12 @@ pub fn hydebar_theme(appearance: &Appearance) -> Theme {
     Theme::custom_with_fn(
         "local".to_string(),
         Palette {
-            background: appearance.background_color.get_base(),
-            text:       appearance.text_color.get_base(),
-            primary:    appearance.primary_color.get_base(),
-            success:    appearance.success_color.get_base(),
-            warning:    appearance.warning_color.get_base(),
-            danger:     appearance.danger_color.get_base()
+            background: painted(appearance.background_color.get_base()),
+            text:       painted(appearance.text_color.get_base()),
+            primary:    painted(appearance.primary_color.get_base()),
+            success:    painted(appearance.success_color.get_base()),
+            warning:    painted(appearance.warning_color.get_base()),
+            danger:     painted(appearance.danger_color.get_base())
         },
         |palette| build_extended_palette(appearance, palette)
     )
@@ -41,30 +58,39 @@ fn build_extended_palette(appearance: &Appearance, palette: Palette) -> palette:
         appearance
             .background_color
             .get_text()
-            .unwrap_or(palette.text)
+            .map_or(palette.text, painted)
     );
     let default_primary = palette::Primary::generate(
         palette.primary,
         palette.background,
-        appearance.primary_color.get_text().unwrap_or(palette.text)
+        appearance
+            .primary_color
+            .get_text()
+            .map_or(palette.text, painted)
     );
     let default_secondary = palette::Primary::generate(
-        appearance.secondary_color.get_base(),
+        painted(appearance.secondary_color.get_base()),
         palette.background,
         appearance
             .secondary_color
             .get_text()
-            .unwrap_or(palette.text)
+            .map_or(palette.text, painted)
     );
     let default_success = palette::Success::generate(
         palette.success,
         palette.background,
-        appearance.success_color.get_text().unwrap_or(palette.text)
+        appearance
+            .success_color
+            .get_text()
+            .map_or(palette.text, painted)
     );
     let default_danger = palette::Danger::generate(
         palette.danger,
         palette.background,
-        appearance.danger_color.get_text().unwrap_or(palette.text)
+        appearance
+            .danger_color
+            .get_text()
+            .map_or(palette.text, painted)
     );
 
     palette::Extended {
@@ -83,9 +109,12 @@ fn build_extended_palette(appearance: &Appearance, palette: Palette) -> palette:
         ),
         success:    build_success_pair(&appearance.success_color, palette.text, default_success),
         warning:    palette::Warning::generate(
-            appearance.warning_color.get_base(),
+            painted(appearance.warning_color.get_base()),
             palette.background,
-            appearance.warning_color.get_text().unwrap_or(palette.text)
+            appearance
+                .warning_color
+                .get_text()
+                .map_or(palette.text, painted)
         ),
         danger:     build_danger_pair(&appearance.danger_color, palette.text, default_danger),
         is_dark:    palette_is_dark(palette.background)
@@ -112,10 +141,10 @@ fn build_pair(
     _default_strong: palette::Pair
 ) -> palette::Background {
     let mut bg = palette::Background::new(base.color, base.text);
-    if let Some(weak) = color.get_weak_pair(text_fallback) {
+    if let Some(weak) = weak_pair(color, text_fallback) {
         bg.weak = weak;
     }
-    if let Some(strong) = color.get_strong_pair(text_fallback) {
+    if let Some(strong) = strong_pair(color, text_fallback) {
         bg.strong = strong;
     }
     bg
@@ -128,10 +157,8 @@ fn build_primary_pair(
 ) -> palette::Primary {
     palette::Primary {
         base:   defaults.base,
-        weak:   color.get_weak_pair(text_fallback).unwrap_or(defaults.weak),
-        strong: color
-            .get_strong_pair(text_fallback)
-            .unwrap_or(defaults.strong)
+        weak:   weak_pair(color, text_fallback).unwrap_or(defaults.weak),
+        strong: strong_pair(color, text_fallback).unwrap_or(defaults.strong)
     }
 }
 
@@ -142,10 +169,8 @@ fn build_secondary_pair(
 ) -> palette::Secondary {
     palette::Secondary {
         base:   defaults.base,
-        weak:   color.get_weak_pair(text_fallback).unwrap_or(defaults.weak),
-        strong: color
-            .get_strong_pair(text_fallback)
-            .unwrap_or(defaults.strong)
+        weak:   weak_pair(color, text_fallback).unwrap_or(defaults.weak),
+        strong: strong_pair(color, text_fallback).unwrap_or(defaults.strong)
     }
 }
 
@@ -156,10 +181,8 @@ fn build_success_pair(
 ) -> palette::Success {
     palette::Success {
         base:   defaults.base,
-        weak:   color.get_weak_pair(text_fallback).unwrap_or(defaults.weak),
-        strong: color
-            .get_strong_pair(text_fallback)
-            .unwrap_or(defaults.strong)
+        weak:   weak_pair(color, text_fallback).unwrap_or(defaults.weak),
+        strong: strong_pair(color, text_fallback).unwrap_or(defaults.strong)
     }
 }
 
@@ -170,10 +193,8 @@ fn build_danger_pair(
 ) -> palette::Danger {
     palette::Danger {
         base:   defaults.base,
-        weak:   color.get_weak_pair(text_fallback).unwrap_or(defaults.weak),
-        strong: color
-            .get_strong_pair(text_fallback)
-            .unwrap_or(defaults.strong)
+        weak:   weak_pair(color, text_fallback).unwrap_or(defaults.weak),
+        strong: strong_pair(color, text_fallback).unwrap_or(defaults.strong)
     }
 }
 
