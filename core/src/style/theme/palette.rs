@@ -10,24 +10,13 @@ use iced::{
     theme::{Palette, palette}
 };
 
-use crate::{
-    config::{Appearance, AppearanceColor},
-    style::color::{painted, readable_pair}
+mod shades;
+
+use shades::{
+    build_danger_pair, build_pair, build_primary_pair, build_secondary_pair, build_success_pair
 };
 
-/// The weak shade of an entry, paired with the text that has to read on it.
-fn weak_pair(color: &AppearanceColor, text_fallback: Color) -> Option<palette::Pair> {
-    color
-        .get_weak()
-        .map(|weak| readable_pair(weak, color.get_text(), text_fallback))
-}
-
-/// The strong shade of an entry, paired with the text that has to read on it.
-fn strong_pair(color: &AppearanceColor, text_fallback: Color) -> Option<palette::Pair> {
-    color
-        .get_strong()
-        .map(|strong| readable_pair(strong, color.get_text(), text_fallback))
-}
+use crate::{config::Appearance, style::color::painted};
 
 /// Builds the `HyDEbar` [`Theme`] from the configured [`Appearance`].
 ///
@@ -131,71 +120,6 @@ fn palette_is_dark(background: Color) -> bool {
         background.b,
         0.7152f32.mul_add(background.g, 0.2126 * background.r)
     ) < 0.5
-}
-
-fn build_pair(
-    color: &AppearanceColor,
-    text_fallback: Color,
-    base: palette::Pair,
-    _default_weak: palette::Pair,
-    _default_strong: palette::Pair
-) -> palette::Background {
-    let mut bg = palette::Background::new(base.color, base.text);
-    if let Some(weak) = weak_pair(color, text_fallback) {
-        bg.weak = weak;
-    }
-    if let Some(strong) = strong_pair(color, text_fallback) {
-        bg.strong = strong;
-    }
-    bg
-}
-
-fn build_primary_pair(
-    color: &AppearanceColor,
-    text_fallback: Color,
-    defaults: palette::Primary
-) -> palette::Primary {
-    palette::Primary {
-        base:   defaults.base,
-        weak:   weak_pair(color, text_fallback).unwrap_or(defaults.weak),
-        strong: strong_pair(color, text_fallback).unwrap_or(defaults.strong)
-    }
-}
-
-fn build_secondary_pair(
-    color: &AppearanceColor,
-    text_fallback: Color,
-    defaults: palette::Primary
-) -> palette::Secondary {
-    palette::Secondary {
-        base:   defaults.base,
-        weak:   weak_pair(color, text_fallback).unwrap_or(defaults.weak),
-        strong: strong_pair(color, text_fallback).unwrap_or(defaults.strong)
-    }
-}
-
-fn build_success_pair(
-    color: &AppearanceColor,
-    text_fallback: Color,
-    defaults: palette::Success
-) -> palette::Success {
-    palette::Success {
-        base:   defaults.base,
-        weak:   weak_pair(color, text_fallback).unwrap_or(defaults.weak),
-        strong: strong_pair(color, text_fallback).unwrap_or(defaults.strong)
-    }
-}
-
-fn build_danger_pair(
-    color: &AppearanceColor,
-    text_fallback: Color,
-    defaults: palette::Danger
-) -> palette::Danger {
-    palette::Danger {
-        base:   defaults.base,
-        weak:   weak_pair(color, text_fallback).unwrap_or(defaults.weak),
-        strong: strong_pair(color, text_fallback).unwrap_or(defaults.strong)
-    }
 }
 
 #[cfg(test)]
