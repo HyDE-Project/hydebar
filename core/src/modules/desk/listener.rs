@@ -15,13 +15,20 @@ const EVENT_RETRY_DELAY: Duration = Duration::from_secs(5);
 
 /// How long a screen has to stay clear before the desk unfolds on it.
 ///
-/// Closing the last window of a workspace and mapping the next one is one
-/// gesture to the user and two events to the bar; unfolding on the first of
-/// them would flash the whole canvas between them. Kept to the width of one
-/// such pair of events and no wider: every millisecond of it is a wait
-/// between clearing the screen and the bar moving, and a wait before a
-/// movement is read as the bar being slow to notice.
-const SETTLE_DELAY: Duration = Duration::from_millis(40);
+/// Two things are waited out here, and the longer of them sets the figure.
+///
+/// One is a burst: closing the last window of a workspace and mapping the
+/// next one is one gesture to the user and two events to the bar, and
+/// unfolding on the first of them would flash the whole canvas between them.
+///
+/// The other is the compositor itself. A workspace is switched to with an
+/// animation of its own, and for as long as it runs the outgoing window is
+/// still crossing the screen, over the canvas below it. Unfolding into that
+/// hides the first stretch of the unfolding behind the window and leaves the
+/// bar looking as though it began half done — measured off a recording, that
+/// stretch was the whole of the islands' flight. The desk waits for the
+/// screen it is unfolding onto to actually be clear.
+const SETTLE_DELAY: Duration = Duration::from_millis(200);
 
 /// Follows the compositor's workspace events for as long as the desk runs.
 ///

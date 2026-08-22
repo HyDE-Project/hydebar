@@ -217,7 +217,7 @@ impl App {
         bloom: f32
     ) -> Vec<Element<'a, Message>> {
         if matches!(module, ModuleName::Clock) {
-            return vec![self.desk_month()];
+            return vec![blocks::month(self.desk_month(), ink, bloom)];
         }
 
         let panels = self.desk_panels(module);
@@ -292,10 +292,11 @@ impl App {
     /// The month the clock opens into.
     ///
     /// The very grid its press opens on the strip — the same widget, drawn
-    /// straight onto the wallpaper instead of into a popup. It is there from
-    /// the first frame of the unfolding: six rows arriving part way through
-    /// would push the rest of the column down the screen at that moment, and
-    /// the clock is flying at that moment.
+    /// straight onto the wallpaper instead of into a popup. Its room is taken
+    /// from the first frame of the unfolding and it is written into that room
+    /// as the clock lands, the same as every other block: standing there
+    /// whole from the first frame was the one thing on the canvas that did
+    /// not open.
     fn desk_month(&self) -> Element<'_, Message> {
         self.calendar.menu_view(self.icons()).map(Message::Calendar)
     }

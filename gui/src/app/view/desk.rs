@@ -254,6 +254,55 @@ mod tests {
     }
 
     #[test]
+    fn the_month_grid_is_whole_once_the_clock_has_opened() {
+        let app = unfolded(1.0);
+
+        for week in ["27", "17", "31"] {
+            assert!(
+                on_screen(&app)
+                    .find(week)
+                    .ok()
+                    .and_then(|found| found.visible_bounds())
+                    .is_some(),
+                "the row holding {week} is inside the room the month was given"
+            );
+        }
+    }
+
+    #[test]
+    fn the_month_grid_opens_rather_than_standing_there_whole() {
+        let mut app = test_app_with(|config| config.desk.enabled = true);
+        set_off(&mut app);
+
+        let month = app.clock.data().format("%B %Y");
+        let mut seen_partly = false;
+
+        for _ in 0..256 {
+            let heading = on_screen(&app)
+                .find(month.as_str())
+                .ok()
+                .and_then(|found| found.visible_bounds())
+                .is_some();
+            let last = on_screen(&app)
+                .find("17")
+                .ok()
+                .and_then(|found| found.visible_bounds())
+                .is_some();
+
+            seen_partly |= heading && !last;
+
+            if !tick(&mut app) {
+                break;
+            }
+        }
+
+        assert!(
+            seen_partly,
+            "the grid is written out from the top like every other block"
+        );
+    }
+
+    #[test]
     fn the_clock_stands_over_the_month_it_opens() {
         let app = unfolded(1.0);
         let month = app.clock.data().format("%B %Y");
