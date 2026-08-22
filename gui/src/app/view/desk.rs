@@ -128,17 +128,18 @@ impl App {
                     .flatten()
                     .filter_map(|within| {
                         let key = self.flip_key(order[within], id);
-                        let travel = hydebar_core::animation::share(
+
+                        let (travel, bloom) = hydebar_core::animation::share(
                             unfolding,
                             Self::reach(within, deepest)
-                        )
-                        .0;
+                        );
 
                         Some(trails::Way {
                             seat: *memo.seats().get(&key)?,
                             from: *memo.from_map().get(&key)?,
                             from_y: self.strip_row(id),
-                            travel
+                            travel,
+                            bloom
                         })
                     })
                     .collect::<Vec<trails::Way>>()
@@ -148,16 +149,19 @@ impl App {
 
     /// The three columns of the canvas, each in the order it stands in.
     ///
-    /// Read from the middle of the strip outwards: the unit that stood
-    /// nearest the centre heads its column and the one that stood at an edge
-    /// ends it, which is what puts the ends of the bar down in the corners of
-    /// the screen. Nothing here says when a unit moves — they all move at
+    /// Read from the edge of the screen inwards: the unit that stood nearest
+    /// its own edge heads the column and the one that stood nearest the middle
+    /// ends it. That is the one order in which no two journeys cross — every
+    /// path falls, then closes in on the same edge, and paths laid this way
+    /// nest inside one another instead of cutting across. Read the other way
+    /// round, the near block's run to the edge cut straight through the far
+    /// block's fall. Nothing here says when a unit moves — they all move at
     /// once — only where each of them is bound.
     pub(crate) fn desk_columns(modules: &hydebar_core::config::Modules) -> Columns<'_> {
         (
-            Self::desk_order(&modules.left, true),
+            Self::desk_order(&modules.left, false),
             Self::desk_order(&modules.center, false),
-            Self::desk_order(&modules.right, false)
+            Self::desk_order(&modules.right, true)
         )
     }
 
@@ -221,7 +225,16 @@ mod tests {
     /// The spring is snapped rather than animated: a test asserting what the
     /// canvas draws must not also wait for a frame clock.
     fn unfolded(presence: f32) -> App {
-        let mut app = test_app_with(|config| config.desk.enabled = true);
+        // the clock alone in the layout, so what is asserted about its month
+        // grid is the grid rather than how far down a column it happens to sit
+        let mut app = test_app_with(|config| {
+            config.desk.enabled = true;
+            config.modules.left = vec![hydebar_proto::config::ModuleDef::Single(
+                hydebar_core::config::ModuleName::Clock
+            )];
+            config.modules.center = Vec::new();
+            config.modules.right = Vec::new();
+        });
 
         if presence > 0.0 {
             open(&mut app);
@@ -273,7 +286,9 @@ mod tests {
 
     #[test]
     fn a_bare_screen_unfolds_the_bar_into_its_blocks() {
-        let app = unfolded(1.0);
+        let mut app = test_app_with(|config| config.desk.enabled = true);
+        open(&mut app);
+
         let mut ui = simulator(app.desk_surface(surface()));
 
         assert!(
@@ -355,7 +370,7 @@ mod tests {
 
     #[test]
     fn the_month_grid_opens_rather_than_standing_there_whole() {
-        let mut app = test_app_with(|config| config.desk.enabled = true);
+        let mut app = unfolded(0.0);
         set_off(&mut app);
 
         let month = app.clock.data().format("%B %Y");
@@ -509,7 +524,11 @@ mod tests {
 
         for _ in 0..256 {
             let (_, _, right) = App::desk_columns(&app.config.modules);
-            let reach = App::reach(1, right.len());
+            let watched = right
+                .iter()
+                .position(|unit| **unit == hydebar_core::config::ModuleName::Memory)
+                .unwrap_or_default();
+            let reach = App::reach(watched, right.len());
             let down = hydebar_core::animation::share(app.desk_presence(None), reach).1 > 0.0;
             let writing = on_screen(&app)
                 .find("MEMORY")
@@ -663,7 +682,7 @@ mod tests {
     }
 
     #[test]
-    fn a_column_is_read_from_the_middle_of_the_strip_outwards() {
+    fn a_column_is_read_from_its_own_edge_of_the_screen_inwards() {
         use hydebar_core::config::{ModuleName, Modules};
         use hydebar_proto::config::ModuleDef;
 
@@ -683,13 +702,13 @@ mod tests {
 
         assert_eq!(
             left,
-            vec![&ModuleName::Clock, &ModuleName::Memory],
-            "the left section is read towards the middle, so it is turned around"
+            vec![&ModuleName::Memory, &ModuleName::Clock],
+            "the left section already reads from its own edge inwards"
         );
         assert_eq!(
             right,
-            vec![&ModuleName::CpuTemp, &ModuleName::Battery],
-            "the right section already reads outwards"
+            vec![&ModuleName::Battery, &ModuleName::CpuTemp],
+            "the right section reads towards its edge, so it is turned around"
         );
     }
 
@@ -719,7 +738,7 @@ mod tests {
 
         let far = simulator(app.desk_surface(surface()))
             .find("MEMORY")
-            .expect("the member that stood further from the middle")
+            .expect("the member that stood nearer its own edge")
             .bounds();
         let near = simulator(app.desk_surface(surface()))
             .find("CPU TEMPERATURE")
@@ -727,8 +746,8 @@ mod tests {
             .bounds();
 
         assert!(
-            far.y > near.y,
-            "each stands in its own place, the nearer one higher: {} against {}",
+            far.y < near.y,
+            "each stands in its own place, the one nearest its edge higher: {} against {}",
             far.y,
             near.y
         );
@@ -840,31 +859,31 @@ mod tests {
         app.screen_width = Some(1920.0);
         open(&mut app);
 
-        let far = simulator(app.desk_surface(surface()))
+        let nearest = simulator(app.desk_surface(surface()))
             .find("CPU TEMPERATURE")
-            .expect("the far module")
+            .expect("the module nearest the left edge")
             .bounds();
-        let near = simulator(app.desk_surface(surface()))
+        let inner = simulator(app.desk_surface(surface()))
             .find("MEMORY")
-            .expect("the near module")
+            .expect("the module nearer the middle")
             .bounds();
 
         assert!(
-            near.y < far.y,
-            "the near module stands higher: {} against {}",
-            near.y,
-            far.y
+            nearest.y < inner.y,
+            "the one nearest its own edge stands higher: {} against {}",
+            nearest.y,
+            inner.y
         );
         assert!(
-            (near.x - far.x).abs() < 1.0,
+            (nearest.x - inner.x).abs() < 1.0,
             "and both stand on the edge of the screen: {} against {}",
-            near.x,
-            far.x
+            nearest.x,
+            inner.x
         );
     }
 
     #[test]
-    fn the_module_nearest_the_middle_of_the_strip_stands_highest() {
+    fn the_module_nearest_its_own_edge_of_the_screen_stands_highest() {
         use hydebar_core::config::ModuleName;
         use hydebar_proto::config::ModuleDef;
 
@@ -879,20 +898,20 @@ mod tests {
         });
         open(&mut app);
 
-        let edge = simulator(app.desk_surface(surface()))
+        let nearest = simulator(app.desk_surface(surface()))
             .find("CPU TEMPERATURE")
-            .expect("the far module")
+            .expect("the module nearest the left edge")
             .bounds()
             .y;
-        let middle = simulator(app.desk_surface(surface()))
+        let inner = simulator(app.desk_surface(surface()))
             .find("MEMORY")
-            .expect("the near module")
+            .expect("the module nearer the middle")
             .bounds()
             .y;
 
         assert!(
-            middle < edge,
-            "the module that stood nearer the middle stands higher: {middle} against {edge}"
+            nearest < inner,
+            "the module that stood nearer its own edge stands higher: {nearest} against {inner}"
         );
     }
 

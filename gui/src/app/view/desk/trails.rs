@@ -1,35 +1,41 @@
-//! The fading streak a block leaves along the way it came.
+//! The outline that leaves the strip with a block and becomes its border.
 //!
-//! A block that simply arrives has moved; a block that leaves a wake has
-//! travelled, and the wake is what tells the eye where it came from once it
-//! is standing still. Drawn under everything else so the blocks fly over
-//! their own trails rather than through them, and drawn from the very
-//! function the blocks fly by, so the streak cannot describe a path the block
-//! did not take.
+//! Four things happen to one thin line, in order. It appears around the module
+//! where the strip drew it. It travels the way the block travels, drawing the
+//! line it came along behind it. On arrival it takes the shape of the area the
+//! block is opening into and holds it as a border. And while the block writes
+//! itself out, a brighter length of that border runs once around it and goes
+//! out with it.
+//!
+//! Drawn under the blocks and off the very function they fly by, so the line
+//! cannot describe a path the block did not take.
+
+mod runner;
+mod streak;
 
 use hydebar_core::components::flip::offset_of;
 use iced::{
-    Color, Element, Length, Point, Rectangle, Renderer, Theme,
+    Color, Element, Length, Point, Rectangle, Renderer, Size, Theme,
     mouse::Cursor,
     widget::canvas::{self, Canvas, Frame as Sheet, Geometry, Path, Stroke}
 };
 
 use super::super::super::state::Message;
 
-/// How many steps of the way a trail is drawn in.
+/// How wide the outline is drawn, in body letters.
+const WIDTH: f32 = 0.09;
+
+/// Radius the outline's corners are turned by, in body letters.
+const CORNER: f32 = 0.3;
+
+/// Share of the journey the outline spends as the island's own shape.
 ///
-/// Enough that the bend where a block stops moving sideways and comes down is
-/// a curve rather than a corner, few enough that a screen of them is a
-/// handful of lines.
-const STEPS: usize = 24;
+/// It keeps the module's shape while it is crossing and takes the shape of
+/// what it is opening into as it lands, so what arrives is already the border
+/// of the area rather than a box that snaps to it.
+const KEEPS_ITS_SHAPE: f32 = 0.55;
 
-/// How wide the streak is at the block, in body letters.
-const WIDTH: f32 = 0.5;
-
-/// How plainly the streak is drawn where it is strongest.
-const INK: f32 = 0.3;
-
-/// One block's way, as the trail needs to know it.
+/// One block's way, as the outline needs to know it.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(super) struct Way {
     /// Where the block rests once it has landed.
@@ -39,30 +45,68 @@ pub(super) struct Way {
     /// The row of the strip it set off from.
     pub from_y: f32,
     /// How far along its own journey it is.
-    pub travel: f32
+    pub travel: f32,
+    /// How far the block has opened, once it is down.
+    pub bloom:  f32
 }
 
-/// Draws every trail of a screen, under everything the canvas stands on it.
+impl Way {
+    /// The outline as it stands at `progress` of the journey.
+    ///
+    /// The place comes off the same function the block flies by; the shape is
+    /// the module's until it is nearly down and the block's by the time it is.
+    fn outline(&self, progress: f32) -> Rectangle {
+        let at = Point::new(self.seat.x, self.seat.y);
+        let offset = offset_of(progress, true, Some(self.from.x), Some(self.from_y), at);
+        let shape = ((progress - KEEPS_ITS_SHAPE) / (1.0 - KEEPS_ITS_SHAPE)).clamp(0.0, 1.0);
+
+        Rectangle::new(
+            Point::new(at.x + offset.x, at.y + offset.y),
+            Size::new(
+                (self.seat.width - self.from.width).mul_add(shape, self.from.width),
+                (self.seat.height - self.from.height).mul_add(shape, self.from.height)
+            )
+        )
+    }
+
+    /// How plainly the outline is drawn at all.
+    ///
+    /// Full while it travels, thinning away as the block finishes opening:
+    /// the border has said what it came to say by then, and a canvas keeping
+    /// every border it was drawn with is a canvas of boxes.
+    fn ink(&self) -> f32 {
+        if self.travel < 1.0 {
+            return 1.0;
+        }
+
+        1.0 - self.bloom.clamp(0.0, 1.0)
+    }
+}
+
+/// Draws every outline of a screen, under everything standing on it.
 pub(super) fn trails<'a>(ways: Vec<Way>, ink: Color, size: f32) -> Element<'a, Message> {
     Canvas::new(Wake {
         ways,
         ink,
-        width: size * WIDTH
+        width: (size * WIDTH).max(1.0),
+        corner: size * CORNER
     })
     .width(Length::Fill)
     .height(Length::Fill)
     .into()
 }
 
-/// Every way of a screen, drawn over the whole of it.
+/// Every outline of a screen, drawn over the whole of it.
 #[derive(Debug)]
 struct Wake {
     /// The blocks and how far each of them has come.
-    ways:  Vec<Way>,
+    ways:   Vec<Way>,
     /// What the canvas is written in, which is what this is drawn in.
-    ink:   Color,
-    /// How wide the streak is at the block.
-    width: f32
+    ink:    Color,
+    /// How wide the outline is drawn.
+    width:  f32,
+    /// Radius the outline's corners are turned by.
+    corner: f32
 }
 
 impl canvas::Program<Message> for Wake {
@@ -79,7 +123,17 @@ impl canvas::Program<Message> for Wake {
         let mut sheet = Sheet::new(renderer, bounds.size());
 
         for way in &self.ways {
-            self.streak(&mut sheet, way);
+            let ink = way.ink();
+
+            if ink <= 0.0 {
+                continue;
+            }
+
+            let outline = way.outline(way.travel);
+
+            streak::draw(&mut sheet, way, self.ink, self.width);
+            self.border(&mut sheet, outline, ink);
+            runner::draw(&mut sheet, outline, way, self.ink, self.width);
         }
 
         vec![sheet.into_geometry()]
@@ -87,67 +141,19 @@ impl canvas::Program<Message> for Wake {
 }
 
 impl Wake {
-    /// Draws the way one block came, thinning and fading behind it.
-    ///
-    /// Stepped rather than stroked in one line because a stroke carries one
-    /// width and one colour, and the whole point of a wake is that it has
-    /// neither: it is strongest at the block and gone where the block set off.
-    fn streak(&self, sheet: &mut Sheet, way: &Way) {
-        if way.travel <= 0.0 || way.travel >= 1.0 {
-            return;
-        }
-
-        let along = walked(way);
-
-        for step in 1..along.len() {
-            #[expect(
-                clippy::cast_precision_loss,
-                reason = "a trail is drawn in a few dozen steps"
-            )]
-            let share = step as f32 / (along.len() - 1) as f32;
-            let fading = (1.0 - way.travel).min(1.0);
-
-            sheet.stroke(
-                &Path::line(along[step - 1], along[step]),
-                Stroke::default()
-                    .with_width((self.width * share).max(0.5))
-                    .with_color(self.ink.scale_alpha(INK * share * share * fading))
-            );
-        }
+    /// Draws the outline itself, wherever it stands right now.
+    fn border(&self, sheet: &mut Sheet, outline: Rectangle, ink: f32) {
+        sheet.stroke(
+            &Path::rounded_rectangle(
+                Point::new(outline.x, outline.y),
+                Size::new(outline.width, outline.height),
+                self.corner.into()
+            ),
+            Stroke::default()
+                .with_width(self.width)
+                .with_color(self.ink.scale_alpha(0.55 * ink))
+        );
     }
-}
-
-/// The places the block stood on, from where it set off to where it is now.
-///
-/// Traced through the middle of the block rather than its corner, and the
-/// middle moves: on the strip the block is an island a few letters wide, on
-/// the canvas it is a table of readings, and the point the eye follows is the
-/// middle of whichever of the two it looks like at that moment. Taken from
-/// the corner alone the streak began half a block away from the module it
-/// belongs to, which is the one place it must not begin.
-fn walked(way: &Way) -> Vec<Point> {
-    let at = Point::new(way.seat.x, way.seat.y);
-
-    (0..=STEPS)
-        .map(|step| {
-            #[expect(
-                clippy::cast_precision_loss,
-                reason = "a trail is drawn in a few dozen steps"
-            )]
-            let progress = way.travel * (step as f32 / STEPS as f32);
-            let offset = offset_of(progress, true, Some(way.from.x), Some(way.from_y), at);
-            let shape = grown(progress);
-            let across = (way.seat.width - way.from.width).mul_add(shape, way.from.width);
-            let down = (way.seat.height - way.from.height).mul_add(shape, way.from.height);
-
-            Point::new(at.x + offset.x + across / 2.0, at.y + offset.y + down / 2.0)
-        })
-        .collect()
-}
-
-/// How much of the way from the strip's shape to the canvas's one is done.
-const fn grown(progress: f32) -> f32 {
-    progress.clamp(0.0, 1.0)
 }
 
 #[cfg(test)]
@@ -155,72 +161,52 @@ const fn grown(progress: f32) -> f32 {
 mod tests {
     #![allow(clippy::float_cmp)]
 
-    use iced::Size;
-
     use super::*;
 
-    fn way(travel: f32) -> Way {
+    fn way(travel: f32, bloom: f32) -> Way {
         Way {
             seat: Rectangle::new(Point::new(40.0, 600.0), Size::new(300.0, 80.0)),
             from: Rectangle::new(Point::new(900.0, 0.0), Size::new(120.0, 30.0)),
             from_y: 8.0,
-            travel
+            travel,
+            bloom
         }
     }
 
     #[test]
-    fn the_way_begins_in_the_middle_of_the_place_the_strip_gave_the_module() {
-        let along = walked(&way(0.5));
-        let leaving = way(0.5).from;
+    fn the_outline_begins_around_the_place_the_strip_gave_the_module() {
+        let outline = way(0.0, 0.0).outline(0.0);
 
-        assert_eq!(
-            along[0],
-            Point::new(leaving.x + leaving.width / 2.0, 8.0 + leaving.height / 2.0),
-            "the first step is the middle of the island, not a corner of the block"
-        );
+        assert_eq!(outline.x, 900.0, "on the module, not on the block");
+        assert_eq!(outline.y, 8.0);
+        assert_eq!(outline.width, 120.0, "and in the module's own shape");
+        assert_eq!(outline.height, 30.0);
     }
 
     #[test]
-    fn the_way_ends_in_the_middle_of_the_block_as_it_stands_now() {
-        let travelling = way(0.5);
-        let along = walked(&travelling);
-        let last = along[along.len() - 1];
-        let now = offset_of(
-            0.5,
-            true,
-            Some(travelling.from.x),
-            Some(8.0),
-            Point::new(travelling.seat.x, travelling.seat.y)
-        );
-        let grown_to = |from: f32, to: f32| (to - from).mul_add(0.5, from);
+    fn the_outline_ends_as_the_border_of_the_area_that_opened() {
+        let outline = way(1.0, 0.0).outline(1.0);
+        let seat = way(1.0, 0.0).seat;
 
-        assert!(
-            (last.x
-                - (travelling.seat.x
-                    + now.x
-                    + grown_to(travelling.from.width, travelling.seat.width) / 2.0))
-                .abs()
-                < 0.001
-        );
-        assert!(
-            (last.y
-                - (travelling.seat.y
-                    + now.y
-                    + grown_to(travelling.from.height, travelling.seat.height) / 2.0))
-                .abs()
-                < 0.001
-        );
+        assert_eq!(outline.x, seat.x);
+        assert_eq!(outline.y, seat.y);
+        assert_eq!(outline.width, seat.width);
+        assert_eq!(outline.height, seat.height);
     }
 
     #[test]
-    fn the_way_lengthens_as_the_block_travels() {
-        let early = walked(&way(0.2));
-        let late = walked(&way(0.8));
+    fn the_outline_keeps_the_modules_shape_for_the_first_half_of_the_way() {
+        let outline = way(0.4, 0.0).outline(0.4);
 
-        let span = |along: &[Point]| {
-            (along[along.len() - 1].x - along[0].x).hypot(along[along.len() - 1].y - along[0].y)
-        };
+        assert_eq!(outline.width, 120.0);
+        assert_eq!(outline.height, 30.0);
+    }
 
-        assert!(span(&late) > span(&early));
+    #[test]
+    fn the_border_goes_out_as_the_block_finishes_opening() {
+        assert_eq!(way(0.5, 0.0).ink(), 1.0, "plain while it travels");
+        assert_eq!(way(1.0, 0.0).ink(), 1.0, "and as it lands");
+        assert!(way(1.0, 0.5).ink() < 1.0, "thinning as the block opens");
+        assert_eq!(way(1.0, 1.0).ink(), 0.0, "gone once it is open");
     }
 }

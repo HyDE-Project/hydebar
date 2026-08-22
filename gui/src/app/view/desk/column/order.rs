@@ -11,11 +11,11 @@ impl App {
     /// strip and each carries a pill of its own to its place on the canvas:
     /// what parts is the icons, and the backing goes with both of them.
     ///
-    /// The rule is the distance from the middle of the strip: a unit that
-    /// stood near the centre stands high on the canvas, and one that stood at
-    /// an edge reaches for the corner below it. The centre section already
-    /// reads outwards from the middle; the left one reads towards it, so it
-    /// is turned around.
+    /// The rule is the distance from the edge the section belongs to: a unit
+    /// that stood nearest its own edge stands high on the canvas, and one that
+    /// stood nearest the middle of the strip ends the column. The left section
+    /// already reads from its edge inwards; the right one reads towards its
+    /// edge, so it is turned around.
     pub(crate) fn desk_order(
         section: &[ModuleDef],
         reads_towards_the_centre: bool
