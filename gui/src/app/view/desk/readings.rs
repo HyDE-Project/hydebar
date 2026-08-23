@@ -14,8 +14,9 @@ pub(super) use machine::{
     cooling, cpu_temperature, graphics, memory, network, processor, storage, system
 };
 pub(super) use session::{
-    battery, keyboard, link, notifications, own, playing, privacy, radio, screen, seat,
-    session_idle, sound, submap, theme, tray, updates, wallpaper, weather, windows, workspaces
+    battery, desktop_menu, keyboard, link, notifications, own, playing, privacy, radio, screen,
+    seat, session_idle, sound, submap, theme, tray, updates, wallpaper, weather, windows,
+    workspaces
 };
 
 /// One window of a screen, as a share of that screen.
@@ -77,6 +78,8 @@ pub enum Figure {
     },
     /// A row of pictures with the one in force big in the middle of it.
     Accordion(hydebar_core::modules::desk::looks::Reel),
+    /// What pressing a module leads to, as the glyphs of its own menu.
+    Choices(Vec<String>),
     /// The last few minutes of one reading, oldest first.
     Trace {
         /// The readings themselves.

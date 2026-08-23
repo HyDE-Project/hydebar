@@ -402,10 +402,7 @@ mod tests {
         assert_eq!(flare(0.0, 1.0), 0.0, "a block at rest on the strip is dark");
         assert_eq!(flare(1.0, 1.0), 0.0, "a canvas standing open is dark");
 
-        assert!(
-            flare(FLARE / 2.0, 1.0) > 0.9,
-            "the setting off is not lit"
-        );
+        assert!(flare(FLARE / 2.0, 1.0) > 0.9, "the setting off is not lit");
         assert!(flare(landed(1.0), 1.0) > 0.9, "the settling is not lit");
         assert_eq!(
             flare(landed(1.0).midpoint(FLARE), 1.0),

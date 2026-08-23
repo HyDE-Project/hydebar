@@ -138,6 +138,77 @@ impl HydeMenu {
     pub fn menu_view(&self, id: iced::SurfaceId, opacity: f32) -> Element<'_, Message> {
         view::tree_view(&self.tree, &self.expanded, id, opacity)
     }
+
+    /// What the menu offers at its top level, as the glyphs it draws them
+    /// with.
+    ///
+    /// Read off the tree already in hand rather than the file it came from:
+    /// the canvas asks this on every frame of an unfolding.
+    #[must_use]
+    pub fn choices(&self) -> Vec<String> {
+        choices_of(&self.tree)
+    }
+}
+
+/// The choices the desktop's menu for `module` offers, as the glyphs it
+/// draws them with.
+///
+/// The desktop ships a menu beside several of its waybar modules — the power
+/// module above all — and a bar module the user wired to the same script has
+/// nothing of its own to say: it is a button, and the canvas would open it
+/// into an empty block. What it can show instead is what pressing it leads
+/// to, read from the very files the reference bar reads.
+///
+/// The top level of the menu and no deeper. A branch stands for what it
+/// unfolds into — one glyph for shutting down rather than two for shutting
+/// down now and shutting down presently — and a row that spelled out every
+/// leaf would say less by saying more.
+///
+/// Glyphs only: a label here reads `󰍁  Lock`, and it is the glyph that
+/// carries it. A label written in letters alone is passed over rather than
+/// squeezed into a row meant for icons.
+///
+/// Blocking on purpose, like everything else that reads the desktop's files:
+/// the caller decides which pool it runs on.
+#[must_use]
+pub fn desktop_choices(module: &str) -> Vec<String> {
+    let Some(definition) = definition::read_definition(module) else {
+        return Vec::new();
+    };
+
+    choices_of(
+        &definition
+            .menu_file
+            .as_deref()
+            .and_then(tree::read_tree)
+            .unwrap_or_default()
+    )
+}
+
+/// The glyphs the top level of `tree` offers, in the order it lists them.
+fn choices_of(tree: &[Entry]) -> Vec<String> {
+    tree.iter()
+        .filter_map(|entry| match entry {
+            Entry::Item {
+                label, ..
+            }
+            | Entry::Submenu {
+                label, ..
+            } => glyph_of(label),
+            Entry::Separator => None
+        })
+        .collect()
+}
+
+/// The glyph a menu label leads with, when it leads with one.
+///
+/// The desktop writes its labels glyph first and name after, and the two are
+/// told apart by what they are made of: a name is letters and digits, a glyph
+/// is neither.
+fn glyph_of(label: &str) -> Option<String> {
+    let leading = label.split_whitespace().next()?;
+
+    (!leading.chars().any(char::is_alphanumeric)).then(|| leading.to_owned())
 }
 
 /// Reads the desktop's two menu files, as the message that folds them in.
@@ -146,7 +217,7 @@ impl HydeMenu {
 /// function rather than two, so the read the bar does on its own and the read
 /// an opening menu asks for can never disagree about where the menu lives.
 fn read() -> Message {
-    let Some(definition) = definition::read_definition() else {
+    let Some(definition) = definition::read_definition("hyde-menu") else {
         log::warn!("the desktop ships no menu definition, the menu stays empty");
 
         return Message::Loaded {
@@ -171,6 +242,42 @@ fn read() -> Message {
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_label_written_glyph_first_gives_up_its_glyph() {
+        assert_eq!(glyph_of("\u{f0341}  Lock"), Some("\u{f0341}".to_owned()));
+    }
+
+    #[test]
+    fn a_label_of_letters_alone_offers_no_glyph() {
+        assert!(glyph_of("Lock").is_none());
+        assert!(glyph_of("").is_none());
+    }
+
+    #[test]
+    fn the_choices_are_the_top_level_of_the_menu_and_nothing_deeper() {
+        let tree = vec![
+            Entry::Item {
+                id:    "lock".to_owned(),
+                label: "\u{f0341}  Lock".to_owned()
+            },
+            Entry::Separator,
+            Entry::Submenu {
+                id:       "shutdown".to_owned(),
+                label:    "\u{f06a6}  Shutdown".to_owned(),
+                children: vec![Entry::Item {
+                    id:    "now".to_owned(),
+                    label: "\u{f06a6}  Shutdown Now".to_owned()
+                }]
+            },
+        ];
+
+        assert_eq!(
+            choices_of(&tree),
+            vec!["\u{f0341}".to_owned(), "\u{f06a6}".to_owned()],
+            "a branch stands for what it unfolds into, and a rule for nothing"
+        );
+    }
 
     #[test]
     fn a_toggle_unfolds_and_folds_the_same_branch() {

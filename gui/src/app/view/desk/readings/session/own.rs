@@ -6,10 +6,14 @@
 //! state the command reported itself in, the tooltip it would have shown on a
 //! hover, and the reading behind a progress figure.
 
-use super::super::{Panel, push};
+use super::super::{Figure, Panel, push};
 use crate::app::state::App;
 
 /// What the custom module named `name` last answered, if it answered at all.
+///
+/// A module that answers nothing at all is not always empty: a button wired
+/// to one of the desktop's own scripts has a menu behind it, and the choices
+/// that menu offers are drawn in a row where the readings would stand.
 pub fn own(app: &App, name: &str) -> Option<Panel> {
     let module = app.custom.get(name)?;
     let data = module.readings();
@@ -43,5 +47,15 @@ pub fn own(app: &App, name: &str) -> Option<Panel> {
         rows.push(("state".to_owned(), "waiting for a first answer".to_owned()));
     }
 
-    Panel::of(name.to_owned(), rows)
+    let choices = module.choices();
+
+    if choices.is_empty() {
+        return Panel::of(name.to_owned(), rows);
+    }
+
+    Some(Panel::drawn(
+        name.to_owned(),
+        rows,
+        Figure::Choices(choices.to_vec())
+    ))
 }

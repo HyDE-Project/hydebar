@@ -1,7 +1,19 @@
 //! The state of the desk itself: its keyboard, its sky, its tray, its look.
 
-use super::super::{Panel, push};
+use super::super::{Figure, Panel, push};
 use crate::app::state::App;
+
+/// What the desktop's own menu offers, as a row of its glyphs.
+///
+/// The entry is a button and knows nothing about itself, so the block it
+/// opens into would be empty. What it can show is where pressing it leads:
+/// the top level of the very menu it opens, in the glyphs the desktop draws
+/// it with.
+pub fn desktop_menu(app: &App) -> Option<Panel> {
+    let choices = app.hyde_menu.choices();
+
+    (!choices.is_empty()).then(|| Panel::drawn("hyde menu", Vec::new(), Figure::Choices(choices)))
+}
 
 /// The keyboard layout in force.
 pub fn keyboard(app: &App) -> Option<Panel> {

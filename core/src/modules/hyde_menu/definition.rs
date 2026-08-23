@@ -19,16 +19,26 @@ fn data_dir() -> Option<std::path::PathBuf> {
         .or_else(|| dirs::home_dir().map(|home| home.join(".local/share")))
 }
 
-/// Reads the module definition the desktop ships for its menu.
-pub(super) fn read_definition() -> Option<Definition> {
-    let path = data_dir()?.join("waybar/modules/custom-hyde-menu.jsonc");
+/// Reads the module definition the desktop ships for the menu of `module`.
+///
+/// One name, two places it appears: the desktop keeps a waybar module in a
+/// file called after it and states the module under a key called after it as
+/// well, so a caller naming the module once reaches both.
+pub(super) fn read_definition(module: &str) -> Option<Definition> {
+    let path = data_dir()?.join(format!("waybar/modules/custom-{module}.jsonc"));
     let source = std::fs::read_to_string(&path)
-        .inspect_err(|err| warn!("cannot read {}: {err}", path.display()))
+        .inspect_err(|err| {
+            if err.kind() == std::io::ErrorKind::NotFound {
+                log::debug!("the desktop ships no menu for {module}");
+            } else {
+                warn!("cannot read {}: {err}", path.display());
+            }
+        })
         .ok()?;
     let parsed: serde_json::Value = serde_json::from_str(&plain_json(&source))
         .inspect_err(|err| warn!("cannot parse {}: {err}", path.display()))
         .ok()?;
-    let module = parsed.get("custom/hyde-menu")?;
+    let module = parsed.get(format!("custom/{module}"))?;
 
     let actions = module
         .get("menu-actions")
@@ -165,19 +175,24 @@ mod tests {
         outcome
     }
 
+    /// The desktop's menu module, read under the name the tests write it as.
+    fn read_definition_of() -> Option<Definition> {
+        read_definition("hyde-menu")
+    }
+
     #[test]
     fn a_desktop_that_ships_no_module_states_nothing() {
-        assert!(with_data_home(None, read_definition).is_none());
+        assert!(with_data_home(None, read_definition_of).is_none());
     }
 
     #[test]
     fn a_module_file_that_is_not_json_states_nothing() {
-        assert!(with_data_home(Some("{ not json"), read_definition).is_none());
+        assert!(with_data_home(Some("{ not json"), read_definition_of).is_none());
     }
 
     #[test]
     fn a_json_file_without_the_menu_module_states_nothing() {
-        assert!(with_data_home(Some(r#"{"custom/other": {}}"#), read_definition).is_none());
+        assert!(with_data_home(Some(r#"{"custom/other": {}}"#), read_definition_of).is_none());
     }
 
     #[test]
@@ -193,7 +208,7 @@ mod tests {
                     }
                 }"#
             ),
-            read_definition
+            read_definition_of
         )
         .expect("the module is read");
 
@@ -211,7 +226,7 @@ mod tests {
 
     #[test]
     fn a_module_that_states_nothing_about_itself_is_still_read() {
-        let definition = with_data_home(Some(r#"{"custom/hyde-menu": {}}"#), read_definition)
+        let definition = with_data_home(Some(r#"{"custom/hyde-menu": {}}"#), read_definition_of)
             .expect("the module is read");
 
         assert!(definition.glyph.is_none());
@@ -223,7 +238,7 @@ mod tests {
     fn an_action_that_is_not_a_command_is_dropped() {
         let definition = with_data_home(
             Some(r#"{"custom/hyde-menu": {"menu-actions": {"lock": 3, "quit": "exit"}}}"#),
-            read_definition
+            read_definition_of
         )
         .expect("the module is read");
 

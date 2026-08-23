@@ -72,6 +72,7 @@ impl App {
             }
             ModuleName::MediaPlayer => readings::playing(self).into_iter().collect(),
             ModuleName::KeyboardSubmap => readings::submap(self).into_iter().collect(),
+            ModuleName::HydeMenu => readings::desktop_menu(self).into_iter().collect(),
             ModuleName::Custom(name) => readings::own(self, name).into_iter().collect(),
             _ => Vec::new()
         }

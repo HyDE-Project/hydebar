@@ -12,6 +12,7 @@ use super::{
     },
     Ink, Side,
     accordion::accordion,
+    choices::choices,
     overview::overview,
     trace::trace
 };
@@ -30,7 +31,7 @@ pub(super) fn written<'a>(panel: &Panel, side: Side, ink: Ink) -> Element<'a, Me
     Column::with_children(
         std::iter::once(heading.into())
             .chain(std::iter::once(rule(ink)))
-            .chain(panel.figure.as_ref().map(|figure| drawn(figure, ink)))
+            .chain(panel.figure.as_ref().map(|figure| drawn(figure, side, ink)))
             .chain(lines)
     )
     .spacing(ink.size * 0.28)
@@ -40,7 +41,7 @@ pub(super) fn written<'a>(panel: &Panel, side: Side, ink: Ink) -> Element<'a, Me
 }
 
 /// The drawing a panel carries, in the room its kind asks for.
-fn drawn<'a>(figure: &Figure, ink: Ink) -> Element<'a, Message> {
+fn drawn<'a>(figure: &Figure, side: Side, ink: Ink) -> Element<'a, Message> {
     match figure {
         Figure::Picture(handle) => container(
             iced::widget::image(handle.clone())
@@ -55,6 +56,7 @@ fn drawn<'a>(figure: &Figure, ink: Ink) -> Element<'a, Message> {
             ground
         } => overview(rooms, ground.as_ref(), ink),
         Figure::Accordion(reel) => accordion(reel, ink),
+        Figure::Choices(glyphs) => choices(glyphs, side, ink),
         Figure::Trace {
             readings,
             ceiling

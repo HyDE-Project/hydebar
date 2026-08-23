@@ -1,6 +1,6 @@
 //! Construction of the application and the modules it carries.
 
-use std::{path::PathBuf, sync::Arc};
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 use flexi_logger::LoggerHandle;
 use hydebar_core::{
@@ -39,6 +39,28 @@ type AppDependencies = (
     EventReceiver
 );
 
+/// The modules the user wrote themselves, each holding what the desktop's own
+/// menu for it offers.
+///
+/// The desktop's files are read here, once, rather than where the canvas draws
+/// them: a module that is a button and nothing else opens into a row of the
+/// choices behind it, and a row rebuilt off the filesystem on every frame of
+/// an unfolding would be a read per block per frame.
+fn custom_modules(config: &Config) -> HashMap<String, Custom> {
+    config
+        .custom_modules
+        .iter()
+        .map(|module| {
+            (
+                module.name.clone(),
+                Custom::with_choices(hydebar_core::modules::hyde_menu::desktop_choices(
+                    &module.name
+                ))
+            )
+        })
+        .collect()
+}
+
 impl App {
     /// Builds the bar from what the binary has already opened for it.
     ///
@@ -59,11 +81,7 @@ impl App {
     ) -> (Self, Task<Message>) {
         let (outputs, task) = Outputs::new(config.appearance.style, config.position, &config);
 
-        let custom = config
-            .custom_modules
-            .iter()
-            .map(|o| (o.name.clone(), Custom::default()))
-            .collect();
+        let custom = custom_modules(&config);
         let module_context = ModuleContext::new(event_sender, runtime_handle);
         let hyprland_clone = Arc::clone(&hyprland);
         let mut app = Self {
