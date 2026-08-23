@@ -1,20 +1,12 @@
-//! Module trait wiring for the media player.
+//! Registration of the MPRIS listener the media player owns.
 
-use iced::{Element, alignment::Vertical, widget::row};
 use log::warn;
 
 use super::{MediaPlayer, MediaPlayerPublisher};
 use crate::{
     ModuleContext,
-    components::{
-        icons::{IconTheme, Icons, icon},
-        scale,
-        text::text
-    },
-    config::MediaPlayerModuleConfig,
     event_bus::ModuleEvent,
-    menu::MenuType,
-    modules::{Module, ModuleError, OnModulePress},
+    modules::{Module, ModuleError},
     services::{
         ServiceEvent,
         mpris::{ListenerState, MprisEventPublisher, MprisPlayerService}
@@ -23,9 +15,9 @@ use crate::{
 
 impl<M> Module<M> for MediaPlayer
 where
-    M: 'static + Clone
+    M: 'static
 {
-    type ViewData<'a> = (&'a MediaPlayerModuleConfig, &'a IconTheme);
+    type ViewData<'a> = ();
     type RegistrationData<'a> = ();
 
     fn register(
@@ -89,30 +81,5 @@ where
 
         self.service = None;
         self.sender = None;
-    }
-
-    fn view(
-        &self,
-        (config, icons): Self::ViewData<'_>
-    ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
-        self.service.as_ref().and_then(|s| match s.len() {
-            0 => None,
-            _ => Some((
-                row![
-                    icon(icons, Icons::MusicNote),
-                    text(
-                        self.bar_title
-                            .clone()
-                            .unwrap_or_else(|| Self::get_title(&s[0], config))
-                    )
-                    .wrapping(iced::widget::text::Wrapping::WordOrGlyph)
-                    .size(scale::scaled(12.0))
-                ]
-                .align_y(Vertical::Center)
-                .spacing(scale::scaled(8.0))
-                .into(),
-                Some(OnModulePress::ToggleMenu(MenuType::MediaPlayer))
-            ))
-        })
     }
 }

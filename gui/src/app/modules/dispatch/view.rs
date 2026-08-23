@@ -67,7 +67,7 @@ impl App {
             )),
             ModuleName::WindowTitle => self
                 .window_title
-                .view((&self.config.window_title, self.attention.is_on(module_name))),
+                .bar_view(&self.config.window_title, self.attention.is_on(module_name)),
             ModuleName::SystemInfo => {
                 self.system_info
                     .view((&self.config.system, self.appearance(), self.icons()))
@@ -138,7 +138,7 @@ impl App {
             ModuleName::BarLayout => self.bar_layout.bar_view(self.icons()),
             ModuleName::MediaPlayer => self
                 .media_player
-                .view((&self.config.media_player, self.icons())),
+                .bar_view(&self.config.media_player, self.icons()),
             ModuleName::Notifications => self.notifications.bar_view(self.icons()),
             ModuleName::Screenshot => self.screenshot.bar_view(self.icons()),
             ModuleName::IdleInhibitor => Some(hydebar_core::modules::idle_inhibitor::bar_view(

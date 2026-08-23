@@ -1,4 +1,4 @@
-//! Module trait wiring for the window title.
+//! Registration of the compositor stream the window title owns.
 //!
 //! No iced subscription is involved: the listener publishes focused-window
 //! changes onto the event bus and the bar folds them in through
@@ -6,22 +6,18 @@
 
 use std::sync::Arc;
 
-use iced::{Element, widget::text};
-
-use super::{WindowTitle, listener, state::shown_title};
+use super::{WindowTitle, listener};
 use crate::{
     ModuleContext,
-    components::scale,
-    config::WindowTitleConfig,
     event_bus::ModuleEvent,
-    modules::{Module, ModuleError, OnModulePress}
+    modules::{Module, ModuleError}
 };
 
 impl<M> Module<M> for WindowTitle
 where
-    M: 'static + Clone
+    M: 'static
 {
-    type ViewData<'a> = (&'a WindowTitleConfig, bool);
+    type ViewData<'a> = ();
     type RegistrationData<'a> = ();
 
     fn register(
@@ -53,33 +49,5 @@ where
         }
 
         self.sender = None;
-    }
-
-    /// Draws the title, in full while the module is attended.
-    ///
-    /// A title long enough to be shortened is exactly the one the user leans
-    /// in to read, so looking at the module is taken as asking for the rest of
-    /// it.
-    fn view(
-        &self,
-        (config, attended): Self::ViewData<'_>
-    ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
-        self.value.as_ref().map(|value| {
-            let shown = if attended {
-                value.clone()
-            } else {
-                self.shortened
-                    .clone()
-                    .unwrap_or_else(|| shown_title(value, config, attended))
-            };
-
-            (
-                text(shown)
-                    .size(scale::scaled(12.0))
-                    .wrapping(text::Wrapping::WordOrGlyph)
-                    .into(),
-                None
-            )
-        })
     }
 }

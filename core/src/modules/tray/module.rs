@@ -1,20 +1,24 @@
-//! Module trait wiring for the tray.
+//! Registration of the status notifier listener the tray owns.
+//!
+//! The tray draws no bar entry of its own: each icon of the strip toggles a
+//! positioned menu, and those messages carry a
+//! [`ButtonUIRef`](crate::position_button::ButtonUIRef) that no drawing
+//! generic over its message type can construct, so the strip stays in the
+//! bar layer that owns the surface.
 
 use std::sync::Arc;
 
-use iced::{Element, SurfaceId as Id};
-
 use super::super::{
-    Module, ModuleError, OnModulePress,
+    Module, ModuleError,
     tray::{CommandFactory, ListenerSpawner, TrayMessage, TrayModule}
 };
 use crate::{ModuleContext, event_bus::ModuleEvent, services::tray::TrayService};
 
 impl<M> Module<M> for TrayModule
 where
-    M: 'static + Clone
+    M: 'static
 {
-    type ViewData<'a> = (Id, f32);
+    type ViewData<'a> = ();
     type RegistrationData<'a> = ();
 
     fn register(
@@ -42,17 +46,6 @@ where
 
         self.service = None;
         self.sender = None;
-    }
-
-    /// The bar strip is rendered by the GUI layer, like the battery: each
-    /// icon toggles its own positioned menu, and those messages carry a
-    /// [`ButtonUIRef`](crate::position_button::ButtonUIRef) that a view
-    /// generic over its message type cannot construct.
-    fn view(
-        &self,
-        (_id, _opacity): Self::ViewData<'_>
-    ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
-        None
     }
 }
 

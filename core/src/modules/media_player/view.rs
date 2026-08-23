@@ -1,4 +1,4 @@
-//! Rendering of the media player menu.
+//! Drawing of the media player: the bar entry and the menu behind it.
 
 use iced::{
     Background, Border, Element, Length, Theme,
@@ -15,11 +15,51 @@ use crate::{
         text::text
     },
     config::MediaPlayerModuleConfig,
+    menu::MenuType,
+    modules::OnModulePress,
     services::mpris::PlaybackStatus,
     style::settings_button_style
 };
 
 impl MediaPlayer {
+    /// The bar entry: a note and the title of the leading player, opening the
+    /// full controls.
+    ///
+    /// Draws nothing while no player is running, so a silent session carries
+    /// no entry at all.
+    ///
+    /// Rendered by the module itself, so the bar layer holds no player
+    /// drawing of its own.
+    #[must_use]
+    pub fn bar_view<M>(
+        &self,
+        config: &MediaPlayerModuleConfig,
+        icons: &IconTheme
+    ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)>
+    where
+        M: 'static
+    {
+        let leading = self.service.as_ref()?.first()?;
+
+        let title = self
+            .bar_title
+            .clone()
+            .unwrap_or_else(|| Self::get_title(leading, config));
+
+        Some((
+            row![
+                icon(icons, Icons::MusicNote),
+                text(title)
+                    .wrapping(iced::widget::text::Wrapping::WordOrGlyph)
+                    .size(scale::scaled(12.0))
+            ]
+            .align_y(Vertical::Center)
+            .spacing(scale::scaled(8.0))
+            .into(),
+            Some(OnModulePress::ToggleMenu(MenuType::MediaPlayer))
+        ))
+    }
+
     /// The panel naming every player and driving each.
     #[must_use]
     pub fn menu_view(

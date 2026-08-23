@@ -1,9 +1,9 @@
 //! The focused window's title, drawn in the bar.
 //!
-//! One folder, three rooms: [`state`] decides what the bar shows and folds
+//! One folder, four rooms: [`state`] decides what the bar shows and folds
 //! title changes in, [`listener`] follows the compositor's window events in
-//! the background and [`module`] wires the module to the bar. The root holds
-//! the state the rooms share.
+//! the background, [`view`] paints the entry and [`module`] starts and stops
+//! the listener with the layout. The root holds the state the rooms share.
 
 use std::sync::Arc;
 
@@ -15,6 +15,7 @@ use crate::{ModuleEventSender, config::WindowTitleConfig, utils::truncate_text};
 mod listener;
 mod module;
 mod state;
+mod view;
 
 /// Title of the focused window, as the compositor reports it.
 ///

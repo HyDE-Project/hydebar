@@ -132,8 +132,7 @@ keeps the trait for its registration alone, so the one law of gating still
 reaches it — `clock` shows that shape.
 
 Migration ledger — still drawing through the trait: `control_center`,
-`custom_module`, `media_player`, `system_info`, `tray`, `updates`,
-`weather`, `window_title`, `workspaces`. A migrated module leaves
+`custom_module`, `system_info`, `updates`, `workspaces`. A migrated module leaves
 this list in the commit that moves it, and the view half of the trait goes
 with the last of them.
 

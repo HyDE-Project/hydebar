@@ -2,9 +2,10 @@
 //!
 //! One folder, five rooms: [`messages`] names what the module accepts,
 //! [`commands`] dispatches player commands to the service, [`state`] folds
-//! messages in, [`module`] wires the module to the bar and [`view`] draws
-//! the menu. The root holds the state the rooms share, and the bridge that
-//! carries listener events onto the module event bus.
+//! messages in, [`module`] starts and stops the MPRIS listener with the
+//! layout and [`view`] draws the bar entry and the menu. The root holds the
+//! state the rooms share, and the bridge that carries listener events onto
+//! the module event bus.
 
 use tokio::{runtime::Handle, task::JoinHandle};
 
