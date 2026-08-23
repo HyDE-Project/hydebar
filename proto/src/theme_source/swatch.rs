@@ -17,7 +17,7 @@ use std::{
 };
 
 use super::{color::parse_color, dcol::DcolPalette};
-use crate::{hyde_dirs::HydeDirs, theme_source::Rgba};
+use crate::{hyde_dirs::HydeDirs, hyde_files, theme_source::Rgba};
 
 /// Digest of a wallpaper file, remembered by the file's identity on disk.
 #[derive(Debug, Clone)]
@@ -80,8 +80,7 @@ pub fn theme_swatch(dirs: &HydeDirs, theme: &str) -> Option<ThemeSwatch> {
 /// The files are tried in name order so the answer is stable, and the first
 /// one that yields a whole swatch wins.
 fn shipped_swatch(dirs: &HydeDirs, theme: &str) -> Option<ThemeSwatch> {
-    let mut files: Vec<_> = fs::read_dir(dirs.theme_dir(theme))
-        .ok()?
+    let mut files: Vec<_> = hyde_files::entries(&dirs.theme_dir(theme))?
         .flatten()
         .map(|entry| entry.path())
         .filter(|path| {
@@ -93,7 +92,7 @@ fn shipped_swatch(dirs: &HydeDirs, theme: &str) -> Option<ThemeSwatch> {
 
     files
         .into_iter()
-        .filter_map(|path| fs::read_to_string(path).ok())
+        .filter_map(|path| hyde_files::text(&path))
         .find_map(|source| swatch_of(&source))
 }
 
@@ -159,7 +158,7 @@ fn extracted_swatch(dirs: &HydeDirs, theme: &str) -> Option<ThemeSwatch> {
 
 /// The palette the theme ships under its own name.
 fn pinned_palette(dirs: &HydeDirs, theme: &str) -> Option<DcolPalette> {
-    DcolPalette::parse(&fs::read_to_string(dirs.theme_dcol(theme)).ok()?)
+    DcolPalette::parse(&hyde_files::text(&dirs.theme_dcol(theme))?)
 }
 
 /// The palette `HyDE` extracted from the theme's current wallpaper.
@@ -174,7 +173,7 @@ fn wallpaper_palette(dirs: &HydeDirs, theme: &str) -> Option<DcolPalette> {
         .join("dcols")
         .join(format!("{digest}.dcol"));
 
-    DcolPalette::parse(&fs::read_to_string(cached).ok()?)
+    DcolPalette::parse(&hyde_files::text(&cached)?)
 }
 
 /// Digest of the image at `image`, hashed once per file version.

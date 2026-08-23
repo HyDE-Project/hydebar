@@ -13,13 +13,14 @@
 //! but no `HyDE` at all. Every value found here is a guess about a theme rather
 //! than a reading of it.
 
-use std::{fs, path::Path};
+use std::path::Path;
 
 use super::{
     css::strip_comments,
     extract::{apply_colors, apply_global, parse_pill_radius},
     theme::HydeTheme
 };
+use crate::hyde_files;
 
 /// Reads whatever the stylesheets under `<config_dir>/waybar` still say.
 ///
@@ -46,17 +47,17 @@ pub(super) fn read(config_dir: &Path) -> HydeTheme {
     theme
 }
 
-/// Reads a stylesheet and removes its comments, returning [`None`] when the
-/// file is missing or unreadable.
+/// Reads a stylesheet and removes its comments, returning [`None`] when there
+/// is nothing to read.
 fn read_stylesheet(path: &Path) -> Option<String> {
-    fs::read_to_string(path)
-        .ok()
-        .map(|raw| strip_comments(&raw))
+    hyde_files::text(path).map(|raw| strip_comments(&raw))
 }
 
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
+    use std::fs;
+
     use tempfile::TempDir;
 
     use super::{

@@ -4,7 +4,9 @@
 //! directory listing. The only file read inside a theme is `.sort`, because
 //! that is what decides the order `HyDE` itself presents the themes in.
 
-use std::{cmp::Ordering, fs, path::Path};
+use std::{cmp::Ordering, path::Path};
+
+use crate::hyde_files;
 
 /// File a theme states its place in the list in.
 ///
@@ -30,12 +32,13 @@ struct Entry {
 
 /// Names of the themes installed under `dir`.
 ///
-/// A directory that cannot be read yields an empty list rather than an error:
+/// A directory that is not there yields an empty list rather than an error:
 /// the machine may simply not have `HyDE` installed, and that is not a failure
-/// the bar has anything to say about.
+/// the bar has anything to say about. One that is there and refuses to be
+/// listed is named in the journal.
 #[must_use]
 pub(super) fn installed(dir: &Path) -> Vec<String> {
-    let Ok(entries) = fs::read_dir(dir) else {
+    let Some(entries) = hyde_files::entries(dir) else {
         return Vec::new();
     };
 
@@ -59,8 +62,7 @@ pub(super) fn installed(dir: &Path) -> Vec<String> {
 /// [`DEFAULT_SORT`], which is what the scripts do with a `.sort` they cannot
 /// read either.
 fn sort_key(directory: &Path) -> i64 {
-    fs::read_to_string(directory.join(SORT_FILE))
-        .ok()
+    hyde_files::text(&directory.join(SORT_FILE))
         .and_then(|source| {
             source
                 .lines()

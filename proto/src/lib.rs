@@ -13,6 +13,7 @@ pub mod compositor_ipc;
 pub mod compositor_look;
 pub mod config;
 pub mod hyde_dirs;
+mod hyde_files;
 pub mod hyde_state;
 pub(crate) mod hypr_vars;
 pub mod ports;

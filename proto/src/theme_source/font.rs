@@ -22,9 +22,7 @@
 //! the user nudges for their screen while a family is something the theme
 //! picks.
 
-use std::fs;
-
-use crate::{hyde_dirs::HydeDirs, hypr_vars, shell_vars};
+use crate::{hyde_dirs::HydeDirs, hyde_files, hypr_vars, shell_vars};
 
 /// Family `HyDE` falls back to when nothing names one.
 const DEFAULT_FAMILY: &str = "JetBrainsMono Nerd Font";
@@ -90,21 +88,22 @@ impl Sources {
     ///
     /// A missing file reads as empty rather than as an error: an install that
     /// has never been themed is missing most of them, and the chain is designed
-    /// to fall through.
+    /// to fall through. One that is there and refuses to be read is named in
+    /// the journal on the way past.
     fn read(dirs: &HydeDirs) -> Self {
-        let staterc = fs::read_to_string(dirs.staterc()).unwrap_or_default();
+        let staterc = hyde_files::text_or_empty(&dirs.staterc());
         let hypr_theme = shell_vars::value_of(&staterc, THEME_KEY)
-            .and_then(|theme| fs::read_to_string(dirs.hypr_theme(&theme)).ok())
+            .map(|theme| hyde_files::text_or_empty(&dirs.hypr_theme(&theme)))
             .unwrap_or_default();
-        let config = fs::read_to_string(dirs.hyde_config_export())
-            .or_else(|_| fs::read_to_string(dirs.hyde_config()))
+        let config = hyde_files::text(&dirs.hyde_config_export())
+            .or_else(|| hyde_files::text(&dirs.hyde_config()))
             .unwrap_or_default();
 
         Self {
             config,
             hypr_theme,
             staterc,
-            env_theme: fs::read_to_string(dirs.env_theme()).unwrap_or_default()
+            env_theme: hyde_files::text_or_empty(&dirs.env_theme())
         }
     }
 
@@ -138,7 +137,8 @@ impl Sources {
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     #![allow(clippy::float_cmp)]
-    use std::path::PathBuf;
+
+    use std::{fs, path::PathBuf};
 
     use super::*;
 

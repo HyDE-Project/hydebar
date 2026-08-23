@@ -9,7 +9,7 @@ use super::{
     roles::BarColors,
     selection::{Recolour, inverts}
 };
-use crate::{hyde_dirs::HydeDirs, hypr_vars, shell_vars};
+use crate::{hyde_dirs::HydeDirs, hyde_files, hypr_vars, shell_vars};
 
 /// Key the active theme is recorded under in `staterc`.
 const THEME_KEY: &str = "HYDE_THEME";
@@ -38,7 +38,7 @@ pub(in crate::theme_source) fn read(dirs: &HydeDirs) -> Option<BarColors> {
 
 /// Reads the palette in force, mirrored if the theme asks for it.
 fn read_palette(dirs: &HydeDirs) -> Option<DcolPalette> {
-    let staterc = fs::read_to_string(dirs.staterc()).unwrap_or_default();
+    let staterc = hyde_files::text_or_empty(&dirs.staterc());
     let recolour = Recolour::parse(&staterc);
     let theme = shell_vars::value_of(&staterc, THEME_KEY);
 
@@ -72,7 +72,7 @@ fn read_palette(dirs: &HydeDirs) -> Option<DcolPalette> {
 fn read_source(dirs: &HydeDirs, theme: Option<&str>, recolour: Recolour) -> Option<String> {
     if recolour.prefers_theme_palette()
         && let Some(theme) = theme
-        && let Ok(source) = fs::read_to_string(dirs.theme_dcol(theme))
+        && let Some(source) = hyde_files::text(&dirs.theme_dcol(theme))
     {
         return Some(source);
     }
@@ -100,20 +100,20 @@ fn read_source(dirs: &HydeDirs, theme: Option<&str>, recolour: Recolour) -> Opti
 /// decides whether the palette is mirrored, and a wrong answer inverts the
 /// whole bar.
 fn color_scheme(dirs: &HydeDirs, theme: Option<&str>) -> Option<String> {
-    let override_source = fs::read_to_string(dirs.hyprland_override()).unwrap_or_default();
+    let override_source = hyde_files::text_or_empty(&dirs.hyprland_override());
 
     if let Some(scheme) = hypr_vars::value_of(&override_source, COLOR_SCHEME) {
         return Some(scheme);
     }
 
     if let Some(theme) = theme
-        && let Ok(source) = fs::read_to_string(dirs.hypr_theme(theme))
+        && let Some(source) = hyde_files::text(&dirs.hypr_theme(theme))
         && let Some(scheme) = hypr_vars::value_of(&source, COLOR_SCHEME)
     {
         return Some(scheme);
     }
 
-    let shipped = fs::read_to_string(dirs.env_theme()).unwrap_or_default();
+    let shipped = hyde_files::text_or_empty(&dirs.env_theme());
 
     shell_vars::value_of(&shipped, COLOR_SCHEME)
 }

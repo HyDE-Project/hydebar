@@ -1,12 +1,9 @@
 //! The `HyDE` state snapshot and the entry points that read it from disk.
 
-use std::{
-    fs,
-    path::{Path, PathBuf}
-};
+use std::path::{Path, PathBuf};
 
 use super::themes;
-use crate::shell_vars as staterc;
+use crate::{hyde_files, shell_vars as staterc};
 
 /// Key the active theme is recorded under.
 const THEME_KEY: &str = "HYDE_THEME";
@@ -80,7 +77,7 @@ impl HydeState {
 /// fields it feeds.
 #[must_use]
 pub fn load_from(state_dir: &Path, config_dir: &Path) -> HydeState {
-    let source = fs::read_to_string(state_dir.join("hyde").join("staterc")).unwrap_or_default();
+    let source = hyde_files::text_or_empty(&state_dir.join("hyde").join("staterc"));
     let installed = themes::installed(&config_dir.join("hyde").join("themes"));
 
     HydeState::parse(&source, installed)

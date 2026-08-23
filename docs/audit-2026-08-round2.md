@@ -159,12 +159,16 @@ inside each section; a checked box means the fix has landed on `main`.
   to hold, every read is behind a named function and covered by tests against
   a temporary directory, so a port would be plumbing without a second
   implementation to justify it.
-- [ ] **Config failures collapse into silence.** Numeric appearance values
+- [x] **Config failures collapse into silence.** Numeric appearance values
   are now range-checked with named refusals — a zero scale, a negative
   font or a twelvefold opacity is rejected with the field and the allowed
-  range, and the reload keeps the last valid configuration. Still open:
-  layout and theme reads folding errors into `None`, and unknown keys
-  passing unnoticed.
+  range, and the reload keeps the last valid configuration. An unknown key
+  is named where it stands. Every desktop file the bar reads goes through
+  `proto/src/hyde_files.rs`, which draws the line the readers could not: a
+  file that is not there is silence, because a machine without `HyDE`, or
+  one never themed, is missing most of them — and a file that is there and
+  still refuses is named in the journal at its own path, so a wrong owner
+  or a vanished mount no longer reads as an unthemed desktop.
 - [x] **Errors are strings at heart.** One hundred and sixty of the sites
   now go through `services/bus.rs`, which reads the D-Bus error name the peer
   raised and answers with the kind it stands for — a refusal, an absence, a
