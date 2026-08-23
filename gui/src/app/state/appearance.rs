@@ -144,6 +144,7 @@ impl App {
     }
 
     #[must_use]
+    /// How many entries the bar draws across its three sections.
     pub fn get_all_modules_count(&self) -> usize {
         let count_modules = |modules_def: &[ModuleDef]| -> usize {
             modules_def

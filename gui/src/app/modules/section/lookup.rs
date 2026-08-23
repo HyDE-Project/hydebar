@@ -7,6 +7,10 @@ use crate::app::state::{App, Message};
 
 impl App {
     #[must_use]
+    /// The entry standing at `index` in the whole bar, drawn for the keyboard.
+    ///
+    /// Counted across the three sections in the order they are written, which
+    /// is the order the keyboard selection walks them in.
     pub fn get_module_at_index(
         &self,
         index: usize,
@@ -44,6 +48,7 @@ impl App {
     }
 
     #[must_use]
+    /// Every stream the entries of one section produce on their own.
     pub fn modules_subscriptions(&self, modules_def: &[ModuleDef]) -> Vec<Subscription<Message>> {
         let mut subscriptions = Vec::new();
 

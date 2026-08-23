@@ -9,6 +9,7 @@ use super::super::state::{App, Message};
 
 impl App {
     #[must_use]
+    /// Draws whatever this surface is: the bar itself, or a menu it opened.
     pub fn view(&self, id: Id) -> Element<'_, Message> {
         match self.outputs.has(id) {
             Some(HasOutput::Main) => self.bar_surface(id),

@@ -1,9 +1,19 @@
+//! The bar itself: the state machine every surface renders from, and the
+//! composition that turns a configuration into the three sections of a bar.
+//!
+//! Modules live in the core crate and know nothing of this one. What happens
+//! here is wiring: registering a module while the layout hosts it, dispatching
+//! a press to whoever answers it, and assembling the elements the modules
+//! return into the islands the compositor is handed.
+
 #![cfg_attr(coverage_nightly, feature(coverage_attribute))]
+#![warn(missing_docs)]
 use flexi_logger::LogSpecification;
 
 mod centerbox;
 mod views;
 
+/// The bar's state machine: what it holds, how it answers, what it draws.
 pub mod app;
 
 pub use app::{App, Message};

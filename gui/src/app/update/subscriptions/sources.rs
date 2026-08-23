@@ -41,6 +41,7 @@ impl App {
         .map(Self::config_event)
     }
 
+    /// Every stream the bar listens to while it runs.
     pub fn subscription(&self) -> Subscription<Message> {
         let mut subscriptions = vec![
             bus::subscription(self.bus_receiver.clone()).map(Message::BusFlushed),

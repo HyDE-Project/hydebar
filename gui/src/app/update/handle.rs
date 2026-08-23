@@ -19,6 +19,7 @@ static SHOT: AtomicBool = AtomicBool::new(false);
 static SHOT_ASKED: LazyLock<bool> = LazyLock::new(|| std::env::var_os("HYDEBAR_SHOT").is_some());
 
 impl App {
+    /// Answers one message, and says what should happen next.
     pub fn update(&mut self, message: Message) -> Task<Message> {
         if *SHOT_ASKED
             && !SHOT.load(Ordering::Relaxed)

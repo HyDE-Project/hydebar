@@ -48,6 +48,7 @@ pub enum Leaving {
     Screen(Option<String>)
 }
 
+/// Everything the bar is, at this moment, on every screen it stands on.
 pub struct App {
     pub(crate) config_path: PathBuf,
     pub(crate) logger: LoggerHandle,
@@ -119,38 +120,66 @@ pub struct App {
     /// modules leave is asked of the compositor rather than assumed. Absent
     /// until the first answer, which reads as a strip at the top.
     pub(crate) strip_rows: HashMap<String, f32>,
+    /// The configuration in force.
     pub config: Arc<Config>,
+    /// The screens the bar stands on, and the surfaces it holds on them.
     pub outputs: Outputs,
+    /// Whether the bar currently holds the keyboard.
     pub navigation_mode: bool,
+    /// Which entry the keyboard selection rests on, while it holds it.
     pub focused_module_index: Option<usize>,
+    /// Bar entry running the launcher the desktop is configured with.
     pub app_launcher: CommandButton,
+    /// The modules the user wrote, by the key each is named under.
     pub custom: HashMap<String, Custom>,
+    /// Bar entry counting what is waiting to be installed.
     pub updates: Updates,
+    /// Bar entry opening the clipboard history.
     pub clipboard: CommandButton,
+    /// Bar entry drawing the compositor’s workspaces.
     pub workspaces: Workspaces,
+    /// Bar entry naming the window holding focus.
     pub window_title: WindowTitle,
+    /// Bar entry reading the machine, and the sample every readout shares.
     pub system_info: SystemInfo,
+    /// Bar entry naming the keyboard layout in force.
     pub keyboard_layout: KeyboardLayout,
+    /// Bar entry naming the compositor submap the keyboard is in.
     pub keyboard_submap: KeyboardSubmap,
+    /// Bar entry holding the icons applications registered.
     pub tray: TrayModule,
+    /// Bar entry listing the open windows.
     pub taskbar: Taskbar,
     /// The canvas the bar unfolds into on a screen holding no window.
     pub desk: Desk,
+    /// Bar entry stating the date and the time.
     pub clock: Clock,
+    /// The calendar the clock opens.
     pub calendar: Calendar,
+    /// Bar entry opening the menu the desktop publishes.
     pub hyde_menu: HydeMenu,
+    /// Bar entry reading the charge and the power source.
     pub battery: Battery,
+    /// Bar entry warning while the microphone, camera or screen is read.
     pub privacy: Privacy,
+    /// Bar entry gathering the quick settings, and the services behind them.
     pub control_center: ControlCenter,
+    /// Bar entry naming what is playing.
     pub media_player: MediaPlayer,
+    /// Bar entry holding the notices that arrived.
     pub notifications: Notifications,
+    /// Bar entry taking a picture of the screen.
     pub screenshot: Screenshot,
+    /// Bar entry opening the window the bar is configured from.
     pub settings: Settings,
     /// Bar entry choosing the desktop theme, and the one holder of a running
     /// switch.
     pub themes: Themes,
+    /// Bar entry stepping through the wallpapers of the theme in force.
     pub wallpaper: Wallpaper,
+    /// Bar entry stepping through the layouts the desktop ships.
     pub bar_layout: hydebar_core::modules::bar_layout::BarLayout,
+    /// Bar entry reading the weather where the machine stands.
     pub weather: Weather,
     /// Notifications currently shown as popups.
     pub notification_popups: Vec<notifications_popup::Popup>,

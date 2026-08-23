@@ -40,6 +40,11 @@ type AppDependencies = (
 );
 
 impl App {
+    /// Builds the bar from what the binary has already opened for it.
+    ///
+    /// Takes its dependencies as one tuple because this is the closure the
+    /// widget toolkit boots the application with, and that closure is handed
+    /// exactly one value.
     pub fn new(
         (
             logger,

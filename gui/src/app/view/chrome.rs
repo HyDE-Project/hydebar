@@ -10,16 +10,19 @@ use super::super::state::{App, Message};
 
 impl App {
     #[must_use]
+    /// The name the compositor is told to call a surface.
     pub fn title(&self, _id: Id) -> String {
         String::from("hydebar")
     }
 
     #[must_use]
+    /// The palette a surface is drawn with.
     pub fn theme(&self, _id: Id) -> Theme {
         self.theme_cache.clone()
     }
 
     #[must_use]
+    /// The ground a surface is painted on, which is nothing at all.
     pub fn style(&self, theme: &Theme) -> Style {
         Style {
             background_color: Color::TRANSPARENT,
@@ -28,6 +31,7 @@ impl App {
     }
 
     #[must_use]
+    /// How much the renderer magnifies a surface.
     pub const fn scale_factor(&self, _id: Id) -> f64 {
         self.appearance().scale_factor
     }
