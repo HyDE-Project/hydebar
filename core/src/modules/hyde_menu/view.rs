@@ -162,4 +162,39 @@ mod tests {
             Some(OnModulePress::ToggleMenu(MenuType::HydeMenu))
         ));
     }
+
+    #[test]
+    fn a_read_desktop_puts_its_own_glyph_on_the_entry() {
+        let mut menu = HydeMenu::default();
+
+        assert_eq!(menu.glyph, None, "nothing has been read yet");
+
+        menu.update(super::super::Message::Loaded {
+            glyph:   Some("\u{f035b}".to_owned()),
+            actions: std::collections::HashMap::new(),
+            tree:    Vec::new()
+        });
+
+        assert_eq!(
+            menu.glyph.as_deref(),
+            Some("\u{f035b}"),
+            "the entry wears what the desktop's own module states, not a stand-in"
+        );
+    }
+
+    #[test]
+    fn a_desktop_that_states_no_glyph_leaves_the_bar_its_own() {
+        let mut menu = HydeMenu::default();
+
+        menu.update(super::super::Message::Loaded {
+            glyph:   Some("   ".to_owned()),
+            actions: std::collections::HashMap::new(),
+            tree:    Vec::new()
+        });
+
+        assert!(
+            menu.bar_view::<()>(&IconTheme::default()).is_some(),
+            "a blank glyph falls back to the bar's own icon rather than drawing nothing"
+        );
+    }
 }

@@ -31,6 +31,7 @@ impl App {
             ModuleEvent::Desk(message) => Message::Desk(message),
             ModuleEvent::Clock(message) => Message::Clock(message),
             ModuleEvent::Weather(message) => Message::Weather(message),
+            ModuleEvent::HydeMenu(message) => Message::HydeMenu(message),
             ModuleEvent::Battery(message) => Message::Battery(message),
             ModuleEvent::Privacy(message) => Message::Privacy(message),
             ModuleEvent::ControlCenter(message) => Message::ControlCenter(message),

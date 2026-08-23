@@ -113,6 +113,8 @@ pub enum ModuleEvent {
     Notifications(modules::notifications::NotificationsMessage),
     /// Something happened in the weather.
     Weather(modules::weather::Message),
+    /// The desktop's menu files were read.
+    HydeMenu(modules::hyde_menu::Message),
     /// Something happened in a module the user wrote.
     Custom {
         /// The key the module is named under.

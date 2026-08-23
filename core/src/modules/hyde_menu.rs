@@ -6,15 +6,17 @@
 //! is stated here — and renders the tree in the bar's own window: submenus
 //! unfold in place, a leaf runs its command and the window closes.
 //!
-//! One folder, three rooms: [`definition`] reads the desktop's module table,
+//! One folder, four rooms: [`definition`] reads the desktop's module table,
 //! [`tree`] parses its menu file, [`view`] draws the bar entry and the tree
-//! it opens. The root holds the state and the messages.
+//! it opens, and [`module`] reads the two files when the bar wires the menu
+//! up. The root holds the state and the messages.
 
 use iced::Element;
 
-use crate::modules::Module;
+use crate::ModuleEventSender;
 
 mod definition;
+mod module;
 mod tree;
 mod view;
 
@@ -69,7 +71,9 @@ pub struct HydeMenu {
     /// Glyph the bar entry shows, as the desktop's module states it.
     glyph:    Option<String>,
     /// Identifiers of the branches currently unfolded.
-    expanded: std::collections::HashSet<String>
+    expanded: std::collections::HashSet<String>,
+    /// Where a read done off the drawing thread reports back.
+    sender:   Option<ModuleEventSender<Message>>
 }
 
 impl HydeMenu {
@@ -83,33 +87,13 @@ impl HydeMenu {
         self.expanded.clear();
 
         iced::Task::perform(
-            async {
-                tokio::task::spawn_blocking(|| {
-                    let Some(definition) = definition::read_definition() else {
-                        log::warn!("the desktop ships no menu definition, the menu stays empty");
-                        return None;
-                    };
-
-                    let tree = definition
-                        .menu_file
-                        .as_deref()
-                        .and_then(tree::read_tree)
-                        .unwrap_or_default();
-
-                    Some((definition.glyph, definition.actions, tree))
-                })
-                .await
-                .ok()
-                .flatten()
-            },
+            async { tokio::task::spawn_blocking(read).await.ok() },
             |loaded| {
-                let (glyph, actions, tree) = loaded.unwrap_or_default();
-
-                Message::Loaded {
-                    glyph,
-                    actions,
-                    tree
-                }
+                loaded.unwrap_or_else(|| Message::Loaded {
+                    glyph:   None,
+                    actions: std::collections::HashMap::new(),
+                    tree:    Vec::new()
+                })
             }
         )
     }
@@ -156,20 +140,30 @@ impl HydeMenu {
     }
 }
 
-impl<M> Module<M> for HydeMenu
-where
-    M: 'static
-{
-    type RegistrationData<'a> = ();
+/// Reads the desktop's two menu files, as the message that folds them in.
+///
+/// Blocking on purpose — the caller decides which pool it runs on — and one
+/// function rather than two, so the read the bar does on its own and the read
+/// an opening menu asks for can never disagree about where the menu lives.
+fn read() -> Message {
+    let Some(definition) = definition::read_definition() else {
+        log::warn!("the desktop ships no menu definition, the menu stays empty");
 
-    fn register(
-        &mut self,
-        _ctx: &crate::ModuleContext,
-        _data: Self::RegistrationData<'_>
-    ) -> Result<(), super::ModuleError> {
-        self.reload();
+        return Message::Loaded {
+            glyph:   None,
+            actions: std::collections::HashMap::new(),
+            tree:    Vec::new()
+        };
+    };
 
-        Ok(())
+    Message::Loaded {
+        glyph:   definition.glyph,
+        actions: definition.actions,
+        tree:    definition
+            .menu_file
+            .as_deref()
+            .and_then(tree::read_tree)
+            .unwrap_or_default()
     }
 }
 
