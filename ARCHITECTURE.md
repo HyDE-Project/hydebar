@@ -108,6 +108,16 @@ and `view`, and a submodule that outgrows its own file nests further —
 `system_info/` is the worked example, with `sensors/` and `window/` inside
 it. The path a caller imports never changes when a file becomes a directory.
 
+### One shape the bar can hold
+
+`core/src/modules/bar.rs` states `BarContext` — everything an entry may want
+to draw itself — and `BarModule`, the object-safe shape the bar holds an entry
+in. A view data shape says how to take itself out of the context once, in
+`modules/bar/shapes.rs`, and a blanket implementation turns every module that
+does into a `BarModule`; no module writes wiring of its own. The bar names the
+module behind an entry once, in `gui/src/app/modules/dispatch/owner.rs`, and
+asks it for its subscription, its cadence and its samples through that.
+
 ### Where module design is heading
 
 The trait is a transitional shape. The target is the battery pattern: data
