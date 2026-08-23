@@ -5,6 +5,7 @@ use masterror::AppError;
 
 use crate::{attention::PollSchedule, menu::MenuType};
 
+pub mod bar;
 pub mod bar_layout;
 pub mod battery;
 pub mod calendar;

@@ -3,7 +3,7 @@
 use hydebar_core::{attention::PollSchedule, config::ModuleName};
 use log::error;
 
-use crate::app::state::{App, Message};
+use crate::app::state::App;
 
 impl App {
     /// The cadences `module_name` declared, if it can be polled at all.
@@ -14,39 +14,18 @@ impl App {
     /// of them the user is looking at, the shared readouts are what want
     /// refreshing.
     pub(crate) fn module_poll_schedule(&self, module_name: &ModuleName) -> Option<PollSchedule> {
-        use hydebar_core::modules::Module;
-
-        match module_name {
-            ModuleName::ControlCenter | ModuleName::Network => {
-                Module::<Message>::poll_schedule(&self.control_center)
-            }
-            ModuleName::SystemInfo
-            | ModuleName::Cpu
-            | ModuleName::Memory
-            | ModuleName::CpuTemp
-            | ModuleName::GpuTemp => Module::<Message>::poll_schedule(&self.system_info),
-            _ => None
-        }
+        self.module_owner(module_name)?.poll_schedule()
     }
 
     /// Takes one sample of `module_name`.
     pub(crate) fn poll_module(&mut self, module_name: &ModuleName) {
-        use hydebar_core::modules::Module;
-
         let ctx = self.module_context.clone();
-        let outcome = match module_name {
-            ModuleName::ControlCenter | ModuleName::Network => {
-                Module::<Message>::poll(&mut self.control_center, &ctx)
-            }
-            ModuleName::SystemInfo
-            | ModuleName::Cpu
-            | ModuleName::Memory
-            | ModuleName::CpuTemp
-            | ModuleName::GpuTemp => Module::<Message>::poll(&mut self.system_info, &ctx),
-            _ => Ok(())
+
+        let Some(owner) = self.module_owner_mut(module_name) else {
+            return;
         };
 
-        if let Err(err) = outcome {
+        if let Err(err) = owner.poll(&ctx) {
             error!("failed to poll {module_name:?} module: {err}");
         }
     }
