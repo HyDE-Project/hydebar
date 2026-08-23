@@ -1,9 +1,10 @@
 //! Which module owns a bar entry, stated once for everything asked of it.
 //!
-//! Several entries are drawn from one module: the standalone processor and
-//! memory readouts render from the system monitor's sample, and the audio,
-//! network, bluetooth and power entries from the control centre's services.
-//! Several others are drawn by a plain function and own no module at all.
+//! Ownership here is ownership of background work, not of drawing: every
+//! entry draws itself. Several share one worker — the standalone processor
+//! and memory readouts sample with the system monitor, and the audio,
+//! network, bluetooth and power entries with the control centre's services —
+//! and many own none at all.
 //!
 //! Subscriptions, sampling cadences and samples are all asked of whatever owns
 //! the entry, so the mapping is stated here once and the three questions are
@@ -21,11 +22,12 @@ type Owner<'a> = &'a dyn BarModule<Message>;
 type OwnerMut<'a> = &'a mut dyn BarModule<Message>;
 
 impl App {
-    /// The module `module_name` is drawn from, where one owns it.
+    /// The module whose background work stands behind `module_name`, where
+    /// any does.
     ///
-    /// Answers [`None`] for an entry drawn by a plain function — the battery,
-    /// the temperatures, the desktop's own buttons — which owns no state to
-    /// subscribe to or sample.
+    /// Answers [`None`] for an entry that owns no work of its own — the
+    /// battery and the temperatures, which read from a shared sample, and the
+    /// pickers and buttons, which read the desktop only when pressed.
     pub(crate) fn module_owner(&self, module_name: &ModuleName) -> Option<Owner<'_>> {
         Some(match module_name {
             ModuleName::Custom(name) => self.declared_custom(name)?,

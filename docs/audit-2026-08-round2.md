@@ -142,11 +142,10 @@ inside each section; a checked box means the fix has landed on `main`.
   (`modules/bar.rs`) whose view data takes itself out of one context, so
   subscriptions, sampling cadences and samples are all asked of the one
   owner lookup in `app/modules/dispatch/owner.rs` rather than each
-  restating the roster. The view stays a table on purpose — half its arms
-  are plain render functions, which is where every module is headed — and
-  the desk panels, the hints and the registration rosters still enumerate
-  their own. Continue module by module, by the ledger in
-  `ARCHITECTURE.md`.
+  restating the roster. The view stays a table on purpose: every entry now
+  draws through a method of its own, so the table is one line per module
+  and nothing more. The desk panels, the hints and the registration
+  rosters still enumerate their own.
 - [x] **The GUI writes core module private state directly.** Menu-open
   preparation now goes through methods the modules own — `open_audio_menu`,
   `open_bluetooth_menu`, `close_submenu`, `refresh_brightness`,
