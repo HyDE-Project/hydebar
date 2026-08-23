@@ -1,4 +1,4 @@
-//! Adapter speaking to the Hyprland compositor through `hyprland-rs`.
+//! Adapter speaking to the Hyprland compositor through its own sockets.
 //!
 //! The client handle lives in [`client`], the port operations in [`port`],
 //! the translation of raw compositor records in [`snapshot`], the dispatcher

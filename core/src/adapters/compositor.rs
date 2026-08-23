@@ -8,5 +8,6 @@
 //! little of the compositor it actually asks for.
 
 pub mod command;
+pub mod events;
 pub mod query;
 pub mod records;

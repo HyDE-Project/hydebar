@@ -27,10 +27,9 @@ It is distributed in the hope that it will be useful, but WITHOUT ANY
 WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
 A PARTICULAR PURPOSE.
 
-The bar links the `hyprland` crate, which is GPL-3.0-or-later, and it belongs
-to a desktop that is itself GPL-3.0, so this is the licence the whole work can
-be handed on under. Parts of the code began in the ashell project under the
-MIT License, whose notice is kept in [LICENSE.MIT](LICENSE.MIT).
+The bar belongs to a desktop that is itself GPL-3.0, which is why it is handed
+on under the same terms. Parts of the code began in the ashell project under
+the MIT License, whose notice is kept in [LICENSE.MIT](LICENSE.MIT).
 
 ---
 

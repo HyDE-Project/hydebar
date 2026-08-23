@@ -74,11 +74,32 @@ pub fn batch<'a>(commands: impl IntoIterator<Item = &'a str>) -> Option<String> 
     request(&format!("[[BATCH]]{joined}"))
 }
 
+/// Name of the socket the compositor answers requests on.
+const REQUEST_SOCKET: &str = ".socket.sock";
+
+/// Name of the socket the compositor announces what happens on.
+const EVENT_SOCKET: &str = ".socket2.sock";
+
 /// Where the running compositor listens for requests.
 fn socket_path() -> Option<PathBuf> {
+    session_socket(REQUEST_SOCKET)
+}
+
+/// Where the running compositor announces what happens in the session.
+///
+/// Returns nothing when there is no compositor, which is the normal state
+/// under a different one and while the session is coming up.
+#[must_use]
+pub fn event_socket_path() -> Option<PathBuf> {
+    session_socket(EVENT_SOCKET)
+}
+
+/// The named socket of the running session, wherever the compositor put it.
+fn session_socket(name: &str) -> Option<PathBuf> {
     locate(
         &non_empty("HYPRLAND_INSTANCE_SIGNATURE")?,
-        non_empty("XDG_RUNTIME_DIR").as_deref()
+        non_empty("XDG_RUNTIME_DIR").as_deref(),
+        name
     )
 }
 
@@ -88,12 +109,12 @@ fn socket_path() -> Option<PathBuf> {
 /// directory is where every release before it did, and costs one `stat` to
 /// keep working. Taking both as arguments keeps the choice testable without a
 /// session to run in.
-fn locate(signature: &str, runtime: Option<&str>) -> Option<PathBuf> {
+fn locate(signature: &str, runtime: Option<&str>, name: &str) -> Option<PathBuf> {
     runtime
         .map(|runtime| PathBuf::from(runtime).join("hypr"))
         .into_iter()
         .chain(std::iter::once(PathBuf::from("/tmp/hypr")))
-        .map(|root| root.join(signature).join(".socket.sock"))
+        .map(|root| root.join(signature).join(name))
         .find(|path| path.exists())
 }
 
@@ -114,12 +135,15 @@ mod tests {
 
     #[test]
     fn a_session_that_left_no_socket_behind_is_not_reached_for() {
-        assert_eq!(locate("no_such_session", Some("/run/user/1000")), None);
+        assert_eq!(
+            locate("no_such_session", Some("/run/user/1000"), REQUEST_SOCKET),
+            None
+        );
     }
 
     #[test]
     fn a_session_without_a_runtime_directory_still_looks_in_the_old_place() {
-        assert_eq!(locate("no_such_session", None), None);
+        assert_eq!(locate("no_such_session", None, REQUEST_SOCKET), None);
     }
 
     #[test]
@@ -127,12 +151,16 @@ mod tests {
         let base = std::env::temp_dir().join("hydebar-ipc-test");
         let session = base.join("hypr").join("live_session");
         std::fs::create_dir_all(&session).expect("a directory to hold the socket");
-        let socket = session.join(".socket.sock");
+        let socket = session.join(REQUEST_SOCKET);
         std::fs::write(&socket, b"").expect("a file standing in for the socket");
+        let events = session.join(EVENT_SOCKET);
+        std::fs::write(&events, b"").expect("a file standing in for the event socket");
 
-        let found = locate("live_session", base.to_str());
+        let found = locate("live_session", base.to_str(), REQUEST_SOCKET);
+        let found_events = locate("live_session", base.to_str(), EVENT_SOCKET);
 
         std::fs::remove_dir_all(&base).ok();
         assert_eq!(found, Some(socket));
+        assert_eq!(found_events, Some(events));
     }
 }

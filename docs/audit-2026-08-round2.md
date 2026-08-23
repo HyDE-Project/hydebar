@@ -188,8 +188,11 @@ inside each section; a checked box means the fix has landed on `main`.
 
 ## Standing constraints
 
-Typed Hyprland IPC remains blocked by the upstream crate (monitor data
-lacks physical dimensions; the control colour type has no public
-constructor), and the compositor-driven frame clock is blocked by the
-layer-shell fork (redraw events never reach subscriptions). Revisit both
-on their next releases.
+The compositor-driven frame clock is blocked by the layer-shell fork, whose
+redraw events never reach subscriptions. Revisit on its next release.
+
+Typed compositor IPC no longer stands on anyone else's release: the bar
+reads the compositor's own sockets — questions and commands through
+`compositor_ipc`, announcements through `adapters/compositor/events.rs` —
+and models only the fields it draws, so a record can carry whatever the
+answer holds rather than whatever a general purpose crate chose to model.

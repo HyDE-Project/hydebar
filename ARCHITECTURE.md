@@ -35,7 +35,7 @@
 │  ┌────────────────────────────────┐  │
 │  │ Services (services/)           │  │
 │  │  - D-Bus, PipeWire, Wayland,   │  │
-│  │    Hyprland adapters           │  │
+│  │    compositor adapters         │  │
 │  └────────────────────────────────┘  │
 └──────────────┬───────────────────────┘
                │

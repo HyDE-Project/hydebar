@@ -324,7 +324,7 @@ Yes! Contributions welcome. See [Contributing](#contributing) section below.
 
 - **Language:** 100% Rust (edition 2024, rust-version 1.97)
 - **GUI:** iced via the `iced_layershell` fork (Wayland layer-shell)
-- **IPC:** Hyprland socket (hyprland-rs)
+- **IPC:** the compositor's own sockets, read directly
 - **D-Bus:** zbus for system integration
 - **Build:** Cargo workspace (`hydebar-proto`, `hydebar-core`, `hydebar-gui`, `hydebar-app`)
 

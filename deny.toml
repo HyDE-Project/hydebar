@@ -49,6 +49,10 @@ allow-git = [
 # Every licence the dependency graph carries today. A crate arriving under a
 # licence not named here fails the check, so the question is answered once,
 # in review, rather than after a release.
+# `GPL-2.0-only` is deliberately absent. It cannot be combined with the
+# licence this workspace is handed on under, and the one crate that names it
+# offers `Apache-2.0` in the same breath — leaving it out of this list is what
+# makes the check take the half that works.
 allow = [
   "0BSD",
   "Apache-2.0",
@@ -58,7 +62,6 @@ allow = [
   "BSL-1.0",
   "CC0-1.0",
   "CDLA-Permissive-2.0",
-  "GPL-2.0-only",
   "GPL-3.0-or-later",
   "ISC",
   "LGPL-2.1-or-later",

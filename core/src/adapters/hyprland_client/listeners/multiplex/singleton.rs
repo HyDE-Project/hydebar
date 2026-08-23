@@ -14,11 +14,14 @@ use hydebar_proto::ports::hyprland::{
 use log::warn;
 use tokio::{sync::broadcast, time::sleep};
 
-use super::wiring::build_listener;
-use crate::adapters::hyprland_client::{
-    HyprlandClient,
-    config::HyprlandClientConfig,
-    listeners::{runtime, supervisor::restart_delay}
+use super::wiring::dispatch;
+use crate::adapters::{
+    compositor::events::EventStream,
+    hyprland_client::{
+        HyprlandClient,
+        config::HyprlandClientConfig,
+        listeners::{runtime, supervisor::restart_delay}
+    }
 };
 
 /// Events a slow subscriber may fall behind before it starts losing them.
@@ -110,14 +113,19 @@ async fn supervise(
     let mut attempt = 0_u32;
 
     loop {
-        let mut listener = build_listener(&mux, &client);
         let started = tokio::time::Instant::now();
 
-        match listener.start_listener_async().await {
-            Ok(()) => warn!(
-                target: "hydebar::hyprland",
-                "compositor connection closed, reconnecting"
-            ),
+        match EventStream::connect().await {
+            Ok(mut events) => {
+                while let Some(event) = events.next().await {
+                    dispatch(event, &mux, &client).await;
+                }
+
+                warn!(
+                    target: "hydebar::hyprland",
+                    "compositor connection closed, reconnecting"
+                );
+            }
             Err(err) => warn!(
                 target: "hydebar::hyprland",
                 "compositor connection failed: {err}"
