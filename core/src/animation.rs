@@ -20,5 +20,5 @@ mod wave;
 
 pub use hover::HoverFades;
 pub use spring::{GENTLE, SNAPPY, STANDARD, SWEEP, Spring};
-pub use unfold::{Unfold, flare, landed, share};
+pub use unfold::{Journey, Unfold, flare, landed, share};
 pub use wave::sweep;

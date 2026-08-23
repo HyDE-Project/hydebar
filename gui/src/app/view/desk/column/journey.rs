@@ -23,6 +23,34 @@ const FAN: f32 = 0.0;
 const NEAREST: f32 = 0.4;
 
 impl App {
+    /// The journey of the block standing `within` places down a column: how
+    /// far it has to go, and when its turn to go comes.
+    pub(crate) fn journey(within: usize, deepest: usize) -> hydebar_core::animation::Journey {
+        hydebar_core::animation::Journey {
+            reach: Self::reach(within, deepest),
+            place: Self::place(within, deepest)
+        }
+    }
+
+    /// Where the block standing `within` places down a column comes in the
+    /// order the bar leaves in, zero first away and one last.
+    ///
+    /// The same figure the reach is drawn from, said plainly: the block that
+    /// has least to go goes first, so the run down a column is also the run
+    /// out of the strip. A bar with one block in it has that block last,
+    /// which is also first.
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "a layout holds a handful of units"
+    )]
+    pub(crate) fn place(within: usize, deepest: usize) -> f32 {
+        if deepest < 2 {
+            return 1.0;
+        }
+
+        (within as f32 / (deepest - 1) as f32).clamp(0.0, 1.0)
+    }
+
     /// How far the block standing `within` places down a column has to go.
     ///
     /// Against the block that goes furthest, which is the last place of the
@@ -33,7 +61,7 @@ impl App {
         clippy::cast_precision_loss,
         reason = "a layout holds a handful of units"
     )]
-    pub(crate) fn reach(within: usize, deepest: usize) -> f32 {
+    fn reach(within: usize, deepest: usize) -> f32 {
         if deepest < 2 {
             return 1.0;
         }

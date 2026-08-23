@@ -222,8 +222,8 @@ mod tests {
             "nothing of the background has gone while every island is still in the air"
         );
 
-        let nearest = hydebar_core::animation::landed(App::reach(0, app.deepest_column()));
-        let furthest = hydebar_core::animation::landed(1.0);
+        let nearest = hydebar_core::animation::landed(App::journey(0, app.deepest_column()));
+        let furthest = hydebar_core::animation::landed(hydebar_core::animation::Journey::whole());
         let mut wash = 1.0;
 
         for _ in 0..256 {

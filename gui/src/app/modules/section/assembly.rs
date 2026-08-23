@@ -29,7 +29,8 @@ impl App {
         modules_def: &'a [ModuleDef],
         id: Id,
         opacity: f32,
-        island_offset: usize
+        island_offset: usize,
+        reads_towards_the_centre: bool
     ) -> Element<'a, Message> {
         use hydebar_core::components::archipelago::{Archipelago, PillPaint};
         use hydebar_proto::config::AppearanceStyle;
@@ -56,6 +57,10 @@ impl App {
         );
 
         let total = self.island_count().max(1) as f32;
+        let places = modules_def.iter().flat_map(Self::members).count();
+        let deepest = self.deepest_column();
+        let screen = self.outputs.screen_of(id).flatten();
+        let mut place = 0usize;
         let mut island_index = 0usize;
         let mut occurrences: std::collections::HashMap<hydebar_core::config::ModuleName, u64> =
             std::collections::HashMap::new();
@@ -76,7 +81,14 @@ impl App {
             let mut seated = false;
 
             for module_name in names {
-                if self.has_left_the_strip(self.outputs.screen_of(id).flatten()) {
+                let within = if reads_towards_the_centre {
+                    places.saturating_sub(place + 1)
+                } else {
+                    place
+                };
+                place += 1;
+
+                if self.has_left_the_strip(screen, Self::journey(within, deepest)) {
                     continue;
                 }
 

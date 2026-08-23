@@ -4,6 +4,8 @@
 //! and every one of them is settled here so a frame showing both of them, or
 //! neither, cannot be drawn.
 
+use hydebar_core::animation::Journey;
+
 use super::super::super::super::state::App;
 
 impl App {
@@ -26,7 +28,7 @@ impl App {
             || self.desk_clocks.values().any(|clock| clock.is_running())
     }
 
-    /// Reports whether the islands have left the strip of `screen`.
+    /// Reports whether the block of `journey` has left the strip of `screen`.
     ///
     /// The one question the strip and the canvas both ask, so that exactly
     /// one of them draws a module: the strip keeps what has not set off, and
@@ -34,18 +36,23 @@ impl App {
     /// own terms, is how a module came to be drawn on the canvas underneath a
     /// strip that was still standing over it.
     ///
-    /// Asked of the whole bar rather than of one module, because the whole
-    /// bar leaves at once: an island that waited its turn while its
-    /// neighbours flew is the thing this unfolding does not do.
+    /// Asked of one block rather than of the whole bar, because the bar
+    /// leaves in a run: the block nearest its place goes first and the
+    /// furthest last, and each is handed over on the frame its own turn
+    /// comes.
     #[must_use]
-    pub(crate) fn has_left_the_strip(&self, screen: Option<&str>) -> bool {
-        hydebar_core::animation::share(self.desk_presence(screen), 1.0).0 > 0.0
+    pub(crate) fn has_left_the_strip(&self, screen: Option<&str>, journey: Journey) -> bool {
+        hydebar_core::animation::share(self.desk_presence(screen), journey).0 > 0.0
     }
 
-    /// Reports whether the strip still has its islands standing on it.
+    /// Reports whether the strip still has an island of its own standing.
+    ///
+    /// Asked of the last block to go: while it is still there the strip has
+    /// something to draw, and a strip that stopped drawing at the first
+    /// departure would take the rest of the run with it.
     #[must_use]
     pub(crate) fn strip_still_holds(&self, screen: Option<&str>) -> bool {
-        !self.has_left_the_strip(screen)
+        !self.has_left_the_strip(screen, Journey::whole())
     }
 
     /// How much of the strip's own background is still painted on `screen`.
@@ -75,8 +82,8 @@ impl App {
             return self.desk_returning.progress();
         }
 
-        let nearest = hydebar_core::animation::landed(Self::reach(0, self.deepest_column()));
-        let furthest = hydebar_core::animation::landed(1.0);
+        let nearest = hydebar_core::animation::landed(Self::journey(0, self.deepest_column()));
+        let furthest = hydebar_core::animation::landed(Journey::whole());
         let span = (furthest - nearest).max(f32::EPSILON);
 
         1.0 - ((self.desk_presence(screen) - nearest) / span).clamp(0.0, 1.0)

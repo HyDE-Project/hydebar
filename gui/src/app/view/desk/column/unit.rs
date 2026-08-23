@@ -8,7 +8,7 @@ use iced::{
 
 use super::super::{
     super::super::state::{App, Message},
-    blocks::{self, Ink, Side}
+    blocks::{self, Along, Ink, Side}
 };
 
 /// How far the light of a moving block reaches at its brightest, in pixels.
@@ -92,11 +92,11 @@ impl App {
         id: Id,
         side: Side,
         ink: Ink,
-        bloom: f32,
-        glow: f32
+        along: Along
     ) -> Option<Element<'a, Message>> {
-        let island = self.desk_island(unit, id, glow, bloom)?;
-        let opened: Vec<Element<'a, Message>> = self.desk_opened(unit, side, ink, bloom);
+        let island = self.desk_island(unit, id, along.glow, along.bloom)?;
+        let island = self.awaiting_its_turn(island, along.travel);
+        let opened: Vec<Element<'a, Message>> = self.desk_opened(unit, side, ink, along.bloom);
 
         if opened.is_empty() {
             return Some(island);
@@ -112,6 +112,28 @@ impl App {
             .max_width(ink.size * MEASURE)
             .into()
         )
+    }
+
+    /// The island of a unit that has not set off yet: its room, and nothing
+    /// in it.
+    ///
+    /// The strip is still drawing this module, and two of it on one screen is
+    /// the one frame this must not draw. Its place is held all the same, so
+    /// the column is laid out from the first frame of the unfolding and
+    /// nothing below it moves when its turn comes.
+    fn awaiting_its_turn<'a>(
+        &self,
+        island: Element<'a, Message>,
+        travel: f32
+    ) -> Element<'a, Message> {
+        if travel > 0.0 {
+            return island;
+        }
+
+        iced::widget::Space::new()
+            .width(Length::Fill)
+            .height(Length::Fixed(self.appearance().height.unwrap_or(ISLAND)))
+            .into()
     }
 
     /// Whether the unit draws anything at all on this screen.

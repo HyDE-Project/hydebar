@@ -27,7 +27,7 @@ use iced::{
 
 use super::{
     super::super::state::{App, Message},
-    blocks::{Ink, Side}
+    blocks::{Along, Ink, Side}
 };
 
 /// The curve the leaving runs on: away quickly, off the edge slowly.
@@ -58,12 +58,12 @@ impl App {
     /// are drawn away from them while they travel, by the journey each one
     /// carries, and nothing else moves.
     ///
-    /// Every block of the column carries the same journey, so the whole bar
-    /// leaves at one instant and none of them waits on another. They are kept
-    /// apart by where they go rather than by when they go: each drops to its
-    /// own level down the very line it stood on, which no other block is on,
-    /// and only then closes in along its lane, by which time the levels are
-    /// already a column apart.
+    /// Every block carries its own journey: the one with least to go leaves
+    /// first and the furthest last, so the strip empties as a run down the
+    /// column rather than in one movement. They are kept apart by where they
+    /// go as well as by when: each drops to its own level down the very line
+    /// it stood on, which no other block is on, and only then closes in along
+    /// its lane, by which time the levels are already a column apart.
     ///
     /// The gaps are the same size whatever the column holds. Pushing the far
     /// end of a short column down to the corner leaves a hole through the
@@ -102,15 +102,14 @@ impl App {
                     .into_iter()
                     .filter_map(|within| {
                         let unit = order[within];
-                        let (travel, bloom) = hydebar_core::animation::share(
-                            unfolding,
-                            Self::reach(within, deepest)
-                        );
-                        let glow = hydebar_core::animation::flare(
-                            unfolding,
-                            Self::reach(within, deepest)
-                        );
-                        let block = self.desk_unit(unit, id, side, ink, bloom, glow)?;
+                        let journey = Self::journey(within, deepest);
+                        let (travel, bloom) = hydebar_core::animation::share(unfolding, journey);
+                        let along = Along {
+                            travel,
+                            bloom,
+                            glow: hydebar_core::animation::flare(unfolding, journey)
+                        };
+                        let block = self.desk_unit(unit, id, side, ink, along)?;
                         let travel = travel_of(travel, leaving);
 
                         #[expect(

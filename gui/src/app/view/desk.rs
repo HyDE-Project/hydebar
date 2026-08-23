@@ -141,7 +141,7 @@ impl App {
 
                         let (travel, bloom) = hydebar_core::animation::share(
                             unfolding,
-                            Self::reach(within, deepest)
+                            Self::journey(within, deepest)
                         );
 
                         Some(trails::Way {
@@ -194,6 +194,25 @@ mod tests {
     /// Sends a bar's canvas all the way out: travelled and written out.
     fn open(app: &mut App) {
         app.desk_clocks.entry(None).or_default().open();
+    }
+
+    /// The journey the clock of a test layout is on.
+    ///
+    /// The strip hands a module over on its own turn, so a test watching one
+    /// module has to ask about that module rather than about the bar.
+    fn clock_journey(app: &App) -> hydebar_core::animation::Journey {
+        use hydebar_core::config::ModuleName;
+
+        let (left, centre, right) = App::desk_columns(&app.config.modules);
+        let deepest = app.deepest_column();
+
+        for order in [&left, &centre, &right] {
+            if let Some(within) = order.iter().position(|unit| **unit == ModuleName::Clock) {
+                return App::journey(within, deepest);
+            }
+        }
+
+        hydebar_core::animation::Journey::whole()
     }
 
     /// Starts a bar's canvas travelling, one frame in.
@@ -418,25 +437,23 @@ mod tests {
 
     /// The two probes that tell which shape holds the screen.
     ///
-    /// The strip is asked for the hour in the format the configuration named,
-    /// which it draws whenever it draws at all. The canvas is asked for
-    /// either half of its unfolding: the modules it carries while they are
-    /// still travelling in their strip shape, or a block heading once they
-    /// have opened.
+    /// Which of the two shapes is drawing the clock, strip first.
+    ///
+    /// One module rather than the bar, because the bar leaves in a run: while
+    /// it passes, one module is still on the strip and its neighbour is
+    /// already on the canvas, and that is the whole point of the run. What
+    /// must never happen is either of them being drawn twice or not at all.
     fn shapes_on_screen(app: &App) -> (bool, bool) {
         let hour = app.clock.data().format(&app.config.clock.format);
 
         let strip = simulator(app.bar_surface(surface()))
             .find(hour.as_str())
             .is_ok();
-        let travelling = simulator(app.desk_surface(surface()))
+        let canvas = simulator(app.desk_surface(surface()))
             .find(hour.as_str())
             .is_ok();
-        let opened = simulator(app.desk_surface(surface()))
-            .find("MEMORY")
-            .is_ok();
 
-        (strip, travelling || opened)
+        (strip, canvas)
     }
 
     #[test]
@@ -483,28 +500,37 @@ mod tests {
     }
 
     #[test]
-    fn the_whole_bar_is_under_way_on_the_first_frame() {
+    fn the_bar_sets_off_in_a_run_and_is_away_by_the_end_of_it() {
+        use hydebar_core::animation::Journey;
+
         let mut app = test_app_with(|config| config.desk.enabled = true);
         set_off(&mut app);
 
-        assert!(
-            app.has_left_the_strip(None),
-            "no island stands waiting while its neighbours fly"
-        );
-
-        let hour = app.clock.data().format(&app.config.clock.format);
+        let deepest = app.deepest_column();
 
         assert!(
-            simulator(app.bar_surface(surface()))
-                .find(hour.as_str())
-                .is_err(),
-            "nothing of the bar is left standing on the strip"
+            app.has_left_the_strip(None, App::journey(0, deepest)),
+            "the block with least to go is still waiting on the first frame"
         );
+
+        if deepest > 1 {
+            assert!(
+                !app.has_left_the_strip(None, Journey::whole()),
+                "the furthest block left with the nearest one"
+            );
+        }
+
+        for _ in 0..256 {
+            if app.has_left_the_strip(None, Journey::whole()) {
+                break;
+            }
+
+            assert!(tick(&mut app), "the run passes before the clock stops");
+        }
+
         assert!(
-            simulator(app.desk_surface(surface()))
-                .find(hour.as_str())
-                .is_ok(),
-            "the canvas carries it from the first frame of the travel"
+            app.has_left_the_strip(None, Journey::whole()),
+            "the run never reached the last block"
         );
     }
 
@@ -531,8 +557,8 @@ mod tests {
                 .iter()
                 .position(|unit| **unit == hydebar_core::config::ModuleName::Memory)
                 .unwrap_or_default();
-            let reach = App::reach(watched, right.len());
-            let down = hydebar_core::animation::share(app.desk_presence(None), reach).1 > 0.0;
+            let journey = App::journey(watched, right.len());
+            let down = hydebar_core::animation::share(app.desk_presence(None), journey).1 > 0.0;
             let writing = on_screen(&app)
                 .find("MEMORY")
                 .ok()
@@ -562,7 +588,21 @@ mod tests {
 
     #[test]
     fn the_block_with_less_way_to_go_opens_first() {
-        let mut app = test_app_with(|config| config.desk.enabled = true);
+        // one column of two, so the two blocks being watched are a place
+        // apart rather than both heading columns of their own
+        let mut app = test_app_with(|config| {
+            config.desk.enabled = true;
+            config.modules.left = vec![
+                hydebar_proto::config::ModuleDef::Single(
+                    hydebar_core::config::ModuleName::AppLauncher
+                ),
+                hydebar_proto::config::ModuleDef::Single(
+                    hydebar_core::config::ModuleName::SystemInfo
+                ),
+            ];
+            config.modules.center = Vec::new();
+            config.modules.right = Vec::new();
+        });
         set_off(&mut app);
 
         let mut near = None;
@@ -577,11 +617,11 @@ mod tests {
                     .is_some()
             };
 
-            if near.is_none() && seen("SYSTEM") {
+            if near.is_none() && seen("APP LAUNCHER") {
                 near = Some(frame);
             }
 
-            if far.is_none() && seen("APP LAUNCHER") {
+            if far.is_none() && seen("SYSTEM") {
                 far = Some(frame);
             }
 
@@ -607,7 +647,12 @@ mod tests {
         let mut seat = None;
 
         for _ in 0..256 {
-            if hydebar_core::animation::share(app.desk_presence(None), 1.0).0 >= 1.0 {
+            if hydebar_core::animation::share(
+                app.desk_presence(None),
+                hydebar_core::animation::Journey::whole()
+            )
+            .0 >= 1.0
+            {
                 let now = on_screen(&app)
                     .find("PROCESSOR")
                     .expect("the block under the first one")
@@ -786,6 +831,8 @@ mod tests {
 
     #[test]
     fn the_strip_stands_while_its_islands_are_on_it_and_not_after() {
+        use hydebar_core::animation::Journey;
+
         let mut app = test_app_with(|config| config.desk.enabled = true);
 
         assert!(
@@ -796,15 +843,21 @@ mod tests {
         set_off(&mut app);
 
         for _ in 0..256 {
-            assert!(
-                !app.strip_still_holds(None),
-                "the strip is empty from the frame the islands set off"
+            assert_eq!(
+                app.strip_still_holds(None),
+                !app.has_left_the_strip(None, Journey::whole()),
+                "the strip stands for exactly as long as its last island does"
             );
 
             if !tick(&mut app) {
                 break;
             }
         }
+
+        assert!(
+            !app.strip_still_holds(None),
+            "the strip is empty once the whole run has passed"
+        );
     }
 
     #[test]
@@ -818,7 +871,7 @@ mod tests {
 
         for _ in 0..256 {
             for module in &watched {
-                let left = app.has_left_the_strip(None);
+                let left = app.has_left_the_strip(None, clock_journey(&app));
                 let hour = app.clock.data().format(&app.config.clock.format);
                 let probe = if matches!(module, ModuleName::Clock) {
                     hour.as_str()

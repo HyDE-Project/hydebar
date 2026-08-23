@@ -6,10 +6,16 @@ use super::memo::FlipMemo;
 
 /// The share of a descending journey spent falling.
 ///
-/// A block is on its own level once this much of its journey is done. Stated
-/// for the whole crate because what a block does on arriving at its level —
-/// open — is timed off it.
-pub const DESCENT: f32 = 0.8;
+/// The whole of it. A fall that ended before the journey did left the block
+/// stopping dead: the curve a journey runs on spends its last stretch slowing
+/// down, and a block already on its level by then had that stretch spent on
+/// nothing — it came down at speed, arrived, and the remainder of the clock
+/// moved nothing at all. Falling for the whole journey is what puts the
+/// slowing where the landing is.
+///
+/// Stated for the whole crate because what a block does on arriving — open —
+/// is timed against it.
+pub const DESCENT: f32 = 1.0;
 
 /// When the move along the lane begins, as a share of the journey.
 ///
@@ -17,8 +23,10 @@ pub const DESCENT: f32 = 0.8;
 /// the first instant they are all at one height and only their own widths
 /// keep them apart. The fall puts a level between them first — by this much
 /// of the journey the nearest pair is further apart than either is tall — and
-/// only then does anything move sideways.
-const CLOSING_FROM: f32 = 0.22;
+/// only then does anything move sideways. Read against a fall that now lasts
+/// the whole journey: the same clearance takes a little more of the clock
+/// than it did when the drop was over early.
+const CLOSING_FROM: f32 = 0.28;
 
 /// When the move along the lane is over, as a share of the journey.
 ///
@@ -28,7 +36,7 @@ const CLOSING_FROM: f32 = 0.22;
 /// edges of the screen instead of coming down off the strip. Ending the
 /// sideways move early leaves the descent as the last thing the eye follows,
 /// which is the one thing this journey is meant to say.
-const CLOSING_TO: f32 = 0.5;
+const CLOSING_TO: f32 = 0.58;
 
 /// Where a block stands on the way from `from` to `at`, at `progress`.
 ///

@@ -62,6 +62,22 @@ impl Side {
     }
 }
 
+/// How far a block is along its own journey, in the three figures the
+/// drawing of it asks for.
+///
+/// Carried together because they are one answer: a block is this far across,
+/// this far written out and lit this much, all of it read off the same clock
+/// at the same instant.
+#[derive(Debug, Clone, Copy)]
+pub(super) struct Along {
+    /// How far it has crossed, one being home.
+    pub(super) travel: f32,
+    /// How far it has written itself out, zero being not yet begun.
+    pub(super) bloom:  f32,
+    /// How much of its journey's light it is carrying.
+    pub(super) glow:   f32
+}
+
 /// Ink of a panel: what its headings, labels and values are drawn in.
 #[derive(Debug, Clone, Copy)]
 pub(super) struct Ink {

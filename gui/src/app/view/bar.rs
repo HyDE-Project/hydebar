@@ -39,18 +39,20 @@ impl App {
         }
 
         let opacity = self.appearance().opacity;
-        let left = self.modules_section(&self.config.modules.left, id, opacity, 0);
+        let left = self.modules_section(&self.config.modules.left, id, opacity, 0, false);
         let center = self.modules_section(
             &self.config.modules.center,
             id,
             opacity,
-            self.config.modules.left.len()
+            self.config.modules.left.len(),
+            false
         );
         let right = self.modules_section(
             &self.config.modules.right,
             id,
             opacity,
-            self.config.modules.left.len() + self.config.modules.center.len()
+            self.config.modules.left.len() + self.config.modules.center.len(),
+            true
         );
 
         #[expect(
