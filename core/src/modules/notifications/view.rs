@@ -46,3 +46,37 @@ impl Notifications {
         ))
     }
 }
+
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_bell_is_always_on_the_strip_and_opens_its_centre() {
+        let notifications = Notifications::default();
+
+        let (_, press) = notifications
+            .bar_view::<()>(&IconTheme::default())
+            .expect("the bell draws");
+
+        assert!(matches!(
+            press,
+            Some(OnModulePress::ToggleMenu(MenuType::Notifications))
+        ));
+    }
+
+    #[test]
+    fn waiting_notifications_are_counted_beside_the_bell() {
+        let notifications = Notifications {
+            unread: 3,
+            ..Notifications::default()
+        };
+
+        assert!(
+            notifications
+                .bar_view::<()>(&IconTheme::default())
+                .is_some()
+        );
+    }
+}

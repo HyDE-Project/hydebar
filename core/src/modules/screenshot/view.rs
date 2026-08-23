@@ -45,3 +45,33 @@ impl Screenshot {
         ))
     }
 }
+
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_camera_is_always_on_the_strip_and_opens_its_menu() {
+        let screenshot = Screenshot::default();
+
+        let (_, press) = screenshot
+            .bar_view::<()>(&IconTheme::default())
+            .expect("the camera draws");
+
+        assert!(matches!(
+            press,
+            Some(OnModulePress::ToggleMenu(MenuType::Screenshot))
+        ));
+    }
+
+    #[test]
+    fn a_running_recording_is_marked_and_still_opens_the_menu() {
+        let screenshot = Screenshot {
+            is_recording: true,
+            ..Screenshot::default()
+        };
+
+        assert!(screenshot.bar_view::<()>(&IconTheme::default()).is_some());
+    }
+}

@@ -168,3 +168,24 @@ impl Themes {
         Some((entry, Some(OnModulePress::ToggleMenu(MenuType::Themes))))
     }
 }
+
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
+mod tests {
+    use super::*;
+    use crate::menu::MenuType;
+
+    #[test]
+    fn the_theme_glyph_is_always_drawn_and_opens_the_gallery() {
+        let themes = Themes::default();
+
+        let (_, press) = themes
+            .bar_view::<()>(&IconTheme::default())
+            .expect("the theme entry draws");
+
+        assert!(matches!(
+            press,
+            Some(OnModulePress::ToggleMenu(MenuType::Themes))
+        ));
+    }
+}

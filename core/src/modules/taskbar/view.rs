@@ -88,7 +88,18 @@ fn fallback_glyph(class: &str) -> String {
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
-    use super::{entry_strength, fallback_glyph};
+    use std::sync::Arc;
+
+    use hydebar_proto::ports::hyprland::HyprlandPort;
+
+    use super::{super::test_client, *};
+    use crate::test_utils::MockHyprlandPort;
+
+    fn module() -> Taskbar {
+        let port: Arc<dyn HyprlandPort> = Arc::new(MockHyprlandPort::default());
+
+        Taskbar::new(port)
+    }
 
     #[test]
     fn the_focused_window_stands_out() {
@@ -99,5 +110,21 @@ mod tests {
     fn a_class_without_an_icon_still_shows_a_letter() {
         assert_eq!(fallback_glyph("kitty"), "K");
         assert_eq!(fallback_glyph(""), "?");
+    }
+
+    #[test]
+    fn a_workspace_with_no_window_carries_no_strip() {
+        let mut taskbar = module();
+        taskbar.update(Message::ClientsChanged(Vec::new()));
+
+        assert!(taskbar.bar_view::<Message>(12.0).is_none());
+    }
+
+    #[test]
+    fn a_mapped_window_puts_the_strip_on_the_bar() {
+        let mut taskbar = module();
+        taskbar.update(Message::ClientsChanged(vec![test_client("0x1", true)]));
+
+        assert!(taskbar.bar_view::<Message>(12.0).is_some());
     }
 }

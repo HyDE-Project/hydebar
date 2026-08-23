@@ -39,3 +39,43 @@ impl KeyboardLayout {
         Some((label, None))
     }
 }
+
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
+mod tests {
+    use std::sync::Arc;
+
+    use hydebar_proto::ports::hyprland::{HyprlandKeyboardState, HyprlandPort};
+
+    use super::*;
+    use crate::test_utils::MockHyprlandPort;
+
+    fn module(multiple: bool) -> KeyboardLayout {
+        let port = MockHyprlandPort::default();
+        *port.keyboard_state.lock().expect("keyboard lock") = HyprlandKeyboardState {
+            active_layout:        "us".into(),
+            has_multiple_layouts: multiple,
+            active_submap:        None
+        };
+
+        KeyboardLayout::new(Arc::new(port) as Arc<dyn HyprlandPort>)
+    }
+
+    #[test]
+    fn a_single_layout_is_no_choice_and_draws_nothing() {
+        assert!(
+            module(false)
+                .bar_view::<()>(&KeyboardLayoutModuleConfig::default())
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn several_layouts_put_the_active_one_on_the_strip() {
+        assert!(
+            module(true)
+                .bar_view::<()>(&KeyboardLayoutModuleConfig::default())
+                .is_some()
+        );
+    }
+}

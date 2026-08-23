@@ -130,3 +130,24 @@ impl Settings {
         ))
     }
 }
+
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
+mod tests {
+    use super::*;
+    use crate::menu::MenuType;
+
+    #[test]
+    fn the_settings_glyph_is_always_drawn_and_opens_its_window() {
+        let settings = Settings::default();
+
+        let (_, press) = settings
+            .bar_view::<()>(&IconTheme::default())
+            .expect("the settings entry draws");
+
+        assert!(matches!(
+            press,
+            Some(OnModulePress::ToggleMenu(MenuType::Settings))
+        ));
+    }
+}

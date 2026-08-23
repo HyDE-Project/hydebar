@@ -42,3 +42,50 @@ impl Clock {
         Some((clock_text, Some(on_press)))
     }
 }
+
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
+mod tests {
+    use super::*;
+    use crate::menu::MenuType;
+
+    fn config(alternatives: &[&str]) -> ClockModuleConfig {
+        ClockModuleConfig {
+            format:       "%H:%M".to_owned(),
+            format_alt:   alternatives.iter().map(ToString::to_string).collect(),
+            show_weather: false
+        }
+    }
+
+    #[test]
+    fn a_clock_is_always_on_the_strip() {
+        let clock = Clock::new();
+
+        assert!(clock.bar_view::<Message>(&config(&[])).is_some());
+    }
+
+    #[test]
+    fn a_clock_without_alternatives_opens_the_calendar() {
+        let clock = Clock::new();
+
+        let (_, press) = clock
+            .bar_view::<Message>(&config(&[]))
+            .expect("the clock draws");
+
+        assert!(matches!(
+            press,
+            Some(OnModulePress::ToggleMenu(MenuType::Calendar))
+        ));
+    }
+
+    #[test]
+    fn a_clock_with_alternatives_walks_them_instead() {
+        let clock = Clock::new();
+
+        let (_, press) = clock
+            .bar_view::<Message>(&config(&["%A"]))
+            .expect("the clock draws");
+
+        assert!(matches!(press, Some(OnModulePress::Action(_))));
+    }
+}

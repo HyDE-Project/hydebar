@@ -43,3 +43,54 @@ impl WindowTitle {
         ))
     }
 }
+
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
+mod tests {
+    use std::sync::Arc;
+
+    use hydebar_proto::ports::hyprland::{HyprlandPort, HyprlandWindowInfo};
+
+    use super::*;
+    use crate::{modules::window_title::Message, test_utils::MockHyprlandPort};
+
+    fn module() -> WindowTitle {
+        let port: Arc<dyn HyprlandPort> = Arc::new(MockHyprlandPort::default());
+
+        WindowTitle::new(port, &WindowTitleConfig::default())
+    }
+
+    fn window(title: &str) -> HyprlandWindowInfo {
+        HyprlandWindowInfo {
+            title: title.to_owned(),
+            class: "term".to_owned()
+        }
+    }
+
+    #[test]
+    fn a_bare_workspace_carries_no_title() {
+        let mut title = module();
+        title.update(Message::TitleChanged(None), &WindowTitleConfig::default());
+
+        assert!(
+            title
+                .bar_view::<()>(&WindowTitleConfig::default(), false)
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn a_focused_window_puts_its_title_on_the_strip() {
+        let mut title = module();
+        title.update(
+            Message::TitleChanged(Some(window("a window"))),
+            &WindowTitleConfig::default()
+        );
+
+        assert!(
+            title
+                .bar_view::<()>(&WindowTitleConfig::default(), false)
+                .is_some()
+        );
+    }
+}

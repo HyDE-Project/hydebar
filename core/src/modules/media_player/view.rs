@@ -140,3 +140,20 @@ impl MediaPlayer {
         )
     }
 }
+
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_silent_session_carries_no_player_entry() {
+        let player = MediaPlayer::default();
+
+        assert!(
+            player
+                .bar_view::<()>(&MediaPlayerModuleConfig::default(), &IconTheme::default())
+                .is_none()
+        );
+    }
+}

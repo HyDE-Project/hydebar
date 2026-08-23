@@ -64,3 +64,16 @@ impl Wallpaper {
         grid.into()
     }
 }
+
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_wallpaper_glyph_is_always_on_the_strip() {
+        let wallpaper = Wallpaper::default();
+
+        assert!(wallpaper.bar_view::<()>(&IconTheme::default()).is_some());
+    }
+}

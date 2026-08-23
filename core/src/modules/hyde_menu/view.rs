@@ -143,3 +143,23 @@ fn row_button(
         .on_press(message)
         .into()
 }
+
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_menu_glyph_is_always_drawn_and_opens_the_tree() {
+        let menu = HydeMenu::default();
+
+        let (_, press) = menu
+            .bar_view::<()>(&IconTheme::default())
+            .expect("the menu entry draws");
+
+        assert!(matches!(
+            press,
+            Some(OnModulePress::ToggleMenu(MenuType::HydeMenu))
+        ));
+    }
+}

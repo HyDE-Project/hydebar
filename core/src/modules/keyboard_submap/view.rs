@@ -31,3 +31,43 @@ impl KeyboardSubmap {
         Some((label, None))
     }
 }
+
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
+mod tests {
+    use std::sync::Arc;
+
+    use hydebar_proto::ports::hyprland::{HyprlandKeyboardState, HyprlandPort};
+
+    use super::*;
+    use crate::{modules::keyboard_submap::Message, test_utils::MockHyprlandPort};
+
+    fn module(submap: Option<&str>) -> KeyboardSubmap {
+        let port = MockHyprlandPort::default();
+        *port.keyboard_state.lock().expect("keyboard lock") = HyprlandKeyboardState {
+            active_layout:        "us".into(),
+            has_multiple_layouts: false,
+            active_submap:        submap.map(ToOwned::to_owned)
+        };
+
+        KeyboardSubmap::new(Arc::new(port) as Arc<dyn HyprlandPort>)
+    }
+
+    #[test]
+    fn a_keyboard_in_no_submap_draws_nothing() {
+        assert!(module(None).bar_view::<()>().is_none());
+    }
+
+    #[test]
+    fn a_keyboard_in_a_submap_names_it() {
+        assert!(module(Some("resize")).bar_view::<()>().is_some());
+    }
+
+    #[test]
+    fn leaving_a_submap_takes_the_entry_off_the_strip() {
+        let mut submap = module(Some("resize"));
+        submap.update(Message::SubmapChanged(String::new()), false);
+
+        assert!(submap.bar_view::<()>().is_none());
+    }
+}

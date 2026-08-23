@@ -88,3 +88,16 @@ impl BarLayout {
         column.into()
     }
 }
+
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_layout_glyph_is_always_on_the_strip() {
+        let layouts = BarLayout::default();
+
+        assert!(layouts.bar_view::<()>(&IconTheme::default()).is_some());
+    }
+}

@@ -64,3 +64,16 @@ impl Privacy {
         ))
     }
 }
+
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn nothing_is_drawn_before_the_service_answers() {
+        let privacy = Privacy::default();
+
+        assert!(privacy.bar_view::<()>(&IconTheme::default()).is_none());
+    }
+}
