@@ -1,4 +1,4 @@
-//! Module trait wiring for the taskbar strip.
+//! Registration of the compositor stream the taskbar strip owns.
 //!
 //! Background updates are delivered via the shared module event sender: the
 //! listener publishes client lists onto the event bus and the bar folds them
@@ -6,20 +6,18 @@
 
 use std::sync::Arc;
 
-use iced::Element;
-
-use super::{Message, Taskbar, listener};
+use super::{Taskbar, listener};
 use crate::{
     ModuleContext,
     event_bus::ModuleEvent,
-    modules::{Module, ModuleError, OnModulePress}
+    modules::{Module, ModuleError}
 };
 
 impl<M> Module<M> for Taskbar
 where
-    M: 'static + Clone + From<Message>
+    M: 'static
 {
-    type ViewData<'a> = f32;
+    type ViewData<'a> = ();
     type RegistrationData<'a> = ();
 
     fn register(
@@ -53,13 +51,6 @@ where
 
         self.sender = None;
     }
-
-    fn view(
-        &self,
-        font_size: Self::ViewData<'_>
-    ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
-        self.entries_row(font_size).map(|row| (row, None))
-    }
 }
 
 #[cfg(test)]
@@ -69,7 +60,7 @@ mod tests {
 
     use hydebar_proto::ports::hyprland::HyprlandPort;
 
-    use super::{Message, Module, ModuleContext, Taskbar};
+    use super::{Module, ModuleContext, Taskbar};
     use crate::{
         event_bus::EventBus, modules::taskbar::test_client, test_utils::MockHyprlandPort
     };
@@ -84,7 +75,7 @@ mod tests {
         *port.clients_snapshot.lock().expect("clients lock") = vec![test_client("0x1", true)];
 
         let mut taskbar = Taskbar::new(Arc::clone(&port) as Arc<dyn HyprlandPort>);
-        <Taskbar as Module<Message>>::register(&mut taskbar, &ctx, ()).expect("registration");
+        <Taskbar as Module<()>>::register(&mut taskbar, &ctx, ()).expect("registration");
 
         let batch = tokio::time::timeout(Duration::from_secs(1), receiver.recv())
             .await
@@ -92,6 +83,6 @@ mod tests {
 
         assert!(!batch.is_empty());
 
-        <Taskbar as Module<Message>>::deregister(&mut taskbar);
+        <Taskbar as Module<()>>::deregister(&mut taskbar);
     }
 }

@@ -8,13 +8,32 @@ use iced::{
 use super::{Message, Taskbar};
 use crate::{
     components::{scale, text::text},
+    modules::OnModulePress,
     services::tray::{TrayIcon, icon_from_name}
 };
 
 impl Taskbar {
+    /// The bar entry: one row of window entries, drawn at `font_size`.
+    ///
+    /// Pressing an entry is handled by the entry itself rather than by the
+    /// strip, so the strip names no press of its own.
+    ///
+    /// Rendered by the module itself, so the bar layer holds no taskbar
+    /// drawing of its own.
+    #[must_use]
+    pub fn bar_view<M>(
+        &self,
+        font_size: f32
+    ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)>
+    where
+        M: 'static + Clone + From<Message>
+    {
+        self.entries_row(font_size).map(|row| (row, None))
+    }
+
     /// The row of entries, one per mapped client, or `None` while nothing is
     /// mapped.
-    pub(super) fn entries_row<M>(&self, font_size: f32) -> Option<Element<'static, M>>
+    fn entries_row<M>(&self, font_size: f32) -> Option<Element<'static, M>>
     where
         M: 'static + Clone + From<Message>
     {

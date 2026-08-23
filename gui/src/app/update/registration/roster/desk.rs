@@ -19,20 +19,6 @@ impl App {
         let hosts = |name: ModuleName| layout.hosts(&name);
 
         gate(
-            "app-launcher",
-            hosts(ModuleName::AppLauncher),
-            &mut self.app_launcher,
-            ctx,
-            ()
-        );
-        gate(
-            "clipboard",
-            hosts(ModuleName::Clipboard),
-            &mut self.clipboard,
-            ctx,
-            ()
-        );
-        gate(
             "hyde-menu",
             hosts(ModuleName::HydeMenu),
             &mut self.hyde_menu,

@@ -28,8 +28,6 @@ impl App {
     /// subscribe to or sample.
     pub(crate) fn module_owner(&self, module_name: &ModuleName) -> Option<Owner<'_>> {
         Some(match module_name {
-            ModuleName::AppLauncher => &self.app_launcher,
-            ModuleName::Clipboard => &self.clipboard,
             ModuleName::Custom(name) => self.declared_custom(name)?,
             ModuleName::Updates => &self.updates,
             ModuleName::Workspaces => &self.workspaces,
@@ -61,6 +59,8 @@ impl App {
             | ModuleName::Themes
             | ModuleName::Settings
             | ModuleName::Screenshot
+            | ModuleName::AppLauncher
+            | ModuleName::Clipboard
             | ModuleName::IdleInhibitor
             | ModuleName::KeybindHint
             | ModuleName::NightLight
@@ -71,8 +71,6 @@ impl App {
     /// [`module_owner`](App::module_owner), for what has to be changed.
     pub(crate) fn module_owner_mut(&mut self, module_name: &ModuleName) -> Option<OwnerMut<'_>> {
         Some(match module_name {
-            ModuleName::AppLauncher => &mut self.app_launcher,
-            ModuleName::Clipboard => &mut self.clipboard,
             ModuleName::Custom(name) => {
                 let declared = self
                     .config
@@ -116,6 +114,8 @@ impl App {
             | ModuleName::Themes
             | ModuleName::Settings
             | ModuleName::Screenshot
+            | ModuleName::AppLauncher
+            | ModuleName::Clipboard
             | ModuleName::IdleInhibitor
             | ModuleName::KeybindHint
             | ModuleName::NightLight

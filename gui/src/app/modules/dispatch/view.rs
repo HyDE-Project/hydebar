@@ -26,7 +26,7 @@ impl App {
         match module_name {
             ModuleName::AppLauncher => self
                 .app_launcher
-                .view((&self.config.app_launcher_cmd, self.icons()))
+                .bar_view(&self.config.app_launcher_cmd, self.icons())
                 .map(|(content, _)| {
                     (
                         content,
@@ -52,7 +52,7 @@ impl App {
             ModuleName::Updates => self.updates.view((&self.config.updates, self.icons())),
             ModuleName::Clipboard => self
                 .clipboard
-                .view((&self.config.clipboard_cmd, self.icons()))
+                .bar_view(&self.config.clipboard_cmd, self.icons())
                 .map(|(content, _)| {
                     (
                         content,
@@ -113,7 +113,7 @@ impl App {
             ModuleName::Audio => self.control_center.audio_bar(self.icons()),
             ModuleName::Brightness => self.control_center.brightness_bar(self.icons()),
             ModuleName::Weather => self.weather.bar_view(self.icons()),
-            ModuleName::Taskbar => self.taskbar.view(self.config.appearance.font_size_px()),
+            ModuleName::Taskbar => self.taskbar.bar_view(self.config.appearance.font_size_px()),
             ModuleName::KeybindHint => Some(hyde_button::bar_view(
                 hyde_button::HydeButton::KeybindHint,
                 self.icons(),

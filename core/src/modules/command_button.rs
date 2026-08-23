@@ -8,7 +8,7 @@
 
 use iced::Element;
 
-use super::{Module, OnModulePress};
+use super::OnModulePress;
 use crate::components::icons::{IconTheme, Icons, icon};
 
 /// A stateless bar entry showing `glyph` while a command is configured.
@@ -27,17 +27,23 @@ impl CommandButton {
     }
 }
 
-impl<M> Module<M> for CommandButton
-where
-    M: 'static + Clone
-{
-    type ViewData<'a> = (&'a Option<String>, &'a IconTheme);
-    type RegistrationData<'a> = ();
-
-    fn view(
+impl CommandButton {
+    /// The bar entry: the glyph, drawn only while a command is configured.
+    ///
+    /// The press is named by the bar layer, which knows the message the entry
+    /// sends; an entry with no command to run is not drawn at all.
+    ///
+    /// Rendered by the module itself, so the bar layer holds no button
+    /// drawing of its own.
+    #[must_use]
+    pub fn bar_view<M>(
         &self,
-        (command, icons): Self::ViewData<'_>
-    ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
+        command: &Option<String>,
+        icons: &IconTheme
+    ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)>
+    where
+        M: 'static
+    {
         command
             .as_ref()
             .map(|_| (icon(icons, self.glyph).into(), None))
@@ -55,8 +61,7 @@ mod tests {
         let button = CommandButton::new(Icons::AppLauncher);
         let command = Some("wofi".to_string());
 
-        let result =
-            <CommandButton as Module<()>>::view(&button, (&command, &IconTheme::default()));
+        let result = button.bar_view::<()>(&command, &IconTheme::default());
         assert!(result.is_some());
 
         if let Some((_, action)) = result {
@@ -69,8 +74,7 @@ mod tests {
         let button = CommandButton::new(Icons::Clipboard);
         let command = None;
 
-        let result =
-            <CommandButton as Module<()>>::view(&button, (&command, &IconTheme::default()));
+        let result = button.bar_view::<()>(&command, &IconTheme::default());
         assert!(result.is_none());
     }
 }
