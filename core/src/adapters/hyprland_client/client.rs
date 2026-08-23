@@ -11,7 +11,7 @@ use hydebar_proto::ports::hyprland::HyprlandError;
 use super::{config::HyprlandClientConfig, listeners::multiplex, sync_ops::execute_with_retry};
 
 /// [`HyprlandPort`](hydebar_proto::ports::hyprland::HyprlandPort)
-/// implementation backed by the `hyprland-rs` crate.
+/// implementation backed by the bar's own compositor client.
 #[derive(Clone, Debug)]
 pub struct HyprlandClient {
     pub(super) config: Arc<HyprlandClientConfig>
@@ -39,16 +39,6 @@ impl HyprlandClient {
     pub fn with_config(config: HyprlandClientConfig) -> Self {
         Self {
             config: Arc::new(config)
-        }
-    }
-
-    pub(crate) fn backend_error<E>(operation: &'static str, err: E) -> HyprlandError
-    where
-        E: std::error::Error + Send + Sync + 'static
-    {
-        HyprlandError::Backend {
-            operation,
-            source: Box::new(err)
         }
     }
 

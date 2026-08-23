@@ -9,11 +9,11 @@
 
 use std::sync::atomic::{AtomicU8, Ordering};
 
-use hydebar_proto::ports::hyprland::{HyprlandMonitorSelector, HyprlandWorkspaceSelector};
-use hyprland::{
-    dispatch::{Dispatch, DispatchType},
-    error::HyprError
+use hydebar_proto::ports::hyprland::{
+    HyprlandError, HyprlandMonitorSelector, HyprlandWorkspaceSelector
 };
+
+use crate::adapters::compositor::command;
 
 /// Not resolved yet.
 const UNKNOWN: u8 = 0;
@@ -128,17 +128,15 @@ pub fn focus_window(dialect: Dialect, address: &str) -> String {
 /// single round trip.
 ///
 /// # Errors
-/// Returns the error of the last attempt when no dialect is accepted.
-pub fn dispatch_in_any_dialect<F>(build: F) -> Result<(), HyprError>
+/// Returns the refusal of the last attempt when no dialect is accepted.
+pub fn dispatch_in_any_dialect<F>(operation: &'static str, build: F) -> Result<(), HyprlandError>
 where
     F: Fn(Dialect) -> String
 {
     let mut last = None;
 
     for dialect in Dialect::attempts() {
-        let command = build(dialect);
-
-        match Dispatch::call(DispatchType::Custom(&command, "")) {
+        match command::dispatch(operation, &build(dialect)) {
             Ok(()) => {
                 dialect.remember();
                 return Ok(());
@@ -147,7 +145,10 @@ where
         }
     }
 
-    Err(last.unwrap_or_else(|| HyprError::NotOkDispatch("no dialect was attempted".to_owned())))
+    Err(last.unwrap_or(HyprlandError::Message {
+        operation,
+        message: "no dialect was attempted".to_owned()
+    }))
 }
 
 #[cfg(test)]

@@ -11,14 +11,9 @@ use hydebar_proto::ports::hyprland::{
     HyprlandWindowInfo, HyprlandWorkspaceEvent, HyprlandWorkspaceSelector,
     HyprlandWorkspaceSnapshot
 };
-use hyprland::{
-    ctl::switch_xkb_layout::SwitchXKBLayoutCmdTypes,
-    data::{Client, Clients, Devices, Monitors, Workspace, Workspaces},
-    keyword::Keyword,
-    shared::{HyprData, HyprDataActive, HyprDataActiveOptional}
-};
 
 use super::{HyprlandClient, dispatch, listeners::multiplex, snapshot};
+use crate::adapters::compositor::{command, query};
 
 const WORKSPACE_SNAPSHOT_OP: &str = "workspace_snapshot";
 const ACTIVE_WINDOW_OP: &str = "active_window";
@@ -48,25 +43,20 @@ impl HyprlandPort for HyprlandClient {
 
     fn active_window(&self) -> Result<Option<HyprlandWindowInfo>, HyprlandError> {
         self.execute_with_retry(ACTIVE_WINDOW_OP, || {
-            Client::get_active()
-                .map_err(|err| Self::backend_error(ACTIVE_WINDOW_OP, err))
-                .map(|maybe_client| {
-                    maybe_client.map(|client| HyprlandWindowInfo {
-                        title: client.title,
-                        class: client.class
-                    })
+            query::active_window(ACTIVE_WINDOW_OP).map(|window| {
+                window.map(|client| HyprlandWindowInfo {
+                    title: client.title,
+                    class: client.class
                 })
+            })
         })
     }
 
     fn workspace_snapshot(&self) -> Result<HyprlandWorkspaceSnapshot, HyprlandError> {
         self.execute_with_retry(WORKSPACE_SNAPSHOT_OP, || {
-            let monitors =
-                Monitors::get().map_err(|err| Self::backend_error(WORKSPACE_SNAPSHOT_OP, err))?;
-            let workspaces = Workspaces::get()
-                .map_err(|err| Self::backend_error(WORKSPACE_SNAPSHOT_OP, err))?;
-            let active = Workspace::get_active()
-                .map_err(|err| Self::backend_error(WORKSPACE_SNAPSHOT_OP, err))?;
+            let monitors = query::monitors(WORKSPACE_SNAPSHOT_OP)?;
+            let workspaces = query::workspaces(WORKSPACE_SNAPSHOT_OP)?;
+            let active = query::active_workspace(WORKSPACE_SNAPSHOT_OP)?;
 
             let monitors = monitors.into_iter().map(snapshot::monitor_info).collect();
 
@@ -85,10 +75,9 @@ impl HyprlandPort for HyprlandClient {
 
     fn change_workspace(&self, workspace: HyprlandWorkspaceSelector) -> Result<(), HyprlandError> {
         self.execute_with_retry(CHANGE_WORKSPACE_OP, move || {
-            dispatch::dispatch_in_any_dialect(|dialect| {
+            dispatch::dispatch_in_any_dialect(CHANGE_WORKSPACE_OP, |dialect| {
                 dispatch::focus_workspace(dialect, &workspace)
             })
-            .map_err(|err| Self::backend_error(CHANGE_WORKSPACE_OP, err))
         })
     }
 
@@ -99,30 +88,27 @@ impl HyprlandPort for HyprlandClient {
     ) -> Result<(), HyprlandError> {
         let workspace_name = workspace_name.to_string();
         self.execute_with_retry(TOGGLE_SPECIAL_OP, move || {
-            dispatch::dispatch_in_any_dialect(|dialect| dispatch::focus_monitor(dialect, &monitor))
-                .and_then(|()| {
-                    dispatch::dispatch_in_any_dialect(|dialect| {
-                        dispatch::toggle_special_workspace(dialect, &workspace_name)
-                    })
+            dispatch::dispatch_in_any_dialect(TOGGLE_SPECIAL_OP, |dialect| {
+                dispatch::focus_monitor(dialect, &monitor)
+            })
+            .and_then(|()| {
+                dispatch::dispatch_in_any_dialect(TOGGLE_SPECIAL_OP, |dialect| {
+                    dispatch::toggle_special_workspace(dialect, &workspace_name)
                 })
-                .map_err(|err| Self::backend_error(TOGGLE_SPECIAL_OP, err))
+            })
         })
     }
 
     fn keyboard_state(&self) -> Result<HyprlandKeyboardState, HyprlandError> {
         self.execute_with_retry(KEYBOARD_STATE_OP, || {
-            let keyword = Keyword::get("input:kb_layout")
-                .map_err(|err| Self::backend_error(KEYBOARD_STATE_OP, err))?;
-            let has_multiple_layouts = keyword
-                .value
-                .to_string()
+            let layouts = query::option_text(KEYBOARD_STATE_OP, "input:kb_layout")?;
+            let has_multiple_layouts = layouts
                 .split(',')
                 .filter(|value| !value.trim().is_empty())
                 .count()
                 > 1;
 
-            let devices =
-                Devices::get().map_err(|err| Self::backend_error(KEYBOARD_STATE_OP, err))?;
+            let devices = query::devices(KEYBOARD_STATE_OP)?;
             let active_layout = devices
                 .keyboards
                 .iter()
@@ -142,15 +128,13 @@ impl HyprlandPort for HyprlandClient {
 
     fn switch_keyboard_layout(&self) -> Result<(), HyprlandError> {
         self.execute_with_retry(SWITCH_LAYOUT_OP, || {
-            hyprland::ctl::switch_xkb_layout::call("all", SwitchXKBLayoutCmdTypes::Next)
-                .map_err(|err| Self::backend_error(SWITCH_LAYOUT_OP, err))
+            command::send(SWITCH_LAYOUT_OP, "switchxkblayout all next")
         })
     }
 
     fn clients_snapshot(&self) -> Result<Vec<HyprlandClientInfo>, HyprlandError> {
         self.execute_with_retry(CLIENTS_SNAPSHOT_OP, || {
-            let clients =
-                Clients::get().map_err(|err| Self::backend_error(CLIENTS_SNAPSHOT_OP, err))?;
+            let clients = query::clients(CLIENTS_SNAPSHOT_OP)?;
 
             Ok(clients
                 .into_iter()
@@ -163,8 +147,9 @@ impl HyprlandPort for HyprlandClient {
     fn focus_window(&self, address: &str) -> Result<(), HyprlandError> {
         let address = address.to_string();
         self.execute_with_retry(FOCUS_WINDOW_OP, move || {
-            dispatch::dispatch_in_any_dialect(|dialect| dispatch::focus_window(dialect, &address))
-                .map_err(|err| Self::backend_error(FOCUS_WINDOW_OP, err))
+            dispatch::dispatch_in_any_dialect(FOCUS_WINDOW_OP, |dialect| {
+                dispatch::focus_window(dialect, &address)
+            })
         })
     }
 }

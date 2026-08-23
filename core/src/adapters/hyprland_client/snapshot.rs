@@ -1,16 +1,18 @@
 //! Translation of raw compositor records into the port's snapshot types.
 //!
-//! The `hyprland-rs` data structures carry compositor conventions — a zero
-//! workspace id standing for none, monitor ids wider than the port speaks —
-//! and this is the one place those conventions are restated in the port's
-//! terms.
+//! The compositor's own records carry its conventions — a zero workspace id
+//! standing for none, monitor ids wider than the port speaks, a focus order
+//! whose head is the focused window — and this is the one place those
+//! conventions are restated in the port's terms.
 
 use hydebar_proto::ports::hyprland::{
     HyprlandClientInfo, HyprlandMonitorInfo, HyprlandWorkspaceInfo
 };
 
+use crate::adapters::compositor::records::{Client, Monitor, Workspace};
+
 /// Restates one compositor monitor record in the port's terms.
-pub(super) fn monitor_info(monitor: hyprland::data::Monitor) -> HyprlandMonitorInfo {
+pub(super) fn monitor_info(monitor: Monitor) -> HyprlandMonitorInfo {
     HyprlandMonitorInfo {
         id:                   i32::try_from(monitor.id).unwrap_or(i32::MAX),
         name:                 monitor.name,
@@ -22,7 +24,7 @@ pub(super) fn monitor_info(monitor: hyprland::data::Monitor) -> HyprlandMonitorI
 }
 
 /// Restates one compositor workspace record in the port's terms.
-pub(super) fn workspace_info(workspace: hyprland::data::Workspace) -> HyprlandWorkspaceInfo {
+pub(super) fn workspace_info(workspace: Workspace) -> HyprlandWorkspaceInfo {
     HyprlandWorkspaceInfo {
         id:           workspace.id,
         name:         workspace.name,
@@ -35,9 +37,9 @@ pub(super) fn workspace_info(workspace: hyprland::data::Workspace) -> HyprlandWo
 }
 
 /// Restates one compositor client record in the port's terms.
-pub(super) fn client_info(client: hyprland::data::Client) -> HyprlandClientInfo {
+pub(super) fn client_info(client: Client) -> HyprlandClientInfo {
     HyprlandClientInfo {
-        address:      client.address.to_string(),
+        address:      client.address,
         class:        client.class,
         title:        client.title,
         workspace_id: client.workspace.id,
