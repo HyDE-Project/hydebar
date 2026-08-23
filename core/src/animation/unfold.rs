@@ -177,34 +177,53 @@ pub fn landed(reach: f32) -> f32 {
 /// answer is worked out, so nothing has to guess where on the clock a block
 /// touches down.
 ///
+/// Closed in on by halving rather than solved. A cubic carrying a slope of
+/// its own at both ends has no inverse worth writing down, and the two dozen
+/// halvings it takes to land inside a millionth cost less than the shadow
+/// they time.
+///
 /// [`DESCENT`]: crate::components::flip::DESCENT
 fn descended() -> f32 {
-    (2.0 * (1.0 - crate::components::flip::DESCENT))
-        .cbrt()
-        .mul_add(-0.5, 1.0)
+    let mut before = 0.0f32;
+    let mut after = 1.0f32;
+
+    for _ in 0..24 {
+        let between = before.midpoint(after);
+
+        if crossed(between) < crate::components::flip::DESCENT {
+            before = between;
+        } else {
+            after = between;
+        }
+    }
+
+    before.midpoint(after)
 }
 
-/// The curve a journey between two places runs on: off slowly, along quickly,
-/// into place slowly.
+/// The curve a journey between two places runs on: away at once, along at its
+/// own pace, into place slowly.
 ///
-/// A block is on the screen for the whole of its crossing, so it has to be
-/// seen leaving as much as arriving. Run on the decelerate curve the acts
-/// that arrive from nowhere use, it spent its whole speed on the first
-/// instant: at the pace the bar unfolds in, a block was out of the strip's
-/// band a frame or two after setting off and crept the rest of the way, which
-/// reads as the strip dropping its modules rather than carrying them. A
-/// symmetric cubic gives the leaving the same stretch as the arriving, so a
-/// block holds its place on the strip until it is really under way.
+/// Two things the crossing has to be, and only one curve is both.
+///
+/// It cannot spend itself on the first instant. Run on the decelerate curve
+/// the acts that arrive from nowhere use, a block was out of the strip's band
+/// a frame or two after setting off and crept the rest of the way, which
+/// reads as the strip dropping its modules rather than carrying them.
+///
+/// It cannot hold still either. The strip hands a block to the canvas on the
+/// very frame the clock starts, and the canvas draws it in the shape it will
+/// stand in — its own pill rather than the one it shared. A curve that leaves
+/// slowly, as a symmetric one does, leaves that change sitting on the strip
+/// for a tenth of a second before anything moves, so the bar is seen changing
+/// before the transition rather than during it.
+///
+/// So: the pace of a straight line at the setting off, which is what carries
+/// the handover, easing to nothing at the arrival, which is what everything
+/// coming to rest does.
 fn crossed(act: f32) -> f32 {
     let act = act.clamp(0.0, 1.0);
 
-    if act < 0.5 {
-        4.0 * act * act * act
-    } else {
-        let left = 2.0f32.mul_add(-act, 2.0);
-
-        left.mul_add(-(left * left) / 2.0, 1.0)
-    }
+    (act * act).mul_add(1.0 - act, act)
 }
 
 /// The curve an act runs on: away quickly, into place slowly.
@@ -347,28 +366,35 @@ mod tests {
     }
 
     #[test]
-    fn a_crossing_sets_off_as_slowly_as_it_settles() {
+    fn a_crossing_sets_off_at_once_and_settles_slowly() {
         assert_eq!(crossed(0.0), 0.0);
         assert_eq!(crossed(1.0), 1.0);
-        assert_eq!(crossed(0.5), 0.5, "half the time is half the way");
 
-        for step in 0..=100 {
-            #[expect(clippy::cast_precision_loss, reason = "a fixed sample count")]
-            let act = step as f32 / 100.0;
-
-            assert!(
-                (crossed(act) + crossed(1.0 - act) - 1.0).abs() < 1e-5,
-                "the setting off at {act:.2} is not what the settling is"
-            );
-        }
+        assert!(
+            crossed(0.1) >= 0.1,
+            "a block is behind a straight line at the setting off"
+        );
+        assert!(
+            crossed(0.1) < eased(0.1) / 2.0,
+            "the first tenth of a crossing spends the speed of a whole arrival"
+        );
+        assert!(
+            crossed(1.0) - crossed(0.9) < crossed(0.1) - crossed(0.0),
+            "the last stretch is not slower than the first"
+        );
     }
 
     #[test]
-    fn a_block_holds_its_place_on_the_strip_until_it_is_under_way() {
-        assert!(
-            crossed(0.1) < eased(0.1) / 5.0,
-            "the first tenth of a crossing spends the speed of a whole arrival"
-        );
+    fn a_block_is_already_moving_on_the_frame_the_strip_lets_go_of_it() {
+        const FRAME: f32 = 0.027;
+
+        for reach in [0.2_f32, 0.5, 1.0] {
+            assert!(
+                share(FRAME, reach).0 > 0.02,
+                "a block reaching {reach} stands still on the frame the canvas takes it, \
+                 so the bar is seen changing before the transition"
+            );
+        }
     }
 
     #[test]
