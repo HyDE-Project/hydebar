@@ -14,6 +14,7 @@ use crate::{
         WORKSPACE_MIN_HEIGHT_EM, WORKSPACE_MIN_WIDTH_EM, WORKSPACE_PADDING_EM,
         WorkspaceVisibilityMode, WorkspacesModuleConfig
     },
+    modules::OnModulePress,
     outputs::Outputs,
     style::workspace_button_style
 };
@@ -40,12 +41,34 @@ fn label_box_width(label: &str, glyph_advance: f32, min_width: f32) -> Length {
 }
 
 impl Workspaces {
+    /// The bar entry: the row of indicators for the monitor the surface sits
+    /// on.
+    ///
+    /// Pressing an indicator is handled by the indicator itself, so the row
+    /// names no press of its own.
+    ///
+    /// Rendered by the module itself, so the bar layer holds no workspace
+    /// drawing of its own.
+    #[must_use]
+    pub fn bar_view<M>(
+        &self,
+        outputs: &Outputs,
+        id: Id,
+        config: &WorkspacesModuleConfig,
+        appearance: &Appearance
+    ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)>
+    where
+        M: 'static + Clone + From<Message>
+    {
+        Some((self.indicators_row(outputs, id, config, appearance), None))
+    }
+
     /// The row of indicators for the monitor the surface sits on.
     ///
     /// Colors are looked up by monitor index, safely: a workspace whose
     /// monitor index is unknown, or whose index lies past the configured
     /// palette, simply draws with no color of its own.
-    pub(super) fn indicators_row<M>(
+    fn indicators_row<M>(
         &self,
         outputs: &Outputs,
         id: Id,

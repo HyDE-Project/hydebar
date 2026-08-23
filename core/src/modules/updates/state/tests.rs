@@ -361,7 +361,7 @@ fn an_unavailable_check_takes_the_indicator_off_the_bar() {
     let icons = IconTheme::default();
     let config = Some(config("true", 3600));
 
-    assert!(<Updates as Module<Message>>::view(&updates, (&config, &icons)).is_none());
+    assert!(updates.bar_view::<Message>(&config, &icons).is_none());
 }
 
 #[test]

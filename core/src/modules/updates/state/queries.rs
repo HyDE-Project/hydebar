@@ -67,6 +67,11 @@ impl Updates {
         self.shown_count.is_animating()
     }
 
+    /// The count on the bar, mid-dissolve, at `size`.
+    pub(crate) fn shown_count(&self, size: f32) -> Element<'static, Message> {
+        self.shown_count.element(size)
+    }
+
     /// The list the entry opens.
     #[must_use]
     pub fn menu_view(&self, id: Id, opacity: f32, icons: &IconTheme) -> Element<'_, Message> {

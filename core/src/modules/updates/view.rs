@@ -6,10 +6,15 @@ use iced::{
 };
 
 use super::state::{CheckState, Message, Updates};
-use crate::components::{
-    icons::{IconTheme, Icons, icon as icon_component},
-    scale,
-    text::text
+use crate::{
+    components::{
+        icons::{IconTheme, Icons, icon as icon_component},
+        scale,
+        text::text
+    },
+    config::UpdatesModuleConfig,
+    menu::MenuType,
+    modules::OnModulePress
 };
 
 mod hyde;
@@ -17,6 +22,42 @@ mod list;
 mod widgets;
 
 use widgets::{action_button, check_now_button, log_block};
+
+impl Updates {
+    /// The bar entry: the state of the last check, with the count of what is
+    /// waiting beside it.
+    ///
+    /// Draws nothing while the configuration declares no check command, and
+    /// nothing while the command it declares cannot be run at all.
+    ///
+    /// Rendered by the module itself, so the bar layer holds no updates
+    /// drawing of its own.
+    #[must_use]
+    pub fn bar_view<M>(
+        &self,
+        config: &Option<UpdatesModuleConfig>,
+        icons: &IconTheme
+    ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)>
+    where
+        M: 'static + Clone + From<Message>
+    {
+        if config.is_none() || *self.state() == CheckState::Unavailable {
+            return None;
+        }
+
+        Some((
+            icon(
+                self.state(),
+                self.updates().len(),
+                self.hyde_pending(),
+                self.shown_count(scale::base()),
+                icons
+            )
+            .map(M::from),
+            Some(OnModulePress::ToggleMenu(MenuType::Updates))
+        ))
+    }
+}
 
 pub(super) fn menu_view<'a>(
     updates: &'a Updates,

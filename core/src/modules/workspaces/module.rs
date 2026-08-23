@@ -1,4 +1,4 @@
-//! Module trait wiring for the workspaces indicators.
+//! Registration of the compositor stream the workspaces indicators own.
 //!
 //! Background updates are delivered via the shared module event sender: the
 //! listener publishes snapshots onto the event bus and the bar folds them in
@@ -6,22 +6,19 @@
 
 use std::sync::Arc;
 
-use iced::{Element, SurfaceId as Id};
-
 use super::{Workspaces, listener};
 use crate::{
     ModuleContext,
-    config::{Appearance, WorkspacesModuleConfig},
+    config::WorkspacesModuleConfig,
     event_bus::ModuleEvent,
-    modules::{Module, ModuleError, OnModulePress},
-    outputs::Outputs
+    modules::{Module, ModuleError}
 };
 
 impl<M> Module<M> for Workspaces
 where
-    M: 'static + Clone + From<super::Message>
+    M: 'static
 {
-    type ViewData<'a> = (&'a Outputs, Id, &'a WorkspacesModuleConfig, &'a Appearance);
+    type ViewData<'a> = ();
     type RegistrationData<'a> = &'a WorkspacesModuleConfig;
 
     fn register(
@@ -55,12 +52,5 @@ where
         }
 
         self.sender = None;
-    }
-
-    fn view(
-        &self,
-        (outputs, id, config, appearance): Self::ViewData<'_>
-    ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
-        Some((self.indicators_row(outputs, id, config, appearance), None))
     }
 }

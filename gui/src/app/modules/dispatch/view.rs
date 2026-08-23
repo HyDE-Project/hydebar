@@ -49,7 +49,7 @@ impl App {
                     .view((definition, self.appearance(), self.icons()))
                     .map(|(content, _)| (content, custom_module_action(definition)))
             }
-            ModuleName::Updates => self.updates.view((&self.config.updates, self.icons())),
+            ModuleName::Updates => self.updates.bar_view(&self.config.updates, self.icons()),
             ModuleName::Clipboard => self
                 .clipboard
                 .bar_view(&self.config.clipboard_cmd, self.icons())
@@ -59,12 +59,12 @@ impl App {
                         Some(OnModulePress::Action(Box::new(Message::OpenClipboard)))
                     )
                 }),
-            ModuleName::Workspaces => self.workspaces.view((
+            ModuleName::Workspaces => self.workspaces.bar_view(
                 &self.outputs,
                 id,
                 &self.config.workspaces,
                 self.appearance()
-            )),
+            ),
             ModuleName::WindowTitle => self
                 .window_title
                 .bar_view(&self.config.window_title, self.attention.is_on(module_name)),

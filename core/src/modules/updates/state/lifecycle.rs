@@ -1,24 +1,20 @@
 //! How the module joins the bar and leaves it: the schedule it keeps
-//! running, and the entry it draws.
+//! running while the layout hosts the entry.
 
 use std::sync::Arc;
 
-use iced::Element;
 use log::{debug, info};
 
 use super::{
-    super::view,
-    CheckState, Message, Updates,
+    Updates,
     hyde_clone::find_hyde_clone,
     schedule::{Schedule, check_interval}
 };
 use crate::{
     ModuleContext,
-    components::icons::IconTheme,
     config::UpdatesModuleConfig,
     event_bus::ModuleEvent,
-    menu::MenuType,
-    modules::{Module, ModuleError, OnModulePress}
+    modules::{Module, ModuleError}
 };
 
 impl Updates {
@@ -34,9 +30,9 @@ impl Updates {
 
 impl<M> Module<M> for Updates
 where
-    M: 'static + Clone + From<Message>
+    M: 'static
 {
-    type ViewData<'a> = (&'a Option<UpdatesModuleConfig>, &'a IconTheme);
+    type ViewData<'a> = ();
     type RegistrationData<'a> = Option<&'a UpdatesModuleConfig>;
 
     /// Makes sure exactly one check schedule is running for `config`.
@@ -104,26 +100,5 @@ where
     /// interval for a badge nobody renders.
     fn deregister(&mut self) {
         self.stop();
-    }
-
-    fn view(
-        &self,
-        (config, icons): Self::ViewData<'_>
-    ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
-        if config.is_none() || self.state == CheckState::Unavailable {
-            return None;
-        }
-
-        Some((
-            view::icon(
-                &self.state,
-                self.pending.len(),
-                self.hyde_pending(),
-                self.shown_count.element(crate::components::scale::base()),
-                icons
-            )
-            .map(M::from),
-            Some(OnModulePress::ToggleMenu(MenuType::Updates))
-        ))
     }
 }
