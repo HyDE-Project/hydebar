@@ -103,7 +103,7 @@ impl App {
                 crate::views::tray::render_tray(&self.tray, id, opacity, self.icons())
                     .map(|content| (content, None))
             }
-            ModuleName::Clock => self.clock.view(&self.config.clock),
+            ModuleName::Clock => self.clock.bar_view(&self.config.clock),
             ModuleName::HydeMenu => self.hyde_menu.view(self.icons()),
             ModuleName::Battery => self.battery.bar_view(&self.config.battery, self.icons()),
             ModuleName::Privacy => self.privacy.view(self.icons()),

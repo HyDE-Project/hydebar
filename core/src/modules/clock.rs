@@ -4,10 +4,11 @@
 //! what time it is. Its bar entry opens the calendar menu, which is
 //! composition between blocks, not knowledge of each other's insides.
 //!
-//! One folder, three rooms: [`ticker`] runs the tick loop on the wall-clock
+//! One folder, four rooms: [`ticker`] runs the tick loop on the wall-clock
 //! boundaries the formats call for, [`state`] folds messages in and follows
-//! the format cycle, and [`module`] wires the module to the bar. The root
-//! holds the state the rooms share.
+//! the format cycle, [`view`] paints the bar entry and [`module`] starts and
+//! stops the tick loop with the layout. The root holds the state the rooms
+//! share.
 
 use std::time::Duration;
 
@@ -19,6 +20,7 @@ use crate::{ModuleEventSender, format_cycle::FormatCycle};
 mod module;
 mod state;
 mod ticker;
+mod view;
 
 /// The moment the clock last read.
 #[derive(Debug, Clone)]

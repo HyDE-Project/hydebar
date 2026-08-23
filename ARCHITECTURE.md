@@ -127,14 +127,17 @@ dispatch calls with the data it owns, and background work is started by
 with no state of its own is nothing but render functions — `cpu`, `memory`,
 `cpu_temp`, `gpu_temp` and `idle_inhibitor` are the worked examples; a
 stateful module keeps its state in core without the trait — `battery` and
-`calendar` show that shape.
+`calendar` show that shape. A module that genuinely owns background work
+keeps the trait for its registration alone, so the one law of gating still
+reaches it — `clock` shows that shape.
 
-Migration ledger — still on the trait: `bar_layout`, `clock`,
+Migration ledger — still drawing through the trait: `bar_layout`,
 `command_button`, `control_center`, `custom_module`, `hyde_menu`,
 `keyboard_layout`, `keyboard_submap`, `media_player`, `notifications`,
 `privacy`, `screenshot`, `settings`, `system_info`, `taskbar`, `themes`,
 `tray`, `updates`, `wallpaper`, `weather`, `window_title`, `workspaces`. A
-migrated module leaves this list in the commit that moves it.
+migrated module leaves this list in the commit that moves it, and the view
+half of the trait goes with the last of them.
 
 ### Registration: one law
 
