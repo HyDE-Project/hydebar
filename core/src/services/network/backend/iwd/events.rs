@@ -12,13 +12,18 @@
 //! through the daemon rather than through the bar.
 
 use iced::futures::{Stream, StreamExt, stream::select_all};
-use log::{debug, warn};
+use log::debug;
 use masterror::{AppError, AppResult};
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use uuid::Uuid;
 use zbus::zvariant::OwnedObjectPath;
 
-use super::{IwdDbus, agents::SignalAgent};
+use super::{IwdDbus, agents::SignalAgent, signal_agents::SignalAgents};
+
+mod bands;
+
+use bands::strength_of_level;
+
 use crate::services::{
     bus::bus_failure,
     network::{ConnectivityState, NetworkBackend, NetworkEvent}
@@ -37,6 +42,7 @@ impl IwdDbus<'_> {
     )]
     pub async fn subscribe_events(&self) -> AppResult<impl Stream<Item = Vec<NetworkEvent>>> {
         let iwd = self;
+        let mut kept = SignalAgents::new(self.inner().connection().clone());
 
         let mut wireless_enabled_changes = vec![];
         for adapter_proxy in self.adapters().await? {
@@ -132,8 +138,7 @@ impl IwdDbus<'_> {
             ))
             .map_err(|e| AppError::internal(format!("Failed to create agent path: {e}")))?;
 
-            let _server = self
-                .inner()
+            self.inner()
                 .connection()
                 .object_server()
                 .at(&agent_path, agent)
@@ -168,7 +173,8 @@ impl IwdDbus<'_> {
                         "Failed to register signal level agent with station: {e}"
                     ))
                 })?;
-            warn!("Registered signal level agent at {agent_path}");
+            debug!("Registered signal level agent at {agent_path}");
+            kept.keep(station.inner().path().to_owned().into(), agent_path);
         }
 
         let events = select_all(vec![
@@ -178,49 +184,6 @@ impl IwdDbus<'_> {
             select_all(signal_level_updates).boxed(),
         ]);
 
-        Ok(events)
-    }
-}
-
-/// Maps the bucket the signal agent reports onto a percentage.
-///
-/// The agent is registered with three thresholds, so iwd answers with the
-/// index of the band the signal fell into — not a percentage. Rendering the
-/// index directly showed the weakest icon whatever the actual signal.
-const fn strength_of_level(level: i16) -> u8 {
-    match level {
-        0 => 100,
-        1 => 75,
-        2 => 50,
-        _ => 25
-    }
-}
-
-#[cfg(test)]
-#[cfg_attr(coverage_nightly, coverage(off))]
-mod tests {
-    use super::strength_of_level;
-
-    #[test]
-    fn the_strongest_band_maps_to_a_full_signal() {
-        assert_eq!(strength_of_level(0), 100);
-    }
-
-    #[test]
-    fn the_second_band_maps_to_three_quarters() {
-        assert_eq!(strength_of_level(1), 75);
-    }
-
-    #[test]
-    fn the_third_band_maps_to_half() {
-        assert_eq!(strength_of_level(2), 50);
-    }
-
-    #[test]
-    fn any_other_band_maps_to_a_quarter() {
-        assert_eq!(strength_of_level(3), 25);
-        assert_eq!(strength_of_level(-1), 25);
-        assert_eq!(strength_of_level(i16::MAX), 25);
-        assert_eq!(strength_of_level(i16::MIN), 25);
+        Ok(kept.guarding(events))
     }
 }
