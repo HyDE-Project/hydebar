@@ -133,7 +133,7 @@ reaches it — `clock` shows that shape.
 
 Migration ledger — still drawing through the trait: `bar_layout`,
 `command_button`, `control_center`, `custom_module`, `hyde_menu`,
-`keyboard_layout`, `keyboard_submap`, `media_player`, `notifications`,
+`keyboard_submap`, `media_player`, `notifications`,
 `privacy`, `screenshot`, `settings`, `system_info`, `taskbar`, `themes`,
 `tray`, `updates`, `wallpaper`, `weather`, `window_title`, `workspaces`. A
 migrated module leaves this list in the commit that moves it, and the view

@@ -11,8 +11,8 @@ use super::{BarContext, FromBarContext};
 use crate::{
     components::icons::IconTheme,
     config::{
-        Appearance, CustomModuleDef, KeyboardLayoutModuleConfig, MediaPlayerModuleConfig,
-        SystemModuleConfig, UpdatesModuleConfig, WindowTitleConfig, WorkspacesModuleConfig
+        Appearance, CustomModuleDef, MediaPlayerModuleConfig, SystemModuleConfig,
+        UpdatesModuleConfig, WindowTitleConfig, WorkspacesModuleConfig
     },
     outputs::Outputs
 };
@@ -38,12 +38,6 @@ impl FromBarContext<'_> for (Id, f32) {
 impl<'a> FromBarContext<'a> for &'a IconTheme {
     fn from_bar_context(ctx: &BarContext<'a>) -> Option<Self> {
         Some(ctx.icons)
-    }
-}
-
-impl<'a> FromBarContext<'a> for &'a KeyboardLayoutModuleConfig {
-    fn from_bar_context(ctx: &BarContext<'a>) -> Option<Self> {
-        Some(&ctx.config.keyboard_layout)
     }
 }
 

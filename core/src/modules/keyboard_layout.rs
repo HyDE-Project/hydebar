@@ -1,9 +1,10 @@
 //! The keyboard layout indicator: the active layout's label in the bar.
 //!
-//! One folder, three rooms: [`state`] folds messages in and steps the
+//! One folder, four rooms: [`state`] folds messages in and steps the
 //! label's dissolve, [`listener`] follows the compositor's keyboard events
-//! in the background and [`module`] wires the module to the bar. The root
-//! holds the state the rooms share.
+//! in the background, [`view`] paints the bar entry and [`module`] starts and
+//! stops the listener with the layout. The root holds the state the rooms
+//! share.
 
 use std::sync::Arc;
 
@@ -15,6 +16,7 @@ use crate::ModuleEventSender;
 mod listener;
 mod module;
 mod state;
+mod view;
 
 /// Bar entry naming the keyboard layout in force.
 pub struct KeyboardLayout {

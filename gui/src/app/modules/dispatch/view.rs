@@ -97,7 +97,9 @@ impl App {
                 self.appearance(),
                 self.icons()
             ),
-            ModuleName::KeyboardLayout => self.keyboard_layout.view(&self.config.keyboard_layout),
+            ModuleName::KeyboardLayout => {
+                self.keyboard_layout.bar_view(&self.config.keyboard_layout)
+            }
             ModuleName::KeyboardSubmap => self.keyboard_submap.view(()),
             ModuleName::Tray => {
                 crate::views::tray::render_tray(&self.tray, id, opacity, self.icons())
