@@ -11,7 +11,7 @@ repository = "https://github.com/HyDE-Project/hydebar"
 homepage = "https://github.com/HyDE-Project/hydebar"
 
 [workspace.dependencies]
-quick-xml = "0.41"
+quick-xml = "0.42"
 ttf-parser = "0.25"
 iced = { package = "iced_layershell", git = "https://github.com/MalpenZibo/iced_layershell", tag = "v0.2.1", features = [
   "tokio",

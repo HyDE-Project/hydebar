@@ -37,7 +37,7 @@ pub(super) fn read_tree(path: &str) -> Option<Vec<Entry>> {
         tag.try_get_attribute(name)
             .ok()
             .flatten()
-            .map(|attribute| String::from_utf8_lossy(&attribute.value).into_owned())
+            .map(|attribute| attribute.value.into_owned())
             .unwrap_or_default()
     };
 
@@ -50,7 +50,7 @@ pub(super) fn read_tree(path: &str) -> Option<Vec<Entry>> {
     loop {
         match reader.read_event() {
             Ok(Event::Start(tag)) => match tag.name().as_ref() {
-                b"object" => match attribute(&tag, "class").as_str() {
+                "object" => match attribute(&tag, "class").as_str() {
                     "GtkMenu" => {
                         menus.push(Vec::new());
                         objects.push(ObjectKind::Menu);
@@ -65,13 +65,13 @@ pub(super) fn read_tree(path: &str) -> Option<Vec<Entry>> {
                     }
                     _ => objects.push(ObjectKind::Other)
                 },
-                b"property" => {
+                "property" => {
                     in_label = attribute(&tag, "name") == "label";
                 }
                 _ => {}
             },
             Ok(Event::Empty(tag))
-                if tag.name().as_ref() == b"object"
+                if tag.name().as_ref() == "object"
                     && attribute(&tag, "class") == "GtkSeparatorMenuItem" =>
             {
                 if let Some(menu) = menus.last_mut() {
@@ -80,17 +80,12 @@ pub(super) fn read_tree(path: &str) -> Option<Vec<Entry>> {
             }
             Ok(Event::Text(content)) if in_label => {
                 if let Some(item) = items.last_mut() {
-                    item.label.push_str(
-                        &content
-                            .decode()
-                            .map(std::borrow::Cow::into_owned)
-                            .unwrap_or_default()
-                    );
+                    item.label.push_str(&content);
                 }
             }
             Ok(Event::End(tag)) => match tag.name().as_ref() {
-                b"property" => in_label = false,
-                b"object" => match objects.pop() {
+                "property" => in_label = false,
+                "object" => match objects.pop() {
                     Some(ObjectKind::Menu) => {
                         let entries = menus.pop().unwrap_or_default();
 
