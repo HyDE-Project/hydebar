@@ -11,6 +11,41 @@ use super::super::{
     blocks::{self, Ink, Side}
 };
 
+/// How far the light of a moving block reaches at its brightest, in pixels.
+///
+/// Wider than the shadow an island rests under and softer than its edge: what
+/// is wanted is a block glowing, not a block with a second outline.
+const HALO: f32 = 26.0;
+
+/// How strong the light of a moving block is at its brightest.
+///
+/// Low. The glow says a block came loose or came to rest and then gets out of
+/// the way; one bright enough to read as a colour of its own turns every
+/// unfolding into a light show.
+const GLEAM: f32 = 0.4;
+
+/// The shadow a block wears while it is carrying `glow` of its journey's
+/// light.
+///
+/// The island's own shadow opened out and lit, rather than a second thing
+/// painted behind the pill: a block resting carries exactly what it always
+/// carried, and one on the move carries the same shadow reaching further and
+/// in the colour the theme lights things with.
+fn halo(resting: iced::Shadow, lit: iced::Color, glow: f32) -> iced::Shadow {
+    if glow <= 0.0 {
+        return resting;
+    }
+
+    iced::Shadow {
+        color:       iced::Color {
+            a: GLEAM * glow,
+            ..lit
+        },
+        offset:      iced::Vector::ZERO,
+        blur_radius: HALO.mul_add(glow, resting.blur_radius)
+    }
+}
+
 /// How wide a block is written, in body letters.
 ///
 /// A reading is a label and a figure, and the eye pairs them by how close
@@ -35,9 +70,10 @@ impl App {
         id: Id,
         side: Side,
         ink: Ink,
-        bloom: f32
+        bloom: f32,
+        glow: f32
     ) -> Option<Element<'a, Message>> {
-        let island = self.desk_island(unit, id)?;
+        let island = self.desk_island(unit, id, glow)?;
         let opened: Vec<Element<'a, Message>> = self.desk_opened(unit, side, ink, bloom);
 
         if opened.is_empty() {
@@ -65,7 +101,7 @@ impl App {
         unit: &ModuleName,
         id: Id
     ) -> bool {
-        self.desk_island(unit, id).is_some()
+        self.desk_island(unit, id, 0.0).is_some()
     }
 
     /// The room one unit takes when it is open, at the given ink.
@@ -156,16 +192,29 @@ impl App {
     /// its own island fills the row it stands in, and a row of the canvas is
     /// as tall as the column: the island stretched down the screen and left
     /// its own readings behind.
-    fn desk_island<'a>(&'a self, unit: &'a ModuleName, id: Id) -> Option<Element<'a, Message>> {
+    fn desk_island<'a>(
+        &'a self,
+        unit: &'a ModuleName,
+        id: Id,
+        glow: f32
+    ) -> Option<Element<'a, Message>> {
         let opacity = self.appearance().opacity;
         let (content, action) = self.get_module_view(unit, id, opacity)?;
         let actions = self.module_actions(unit, action);
 
-        Some(self.desk_pill(vec![self.module_element(content, actions, unit, id, true)]))
+        Some(self.desk_pill(
+            vec![self.module_element(content, actions, unit, id, true)],
+            glow
+        ))
     }
 
-    /// The one pill a group of modules shares, as the strip paints it.
-    fn desk_pill<'a>(&'a self, members: Vec<Element<'a, Message>>) -> Element<'a, Message> {
+    /// The one pill a group of modules shares, as the strip paints it, lit by
+    /// however much of its journey's light it is carrying.
+    fn desk_pill<'a>(
+        &'a self,
+        members: Vec<Element<'a, Message>>,
+        glow: f32
+    ) -> Element<'a, Message> {
         use hydebar_proto::config::AppearanceStyle;
 
         let appearance = self.appearance();
@@ -173,7 +222,10 @@ impl App {
             .spacing(appearance.island_gap())
             .align_y(iced::Alignment::Center);
 
-        if appearance.style != AppearanceStyle::Islands {
+        let islands = appearance.style == AppearanceStyle::Islands;
+        let glow = glow.clamp(0.0, 1.0);
+
+        if !islands && glow <= 0.0 {
             return row.into();
         }
 
@@ -182,11 +234,20 @@ impl App {
         let radius = appearance.pill_radius();
 
         container(row)
-            .padding(appearance.island_padding())
+            .padding(if islands {
+                appearance.island_padding()
+            } else {
+                [0.0, 0.0]
+            })
             .style(move |theme: &iced::Theme| iced::widget::container::Style {
-                background: Some(theme.palette().background.scale_alpha(opacity).into()),
-                border: finish.border(radius),
-                shadow: finish.shadow(),
+                background: islands
+                    .then(|| theme.palette().background.scale_alpha(opacity).into()),
+                border: if islands {
+                    finish.border(radius)
+                } else {
+                    iced::Border::default().rounded(radius)
+                },
+                shadow: halo(finish.shadow(), theme.palette().primary, glow),
                 ..iced::widget::container::Style::default()
             })
             .into()

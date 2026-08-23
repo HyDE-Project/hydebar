@@ -22,6 +22,13 @@ use std::time::Duration;
 /// Share of the clock the block with the furthest to go spends crossing.
 const CROSSING: f32 = 0.55;
 
+/// How much of the clock one breath of light lasts.
+///
+/// Short: the light marks an instant — the setting off, the settling — and an
+/// instant that is held is a state rather than a moment. Long enough that the
+/// bar's own frames can draw it rising and falling rather than blinking.
+const FLARE: f32 = 0.16;
+
 /// How long a block takes to write itself out, once it is down.
 ///
 /// The same stretch for every block, which is what makes the near ones finish
@@ -109,6 +116,42 @@ pub fn share(progress: f32, reach: f32) -> (f32, f32) {
     let bloom = eased((progress - arrival) / opening());
 
     (travel, bloom)
+}
+
+/// How brightly a block is lit at `progress`, on a journey `reach` long.
+///
+/// Two breaths of light and nothing between them: one where the block leaves
+/// the place it held, one where it settles into the place it was going to.
+/// What the eye is given is the two ends of the journey — a thing coming
+/// loose and a thing coming to rest — and lighting the whole crossing would
+/// say only that the block is lit.
+///
+/// Both are out well before the clock is, so a canvas standing open carries
+/// no glow at all: this is the light of something moving, and nothing here
+/// is moving any more.
+#[must_use]
+pub fn flare(progress: f32, reach: f32) -> f32 {
+    let progress = progress.clamp(0.0, 1.0);
+
+    let setting_off = breath(progress / FLARE);
+    let settling = breath((progress - landed(reach)) / FLARE + 0.5);
+
+    setting_off.max(settling)
+}
+
+/// One breath of light over its own stretch: dark, bright, dark again.
+///
+/// Rounded rather than triangular. A light that came up and went out at one
+/// pace read as a lamp being switched, and what is wanted is the glow of a
+/// thing gathering itself and letting go.
+fn breath(act: f32) -> f32 {
+    if !(0.0..=1.0).contains(&act) {
+        return 0.0;
+    }
+
+    let away = 2.0f32.mul_add(act, -1.0);
+
+    away.mul_add(-away, 1.0)
 }
 
 /// When a block whose journey is `reach` long is down on its level.
@@ -326,6 +369,41 @@ mod tests {
             crossed(0.1) < eased(0.1) / 5.0,
             "the first tenth of a crossing spends the speed of a whole arrival"
         );
+    }
+
+    #[test]
+    fn a_block_is_lit_where_it_comes_loose_and_where_it_comes_to_rest() {
+        assert_eq!(flare(0.0, 1.0), 0.0, "a block at rest on the strip is dark");
+        assert_eq!(flare(1.0, 1.0), 0.0, "a canvas standing open is dark");
+
+        assert!(
+            flare(FLARE / 2.0, 1.0) > 0.9,
+            "the setting off is not lit"
+        );
+        assert!(flare(landed(1.0), 1.0) > 0.9, "the settling is not lit");
+        assert_eq!(
+            flare(landed(1.0).midpoint(FLARE), 1.0),
+            0.0,
+            "the crossing between the two ends is lit"
+        );
+    }
+
+    #[test]
+    fn the_light_of_a_journey_is_out_before_the_clock_is() {
+        for reach in [0.2_f32, 0.5, 1.0] {
+            let settled = landed(reach) + FLARE;
+
+            for step in 0..=100 {
+                #[expect(clippy::cast_precision_loss, reason = "a fixed sample count")]
+                let progress = (1.0 - settled).mul_add(step as f32 / 100.0, settled);
+
+                assert_eq!(
+                    flare(progress, reach),
+                    0.0,
+                    "a block reaching {reach} is still lit at {progress:.3}"
+                );
+            }
+        }
     }
 
     #[test]

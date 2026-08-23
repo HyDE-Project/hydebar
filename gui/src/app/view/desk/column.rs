@@ -106,7 +106,11 @@ impl App {
                             unfolding,
                             Self::reach(within, deepest)
                         );
-                        let block = self.desk_unit(unit, id, side, ink, bloom)?;
+                        let glow = hydebar_core::animation::flare(
+                            unfolding,
+                            Self::reach(within, deepest)
+                        );
+                        let block = self.desk_unit(unit, id, side, ink, bloom, glow)?;
                         let travel = travel_of(travel, leaving);
 
                         #[expect(
