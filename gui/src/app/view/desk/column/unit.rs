@@ -67,7 +67,7 @@ fn halo(resting: iced::Shadow, lit: iced::Color, glow: f32) -> iced::Shadow {
 /// halves of a line still read as one line.
 const MEASURE: f32 = 30.0;
 
-/// How tall an island stands when the appearance states no height of its own.
+/// How tall the strip stands when the appearance states no height of its own.
 const ISLAND: f32 = 38.0;
 
 impl App {
@@ -102,9 +102,11 @@ impl App {
             return Some(island);
         }
 
+        let named = Self::named(island, self.desk_heading(unit), side, ink, along.bloom);
+
         Some(
             container(
-                Column::with_children(std::iter::once(island).chain(opened))
+                Column::with_children(std::iter::once(named).chain(opened))
                     .spacing(ink.size * 0.9)
                     .width(Length::Fill)
                     .align_x(side.alignment_x())
@@ -112,6 +114,80 @@ impl App {
             .max_width(ink.size * MEASURE)
             .into()
         )
+    }
+
+    /// The name the first block of `unit` would have written over itself.
+    ///
+    /// Nothing when the unit opens into something that carries no name of its
+    /// own — the month grid the clock opens into is the one — and the island
+    /// then stands on its row alone.
+    fn desk_heading(&self, unit: &ModuleName) -> Option<String> {
+        if matches!(unit, ModuleName::Clock) {
+            return None;
+        }
+
+        Some(
+            self.desk_panels(unit)
+                .first()
+                .map_or_else(|| unit.label().to_owned(), |panel| panel.title.to_string())
+        )
+    }
+
+    /// The island and the name of what it opens into, on one row.
+    ///
+    /// Two lines were three: the reading came in on its own row, the name of
+    /// the block stood on the next one, and the rule under that. The island
+    /// is what arrived, so the name belongs beside it.
+    ///
+    /// The name takes the column's own edge and the island stands inward of
+    /// it. The islands are as wide as whatever they carry, so a name set
+    /// after one lands wherever that island happened to end and the column
+    /// loses the straight edge its names are read down.
+    ///
+    /// It is written in as its block opens, in step with the rule and the
+    /// lines under it: the row a block arrives in is the island alone, and
+    /// nothing of the arrival is spoiled by a name standing there before the
+    /// block it names.
+    fn named(
+        island: Element<'_, Message>,
+        heading: Option<String>,
+        side: Side,
+        ink: Ink,
+        bloom: f32
+    ) -> Element<'_, Message> {
+        let Some(heading) = heading else {
+            return island;
+        };
+
+        let written = blocks::name(&heading, ink, bloom);
+
+        let row = match side {
+            Side::Trailing => iced::widget::Row::with_children([island, written]),
+            Side::Leading | Side::Middle => iced::widget::Row::with_children([written, island])
+        };
+
+        row.spacing(ink.size * 0.6)
+            .align_y(iced::Alignment::Center)
+            .into()
+    }
+
+    /// How tall an island stands on the strip, which is how tall it arrives.
+    ///
+    /// Not the height of the strip: the strip holds its islands inside its
+    /// own padding, and an island given the whole band to stand in arrives a
+    /// little taller than the one that left. Worked out the way the strip
+    /// works it out, so the two cannot drift apart.
+    fn island_height(&self) -> f32 {
+        use hydebar_proto::config::AppearanceStyle;
+
+        let appearance = self.appearance();
+        let band = appearance.height.unwrap_or(ISLAND);
+
+        if appearance.style == AppearanceStyle::Islands {
+            appearance.bar_padding()[0].mul_add(-2.0, band)
+        } else {
+            band - 8.0
+        }
     }
 
     /// The island of a unit that has not set off yet: its room, and nothing
@@ -132,7 +208,7 @@ impl App {
 
         iced::widget::Space::new()
             .width(Length::Fill)
-            .height(Length::Fixed(self.appearance().height.unwrap_or(ISLAND)))
+            .height(Length::Fixed(self.island_height()))
             .into()
     }
 
@@ -154,7 +230,8 @@ impl App {
     /// column needs is what the column takes: the island it arrived as, the
     /// gap under it, and the room of every block it opens into.
     pub(in crate::app::view::desk) fn desk_unit_room(&self, unit: &ModuleName, ink: Ink) -> f32 {
-        let island = self.appearance().height.unwrap_or(ISLAND);
+        let island = self.island_height();
+
         let opened = self.desk_room(unit, ink);
 
         if opened <= 0.0 {
@@ -168,7 +245,7 @@ impl App {
     fn desk_room(&self, unit: &ModuleName, ink: Ink) -> f32 {
         if matches!(unit, ModuleName::Clock) {
             let seat = super::super::readings::seat(self).map_or(0.0, |panel| {
-                ink.size.mul_add(0.9, blocks::room_of(&panel, ink))
+                ink.size.mul_add(0.9, blocks::room_of(&panel, ink, true))
             });
 
             return ink.size.mul_add(blocks::MONTH_ROWS, seat);
@@ -188,7 +265,8 @@ impl App {
 
         panels
             .iter()
-            .map(|panel| blocks::room_of(panel, ink))
+            .enumerate()
+            .map(|(place, panel)| blocks::room_of(panel, ink, place > 0))
             .sum::<f32>()
             + gaps
     }
@@ -206,7 +284,7 @@ impl App {
                 .chain(
                     super::super::readings::seat(self)
                         .into_iter()
-                        .map(|panel| blocks::panel(&panel, side, ink, bloom))
+                        .map(|panel| blocks::panel(&panel, side, ink, bloom, true))
                 )
                 .collect();
         }
@@ -214,12 +292,13 @@ impl App {
         let panels = self.desk_panels(module);
 
         if panels.is_empty() {
-            return vec![blocks::awaited(module.label(), side, ink, bloom)];
+            return vec![blocks::awaited(side, ink, bloom)];
         }
 
         panels
             .iter()
-            .map(|panel| blocks::panel(panel, side, ink, bloom))
+            .enumerate()
+            .map(|(place, panel)| blocks::panel(panel, side, ink, bloom, place > 0))
             .collect()
     }
 
@@ -260,6 +339,15 @@ impl App {
     /// heads is written out: what left the strip has to arrive looking like
     /// what left, and what stands on the canvas has to look like the canvas.
     /// `glow` is however much of its journey's light it is carrying.
+    ///
+    /// The room it takes never changes with any of that. The padding and the
+    /// height are the strip's own, held whether the ground under them is
+    /// painted or not: a pill that gave its padding back when it stopped
+    /// being painted moved the readout standing in it, and a reading that
+    /// jumps as its background fades is the fade drawing attention to itself.
+    ///
+    /// The height is the one the strip gives an island, so a block leaves the
+    /// bar at the size it stood there and arrives at that size too.
     fn desk_pill<'a>(
         &'a self,
         members: Vec<Element<'a, Message>>,
@@ -276,16 +364,13 @@ impl App {
         let islands = appearance.style == AppearanceStyle::Islands;
         let glow = glow.clamp(0.0, 1.0);
         let ground = 1.0 - bloom.clamp(0.0, 1.0);
-
-        if (!islands || ground <= 0.0) && glow <= 0.0 {
-            return row.into();
-        }
-
         let opacity = appearance.opacity;
         let finish = hydebar_core::style::IslandFinish::of(appearance);
         let radius = appearance.pill_radius();
 
         container(row)
+            .height(Length::Fixed(self.island_height()))
+            .align_y(iced::Alignment::Center)
             .padding(if islands {
                 appearance.island_padding()
             } else {

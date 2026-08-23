@@ -14,10 +14,18 @@ use super::{super::super::super::state::Message, Ink};
     reason = "a block holds a handful of rows, far below any precision limit"
 )]
 pub(super) fn room(rows: usize, line: f32, ink: Ink) -> f32 {
-    let heading = ink.size * 1.05 * 1.4;
     let gaps = (rows + 1) as f32 * (ink.size * 0.28);
 
-    (rows as f32).mul_add(line, heading + 1.0 + gaps)
+    (rows as f32).mul_add(line, heading(ink) + 1.0 + gaps)
+}
+
+/// The room a heading takes, which the block it heads may not be keeping.
+///
+/// The first block of a unit gives its heading up to the row the island
+/// stands in — the name of the thing and the reading it came in as, on one
+/// line rather than two — so the room it asks for is a heading short.
+pub(super) fn heading(ink: Ink) -> f32 {
+    ink.size * 1.05 * 1.4
 }
 
 /// Opens `shown` from the top inside the room it will need when it is open.

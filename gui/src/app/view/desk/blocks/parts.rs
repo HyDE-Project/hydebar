@@ -18,10 +18,22 @@ use super::{
 };
 
 /// The lines of a panel, in the ink they are drawn in.
-pub(super) fn written<'a>(panel: &Panel, side: Side, ink: Ink) -> Element<'a, Message> {
-    let heading = text(panel.title.to_uppercase())
-        .size(ink.size * 1.05)
-        .color(ink.heading());
+///
+/// `headed` is whether the panel writes its own name. The first block of a
+/// unit does not: its name stands beside the island the unit arrived as,
+/// which is one line where it used to be two.
+pub(super) fn written<'a>(
+    panel: &Panel,
+    side: Side,
+    ink: Ink,
+    headed: bool
+) -> Element<'a, Message> {
+    let heading = headed.then(|| {
+        text(panel.title.to_uppercase())
+            .size(ink.size * 1.05)
+            .color(ink.heading())
+            .into()
+    });
 
     let lines = panel
         .rows
@@ -29,7 +41,8 @@ pub(super) fn written<'a>(panel: &Panel, side: Side, ink: Ink) -> Element<'a, Me
         .map(|(label, value)| line(label, value, side, ink));
 
     Column::with_children(
-        std::iter::once(heading.into())
+        heading
+            .into_iter()
             .chain(std::iter::once(rule(ink)))
             .chain(panel.figure.as_ref().map(|figure| drawn(figure, side, ink)))
             .chain(lines)
@@ -65,11 +78,10 @@ fn drawn<'a>(figure: &Figure, side: Side, ink: Ink) -> Element<'a, Message> {
 }
 
 /// The blank shape a module with nothing to say opens into.
-pub(super) fn blank<'a>(title: &str, side: Side, ink: Ink) -> Element<'a, Message> {
-    let heading = text(title.to_uppercase())
-        .size(ink.size * 1.05)
-        .color(ink.heading());
-
+///
+/// Headless like the first block of any unit: its name is up on the island's
+/// own row.
+pub(super) fn blank<'a>(side: Side, ink: Ink) -> Element<'a, Message> {
     let lines = [0.62_f32, 0.38].into_iter().map(|share| {
         Row::with_children(match side {
             Side::Leading | Side::Middle => vec![
@@ -89,15 +101,11 @@ pub(super) fn blank<'a>(title: &str, side: Side, ink: Ink) -> Element<'a, Messag
         .into()
     });
 
-    Column::with_children(
-        std::iter::once(heading.into())
-            .chain(std::iter::once(rule(ink)))
-            .chain(lines)
-    )
-    .spacing(ink.size * 0.28)
-    .width(Length::Fill)
-    .align_x(side.alignment_x())
-    .into()
+    Column::with_children(std::iter::once(rule(ink)).chain(lines))
+        .spacing(ink.size * 0.28)
+        .width(Length::Fill)
+        .align_x(side.alignment_x())
+        .into()
 }
 
 /// One blank where a reading will stand, `width` wide.

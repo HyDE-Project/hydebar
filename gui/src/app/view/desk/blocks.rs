@@ -89,7 +89,7 @@ pub(super) struct Ink {
 
 impl Ink {
     /// Colour of the headings, a step back from the values.
-    fn heading(self) -> Color {
+    pub(in crate::app::view::desk) fn heading(self) -> Color {
         self.value.scale_alpha(0.85)
     }
 
@@ -106,13 +106,23 @@ impl Ink {
 /// line at a time: a line is a step, and a dozen steps in a fifth of a second
 /// is what the eye reads as juddering.
 /// The room one panel takes when it is open.
-pub(in crate::app::view::desk) fn room_of(panel: &Panel, ink: Ink) -> f32 {
-    room(panel.rows.len(), ink.size * 1.4, ink) + drawing_room(panel, ink)
+///
+/// `headed` is whether it writes its own name: the first block of a unit
+/// gives that name to the row the island stands in, and asks for a heading
+/// less room here.
+pub(in crate::app::view::desk) fn room_of(panel: &Panel, ink: Ink, headed: bool) -> f32 {
+    let written = room(panel.rows.len(), ink.size * 1.4, ink) + drawing_room(panel, ink);
+
+    if headed {
+        written
+    } else {
+        written - self::room::heading(ink)
+    }
 }
 
-/// The room the blank shape takes, which is a heading and two bars.
+/// The room the blank shape takes, which is two bars under a rule.
 pub(in crate::app::view::desk) fn blank_room(ink: Ink) -> f32 {
-    room(2, ink.size * 0.55, ink)
+    room(2, ink.size * 0.55, ink) - self::room::heading(ink)
 }
 
 /// The room the drawing of a panel takes, nothing when it carries none.
@@ -133,21 +143,49 @@ fn drawing_room(panel: &Panel, ink: Ink) -> f32 {
     }
 }
 
-pub(super) fn panel<'a>(panel: &Panel, side: Side, ink: Ink, bloom: f32) -> Element<'a, Message> {
-    revealed(written(panel, side, ink), room_of(panel, ink), bloom)
+pub(super) fn panel<'a>(
+    panel: &Panel,
+    side: Side,
+    ink: Ink,
+    bloom: f32,
+    headed: bool
+) -> Element<'a, Message> {
+    revealed(
+        written(panel, side, ink, headed),
+        room_of(panel, ink, headed),
+        bloom
+    )
 }
 
 /// The block of a module that has nothing to say yet.
 ///
-/// Every module opens into the same shape — a heading, a rule and lines
-/// under it — and one with no readings of its own would otherwise open into
-/// nothing and break the shape of the column it stands in. It opens into the
-/// shape with the lines left blank: two dim bars where the readings would
-/// stand, which is a placeholder anywhere anyone has seen one.
-pub(super) fn awaited<'a>(title: &str, side: Side, ink: Ink, bloom: f32) -> Element<'a, Message> {
+/// Every module opens into the same shape — a rule and lines under it, its
+/// name up on the island's own row — and one with no readings of its own
+/// would otherwise open into nothing and break the shape of the column it
+/// stands in. It opens into the shape with the lines left blank: two dim bars
+/// where the readings would stand, which is a placeholder anywhere anyone has
+/// seen one.
+pub(super) fn awaited<'a>(side: Side, ink: Ink, bloom: f32) -> Element<'a, Message> {
+    revealed(blank(side, ink), blank_room(ink), bloom)
+}
+
+/// The name of a block, written in beside the island it arrived as.
+///
+/// Opened rather than simply drawn, the way the lines under it are: it is
+/// part of the block, not part of the island, and a name standing there while
+/// its block was still on its way would be the one piece of the canvas that
+/// arrived early.
+pub(in crate::app::view::desk) fn name<'a>(
+    heading: &str,
+    ink: Ink,
+    bloom: f32
+) -> Element<'a, Message> {
     revealed(
-        blank(title, side, ink),
-        room(2, ink.size * 0.55, ink),
+        iced::widget::text(heading.to_uppercase())
+            .size(ink.size * 1.05)
+            .color(ink.heading())
+            .into(),
+        room::heading(ink),
         bloom
     )
 }
