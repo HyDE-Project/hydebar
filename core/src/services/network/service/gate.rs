@@ -98,6 +98,17 @@ mod tests {
     }
 
     #[test]
+    fn a_reading_that_names_no_network_never_reaches_the_bar() {
+        let mut gate = gate();
+
+        assert!(
+            !gate.admits(&NetworkEvent::Strength((String::new(), 61))),
+            "a reading is filed under the network it was taken on, so a producer \
+             that cannot name one has to stay quiet rather than send an empty name"
+        );
+    }
+
+    #[test]
     fn the_strength_of_a_neighbour_never_reaches_the_bar() {
         let mut gate = gate();
 

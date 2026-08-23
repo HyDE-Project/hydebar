@@ -6,7 +6,8 @@ use masterror::AppResult;
 use zbus::zvariant::OwnedObjectPath;
 
 use super::{
-    IwdDbus, device::DeviceProxy, network::NetworkProxy, station_state::state_from_station
+    IwdDbus, device::DeviceProxy, network::NetworkProxy, station::StationProxy,
+    station_state::state_from_station
 };
 use crate::services::{
     bus::bus_failure,
@@ -85,6 +86,33 @@ impl IwdDbus<'_> {
         Ok(networks)
     }
 
+    /// The name of the network a station is joined to, where it is joined to
+    /// one.
+    ///
+    /// The signal agent reports how strong a link is and says nothing about
+    /// which link it is — but an agent is registered against one station, so
+    /// the station is the answer. Asked at the moment the reading arrives
+    /// rather than remembered from registration, because a station roams and
+    /// the reading has to be filed under the network it was taken on.
+    ///
+    /// A station between networks answers with nothing rather than an empty
+    /// name: the bar files strength readings under the network they belong
+    /// to, and an empty name belongs to none of them.
+    pub async fn connected_network_name(&self, station: &StationProxy<'_>) -> Option<String> {
+        let path = station.connected_network().await.ok()?;
+
+        let network = NetworkProxy::builder(self.inner().connection())
+            .destination("net.connman.iwd")
+            .ok()?
+            .path(path)
+            .ok()?
+            .build()
+            .await
+            .ok()?;
+
+        network.name().await.ok().filter(|name| !name.is_empty())
+    }
+
     /// Detailed info on active connections
     ///
     /// # Errors
@@ -92,8 +120,6 @@ impl IwdDbus<'_> {
     /// Returns an error when the active connections cannot be listed or a
     /// network refuses to report its name.
     pub async fn active_connections_info(&self) -> AppResult<Vec<ActiveConnectionInfo>> {
-        // INFO: probably way cleaner with a custom dbus object - SignalLevelAgent
-
         let nets = self.active_connections().await?;
         let mut info = Vec::new();
         for (net, s) in nets {

@@ -65,9 +65,10 @@ impl IwdDbus<'_> {
         })
     }
 
-    // adapter <- device (station mode) <- station
-
     /// Lists a proxy for every iwd station object.
+    ///
+    /// iwd nests them: an adapter carries devices, and a device in station
+    /// mode carries the station. The station is what answers for the link.
     ///
     /// # Errors
     ///
@@ -142,15 +143,15 @@ impl IwdDbus<'_> {
 
     /// Lists a proxy for every access point object currently exposed.
     ///
+    /// Asked of the root object manager, where iwd exposes an access point
+    /// only while the card is running one. A card in station mode answers
+    /// with nothing, which is the ordinary case and not a failure.
+    ///
     /// # Errors
     ///
     /// Returns an error when the managed objects cannot be listed or an access
     /// point proxy cannot be built.
     pub async fn access_points_proxies(&self) -> AppResult<Vec<AccessPointProxy>> {
-        // Note: AccessPoint interface might not be directly on the root object manager.
-        // It might be associated with a Device or Station. This function assumes they
-        // might appear. If this doesn't work as expected, the logic might need
-        // refinement based on IWD's structure.
         list_proxies!(&self.inner, "net.connman.iwd.AccessPoint", AccessPointProxy).await
     }
 

@@ -126,7 +126,6 @@ impl NetworkBackend for BackendChoiceWithConnection {
                     .set_vpn(connection_path, enable)
                     .await
             }
-            // IWD does not handle VPNs directly
             BackendChoice::Iwd => Err(AppError::new(
                 AppErrorKind::NotImplemented,
                 "IWD does not support VPN management"
