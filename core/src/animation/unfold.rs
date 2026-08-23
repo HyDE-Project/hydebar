@@ -12,8 +12,10 @@
 //! the instant it is there. And the near blocks are on their level first: the
 //! way is shorter and the speed is the same, so the top of a column has
 //! finished opening while
-//! the bottom of it is still coming down. Both acts leave quickly and settle
-//! slowly, which is what everything arriving somewhere does.
+//! the bottom of it is still coming down. The crossing settles slowly and
+//! sets off just as slowly — a block is watched leaving its place on the
+//! strip as much as arriving at its place on the canvas — and the opening,
+//! which arrives from nowhere, only settles slowly.
 
 use std::time::Duration;
 
@@ -26,7 +28,12 @@ const CROSSING: f32 = 0.55;
 /// before the far ones start. Timing the opening to end with the clock
 /// instead had every block, near or far, finish writing on the same frame —
 /// so however early a block landed, the whole canvas still settled at once.
-const OPENING: f32 = 1.0 - CROSSING * crate::components::flip::DESCENT;
+///
+/// Measured back from the end of the clock off the furthest block's landing,
+/// so that block is written out on the very frame the unfolding is over.
+fn opening() -> f32 {
+    1.0 - landed(1.0)
+}
 
 /// The even clock one screen's unfolding runs on.
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
@@ -96,10 +103,10 @@ pub fn share(progress: f32, reach: f32) -> (f32, f32) {
     let reach = reach.clamp(0.05, 1.0);
 
     let crossing = CROSSING * reach;
-    let arrival = crossing * crate::components::flip::DESCENT;
+    let arrival = landed(reach);
 
-    let travel = eased(progress / crossing);
-    let bloom = eased((progress - arrival) / OPENING);
+    let travel = crossed(progress / crossing);
+    let bloom = eased((progress - arrival) / opening());
 
     (travel, bloom)
 }
@@ -110,9 +117,51 @@ pub fn share(progress: f32, reach: f32) -> (f32, f32) {
 /// block landing needs: the strip's own background goes out behind its
 /// islands rather than before them, so it has to be told when each of them
 /// has landed.
+///
+/// Read off the crossing curve rather than assumed from the share of the
+/// journey the drop takes: a curve that is not a straight line puts the
+/// landing somewhere else in the clock than the distance alone says, and a
+/// background timed off the wrong instant goes out from under a block that
+/// is still on its way down.
 #[must_use]
 pub fn landed(reach: f32) -> f32 {
-    CROSSING * reach.clamp(0.05, 1.0) * crate::components::flip::DESCENT
+    CROSSING * reach.clamp(0.05, 1.0) * descended()
+}
+
+/// How far into its crossing a block is when its drop is over.
+///
+/// The crossing curve read backwards from [`DESCENT`]: the one place the
+/// answer is worked out, so nothing has to guess where on the clock a block
+/// touches down.
+///
+/// [`DESCENT`]: crate::components::flip::DESCENT
+fn descended() -> f32 {
+    (2.0 * (1.0 - crate::components::flip::DESCENT))
+        .cbrt()
+        .mul_add(-0.5, 1.0)
+}
+
+/// The curve a journey between two places runs on: off slowly, along quickly,
+/// into place slowly.
+///
+/// A block is on the screen for the whole of its crossing, so it has to be
+/// seen leaving as much as arriving. Run on the decelerate curve the acts
+/// that arrive from nowhere use, it spent its whole speed on the first
+/// instant: at the pace the bar unfolds in, a block was out of the strip's
+/// band a frame or two after setting off and crept the rest of the way, which
+/// reads as the strip dropping its modules rather than carrying them. A
+/// symmetric cubic gives the leaving the same stretch as the arriving, so a
+/// block holds its place on the strip until it is really under way.
+fn crossed(act: f32) -> f32 {
+    let act = act.clamp(0.0, 1.0);
+
+    if act < 0.5 {
+        4.0 * act * act * act
+    } else {
+        let left = 2.0f32.mul_add(-act, 2.0);
+
+        left.mul_add(-(left * left) / 2.0, 1.0)
+    }
 }
 
 /// The curve an act runs on: away quickly, into place slowly.
@@ -191,7 +240,7 @@ mod tests {
         assert_eq!(share(1.0, 1.0), (1.0, 1.0));
 
         for reach in [0.2_f32, 0.5, 1.0] {
-            let arrival = CROSSING * reach * crate::components::flip::DESCENT;
+            let arrival = landed(reach);
 
             for step in 0..=200 {
                 #[expect(clippy::cast_precision_loss, reason = "a fixed sample count")]
@@ -252,5 +301,46 @@ mod tests {
             eased(0.9) - eased(0.8) < eased(0.2) - eased(0.1),
             "the last stretch is slower than the first"
         );
+    }
+
+    #[test]
+    fn a_crossing_sets_off_as_slowly_as_it_settles() {
+        assert_eq!(crossed(0.0), 0.0);
+        assert_eq!(crossed(1.0), 1.0);
+        assert_eq!(crossed(0.5), 0.5, "half the time is half the way");
+
+        for step in 0..=100 {
+            #[expect(clippy::cast_precision_loss, reason = "a fixed sample count")]
+            let act = step as f32 / 100.0;
+
+            assert!(
+                (crossed(act) + crossed(1.0 - act) - 1.0).abs() < 1e-5,
+                "the setting off at {act:.2} is not what the settling is"
+            );
+        }
+    }
+
+    #[test]
+    fn a_block_holds_its_place_on_the_strip_until_it_is_under_way() {
+        assert!(
+            crossed(0.1) < eased(0.1) / 5.0,
+            "the first tenth of a crossing spends the speed of a whole arrival"
+        );
+    }
+
+    #[test]
+    fn a_landing_is_the_instant_the_drop_is_over() {
+        for reach in [0.2_f32, 0.5, 1.0] {
+            let down = landed(reach);
+
+            assert!(
+                (share(down, reach).0 - crate::components::flip::DESCENT).abs() < 1e-4,
+                "the drop of a block reaching {reach} is not over when it is said to be"
+            );
+            assert!(
+                share(down - 0.01, reach).0 < crate::components::flip::DESCENT,
+                "a block reaching {reach} is down before it is said to be"
+            );
+        }
     }
 }
