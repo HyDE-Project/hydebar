@@ -1,13 +1,8 @@
-//! Module trait wiring for the privacy indicator.
+//! Registration of the listener loop the privacy indicator owns.
 //!
-//! Registration spawns the listener loop that keeps the privacy service
-//! connected, backing off after failures; the view draws one icon per active
-//! access and stays empty while nothing is watched.
-
-use iced::{
-    Alignment, Element,
-    widget::{Row, container}
-};
+//! The loop keeps the privacy service connected, backing off after failures,
+//! so a `PipeWire` that went away is picked up again rather than leaving the
+//! indicator blind.
 
 use super::{
     Privacy, PrivacyMessage,
@@ -15,21 +10,16 @@ use super::{
 };
 use crate::{
     ModuleContext,
-    components::{
-        icons::{IconTheme, Icons, icon},
-        push_maybe::PushMaybe,
-        scale
-    },
     event_bus::ModuleEvent,
-    modules::{Module, ModuleError, OnModulePress},
+    modules::{Module, ModuleError},
     services::{ServiceEvent, privacy::State}
 };
 
 impl<M> Module<M> for Privacy
 where
-    M: 'static + Clone
+    M: 'static
 {
-    type ViewData<'a> = &'a IconTheme;
+    type ViewData<'a> = ();
     type RegistrationData<'a> = ();
 
     fn register(
@@ -84,45 +74,6 @@ where
         }
 
         self.sender = None;
-    }
-
-    /// Render the privacy indicator when data is available.
-    fn view(
-        &self,
-        icons: Self::ViewData<'_>
-    ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
-        self.service.as_ref().and_then(|service| {
-            if service.no_access() {
-                None
-            } else {
-                Some((
-                    container(
-                        Row::new()
-                            .push_maybe(
-                                service
-                                    .screenshare_access()
-                                    .then(|| icon(icons, Icons::ScreenShare))
-                            )
-                            .push_maybe(
-                                service.webcam_access().then(|| icon(icons, Icons::Webcam))
-                            )
-                            .push_maybe(
-                                service
-                                    .microphone_access()
-                                    .then(|| icon(icons, Icons::Mic1))
-                            )
-                            .align_y(Alignment::Center)
-                            .spacing(scale::item_gap())
-                    )
-                    .style(|theme| container::Style {
-                        text_color: Some(theme.extended_palette().danger.weak.color),
-                        ..Default::default()
-                    })
-                    .into(),
-                    None
-                ))
-            }
-        })
     }
 }
 

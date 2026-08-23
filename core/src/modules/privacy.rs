@@ -1,9 +1,9 @@
 //! The privacy indicator: small icons for whoever is watching or listening.
 //!
-//! Two rooms beside the shared state: [`publisher`] carries service events
-//! onto the bus and keeps the listener loop alive, [`module`] wires the
-//! indicator to the bar and draws the icons. The root folds events into the
-//! service snapshot the view reads.
+//! Three rooms beside the shared state: [`publisher`] carries service events
+//! onto the bus and keeps the listener loop alive, [`module`] starts and
+//! stops that loop with the layout, and [`view`] draws the icons. The root
+//! folds events into the service snapshot the view reads.
 
 use log::{error, warn};
 use tokio::task::JoinHandle;
@@ -18,6 +18,7 @@ use crate::{
 
 mod module;
 mod publisher;
+mod view;
 
 /// Message emitted by the privacy module subscription.
 #[derive(Debug, Clone)]

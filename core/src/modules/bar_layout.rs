@@ -6,12 +6,11 @@
 //! dialect as the wallpaper entry: the side buttons step, the middle
 //! button opens the picker.
 //!
-//! One folder, four rooms: [`roster`] reads the desktop's layouts and the
+//! One folder, three rooms: [`roster`] reads the desktop's layouts and the
 //! record of the one in force, [`state`] folds messages in and dispatches
-//! commands, [`view`] draws the picker and [`module`] wires the module to
-//! the bar. The root holds the state the rooms share.
+//! commands, and [`view`] draws the bar entry and the picker. The root holds
+//! the state the rooms share.
 
-mod module;
 mod roster;
 mod state;
 mod view;

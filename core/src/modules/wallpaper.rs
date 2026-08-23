@@ -10,14 +10,13 @@
 //! from the square thumbnails `HyDE` already keeps in its cache, one press on
 //! a tile and the desktop wears it.
 //!
-//! One folder, four rooms: [`listing`] reads the theme's wallpapers and
+//! One folder, three rooms: [`listing`] reads the theme's wallpapers and
 //! decodes their thumbnails, [`state`] folds messages in and dispatches
-//! commands, [`view`] draws the picker grid and [`module`] wires the module
-//! to the bar. The root holds the state the rooms share.
+//! commands, and [`view`] draws the bar entry and the picker grid. The root
+//! holds the state the rooms share.
 
 pub mod current;
 pub(crate) mod listing;
-mod module;
 mod state;
 mod view;
 

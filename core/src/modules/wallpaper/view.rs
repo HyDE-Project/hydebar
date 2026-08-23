@@ -6,12 +6,37 @@ use iced::{
 };
 
 use super::{Message, Wallpaper};
-use crate::components::scale;
+use crate::{
+    components::{
+        icons::{IconTheme, Icons, icon, icon_raw},
+        scale
+    },
+    modules::OnModulePress
+};
 
 /// Tiles per row of the picker grid.
 const PICKER_COLUMNS: usize = 3;
 
 impl Wallpaper {
+    /// The bar entry: the wallpaper glyph, or the spinner while the picker
+    /// is reading the theme's pictures.
+    ///
+    /// Rendered by the module itself, so the bar layer holds no wallpaper
+    /// drawing of its own.
+    #[must_use]
+    pub fn bar_view<M>(
+        &self,
+        icons: &IconTheme
+    ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)>
+    where
+        M: 'static
+    {
+        if self.loading {
+            return Some((icon_raw(self.spinner.glyph().to_owned()).into(), None));
+        }
+
+        Some((icon(icons, Icons::Wallpaper).into(), None))
+    }
     /// Renders the picker: the theme's wallpapers as pressable tiles.
     #[must_use]
     pub fn menu_view<'a>(&self, font_size: f32) -> Element<'a, Message> {

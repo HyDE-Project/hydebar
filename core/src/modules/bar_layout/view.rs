@@ -6,12 +6,34 @@ use iced::{
 };
 
 use super::{BarLayout, Message};
-use crate::components::{
-    icons::{Icons, icon_raw},
-    scale
+use crate::{
+    components::{
+        icons::{IconTheme, Icons, icon, icon_raw},
+        scale
+    },
+    modules::OnModulePress
 };
 
 impl BarLayout {
+    /// The bar entry: the layout glyph, or the spinner while the picker is
+    /// reading the desktop's roster.
+    ///
+    /// Rendered by the module itself, so the bar layer holds no layout
+    /// drawing of its own.
+    #[must_use]
+    pub fn bar_view<M>(
+        &self,
+        icons: &IconTheme
+    ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)>
+    where
+        M: 'static
+    {
+        if self.loading {
+            return Some((icon_raw(self.spinner.glyph().to_owned()).into(), None));
+        }
+
+        Some((icon(icons, Icons::BarLayout).into(), None))
+    }
     /// Renders the picker: the desktop's layouts as pressable cards.
     #[must_use]
     pub fn menu_view<'a>(&self, font_size: f32) -> Element<'a, Message> {

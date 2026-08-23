@@ -106,9 +106,9 @@ impl App {
                     .map(|content| (content, None))
             }
             ModuleName::Clock => self.clock.bar_view(&self.config.clock),
-            ModuleName::HydeMenu => self.hyde_menu.view(self.icons()),
+            ModuleName::HydeMenu => self.hyde_menu.bar_view(self.icons()),
             ModuleName::Battery => self.battery.bar_view(&self.config.battery, self.icons()),
-            ModuleName::Privacy => self.privacy.view(self.icons()),
+            ModuleName::Privacy => self.privacy.bar_view(self.icons()),
             ModuleName::ControlCenter => self.control_center.view(self.icons()),
             ModuleName::Audio => self.control_center.audio_bar(self.icons()),
             ModuleName::Brightness => self.control_center.brightness_bar(self.icons()),
@@ -134,8 +134,8 @@ impl App {
             ModuleName::PowerProfile => self.control_center.power_profile_bar(self.icons()),
             ModuleName::Settings => self.settings.view(self.icons()),
             ModuleName::Themes => self.themes.view(self.icons()),
-            ModuleName::Wallpaper => self.wallpaper.view(self.icons()),
-            ModuleName::BarLayout => self.bar_layout.view(self.icons()),
+            ModuleName::Wallpaper => self.wallpaper.bar_view(self.icons()),
+            ModuleName::BarLayout => self.bar_layout.bar_view(self.icons()),
             ModuleName::MediaPlayer => self
                 .media_player
                 .view((&self.config.media_player, self.icons())),

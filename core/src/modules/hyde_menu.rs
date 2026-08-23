@@ -7,16 +7,12 @@
 //! unfold in place, a leaf runs its command and the window closes.
 //!
 //! One folder, three rooms: [`definition`] reads the desktop's module table,
-//! [`tree`] parses its menu file, [`view`] draws the tree. The root holds
-//! the state and the messages.
+//! [`tree`] parses its menu file, [`view`] draws the bar entry and the tree
+//! it opens. The root holds the state and the messages.
 
 use iced::Element;
 
-use crate::{
-    components::icons::IconTheme,
-    menu::MenuType,
-    modules::{Module, OnModulePress}
-};
+use crate::modules::Module;
 
 mod definition;
 mod tree;
@@ -162,9 +158,9 @@ impl HydeMenu {
 
 impl<M> Module<M> for HydeMenu
 where
-    M: 'static + Clone + From<Message>
+    M: 'static
 {
-    type ViewData<'a> = &'a IconTheme;
+    type ViewData<'a> = ();
     type RegistrationData<'a> = ();
 
     fn register(
@@ -175,24 +171,6 @@ where
         self.reload();
 
         Ok(())
-    }
-
-    /// Renders the bar entry with the glyph the desktop's module states.
-    fn view(
-        &self,
-        icons: Self::ViewData<'_>
-    ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
-        use crate::components::icons::{Icons, icon, icon_raw};
-
-        let entry = match self.glyph.as_deref().map(str::trim) {
-            Some(glyph) if !glyph.is_empty() => icon_raw(glyph.to_owned()),
-            _ => icon(icons, Icons::MenuOpen)
-        };
-
-        Some((
-            entry.into(),
-            Some(OnModulePress::ToggleMenu(MenuType::HydeMenu))
-        ))
     }
 }
 

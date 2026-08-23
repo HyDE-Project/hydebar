@@ -46,8 +46,6 @@ impl App {
             ModuleName::Clock => &self.clock,
             ModuleName::HydeMenu => &self.hyde_menu,
             ModuleName::Themes => &self.themes,
-            ModuleName::Wallpaper => &self.wallpaper,
-            ModuleName::BarLayout => &self.bar_layout,
             ModuleName::Weather => &self.weather,
             ModuleName::Settings => &self.settings,
             ModuleName::Privacy => &self.privacy,
@@ -61,6 +59,8 @@ impl App {
             ModuleName::Notifications => &self.notifications,
             ModuleName::Screenshot => &self.screenshot,
             ModuleName::Battery
+            | ModuleName::BarLayout
+            | ModuleName::Wallpaper
             | ModuleName::IdleInhibitor
             | ModuleName::KeybindHint
             | ModuleName::NightLight
@@ -101,8 +101,6 @@ impl App {
             ModuleName::Clock => &mut self.clock,
             ModuleName::HydeMenu => &mut self.hyde_menu,
             ModuleName::Themes => &mut self.themes,
-            ModuleName::Wallpaper => &mut self.wallpaper,
-            ModuleName::BarLayout => &mut self.bar_layout,
             ModuleName::Weather => &mut self.weather,
             ModuleName::Settings => &mut self.settings,
             ModuleName::Privacy => &mut self.privacy,
@@ -116,6 +114,8 @@ impl App {
             ModuleName::Notifications => &mut self.notifications,
             ModuleName::Screenshot => &mut self.screenshot,
             ModuleName::Battery
+            | ModuleName::BarLayout
+            | ModuleName::Wallpaper
             | ModuleName::IdleInhibitor
             | ModuleName::KeybindHint
             | ModuleName::NightLight

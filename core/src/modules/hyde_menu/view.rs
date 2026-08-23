@@ -5,15 +5,43 @@ use iced::{
     widget::{Column, button, container, row, rule}
 };
 
-use super::{Entry, Message};
+use super::{Entry, HydeMenu, Message};
 use crate::{
     components::{
-        icons::{Icons, icon_raw},
+        icons::{IconTheme, Icons, icon, icon_raw},
         scale,
         text::text
     },
+    menu::MenuType,
+    modules::OnModulePress,
     style::ghost_button_style
 };
+
+impl HydeMenu {
+    /// The bar entry: the glyph the desktop's own module states, or the
+    /// bar's menu icon where it states none.
+    ///
+    /// Rendered by the module itself, so the bar layer holds no menu drawing
+    /// of its own.
+    #[must_use]
+    pub fn bar_view<M>(
+        &self,
+        icons: &IconTheme
+    ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)>
+    where
+        M: 'static
+    {
+        let entry = match self.glyph.as_deref().map(str::trim) {
+            Some(glyph) if !glyph.is_empty() => icon_raw(glyph.to_owned()),
+            _ => icon(icons, Icons::MenuOpen)
+        };
+
+        Some((
+            entry.into(),
+            Some(OnModulePress::ToggleMenu(MenuType::HydeMenu))
+        ))
+    }
+}
 
 /// Indent each nesting level adds, in pixels of the reference theme.
 const INDENT: f32 = 16.0;
