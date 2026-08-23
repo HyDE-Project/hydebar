@@ -6,13 +6,22 @@ use zbus::Error as ZbusError;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BrightnessError {
     /// Filesystem interaction failed while reading or writing brightness data.
-    Filesystem { context: Arc<str> },
+    Filesystem {
+        /// What went wrong, in the words of whatever reported it.
+        context: Arc<str>
+    },
 
     /// Parsing the brightness level from sysfs failed.
-    Parse { context: Arc<str> },
+    Parse {
+        /// What went wrong, in the words of whatever reported it.
+        context: Arc<str>
+    },
 
     /// `DBus` call to the system brightness controller failed.
-    DBus { context: Arc<str> },
+    DBus {
+        /// What went wrong, in the words of whatever reported it.
+        context: Arc<str>
+    },
 
     /// No usable backlight device was detected on the system.
     MissingDevice

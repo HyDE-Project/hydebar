@@ -141,6 +141,7 @@ impl AudioService {
         (volume * 100.0) as i32
     }
 
+    /// Keeps the conversation with the sound server for the whole session.
     pub async fn listen<P>(publisher: &mut P)
     where
         P: ServiceEventPublisher<Self> + Send

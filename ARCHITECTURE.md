@@ -60,8 +60,8 @@ The four crates live at the workspace root: `proto/` (no dependency on the
 widget toolkit at all — colours are stated as `theme_source::Rgba` and read as
 the renderer's own only in `core/src/style/color.rs`), `core/` (modules,
 services, event bus), `gui/` (the `App` state machine and bar composition) and
-`app/` (the binary). Every item `proto` exports is documented: the crate warns
-on `missing_docs`, so a setting cannot be added without saying what it means.
+`app/` (the binary). Every item all four crates export is documented: each warns on
+`missing_docs`, so nothing public can be added without saying what it is.
 
 ## Module Design Pattern
 

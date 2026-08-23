@@ -20,8 +20,11 @@ pub mod who;
 /// Snapshot of network utilisation metrics captured during sampling.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NetworkData {
+    /// The address the machine answers on.
     pub ip:             String,
+    /// How fast the link is receiving, in bytes a second.
     pub download_speed: u32,
+    /// How fast the link is sending, in bytes a second.
     pub upload_speed:   u32,
     /// Bytes taken in over every interface since the machine came up.
     pub received:       u64,
@@ -72,15 +75,18 @@ pub struct DiskData {
 /// Aggregated system information consumed by the UI layer.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct SystemInfoData {
+    /// Share of the processor in use, in percent.
     pub cpu_usage:              u32,
     /// Logical processors the load is averaged over; zero before the
     /// first real sample.
     pub cpu_count:              u32,
+    /// Share of the memory in use, in percent.
     pub memory_usage:           u32,
     /// Memory in use, in bytes, behind [`Self::memory_usage`].
     pub memory_used:            u64,
     /// Memory installed, in bytes.
     pub memory_total:           u64,
+    /// Share of the swap in use, in percent.
     pub memory_swap_usage:      u32,
     /// Swap in use, in bytes, behind [`Self::memory_swap_usage`].
     pub memory_swap_used:       u64,
@@ -93,7 +99,9 @@ pub struct SystemInfoData {
     /// Graphics readings, absent when the machine exposes no graphics
     /// device.
     pub gpu:                    Option<GpuReadings>,
+    /// Every mount point the readout watches.
     pub disks:                  Vec<DiskData>,
+    /// The link, where the machine has one up.
     pub network:                Option<NetworkData>,
     /// Processor model name, as the kernel states it.
     pub cpu_model:              Option<String>,

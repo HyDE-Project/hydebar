@@ -8,6 +8,7 @@ use crate::{
 };
 
 impl AudioData {
+    /// The glyph standing for the default output and its volume.
     #[must_use]
     pub fn sink_indicator<Message: 'static>(
         &self,

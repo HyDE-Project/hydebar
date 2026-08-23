@@ -21,7 +21,9 @@ mod view;
 /// What the user asks of the calendar.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Message {
+    /// Step back one month.
     PreviousMonth,
+    /// Step on one month.
     NextMonth,
     /// Return to the month that holds today.
     Today

@@ -24,6 +24,7 @@ type ResolvedIcons = HashMap<(String, String), Option<TrayIcon>>;
 /// for again; the map stays small — a tray holds a handful of names.
 static ICON_CACHE: LazyLock<Mutex<ResolvedIcons>> = LazyLock::new(Mutex::default);
 
+/// Finds the picture the icon theme keeps under this name.
 pub fn icon_from_name(icon_name: &str) -> Option<TrayIcon> {
     let theme = cached_icon_theme();
     let key = (theme.clone().unwrap_or_default(), icon_name.to_owned());

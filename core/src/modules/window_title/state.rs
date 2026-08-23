@@ -42,6 +42,7 @@ pub(super) fn shown_title(value: &str, config: &WindowTitleConfig, attended: boo
 }
 
 impl WindowTitle {
+    /// Folds one message into the entry.
     pub fn update(&mut self, message: Message, config: &WindowTitleConfig) {
         match message {
             Message::TitleChanged(window) => {

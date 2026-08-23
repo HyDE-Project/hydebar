@@ -43,6 +43,7 @@ pub struct Desk {
 }
 
 impl Desk {
+    /// A canvas that has not read the session yet.
     #[must_use]
     pub fn new(hyprland: Arc<dyn HyprlandPort>) -> Self {
         Self {

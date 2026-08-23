@@ -21,15 +21,25 @@ use hydebar_proto::ports::hyprland::{
 };
 use tokio_stream;
 
+/// A compositor that answers whatever a test told it to, and counts what it was
+/// asked.
 #[derive(Debug)]
 pub struct MockHyprlandPort {
+    /// What it answers when asked for the focused window.
     pub active_window:          Mutex<Option<HyprlandWindowInfo>>,
+    /// What it answers when asked for the workspaces.
     pub workspace_snapshot:     Mutex<HyprlandWorkspaceSnapshot>,
+    /// What it answers when asked about the keyboard.
     pub keyboard_state:         Mutex<HyprlandKeyboardState>,
+    /// What it answers when asked for the windows.
     pub clients_snapshot:       Mutex<Vec<HyprlandClientInfo>>,
+    /// How often it was asked to switch workspace.
     pub change_workspace_calls: AtomicUsize,
+    /// How often it was asked to open a special workspace.
     pub toggle_special_calls:   AtomicUsize,
+    /// How often it was asked to step the keyboard layout.
     pub switch_layout_calls:    AtomicUsize,
+    /// How often it was asked to focus a window.
     pub focus_window_calls:     AtomicUsize
 }
 
@@ -87,14 +97,17 @@ impl MockHyprlandPort {
         port
     }
 
+    /// How often it was asked to switch workspace.
     pub fn workspace_calls(&self) -> usize {
         self.change_workspace_calls.load(Ordering::SeqCst)
     }
 
+    /// How often it was asked to open a special workspace.
     pub fn toggle_special_calls(&self) -> usize {
         self.toggle_special_calls.load(Ordering::SeqCst)
     }
 
+    /// How often it was asked to step the keyboard layout.
     pub fn switch_layout_calls(&self) -> usize {
         self.switch_layout_calls.load(Ordering::SeqCst)
     }

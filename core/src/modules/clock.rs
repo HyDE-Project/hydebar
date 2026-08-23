@@ -23,10 +23,12 @@ mod ticker;
 /// The moment the clock last read.
 #[derive(Debug, Clone)]
 pub struct ClockData {
+    /// The moment the clock last read.
     pub current_time: DateTime<Local>
 }
 
 impl ClockData {
+    /// A clock reading the current moment.
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -34,6 +36,7 @@ impl ClockData {
         }
     }
 
+    /// Reads the moment again.
     pub fn update(&mut self) {
         self.current_time = Local::now();
     }
@@ -54,12 +57,14 @@ impl Default for ClockData {
 /// Events emitted by the clock module.
 #[derive(Debug, Clone)]
 pub enum ClockEvent {
+    /// A moment came round.
     Tick(DateTime<Local>)
 }
 
 /// What the clock reacts to.
 #[derive(Debug, Clone, Copy)]
 pub enum Message {
+    /// Read the moment again.
     Update,
     /// Switch to the next configured format, wrapping after the last one.
     NextFormat
@@ -90,6 +95,7 @@ impl Default for Clock {
 }
 
 impl Clock {
+    /// A clock that has not started ticking yet.
     #[must_use]
     pub fn new() -> Self {
         Self::default()

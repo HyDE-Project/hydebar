@@ -63,6 +63,7 @@ impl NetworkService {
         }
     }
 
+    /// Carries out one command and says what came of it.
     pub async fn run_command(self, command: NetworkCommand) -> ServiceEvent<Self> {
         let mut bc = self.backend_choice.with_connection(self.conn.clone());
 

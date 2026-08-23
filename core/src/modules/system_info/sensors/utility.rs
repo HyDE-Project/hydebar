@@ -34,9 +34,13 @@ pub const UTILITY_INTERVAL: std::time::Duration = std::time::Duration::from_secs
 /// Metrics a vendor utility reports for one device.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct UtilityMetrics {
+    /// Temperature, in degrees Celsius.
     pub temperature:  Option<i32>,
+    /// Share of the card in use, in percent.
     pub utilisation:  Option<u32>,
+    /// Graphics memory in use, in bytes.
     pub memory_used:  Option<u64>,
+    /// Graphics memory in total, in bytes.
     pub memory_total: Option<u64>
 }
 
@@ -56,6 +60,7 @@ impl UtilityMetrics {
 pub struct Utility {
     /// Program name, looked up on `PATH`.
     pub program: &'static str,
+    /// What the program is run with.
     pub args:    &'static [&'static str],
     /// Vendor whose devices the program reports on.
     pub vendor:  GpuVendor,

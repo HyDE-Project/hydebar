@@ -20,6 +20,7 @@ use crate::{
 };
 
 impl MediaPlayer {
+    /// The panel naming every player and driving each.
     #[must_use]
     pub fn menu_view(
         &self,

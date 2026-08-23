@@ -65,6 +65,7 @@ pub struct WeatherData {
 const NO_READING: &str = "--";
 
 impl WeatherData {
+    /// A reading standing in for one that has not arrived.
     #[must_use]
     pub fn new(location: String, use_celsius: bool) -> Self {
         Self {
@@ -115,11 +116,13 @@ impl WeatherData {
         self.temperature != NO_READING
     }
 
+    /// The temperature, written the way the bar draws it.
     #[must_use]
     pub fn display_temp(&self) -> &str {
         &self.temperature
     }
 
+    /// What the sky is doing, in words.
     #[must_use]
     pub fn display_description(&self) -> &str {
         &self.description

@@ -67,6 +67,7 @@ impl Taskbar {
         &self.clients
     }
 
+    /// A window list that has not read the session yet.
     #[must_use]
     pub fn new(hyprland: Arc<dyn HyprlandPort>) -> Self {
         Self {

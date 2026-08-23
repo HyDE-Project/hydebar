@@ -50,8 +50,10 @@ pub struct HydeSnapshot {
     pub(crate) commits: Vec<String>
 }
 
+/// What the updates entry answers to.
 #[derive(Debug, Clone)]
 pub enum Message {
+    /// The check finished, and this is what is waiting.
     UpdatesCheckCompleted(Vec<Update>),
     /// A check ran but could not be trusted; what is known already stands.
     CheckFailed,
@@ -59,16 +61,20 @@ pub enum Message {
     UpdatesUnavailable,
     /// The package update ended, well or badly.
     UpdateFinished {
+        /// Whether the installation failed.
         failed: bool
     },
     /// The last lines the running package update printed.
     UpdateLog(Vec<String>),
+    /// Open or close the list of what is waiting.
     ToggleUpdatesList,
+    /// Check for updates now.
     CheckNow,
     /// Apply the configured update command, narrating into the window.
     Update,
     /// The `HyDE` clone was compared against upstream.
     HydeChecked(HydeSnapshot),
+    /// Open or close the desktop's own update list.
     ToggleHydeList,
     /// Bring the `HyDE` clone up to date, narrating into the window.
     UpdateHyde,
@@ -76,6 +82,7 @@ pub enum Message {
     HydeUpdateLog(Vec<String>),
     /// The `HyDE` update ended, well or badly.
     HydeUpdateFinished {
+        /// Whether the update failed.
         failed: bool
     }
 }
@@ -93,10 +100,12 @@ pub enum CheckState {
     clippy::struct_excessive_bools,
     reason = "the open lists and the run outcomes are independent switches, not one state machine"
 )]
+/// Bar entry counting what is waiting to be installed.
 #[derive(Default)]
 pub struct Updates {
     state:                    CheckState,
     pending:                  Vec<Update>,
+    /// Whether the list of what is waiting is open.
     pub is_updates_list_open: bool,
     is_hyde_list_open:        bool,
     hyde:                     Option<HydeSnapshot>,

@@ -15,15 +15,28 @@ use hydebar_proto::config::{Config, ConfigValidationError};
 #[derive(Debug, Clone, PartialEq)]
 pub enum ConfigUpdateError {
     /// Reading the configuration file from disk failed.
-    Read { path: PathBuf, context: String },
+    Read {
+        /// The file that was being read.
+        path:    PathBuf,
+        /// What the operating system said.
+        context: String
+    },
     /// Parsing TOML content failed.
-    Parse { path: PathBuf, context: String },
+    Parse {
+        /// The file that was being read.
+        path:    PathBuf,
+        /// What the parser said.
+        context: String
+    },
     /// Validation detected a logical inconsistency.
     Validation(ConfigValidationError),
     /// The configuration file was removed.
     Removed,
     /// Updating the configuration state failed for an internal reason.
-    State { context: String }
+    State {
+        /// What went wrong.
+        context: String
+    }
 }
 
 impl std::fmt::Display for ConfigUpdateError {

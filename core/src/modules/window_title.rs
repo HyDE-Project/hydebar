@@ -45,8 +45,10 @@ impl std::fmt::Debug for WindowTitle {
     }
 }
 
+/// What the window title entry answers to.
 #[derive(Debug, Clone)]
 pub enum Message {
+    /// Focus moved, and this is the window that holds it.
     TitleChanged(Option<HyprlandWindowInfo>)
 }
 
@@ -61,6 +63,7 @@ impl WindowTitle {
         self.value.as_deref()
     }
 
+    /// An entry that has not read the session yet.
     pub fn new(hyprland: Arc<dyn HyprlandPort>, config: &WindowTitleConfig) -> Self {
         let init = state::get_window(hyprland.as_ref(), config);
         let shortened = init

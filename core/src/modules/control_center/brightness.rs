@@ -15,13 +15,17 @@ use crate::{
     }
 };
 
+/// What the backlight section of the quick settings answers to.
 #[derive(Debug, Clone)]
 pub enum BrightnessMessage {
+    /// The backlight said something.
     Event(Box<ServiceEvent<BrightnessService>>),
+    /// Set the backlight to this level.
     Change(u32)
 }
 
 impl BrightnessData {
+    /// The slider that sets the backlight.
     #[must_use]
     pub fn brightness_slider(&self, icons: &IconTheme) -> Element<'_, Message> {
         row!(

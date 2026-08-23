@@ -9,14 +9,19 @@ use crate::config::WorkspacesModuleConfig;
 /// One workspace indicator as the bar knows it.
 #[derive(Debug, Clone)]
 pub struct Workspace {
+    /// Identifier the compositor addresses it by.
     pub id:         i32,
+    /// Name it carries, which is its number unless it was named.
     pub name:       String,
     /// Index for color lookup; may be `None`.
     pub monitor_id: Option<usize>,
     /// Monitor name for fallback.
     pub monitor:    String,
+    /// Whether the session is on it.
     pub active:     bool,
+    /// Whether a window on it is asking for attention.
     pub urgent:     bool,
+    /// How many windows it holds.
     pub windows:    u16
 }
 

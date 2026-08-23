@@ -4,6 +4,7 @@ use std::time::Duration;
 
 use crate::{components::icons::Icons, utils::IndicatorState};
 
+/// What the battery currently reads.
 #[derive(Clone, Copy, Debug)]
 pub struct BatteryData {
     /// Charge left, as a share of full.
@@ -21,6 +22,7 @@ pub struct BatteryData {
 }
 
 impl BatteryData {
+    /// How much attention this reading deserves.
     #[must_use]
     pub const fn get_indicator_state(&self) -> IndicatorState {
         match self {
@@ -37,6 +39,7 @@ impl BatteryData {
         }
     }
 
+    /// The glyph this reading is drawn with.
     #[must_use]
     pub const fn get_icon(&self) -> Icons {
         match self {
@@ -69,6 +72,7 @@ impl BatteryData {
     }
 }
 
+/// What the power daemon has to say.
 #[derive(Debug, Clone)]
 pub enum UPowerEvent {
     /// A fresh battery reading.
@@ -79,6 +83,7 @@ pub enum UPowerEvent {
     UpdatePowerProfile(PowerProfile)
 }
 
+/// What the battery is doing, and for how long.
 #[derive(Copy, Clone, Debug)]
 pub enum BatteryStatus {
     /// Taking charge, full in this long.
@@ -89,6 +94,7 @@ pub enum BatteryStatus {
     Full
 }
 
+/// What the machine is favouring: speed or endurance.
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PowerProfile {
     /// Neither speed nor endurance favoured.

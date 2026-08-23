@@ -22,12 +22,14 @@ mod publisher;
 /// Message emitted by the privacy module subscription.
 #[derive(Debug, Clone)]
 pub enum PrivacyMessage {
+    /// The privacy watcher said something.
     Event(ServiceEvent<PrivacyService>)
 }
 
 /// UI module exposing privacy information icons.
 #[derive(Debug, Default)]
 pub struct Privacy {
+    /// The watcher, once it is up.
     pub service: Option<PrivacyService>,
     sender:      Option<ModuleEventSender<PrivacyMessage>>,
     tasks:       Vec<JoinHandle<()>>

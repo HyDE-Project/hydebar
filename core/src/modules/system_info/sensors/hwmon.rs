@@ -35,7 +35,9 @@ pub struct TemperatureInput {
 pub struct Chip {
     /// Name the driver registered, such as `k10temp` or `amdgpu`.
     pub name:   String,
+    /// Every temperature this chip reports.
     pub inputs: Vec<TemperatureInput>,
+    /// What is known about the chip itself.
     pub facts:  ChipFacts,
     /// Device the chip hangs off, resolved through its `device` link.
     ///

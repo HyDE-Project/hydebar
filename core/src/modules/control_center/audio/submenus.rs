@@ -18,6 +18,7 @@ use crate::{
 };
 
 impl AudioData {
+    /// The list of outputs, one entry each.
     #[must_use]
     pub fn sinks_submenu(
         &self,
@@ -51,6 +52,7 @@ impl AudioData {
         )
     }
 
+    /// The list of inputs, one entry each.
     #[must_use]
     pub fn sources_submenu(
         &self,
@@ -85,14 +87,20 @@ impl AudioData {
     }
 }
 
+/// One line of an output or input list.
 #[derive(Debug)]
 pub struct SubmenuEntry<Message> {
+    /// Name a person would recognise the device by.
     pub name:   String,
+    /// What kind of thing it is, which decides its glyph.
     pub device: DeviceType,
+    /// Whether this is the one in use.
     pub active: bool,
+    /// What to send when it is chosen.
     pub msg:    Message
 }
 
+/// Draws a list of devices as choosable lines.
 pub fn audio_submenu<'a, Message: 'a + Clone>(
     icons: &IconTheme,
     entries: Vec<SubmenuEntry<Message>>,

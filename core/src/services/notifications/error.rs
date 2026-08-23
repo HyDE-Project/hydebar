@@ -3,7 +3,9 @@
 /// Error types for `NotificationsService`
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum NotificationsError {
+    /// The bus could not be reached.
     DBusConnection(String),
+    /// The server interface could not be registered.
     DBusInterface(String)
 }
 

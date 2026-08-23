@@ -15,9 +15,12 @@ mod standalone;
 
 pub use quick_button::quick_setting_button;
 
+/// How the quick settings draw themselves, bar entry and panel alike.
 pub trait ControlCenterViewExt {
+    /// What drawing them needs.
     type ViewData<'a>;
 
+    /// Draws the bar entry.
     fn control_center_view<M>(
         &self,
         data: Self::ViewData<'_>
@@ -25,6 +28,7 @@ pub trait ControlCenterViewExt {
     where
         M: 'static + From<Message>;
 
+    /// Draws the panel the entry opens.
     fn menu_view(
         &self,
         id: Id,

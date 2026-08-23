@@ -49,6 +49,7 @@ impl TrayModule {
         });
     }
 
+    /// Folds one message into the tray.
     pub fn update(&mut self, message: TrayMessage) {
         match message {
             TrayMessage::Event(event) => match *event {

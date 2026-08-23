@@ -7,6 +7,7 @@ use log::error;
 use super::{Message, Taskbar};
 
 impl Taskbar {
+    /// Folds one message into the window list.
     pub fn update(&mut self, message: Message) {
         match message {
             Message::ClientsChanged(clients) => {

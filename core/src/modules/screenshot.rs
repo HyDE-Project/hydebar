@@ -13,22 +13,29 @@ mod recording;
 /// Screenshot action types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ScreenshotAction {
+    /// A region the user draws.
     Area,
+    /// One window.
     Window,
+    /// The whole screen.
     Fullscreen
 }
 
 /// Message emitted by the screenshot module.
 #[derive(Debug, Clone, Copy)]
 pub enum ScreenshotMessage {
+    /// Take a picture this way.
     TakeScreenshot(ScreenshotAction),
+    /// Start recording the screen.
     StartRecording,
+    /// Stop recording the screen.
     StopRecording
 }
 
 /// Screenshot and recording module.
 #[derive(Debug, Default)]
 pub struct Screenshot {
+    /// Whether a recording is running.
     pub is_recording: bool,
     /// Identifier of the recorder this bar started, while one runs.
     recorder_pid:     Option<u32>

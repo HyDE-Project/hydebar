@@ -14,18 +14,27 @@ mod service;
 pub use service::{TrayCommand, TrayData, TrayService};
 mod watcher;
 
+/// The picture an application registered for its tray entry.
 #[derive(Debug, Clone)]
 pub enum TrayIcon {
+    /// A picture of pixels.
     Image(image::Handle),
+    /// A picture of shapes.
     Svg(svg::Handle)
 }
 
+/// What the tray watcher has to say.
 #[derive(Debug, Clone)]
 pub enum TrayEvent {
+    /// An application put an icon in the tray.
     Registered(StatusNotifierItem),
+    /// An application changed its icon.
     IconChanged(String, TrayIcon),
+    /// An application changed its menu.
     MenuLayoutChanged(String, Layout),
+    /// An application took its icon away.
     Unregistered(String),
+    /// Nothing worth passing on.
     None
 }
 

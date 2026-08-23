@@ -99,6 +99,7 @@ impl BrightnessService {
         }
     }
 
+    /// Keeps the conversation with the backlight for the whole session.
     pub async fn listen<P>(publisher: &mut P)
     where
         P: ServiceEventPublisher<Self> + Send

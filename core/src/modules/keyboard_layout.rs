@@ -16,6 +16,7 @@ mod listener;
 mod module;
 mod state;
 
+/// Bar entry naming the keyboard layout in force.
 pub struct KeyboardLayout {
     hyprland:        Arc<dyn HyprlandPort>,
     multiple_layout: bool,
@@ -53,14 +54,19 @@ impl Clone for KeyboardLayout {
     }
 }
 
+/// What the keyboard layout entry answers to.
 #[derive(Debug, Clone)]
 pub enum Message {
+    /// Whether there is more than one layout to step to.
     LayoutConfigChanged(bool),
+    /// The layout in force changed.
     ActiveLayoutChanged(String),
+    /// Step to the next layout.
     ChangeLayout
 }
 
 impl KeyboardLayout {
+    /// An entry that has not read the keyboard yet.
     pub fn new(hyprland: Arc<dyn HyprlandPort>) -> Self {
         let HyprlandKeyboardState {
             active_layout,

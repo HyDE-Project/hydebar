@@ -25,6 +25,7 @@ use crate::services::{
     network::{AccessPoint, KnownConnection, NetworkBackend, NetworkData}
 };
 
+/// The conversation with the `NetworkManager` daemon.
 #[derive(Clone)]
 pub struct NetworkDbus<'a>(NetworkManagerProxy<'a>);
 

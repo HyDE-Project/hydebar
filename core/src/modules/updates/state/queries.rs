@@ -67,11 +67,13 @@ impl Updates {
         self.shown_count.is_animating()
     }
 
+    /// The list the entry opens.
     #[must_use]
     pub fn menu_view(&self, id: Id, opacity: f32, icons: &IconTheme) -> Element<'_, Message> {
         view::menu_view(self, id, opacity, icons)
     }
 
+    /// What is waiting to be installed.
     #[must_use]
     pub fn updates(&self) -> &[Update] {
         &self.pending

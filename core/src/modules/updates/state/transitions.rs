@@ -6,6 +6,7 @@ use super::{CheckState, Message, Updates};
 use crate::{config::UpdatesModuleConfig, outputs::Outputs};
 
 impl Updates {
+    /// Folds one message into the entry, and says what follows.
     pub fn update(
         &mut self,
         message: Message,

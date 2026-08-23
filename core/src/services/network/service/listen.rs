@@ -53,6 +53,7 @@ impl NetworkService {
         }
     }
 
+    /// Keeps the conversation with the network backend for the whole session.
     pub async fn listen<P>(publisher: &mut P)
     where
         P: ServiceEventPublisher<Self> + Send

@@ -6,10 +6,14 @@ use zbus::zvariant::OwnedObjectPath;
 use super::{BluetoothService, BluetoothState, dbus::BluetoothDbus};
 use crate::services::ServiceEvent;
 
+/// What the bluetooth service can be told.
 #[derive(Debug, Clone)]
 pub enum BluetoothCommand {
+    /// Turn the adapter on or off.
     Toggle,
+    /// Connect to this device.
     ConnectDevice(OwnedObjectPath),
+    /// Disconnect from this device.
     DisconnectDevice(OwnedObjectPath)
 }
 

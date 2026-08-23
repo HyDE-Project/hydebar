@@ -4,26 +4,47 @@ use std::sync::Arc;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PrivacyError {
     /// Failed to initialise the `PipeWire` main loop.
-    PipewireMainloop { context: Arc<str> },
+    PipewireMainloop {
+        /// What went wrong, in the words of whatever reported it.
+        context: Arc<str>
+    },
 
     /// Failed to create the `PipeWire` context that owns the registry
     /// connection.
-    PipewireContext { context: Arc<str> },
+    PipewireContext {
+        /// What went wrong, in the words of whatever reported it.
+        context: Arc<str>
+    },
 
     /// Failed to connect to the `PipeWire` core service.
-    PipewireCore { context: Arc<str> },
+    PipewireCore {
+        /// What went wrong, in the words of whatever reported it.
+        context: Arc<str>
+    },
 
     /// Failed to access the `PipeWire` registry.
-    PipewireRegistry { context: Arc<str> },
+    PipewireRegistry {
+        /// What went wrong, in the words of whatever reported it.
+        context: Arc<str>
+    },
 
     /// Failed to initialise the inotify subsystem for webcam monitoring.
-    InotifyInit { context: Arc<str> },
+    InotifyInit {
+        /// What went wrong, in the words of whatever reported it.
+        context: Arc<str>
+    },
 
     /// Failed to register the webcam device with inotify.
-    InotifyWatch { context: Arc<str> },
+    InotifyWatch {
+        /// What went wrong, in the words of whatever reported it.
+        context: Arc<str>
+    },
 
     /// Failed to communicate with the internal service channels.
-    Channel { context: Arc<str> },
+    Channel {
+        /// What went wrong, in the words of whatever reported it.
+        context: Arc<str>
+    },
 
     /// The webcam device is not present on the system.
     WebcamUnavailable

@@ -13,6 +13,7 @@ use super::{
 use crate::modules::system_info::sensors::Readings;
 
 impl SystemInfoSampler {
+    /// Takes one sample, including the readings that cost extra to take.
     pub fn sample_with_extras(&mut self) -> SystemInfoData {
         self.ensure_disks();
         self.ensure_networks();

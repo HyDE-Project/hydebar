@@ -10,6 +10,7 @@ use super::{ReadOnlyService, Service, ServiceEvent};
 use crate::modules::ModuleError;
 
 mod commands;
+/// What a player reports about itself.
 pub mod data;
 mod dbus;
 mod ipc;

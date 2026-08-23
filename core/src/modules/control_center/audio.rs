@@ -12,18 +12,28 @@ mod submenus;
 pub use sliders::{SliderType, audio_slider};
 pub use submenus::{SubmenuEntry, audio_submenu};
 
+/// What the sound section of the quick settings answers to.
 #[derive(Debug, Clone)]
 pub enum AudioMessage {
+    /// The sound server said something.
     Event(Box<ServiceEvent<AudioService>>),
+    /// Play everything through this output from now on.
     DefaultSinkChanged(String, String),
+    /// Record everything from this input from now on.
     DefaultSourceChanged(String, String),
+    /// Silence the default output, or let it speak.
     ToggleSinkMute,
+    /// Set the volume of the default output.
     SinkVolumeChanged(i32),
     /// A wheel notch over the bar entry, `1` up and `-1` down.
     SinkVolumeWheel(i32),
+    /// Silence the default input, or let it hear.
     ToggleSourceMute,
+    /// Set the volume of the default input.
     SourceVolumeChanged(i32),
+    /// Open the full output settings.
     SinksMore(Id),
+    /// Open the full input settings.
     SourcesMore(Id)
 }
 

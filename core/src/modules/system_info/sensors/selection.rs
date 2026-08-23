@@ -72,13 +72,16 @@ pub struct ChipView<'a> {
     /// Label of every temperature input, empty where the driver labels
     /// none.
     pub inputs: &'a [&'a str],
+    /// What is known about the chip the reading comes from.
     pub facts:  ChipFacts
 }
 
 /// One chosen reading, addressed the way it was handed in.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Pick {
+    /// Which chip the reading comes from.
     pub chip:  usize,
+    /// Which of its inputs.
     pub input: usize
 }
 
@@ -86,9 +89,13 @@ pub struct Pick {
 /// device.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct GpuPick {
+    /// Which chip the reading comes from.
     pub chip:      usize,
+    /// Which of its inputs.
     pub input:     usize,
+    /// Who made the card it belongs to.
     pub vendor:    GpuVendor,
+    /// Whether that card is its own or part of the processor.
     pub placement: GpuPlacement
 }
 

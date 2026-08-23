@@ -17,20 +17,31 @@ use shellexpand::full;
 
 use super::read::read_config;
 
+/// Why the configuration file could not be opened.
 #[derive(Debug)]
 pub enum ConfigLoadError {
+    /// The path could not be expanded.
     Expand {
+        /// The path as it was written.
         input:  String,
+        /// What the expansion tripped over.
         source: shellexpand::LookupError<std::env::VarError>
     },
+    /// There is no file at that path.
     Missing {
+        /// The path that was looked at.
         path: PathBuf
     },
+    /// The directory that would hold the file does not exist.
     MissingParent {
+        /// The path that was looked at.
         path: PathBuf
     },
+    /// The directory could not be made.
     CreateDir {
+        /// The directory that was to be made.
         path:   PathBuf,
+        /// What the operating system said.
         source: std::io::Error
     }
 }

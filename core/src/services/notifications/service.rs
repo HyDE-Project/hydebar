@@ -18,6 +18,7 @@ pub struct NotificationsService {
 }
 
 impl NotificationsService {
+    /// A service holding no notices yet.
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -36,30 +37,36 @@ impl NotificationsService {
             .unwrap_or_else(std::sync::PoisonError::into_inner)
     }
 
+    /// Every notice being held, newest first.
     #[must_use]
     pub fn get_notifications(&self) -> Vec<Notification> {
         self.storage().get_all().iter().cloned().collect()
     }
 
+    /// How many notices have not been looked at.
     #[must_use]
     pub fn unread_count(&self) -> usize {
         self.storage().unread_count()
     }
 
+    /// Takes one notice down.
     pub fn dismiss(&mut self, id: u32) {
         self.storage().remove(id);
     }
 
+    /// Takes every notice down.
     pub fn clear_all(&mut self) {
         self.storage().clear();
     }
 
+    /// Turns do-not-disturb on, or off.
     pub fn toggle_dnd(&mut self) {
         let mut storage = self.storage();
         let current = storage.is_dnd();
         storage.set_dnd(!current);
     }
 
+    /// Whether do-not-disturb is on.
     #[must_use]
     pub fn is_dnd(&self) -> bool {
         self.storage().is_dnd()

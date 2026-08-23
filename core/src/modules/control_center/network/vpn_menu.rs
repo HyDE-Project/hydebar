@@ -13,6 +13,7 @@ use crate::{
 };
 
 impl NetworkData {
+    /// The list of tunnels the machine has settings for.
     #[must_use]
     pub fn vpn_menu(
         &self,

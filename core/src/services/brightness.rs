@@ -13,12 +13,16 @@ mod listener;
 
 pub use error::BrightnessError;
 
+/// What the backlight currently reads.
 #[derive(Debug, Clone, Default)]
 pub struct BrightnessData {
+    /// The level it is set to.
     pub current: u32,
+    /// The highest level it accepts.
     pub max:     u32
 }
 
+/// The conversation with the backlight.
 #[derive(Debug, Clone)]
 pub struct BrightnessService {
     data:        BrightnessData,
@@ -34,16 +38,21 @@ impl Deref for BrightnessService {
     }
 }
 
+/// The backlight moved to this level.
 #[derive(Debug, Clone)]
 pub struct BrightnessEvent(u32);
 
+/// What the backlight service can be told.
 #[derive(Debug, Clone)]
 pub enum BrightnessCommand {
+    /// Set the backlight to this level.
     Set(u32),
+    /// Read the backlight again.
     Refresh
 }
 
 impl BrightnessService {
+    /// Carries out one command and says what came of it.
     pub async fn run_command(self, command: BrightnessCommand) -> ServiceEvent<Self> {
         match command {
             BrightnessCommand::Set(value) => {

@@ -45,6 +45,7 @@ impl CalendarState {
         })
     }
 
+    /// The year being shown.
     #[must_use]
     pub const fn year(&self) -> i32 {
         self.year
@@ -56,6 +57,7 @@ impl CalendarState {
         self.month
     }
 
+    /// Steps back one month.
     pub const fn previous_month(&mut self) {
         if self.month == 1 {
             self.month = 12;
@@ -65,6 +67,7 @@ impl CalendarState {
         }
     }
 
+    /// Steps on one month.
     pub const fn next_month(&mut self) {
         if self.month == 12 {
             self.month = 1;
@@ -93,8 +96,11 @@ impl CalendarState {
 /// One day cell of the grid.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DayInfo {
+    /// Day of the month.
     pub day:      u32,
+    /// Whether this is today.
     pub is_today: bool,
+    /// Whether it belongs to the month being shown, or to a neighbour.
     pub in_month: bool
 }
 
@@ -104,6 +110,7 @@ pub struct DayInfo {
 /// never changes the window height under the pointer.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CalendarData {
+    /// The days of the grid, including the neighbours that fill it out.
     pub days: Vec<DayInfo>
 }
 
@@ -182,7 +189,10 @@ impl CalendarData {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CalendarError {
     /// Month value outside 1–12.
-    InvalidMonth { month: u32 }
+    InvalidMonth {
+        /// The number that was named.
+        month: u32
+    }
 }
 
 impl std::fmt::Display for CalendarError {

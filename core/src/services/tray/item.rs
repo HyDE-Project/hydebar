@@ -10,10 +10,14 @@ use super::{
 };
 use crate::services::bus::bus_failure;
 
+/// One tray entry, as the bar holds it.
 #[derive(Debug, Clone)]
 pub struct StatusNotifierItem {
+    /// The bus name the application registered under.
     pub name:              String,
+    /// The picture it asked to be drawn with.
     pub icon:              Option<TrayIcon>,
+    /// The menu it opens.
     pub menu:              Layout,
     pub(super) item_proxy: StatusNotifierItemProxy<'static>,
     pub(super) menu_proxy: DBusMenuProxy<'static>

@@ -37,16 +37,19 @@ impl ActiveConnectionInfo {
         f32::round(f32::from(signal.min(100)) / 100. * 4.) as usize
     }
 
+    /// The glyph standing for this signal on an open network.
     #[must_use]
     pub fn get_wifi_icon(signal: u8) -> Icons {
         WIFI_SIGNAL_ICONS[1 + Self::signal_bucket(signal)]
     }
 
+    /// The glyph standing for this signal on a network needing a secret.
     #[must_use]
     pub fn get_wifi_lock_icon(signal: u8) -> Icons {
         WIFI_LOCK_SIGNAL_ICONS[Self::signal_bucket(signal)]
     }
 
+    /// The glyph standing for this connection.
     #[must_use]
     pub fn get_icon(&self) -> Icons {
         match self {
@@ -62,6 +65,7 @@ impl ActiveConnectionInfo {
         }
     }
 
+    /// How much attention this connection deserves.
     #[must_use]
     pub const fn get_indicator_state(&self) -> IndicatorState {
         match self {

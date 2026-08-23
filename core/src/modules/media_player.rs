@@ -20,6 +20,7 @@ mod view;
 pub use messages::Message;
 use publisher::MediaPlayerPublisher;
 
+/// Bar entry naming what is playing, and driving it.
 #[derive(Debug, Default)]
 pub struct MediaPlayer {
     service:   Option<MprisPlayerService>,

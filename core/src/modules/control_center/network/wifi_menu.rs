@@ -17,6 +17,7 @@ use crate::{
 };
 
 impl NetworkData {
+    /// The list of wireless networks in reach.
     #[must_use]
     pub fn wifi_menu(
         &self,

@@ -27,9 +27,12 @@ use hydebar_proto::config::{ModuleDef, ModuleName, Modules};
 /// Region of the bar a list of modules belongs to.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum Section {
+    /// The section against the leading edge.
     #[default]
     Left,
+    /// The middle section.
     Center,
+    /// The section against the trailing edge.
     Right
 }
 
@@ -121,7 +124,9 @@ pub enum LayoutEdit {
     Remove(Slot),
     /// Append a module to a section.
     Add {
+        /// Which of the three sections it stands in.
         section: Section,
+        /// Which module it is.
         module:  ModuleName
     }
 }

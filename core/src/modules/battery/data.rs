@@ -112,6 +112,7 @@ pub struct BatteryData {
 }
 
 impl BatteryData {
+    /// A reading built from what the daemon reported.
     #[must_use]
     pub const fn new(
         capacity: u8,

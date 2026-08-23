@@ -21,12 +21,15 @@ const SUSPENDED: &str = "suspended";
 pub struct Card {
     /// Driver bound to the card, such as `amdgpu` or `nvidia`.
     pub driver:         Option<String>,
+    /// Who made the card, where the machine says.
     pub vendor:         Option<GpuVendor>,
     /// Device the card hangs off, shared with its monitoring chip.
     pub device:         Option<PathBuf>,
     /// Share of the card that is busy, in percent.
     pub busy:           Option<PathBuf>,
+    /// Where memory in use is read from.
     pub memory_used:    Option<PathBuf>,
+    /// Where memory in total is read from.
     pub memory_total:   Option<PathBuf>,
     /// Runtime power state, present once the driver allows the card to
     /// sleep.

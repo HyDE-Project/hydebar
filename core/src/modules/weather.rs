@@ -32,6 +32,7 @@ pub struct Weather {
 }
 
 impl Weather {
+    /// A weather entry that has not read anything yet.
     #[must_use]
     pub fn new(
         location: String,

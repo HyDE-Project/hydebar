@@ -1,5 +1,11 @@
 //! The status notifier watcher interface served on the session bus.
 
+#![expect(
+    missing_docs,
+    reason = "the interface macro writes the proxy beside this one, and a generated item \
+              takes no doc comment of ours"
+)]
+
 use log::warn;
 use zbus::{
     Result, interface,
@@ -12,11 +18,14 @@ pub(super) const NAME: WellKnownName =
     WellKnownName::from_static_str_unchecked("org.kde.StatusNotifierWatcher");
 pub(super) const OBJECT_PATH: &str = "/StatusNotifierWatcher";
 
+/// The tray registry the bar serves, so applications have somewhere to
+/// register.
 #[derive(Debug, Default)]
 pub struct StatusNotifierWatcher {
     pub(super) items: Vec<(UniqueName<'static>, String)>
 }
 
+/// The interface applications register their tray entries against.
 #[interface(
     name = "org.kde.StatusNotifierWatcher",
     proxy(

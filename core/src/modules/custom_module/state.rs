@@ -50,6 +50,7 @@ impl Custom {
         self.last_error.as_ref()
     }
 
+    /// Whether a command is currently feeding this module.
     #[must_use]
     pub const fn is_listening(&self) -> bool {
         self.registration.is_some()
@@ -61,6 +62,7 @@ impl Custom {
         }
     }
 
+    /// Folds one thing the command said into the state.
     pub fn update(&mut self, msg: Message) {
         match msg {
             Message::Event(ServiceEvent::Update(data)) => {
@@ -84,6 +86,7 @@ impl Drop for Custom {
 /// Messages delivered to a custom module.
 #[derive(Debug, Clone)]
 pub enum Message {
+    /// The command said something.
     Event(ServiceEvent<CustomCommandService>)
 }
 

@@ -23,10 +23,15 @@ const REFUSAL_DURATION: u32 = 6000;
 /// Kind of notice, which decides the glyph the compositor draws beside it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Notice {
+    /// Something worth a glance.
     Warning,
+    /// Something worth knowing.
     Info,
+    /// A nudge rather than news.
     Hint,
+    /// Something went wrong.
     Error,
+    /// Something went right.
     Ok
 }
 

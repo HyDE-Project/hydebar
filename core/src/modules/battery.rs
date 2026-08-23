@@ -15,6 +15,7 @@ pub use data::{BatteryData, BatteryEvent, BatteryIcon, IndicatorState, PowerProf
 /// Message type for GUI communication
 #[derive(Debug, Clone)]
 pub enum Message {
+    /// The power daemon said something.
     Event(Box<ServiceEvent<UPowerService>>)
 }
 
@@ -26,6 +27,7 @@ pub struct Battery {
 }
 
 impl Battery {
+    /// A battery entry that has not read anything yet.
     #[must_use]
     pub fn new() -> Self {
         Self::default()

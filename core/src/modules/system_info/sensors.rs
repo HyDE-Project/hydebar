@@ -46,6 +46,7 @@ pub struct Readings {
     /// Chip and label the processor temperature is read from, so the
     /// window can say what its number measures.
     pub cpu_source: Option<String>,
+    /// What the graphics card reports, where one was found.
     pub gpu:        Option<GpuReadings>
 }
 
@@ -56,13 +57,17 @@ pub struct GpuReadings {
     pub name:         String,
     /// Chip and input the temperature is taken from, for the menu.
     pub source:       Option<String>,
+    /// Who made the graphics card.
     pub vendor:       GpuVendor,
+    /// Whether it is a card of its own or part of the processor.
     pub placement:    GpuPlacement,
     /// Temperature in whole degrees Celsius.
     pub temperature:  Option<i32>,
     /// Share of the device that is busy, in percent.
     pub utilisation:  Option<u32>,
+    /// Graphics memory in use, in bytes.
     pub memory_used:  Option<u64>,
+    /// Graphics memory in total, in bytes.
     pub memory_total: Option<u64>
 }
 

@@ -1,6 +1,10 @@
+/// Why watching for privacy-sensitive use failed.
 pub mod error;
+/// Watching the camera devices for use.
 pub mod inotify;
+/// Watching the media server for microphone and screen use.
 pub mod pipewire;
+/// Where the watchers hand what they saw.
 pub mod publisher;
 
 use std::{ops::Deref, pin::Pin};

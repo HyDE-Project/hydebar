@@ -15,9 +15,12 @@ mod model;
 pub use command::PowerProfileCommand;
 pub use model::{BatteryData, BatteryStatus, PowerProfile, UPowerEvent};
 
+/// The conversation with the power daemon.
 #[derive(Debug, Clone)]
 pub struct UPowerService {
+    /// The battery, where the machine has one.
     pub battery:       Option<BatteryData>,
+    /// The power profile in force.
     pub power_profile: PowerProfile,
     conn:              zbus::Connection
 }

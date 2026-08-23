@@ -21,6 +21,7 @@ use crate::{
     clippy::too_many_arguments,
     reason = "each argument feeds a distinct visual piece of the toggle button"
 )]
+/// One toggle of the quick settings, with its own submenu arrow.
 pub fn quick_setting_button<'a, Msg: Clone + 'static>(
     icons: &IconTheme,
     icon_type: Icons,

@@ -7,7 +7,9 @@ use iced::{
 /// message from the place the button is drawn at.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ButtonUIRef {
+    /// Where the press landed, in surface coordinates.
     pub position: Point,
+    /// How wide and how tall the surface is.
     pub viewport: (f32, f32)
 }
 

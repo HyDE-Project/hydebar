@@ -21,6 +21,7 @@ use crate::{
 };
 
 impl AudioData {
+    /// The output and input sliders, drawn together.
     #[must_use]
     pub fn audio_sliders(
         &self,
@@ -80,9 +81,12 @@ impl AudioData {
     }
 }
 
+/// Which end of the sound a slider drives.
 #[derive(Debug)]
 pub enum SliderType {
+    /// Something the machine plays to.
     Sink,
+    /// Something the machine records from.
     Source
 }
 
@@ -90,6 +94,7 @@ pub enum SliderType {
     clippy::too_many_arguments,
     reason = "each argument feeds a distinct visual piece of the slider row"
 )]
+/// One volume slider, with its mute button and its submenu arrow.
 pub fn audio_slider<'a, Message: 'a + Clone>(
     icons: &IconTheme,
     slider_type: SliderType,

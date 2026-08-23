@@ -18,9 +18,12 @@ mod lifecycle;
 /// it, without touching the visible part of either fade.
 const SETTLE_PRECISION: f32 = 0.02;
 
+/// One menu surface, and what it currently holds.
 #[derive(Clone, Debug)]
 pub struct Menu {
+    /// The surface the compositor knows it by.
     pub id:        Id,
+    /// What is open on it, and the button it was opened from.
     pub menu_info: Option<(MenuType, ButtonUIRef)>,
     /// Output the menu surface stands on, for building its replacement.
     output:        Option<OutputId>,
@@ -34,6 +37,7 @@ pub struct Menu {
 }
 
 impl Menu {
+    /// A menu surface holding nothing yet.
     #[must_use]
     pub const fn new(id: Id, output: Option<OutputId>) -> Self {
         Self {

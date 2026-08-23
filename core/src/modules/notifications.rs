@@ -19,15 +19,20 @@ mod state;
 /// Message emitted by the notifications module.
 #[derive(Debug, Clone)]
 pub enum NotificationsMessage {
+    /// The notification bus said something.
     Event(ServiceEvent<NotificationsService>),
+    /// Take this notice down.
     Dismiss(u32),
+    /// Take every notice down.
     ClearAll,
+    /// Turn do-not-disturb on or off.
     ToggleDND
 }
 
 /// UI module displaying notification center with bell icon.
 #[derive(Debug, Default)]
 pub struct Notifications {
+    /// The bus conversation, once it is up.
     pub service: Option<NotificationsService>,
     sender:      Option<ModuleEventSender<NotificationsMessage>>,
     /// Notifications as of the last event, rendered without touching the

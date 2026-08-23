@@ -21,10 +21,14 @@ mod module;
 mod state;
 mod view;
 
+/// What the tray entry answers to.
 #[derive(Debug, Clone)]
 pub enum TrayMessage {
+    /// The tray watcher said something.
     Event(Box<ServiceEvent<TrayService>>),
+    /// Open or close a submenu of the open tray menu.
     ToggleSubmenu(i32),
+    /// An entry of a tray menu was chosen.
     MenuSelected(String, i32)
 }
 
@@ -34,7 +38,9 @@ type CommandFactory =
     Arc<dyn Fn(Option<&TrayService>, TrayCommand) -> Option<TrayCommandFuture> + Send + Sync>;
 type TrayCommandFuture = Pin<Box<dyn Future<Output = ServiceEvent<TrayService>> + Send + 'static>>;
 
+/// Bar entry holding the icons applications registered.
 pub struct TrayModule {
+    /// The watcher conversation, once it is up.
     pub service:         Option<TrayService>,
     pub(crate) submenus: Vec<i32>,
     sender:              Option<ModuleEventSender<TrayMessage>>,

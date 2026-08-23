@@ -5,14 +5,26 @@ use std::sync::Arc;
 /// Something that went wrong while running or reading a listener process.
 #[derive(Debug, Clone)]
 pub enum CustomCommandError {
+    /// The command could not be started.
     Spawn(Arc<std::io::Error>),
+    /// The command was started and prints nowhere the bar can read.
     MissingStdout,
+    /// What the command printed could not be read.
     Read(Arc<std::io::Error>),
+    /// What the command printed is not what the bar expects.
     Parse(String, Arc<serde_json::Error>),
+    /// The command could not be waited on.
     Wait(Arc<std::io::Error>),
-    NonZeroExit { status: Option<i32> },
+    /// The command ended badly.
+    NonZeroExit {
+        /// The status it exited with, absent when a signal ended it.
+        status: Option<i32>
+    },
+    /// The signal the module listens for could not be armed.
     Signal(u8, Arc<std::io::Error>),
+    /// The signal number the module asked for is not one the machine has.
     UnsupportedSignal(u8),
+    /// Nothing is left listening to what the command says.
     ChannelClosed
 }
 

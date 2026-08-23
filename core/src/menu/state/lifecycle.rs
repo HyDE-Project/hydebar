@@ -34,6 +34,7 @@ impl Menu {
         }
     }
 
+    /// Opens `menu_type` on this surface, from the button that asked.
     pub fn open<Message: 'static>(
         &mut self,
         menu_type: MenuType,
@@ -87,6 +88,7 @@ impl Menu {
         Task::batch(vec![destroy_layer_surface(departed), raise])
     }
 
+    /// Opens the menu, or closes it when it is the one already open.
     pub fn toggle<Message: 'static>(
         &mut self,
         menu_type: MenuType,
@@ -106,6 +108,7 @@ impl Menu {
         }
     }
 
+    /// Closes the menu when it satisfies `predicate`.
     pub fn close_if<Message: 'static>(
         &mut self,
         menu_type: &MenuType,
@@ -122,6 +125,7 @@ impl Menu {
         }
     }
 
+    /// Asks the compositor for the keyboard, where the configuration allows it.
     #[must_use]
     pub fn request_keyboard<Message: 'static>(&self, menu_keyboard_focus: bool) -> Task<Message> {
         if menu_keyboard_focus {
@@ -131,6 +135,7 @@ impl Menu {
         }
     }
 
+    /// Gives the keyboard back, where it was asked for.
     #[must_use]
     pub fn release_keyboard<Message: 'static>(&self, menu_keyboard_focus: bool) -> Task<Message> {
         if menu_keyboard_focus {

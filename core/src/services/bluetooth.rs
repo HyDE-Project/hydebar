@@ -15,6 +15,7 @@ mod rfkill;
 pub use commands::BluetoothCommand;
 pub use data::{BluetoothData, BluetoothDevice, BluetoothState};
 
+/// The conversation with the bluetooth daemon.
 #[derive(Debug, Clone)]
 pub struct BluetoothService {
     conn: zbus::Connection,

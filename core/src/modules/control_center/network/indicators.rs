@@ -9,6 +9,7 @@ use crate::{
 };
 
 impl NetworkData {
+    /// The bar reading for one live connection.
     #[must_use]
     pub fn get_connection_indicator<Message: 'static>(
         &self,
@@ -48,6 +49,7 @@ impl NetworkData {
         }
     }
 
+    /// The bar reading for one tunnel that is up.
     #[must_use]
     pub fn get_vpn_indicator<Message: 'static>(
         &self,

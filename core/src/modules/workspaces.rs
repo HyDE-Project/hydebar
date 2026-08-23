@@ -21,15 +21,20 @@ mod view;
 
 pub use snapshot::Workspace;
 
+/// What the workspaces entry answers to.
 #[derive(Debug, Clone)]
 pub enum Message {
+    /// The compositor's workspaces changed.
     WorkspacesChanged(HyprlandWorkspaceSnapshot),
     /// A window on the workspace demanded attention.
     WorkspaceUrgent(i32),
+    /// Move the session to this workspace.
     ChangeWorkspace(i32),
+    /// Open or close this special workspace.
     ToggleSpecialWorkspace(i32)
 }
 
+/// Bar entry drawing the compositor’s workspaces.
 pub struct Workspaces {
     hyprland:   Arc<dyn HyprlandPort>,
     items:      Vec<Workspace>,
@@ -52,6 +57,7 @@ impl Workspaces {
         &self.items
     }
 
+    /// An entry that has not read the session yet.
     pub fn new(hyprland: Arc<dyn HyprlandPort>, config: &WorkspacesModuleConfig) -> Self {
         let workspaces = snapshot::get_workspaces(hyprland.as_ref(), config);
 

@@ -14,15 +14,21 @@ use crate::{
     utils
 };
 
+/// What the power section of the quick settings answers to.
 #[derive(Debug, Clone)]
 pub enum PowerMessage {
+    /// Suspend the machine, with this command.
     Suspend(String),
+    /// Restart the machine, with this command.
     Reboot(String),
+    /// Power the machine off, with this command.
     Shutdown(String),
+    /// End the session, with this command.
     Logout(String)
 }
 
 impl PowerMessage {
+    /// Runs the command this asks for.
     pub fn update(self) {
         match self {
             Self::Suspend(cmd) => {

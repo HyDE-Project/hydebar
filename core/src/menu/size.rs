@@ -39,8 +39,11 @@ pub struct MenuMetrics {
 /// How wide a menu asks to be.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum MenuSize {
+    /// Room for a handful of lines.
     Small,
+    /// Room for a list.
     Medium,
+    /// Room for a window.
     Large,
     /// Exactly as wide as the content it holds, measured by the caller.
     Content(f32)

@@ -51,6 +51,7 @@ where
     Renderer: iced_core::Renderer,
     Theme: Catalog
 {
+    /// A button wrapping this content.
     pub fn new(content: impl Into<iced_core::Element<'a, Message, Theme, Renderer>>) -> Self {
         let content = content.into();
         let size = content.as_widget().size_hint();

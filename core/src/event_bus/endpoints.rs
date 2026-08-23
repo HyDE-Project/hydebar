@@ -9,12 +9,14 @@ use std::{num::NonZeroUsize, sync::Arc};
 
 use super::queue::{BusEvent, EventBusInner};
 
+/// The queue every module publishes into and the bar drains.
 #[derive(Debug, Clone)]
 pub struct EventBus {
     inner: Arc<EventBusInner>
 }
 
 impl EventBus {
+    /// Builds a bus holding at most `capacity` events.
     #[must_use]
     pub fn new(capacity: NonZeroUsize) -> Self {
         Self {
@@ -22,6 +24,7 @@ impl EventBus {
         }
     }
 
+    /// A handle to publish into this bus with.
     #[must_use]
     pub fn sender(&self) -> EventSender {
         EventSender {
@@ -29,6 +32,7 @@ impl EventBus {
         }
     }
 
+    /// A handle to drain this bus with.
     #[must_use]
     pub fn receiver(&self) -> EventReceiver {
         EventReceiver {
@@ -48,6 +52,7 @@ impl EventBus {
     }
 }
 
+/// Publishes into the bus; cheap to clone and hand around.
 #[derive(Debug, Clone)]
 pub struct EventSender {
     inner: Arc<EventBusInner>
@@ -60,6 +65,7 @@ impl EventSender {
     }
 }
 
+/// Drains the bus; the bar holds the only one.
 #[derive(Debug, Clone)]
 pub struct EventReceiver {
     inner: Arc<EventBusInner>

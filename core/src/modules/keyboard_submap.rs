@@ -9,6 +9,7 @@ use tokio_stream::StreamExt;
 use super::{Module, ModuleError, OnModulePress};
 use crate::{ModuleContext, ModuleEventSender, event_bus::ModuleEvent};
 
+/// Bar entry naming the compositor submap the keyboard is in.
 pub struct KeyboardSubmap {
     hyprland: Arc<dyn HyprlandPort>,
     submap:   String,
@@ -38,6 +39,7 @@ impl KeyboardSubmap {
         &self.submap
     }
 
+    /// An entry that has not read the keyboard yet.
     pub fn new(hyprland: Arc<dyn HyprlandPort>) -> Self {
         let initial_submap = hyprland
             .keyboard_state()
@@ -59,8 +61,10 @@ impl KeyboardSubmap {
     }
 }
 
+/// What the submap entry answers to.
 #[derive(Debug, Clone)]
 pub enum Message {
+    /// The submap in force changed; empty means none.
     SubmapChanged(String)
 }
 

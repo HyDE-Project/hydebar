@@ -8,6 +8,7 @@ use crate::{
     }
 };
 
+/// The quick settings, and everything they read from.
 pub struct ControlCenter {
     pub(super) audio:           Option<AudioService>,
     pub(super) brightness:      Option<BrightnessService>,

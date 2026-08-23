@@ -1,6 +1,7 @@
 //! Idle inhibitor service backed by the Wayland idle-inhibit protocol.
 
 mod dispatch;
+/// Why keeping the screen awake failed.
 pub mod error;
 
 use dispatch::IdleInhibitorManagerData;
@@ -11,6 +12,7 @@ use wayland_client::{
     protocol::{wl_display::WlDisplay, wl_registry::WlRegistry}
 };
 
+/// Holds the screen awake for as long as it lives.
 pub struct IdleInhibitorManager {
     _connection: Connection,
     _display:    WlDisplay,
@@ -66,11 +68,13 @@ impl IdleInhibitorManager {
             .map_err(IdleInhibitorError::from)
     }
 
+    /// Whether the screen is currently being kept awake.
     #[must_use]
     pub const fn is_inhibited(&self) -> bool {
         self.data.idle_inhibitor_state.is_some()
     }
 
+    /// Starts keeping the screen awake, or stops.
     pub fn toggle(&mut self) {
         let res = if self.is_inhibited() {
             self.set_inhibit_idle(false)

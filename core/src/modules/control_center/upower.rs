@@ -17,13 +17,17 @@ use crate::{
     utils::{IndicatorState, format_duration}
 };
 
+/// What the power section of the quick settings answers to.
 #[derive(Clone, Debug)]
 pub enum UPowerMessage {
+    /// The power daemon said something.
     Event(Box<ServiceEvent<UPowerService>>),
+    /// Step to the next power profile.
     TogglePowerProfile
 }
 
 impl BatteryData {
+    /// The bar reading of the power profile in force.
     #[must_use]
     pub fn indicator<Message: 'static>(&self, icons: &IconTheme) -> Element<'static, Message> {
         let icon_type = self.get_icon();
@@ -45,6 +49,7 @@ impl BatteryData {
         .into()
     }
 
+    /// The power profile as it is drawn inside the panel.
     #[must_use]
     pub fn settings_indicator<'a, Message: 'static>(
         &self,
@@ -88,6 +93,7 @@ impl BatteryData {
 }
 
 impl PowerProfile {
+    /// The bar reading of the charge left.
     #[must_use]
     pub fn indicator<Message: 'static>(
         &self,
@@ -114,6 +120,7 @@ impl PowerProfile {
         }
     }
 
+    /// The power profile toggle of the quick settings.
     #[must_use]
     pub fn get_quick_setting_button(
         &self,

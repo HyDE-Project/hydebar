@@ -17,13 +17,22 @@ use wayland_client::{ConnectError, DispatchError};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum IdleInhibitorError {
     /// Establishing a Wayland connection failed.
-    Connection { context: Arc<str> },
+    Connection {
+        /// What went wrong, in the words of whatever reported it.
+        context: Arc<str>
+    },
 
     /// A required Wayland global was not advertised by the compositor.
-    MissingGlobal { global: MissingGlobal },
+    MissingGlobal {
+        /// Which of the compositor's offerings is missing.
+        global: MissingGlobal
+    },
 
     /// Dispatching Wayland events failed during a roundtrip.
-    Dispatch { context: Arc<str> }
+    Dispatch {
+        /// What went wrong, in the words of whatever reported it.
+        context: Arc<str>
+    }
 }
 
 impl std::fmt::Display for IdleInhibitorError {

@@ -18,16 +18,23 @@ use crate::{
     style::ghost_button_style
 };
 
+/// What the bluetooth section of the quick settings answers to.
 #[derive(Debug, Clone)]
 pub enum BluetoothMessage {
+    /// The daemon said something.
     Event(Box<ServiceEvent<BluetoothService>>),
+    /// Turn the adapter on or off.
     Toggle,
+    /// Connect to this device.
     ConnectDevice(zbus::zvariant::OwnedObjectPath),
+    /// Disconnect from this device.
     DisconnectDevice(zbus::zvariant::OwnedObjectPath),
+    /// Open the full bluetooth settings.
     More(Id)
 }
 
 impl BluetoothData {
+    /// The bluetooth toggle of the quick settings, where an adapter exists.
     #[must_use]
     pub fn get_quick_setting_button(
         &self,
@@ -60,6 +67,7 @@ impl BluetoothData {
         ))
     }
 
+    /// The list of devices the adapter knows.
     #[must_use]
     pub fn bluetooth_menu(
         &self,

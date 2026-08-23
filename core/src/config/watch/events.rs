@@ -6,6 +6,7 @@ use inotify::EventMask;
 
 use crate::config::{ConfigApplied, ConfigDegradation};
 
+/// What the configuration watcher has to say.
 #[derive(Debug, Clone)]
 pub enum ConfigEvent {
     /// A new, validated configuration was applied.

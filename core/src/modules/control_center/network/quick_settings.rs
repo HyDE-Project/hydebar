@@ -13,6 +13,7 @@ use crate::{
 };
 
 impl NetworkData {
+    /// The wireless toggle of the quick settings, where a radio exists.
     #[must_use]
     pub fn get_wifi_quick_setting_button(
         &self,
@@ -67,6 +68,7 @@ impl NetworkData {
         }
     }
 
+    /// The VPN toggle of the quick settings, where a tunnel is configured.
     #[must_use]
     pub fn get_vpn_quick_setting_button(
         &self,
@@ -103,6 +105,7 @@ impl NetworkData {
             })
     }
 
+    /// The airplane toggle of the quick settings.
     #[must_use]
     pub fn get_airplane_mode_quick_setting_button(
         &self,

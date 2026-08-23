@@ -60,6 +60,7 @@ impl Unavailable {
 /// A readout together with what the machine can do about it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IndicatorStatus {
+    /// Which readout this line is.
     pub indicator:   SystemIndicator,
     /// Why the readout cannot be drawn, or [`None`] when it can.
     pub unavailable: Option<Unavailable>,

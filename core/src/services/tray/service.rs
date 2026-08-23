@@ -13,6 +13,7 @@ use super::{
 };
 use crate::services::{ReadOnlyService, Service, ServiceEvent, bus::bus_failure};
 
+/// Every tray entry the bar currently holds.
 #[derive(Debug, Default, Clone)]
 pub struct TrayData(pub(super) Vec<StatusNotifierItem>);
 
@@ -23,8 +24,10 @@ impl Deref for TrayData {
     }
 }
 
+/// The conversation with the tray registry and the applications in it.
 #[derive(Debug, Clone)]
 pub struct TrayService {
+    /// The entries being held.
     pub data:         TrayData,
     pub(super) _conn: zbus::Connection
 }
@@ -91,6 +94,8 @@ impl TrayService {
         Ok(layout)
     }
 
+    /// Prepares one command for sending, if the application it names is still
+    /// there.
     #[must_use]
     pub fn prepare_command(&self, command: TrayCommand) -> Option<TrayCommandFuture> {
         match command {
@@ -162,8 +167,10 @@ impl ReadOnlyService for TrayService {
     }
 }
 
+/// What the tray service can be told.
 #[derive(Debug, Clone)]
 pub enum TrayCommand {
+    /// An entry of this application’s menu was chosen.
     MenuSelected(String, i32)
 }
 

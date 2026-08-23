@@ -1,6 +1,7 @@
 use std::{sync::LazyLock, time::Duration};
 
 pub mod hyde_shell;
+/// Starting a program the way a desktop session would.
 pub mod launcher;
 pub mod process_group;
 
@@ -31,14 +32,20 @@ pub fn http_client() -> &'static reqwest::Client {
     &HTTP_CLIENT
 }
 
+/// How much attention a reading deserves.
 #[derive(Debug)]
 pub enum IndicatorState {
+    /// Nothing to say about it.
     Normal,
+    /// In good order.
     Success,
+    /// Worth a glance.
     Warning,
+    /// Worth acting on now.
     Danger
 }
 
+/// Writes a span of time the way the bar draws it.
 #[must_use]
 pub fn format_duration(duration: &Duration) -> String {
     let h = duration.as_secs() / 60 / 60;
@@ -50,6 +57,7 @@ pub fn format_duration(duration: &Duration) -> String {
     }
 }
 
+/// Cuts text to `max_length` characters, marking where it was cut.
 #[must_use]
 pub fn truncate_text(value: &str, max_length: u32) -> String {
     let length = value.chars().count();

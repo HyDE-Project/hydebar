@@ -13,13 +13,18 @@ use crate::{
     style::{confirm_button_style, outline_button_style, text_input_style}
 };
 
+/// What the secret dialog answers to.
 #[derive(Debug, Clone)]
 pub enum Message {
+    /// What has been typed so far.
     PasswordChanged(String),
+    /// The secret was accepted by the user.
     DialogConfirmed(Id),
+    /// The dialog was dismissed.
     DialogCancelled(Id)
 }
 
+/// Draws the dialog asking for a network secret.
 pub fn view<'a>(
     id: Id,
     wifi_ssid: &str,

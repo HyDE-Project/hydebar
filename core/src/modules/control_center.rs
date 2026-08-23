@@ -5,7 +5,9 @@ mod state;
 mod view;
 
 pub mod audio;
+/// The adapter and the devices paired with it.
 pub mod bluetooth;
+/// The backlight.
 pub mod brightness;
 pub mod network;
 mod power;

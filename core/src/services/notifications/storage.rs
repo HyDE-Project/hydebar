@@ -4,6 +4,7 @@ use std::collections::VecDeque;
 
 use super::{MAX_NOTIFICATIONS, Notification, Urgency};
 
+/// The notices being held, and what is done with new ones.
 #[derive(Debug, Clone)]
 pub struct NotificationStorage {
     notifications:  VecDeque<Notification>,
@@ -37,6 +38,7 @@ impl NotificationStorage {
         }
     }
 
+    /// Takes one notice in and hands back the identifier it was given.
     pub fn add(&mut self, mut notification: Notification) -> u32 {
         let id = self.next_id;
         self.next_id = self.next_id.wrapping_add(1);
@@ -71,6 +73,7 @@ impl NotificationStorage {
         }
     }
 
+    /// Takes one notice out, if it is still held.
     pub fn remove(&mut self, id: u32) -> Option<Notification> {
         if let Some(pos) = self.notifications.iter().position(|n| n.id == id) {
             self.notifications.remove(pos)
@@ -79,38 +82,46 @@ impl NotificationStorage {
         }
     }
 
+    /// Takes every notice out.
     pub fn clear(&mut self) {
         self.notifications.clear();
     }
 
+    /// Every notice being held, newest first.
     #[must_use]
     pub const fn get_all(&self) -> &VecDeque<Notification> {
         &self.notifications
     }
 
+    /// How many notices have not been looked at.
     #[must_use]
     pub fn unread_count(&self) -> usize {
         self.notifications.len()
     }
 
+    /// Turns do-not-disturb on, or off.
     pub const fn set_dnd(&mut self, enabled: bool) {
         self.do_not_disturb = enabled;
     }
 
+    /// Whether do-not-disturb is on.
     #[must_use]
     pub const fn is_dnd(&self) -> bool {
         self.do_not_disturb
     }
 
+    /// Turns the notice sound on, or off.
     pub const fn set_sounds(&mut self, enabled: bool) {
         self.sounds_enabled = enabled;
     }
 
+    /// Whether the notice sound is on.
     #[must_use]
     pub const fn sounds_enabled(&self) -> bool {
         self.sounds_enabled
     }
 
+    /// Whether a notice of this urgency gets through what is set.
     #[must_use]
     pub const fn should_show(&self, urgency: &Urgency) -> bool {
         if self.do_not_disturb {

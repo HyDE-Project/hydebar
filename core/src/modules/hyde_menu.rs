@@ -44,13 +44,21 @@ pub enum Message {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Entry {
     /// A leaf: label shown, action run on press.
-    Item { id: String, label: String },
+    Item {
+        /// Key the entry is addressed by.
+        id:    String,
+        /// What the entry reads as.
+        label: String
+    },
     /// A dividing line between groups.
     Separator,
     /// A named branch that unfolds in place.
     Submenu {
+        /// Key the entry is addressed by.
         id:       String,
+        /// What the entry reads as.
         label:    String,
+        /// What opens under it.
         children: Vec<Self>
     }
 }

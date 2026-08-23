@@ -2,9 +2,12 @@
 
 use hydebar_proto::config::ModuleName;
 
+/// Which menu a press is asking for.
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub enum MenuType {
+    /// What is waiting to be installed.
     Updates,
+    /// The quick settings panel.
     ControlCenter,
     /// Menu of the standalone audio module.
     Audio,
@@ -16,11 +19,15 @@ pub enum MenuType {
     PowerProfile,
     /// Window configuring the bar itself.
     Settings,
+    /// The menu the desktop publishes.
     HydeMenu,
     /// Menu of the theme module, listing the installed desktop themes.
     Themes,
+    /// The menu of one tray icon, named by its key.
     Tray(String),
+    /// What is playing, and the buttons that drive it.
     MediaPlayer,
+    /// The machine readout in full.
     SystemInfo,
     /// Window of the standalone processor entry.
     Cpu,
@@ -34,8 +41,11 @@ pub enum MenuType {
     CpuTemp,
     /// Window of the standalone graphics temperature entry.
     Gpu,
+    /// The notices that arrived.
     Notifications,
+    /// The picture-taking choices.
     Screenshot,
+    /// The calendar.
     Calendar,
     /// Context menu of the custom module carrying the given name.
     Custom(String)

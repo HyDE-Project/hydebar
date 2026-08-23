@@ -9,6 +9,7 @@ use super::{Message, Workspaces, snapshot::map_snapshot_to_workspaces};
 use crate::config::WorkspacesModuleConfig;
 
 impl Workspaces {
+    /// Folds one message into the entry.
     pub fn update(&mut self, message: Message, config: &WorkspacesModuleConfig) {
         match message {
             Message::WorkspacesChanged(snapshot) => {

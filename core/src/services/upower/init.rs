@@ -14,6 +14,7 @@ use super::{
 use crate::services::{ServiceEvent, bus::bus_failure};
 
 impl UPowerService {
+    /// Subscribes to this service under an identity of the caller’s choosing.
     pub fn subscription_with_id(id: TypeId) -> Subscription<ServiceEvent<Self>> {
         Subscription::run_with(id, |&_id| {
             channel(100, async |mut output| {

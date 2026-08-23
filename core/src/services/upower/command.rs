@@ -7,6 +7,7 @@ use super::{PowerProfile, UPowerEvent, UPowerService, dbus::PowerProfilesProxy};
 use crate::services::{Service, ServiceEvent, bus::bus_failure};
 
 impl UPowerService {
+    /// Carries out one command and says what came of it.
     pub async fn run_command(self, command: PowerProfileCommand) -> ServiceEvent<Self> {
         let conn = self.conn.clone();
         let power_profile = self.power_profile;
@@ -77,8 +78,10 @@ impl UPowerService {
     }
 }
 
+/// What the power service can be told.
 #[derive(Debug)]
 pub enum PowerProfileCommand {
+    /// Step to the next power profile.
     Toggle
 }
 

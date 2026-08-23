@@ -143,6 +143,7 @@ impl UPowerService {
         }
     }
 
+    /// Keeps the conversation with the power daemon for the whole session.
     pub async fn listen<P>(publisher: &mut P)
     where
         P: ServiceEventPublisher<Self> + Send

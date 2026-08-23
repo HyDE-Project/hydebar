@@ -25,8 +25,11 @@ use tables::{CPU_CHIP_TIERS, GPU_CHIPS};
 /// Vendor behind a graphics processor.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum GpuVendor {
+    /// A card from AMD.
     Amd,
+    /// A card from Intel.
     Intel,
+    /// A card from NVIDIA.
     Nvidia,
     /// A graphics block integrated into a system on a chip, such as the
     /// ones the ARM boards expose through their thermal
@@ -56,8 +59,11 @@ impl GpuVendor {
 /// graphics reports the card whenever the card is awake.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum GpuPlacement {
+    /// A card of its own.
     Discrete,
+    /// Neither could be told from what the machine reports.
     Unknown,
+    /// Graphics built into the processor.
     Integrated
 }
 

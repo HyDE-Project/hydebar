@@ -26,6 +26,7 @@ impl std::fmt::Debug for NotificationsServer {
 }
 
 impl NotificationsServer {
+    /// A server holding this storage and publishing through this sender.
     pub const fn new(
         storage: std::sync::Arc<std::sync::Mutex<NotificationStorage>>,
         announce: UnboundedSender<NotificationEvent>

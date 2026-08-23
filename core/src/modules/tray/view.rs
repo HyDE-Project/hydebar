@@ -18,6 +18,7 @@ use crate::{
 };
 
 impl TrayModule {
+    /// The menu one tray icon opens.
     #[must_use]
     pub fn menu_view(
         &self,

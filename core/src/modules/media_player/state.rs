@@ -15,6 +15,7 @@ impl MediaPlayer {
         self.service.as_deref().map_or(&[], Vec::as_slice)
     }
 
+    /// Folds one message into the state, and says what follows.
     pub fn update(
         &mut self,
         message: Message,
