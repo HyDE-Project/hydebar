@@ -17,7 +17,6 @@ impl<M> Module<M> for MediaPlayer
 where
     M: 'static
 {
-    type ViewData<'a> = ();
     type RegistrationData<'a> = ();
 
     fn register(

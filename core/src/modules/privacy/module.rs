@@ -19,7 +19,6 @@ impl<M> Module<M> for Privacy
 where
     M: 'static
 {
-    type ViewData<'a> = ();
     type RegistrationData<'a> = ();
 
     fn register(

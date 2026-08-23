@@ -24,7 +24,7 @@
 │  ┌────────────────────────────────┐  │
 │  │ Modules (modules/)             │  │
 │  │  - state, update and iced view │  │
-│  │  - implement the Module trait  │  │
+│  │  - own their background work   │  │
 │  └────────────────────────────────┘  │
 │  ┌────────────────────────────────┐  │
 │  │ Event Bus (event_bus.rs)       │  │
@@ -110,31 +110,29 @@ it. The path a caller imports never changes when a file becomes a directory.
 
 ### One shape the bar can hold
 
-`core/src/modules/bar.rs` states `BarContext` — everything an entry may want
-to draw itself — and `BarModule`, the object-safe shape the bar holds an entry
-in. A view data shape says how to take itself out of the context once, in
-`modules/bar/shapes.rs`, and a blanket implementation turns every module that
-does into a `BarModule`; no module writes wiring of its own. The bar names the
-module behind an entry once, in `gui/src/app/modules/dispatch/owner.rs`, and
-asks it for its subscription, its cadence and its samples through that.
+`core/src/modules/bar.rs` states `BarModule`, the object-safe shape the bar
+holds an entry in, and a blanket implementation turns every module into one;
+no module writes wiring of its own. The bar names the module behind an entry
+once, in `gui/src/app/modules/dispatch/owner.rs`, and asks it for its
+subscription, its cadence and its samples through that.
 
-### Where module design is heading
+### How a module is built
 
-The trait is a transitional shape. The target is the battery pattern: data
-and update logic live in core, rendering is a plain function the GUI's
-dispatch calls with the data it owns, and background work is started by
-`register`-style methods only where a module genuinely owns any. A module
-with no state of its own is nothing but render functions — `cpu`, `memory`,
-`cpu_temp`, `gpu_temp` and `idle_inhibitor` are the worked examples; a
-stateful module keeps its state in core without the trait — `battery` and
-`calendar` show that shape. A module that genuinely owns background work
-keeps the trait for its registration alone, so the one law of gating still
-reaches it — `clock` shows that shape.
+Data and update logic live in core; drawing is a method the module owns and
+the GUI's dispatch calls with the data it holds. Nothing about the bar entry
+crosses into the bar layer, so a module can change what it draws without the
+dispatch knowing.
 
-Migration ledger — still drawing through the trait: `control_center`,
-`custom_module`, `system_info`. A migrated module leaves
-this list in the commit that moves it, and the view half of the trait goes
-with the last of them.
+A module with no state of its own is nothing but render functions — `cpu`,
+`memory`, `cpu_temp`, `gpu_temp` and `idle_inhibitor` are the worked
+examples. A stateful module keeps its state in core and draws from it —
+`battery` and `calendar` show that shape.
+
+A module that genuinely owns background work — a listener, a poller, a tick
+loop — also implements `Module`, whose whole subject is that work: when to
+start it, when to give it back, and how often the bar should take a sample.
+The trait names no drawing at all, so a module that owns nothing in the
+background implements nothing.
 
 ### Registration: one law
 

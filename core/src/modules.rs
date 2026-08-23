@@ -98,17 +98,13 @@ impl ModuleError {
     }
 }
 
-/// Behaviour shared by all UI modules rendered inside the bar.
+/// The background work a bar module owns, and how the bar drives it.
 ///
-/// A transitional shape: the target convention separates data and logic
-/// (core) from rendering (a plain view function dispatch calls), as the
-/// battery and idle-inhibitor modules already do. The migration ledger in
-/// `ARCHITECTURE.md` names every module still implementing this trait; a
-/// new module starts on the target convention, not here.
+/// Drawing is not here: a module renders through a method of its own that the
+/// bar's dispatch calls with the data it holds. What is left is what only the
+/// bar can decide — when to start the work, when to give it back, and how
+/// often to take a sample.
 pub trait Module<Message> {
-    /// What the module needs in order to draw itself.
-    type ViewData<'a>;
-
     /// What the module needs in order to start its work.
     type RegistrationData<'a>;
 
@@ -169,21 +165,6 @@ pub trait Module<Message> {
     fn poll(&mut self, ctx: &crate::module_context::ModuleContext) -> Result<(), ModuleError> {
         let _ = ctx;
         Ok(())
-    }
-
-    /// Draws the bar entry, and names what pressing it does.
-    ///
-    /// The default draws nothing, which is right for a module that only owns
-    /// background work.
-    fn view(
-        &self,
-        data: Self::ViewData<'_>
-    ) -> Option<(
-        iced::Element<'static, Message>,
-        Option<OnModulePress<Message>>
-    )> {
-        let _ = data;
-        None
     }
 
     /// The stream the module produces on its own, if it produces one.

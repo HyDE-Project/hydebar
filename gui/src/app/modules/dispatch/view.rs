@@ -21,8 +21,6 @@ impl App {
         id: Id,
         opacity: f32
     ) -> Option<(Element<'_, Message>, Option<OnModulePress<Message>>)> {
-        use hydebar_core::modules::Module;
-
         match module_name {
             ModuleName::AppLauncher => self
                 .app_launcher
@@ -46,7 +44,7 @@ impl App {
                 };
 
                 module
-                    .view((definition, self.appearance(), self.icons()))
+                    .bar_view(definition, self.appearance(), self.icons())
                     .map(|(content, _)| (content, custom_module_action(definition)))
             }
             ModuleName::Updates => self.updates.bar_view(&self.config.updates, self.icons()),
@@ -70,7 +68,7 @@ impl App {
                 .bar_view(&self.config.window_title, self.attention.is_on(module_name)),
             ModuleName::SystemInfo => {
                 self.system_info
-                    .view((&self.config.system, self.appearance(), self.icons()))
+                    .bar_view(&self.config.system, self.appearance(), self.icons())
             }
             ModuleName::Cpu => hydebar_core::modules::cpu::bar_view(
                 self.system_info.data(),
@@ -109,7 +107,7 @@ impl App {
             ModuleName::HydeMenu => self.hyde_menu.bar_view(self.icons()),
             ModuleName::Battery => self.battery.bar_view(&self.config.battery, self.icons()),
             ModuleName::Privacy => self.privacy.bar_view(self.icons()),
-            ModuleName::ControlCenter => self.control_center.view(self.icons()),
+            ModuleName::ControlCenter => self.control_center.bar_view(self.icons()),
             ModuleName::Audio => self.control_center.audio_bar(self.icons()),
             ModuleName::Brightness => self.control_center.brightness_bar(self.icons()),
             ModuleName::Weather => self.weather.bar_view(self.icons()),

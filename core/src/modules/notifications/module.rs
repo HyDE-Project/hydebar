@@ -12,7 +12,6 @@ impl<M> Module<M> for Notifications
 where
     M: 'static + Clone + From<NotificationsMessage>
 {
-    type ViewData<'a> = ();
     type RegistrationData<'a> = ();
 
     fn register(

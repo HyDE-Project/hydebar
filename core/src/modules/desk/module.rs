@@ -17,7 +17,6 @@ impl<M> Module<M> for Desk
 where
     M: 'static + Clone + From<Message>
 {
-    type ViewData<'a> = ();
     type RegistrationData<'a> = ();
 
     fn register(

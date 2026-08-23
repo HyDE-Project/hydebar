@@ -18,7 +18,6 @@ impl<M> Module<M> for KeyboardLayout
 where
     M: 'static
 {
-    type ViewData<'a> = ();
     type RegistrationData<'a> = ();
 
     fn register(

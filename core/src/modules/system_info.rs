@@ -140,9 +140,8 @@ impl SystemInfo {
 
 impl<M> Module<M> for SystemInfo
 where
-    M: 'static + Clone + From<Message>
+    M: 'static
 {
-    type ViewData<'a> = (&'a SystemModuleConfig, &'a Appearance, &'a IconTheme);
     type RegistrationData<'a> = (&'a SystemModuleConfig, bool);
 
     fn register(
@@ -180,11 +179,24 @@ where
 
         Ok(())
     }
+}
 
-    fn view(
+impl SystemInfo {
+    /// The bar entry: the combined readout of the machine.
+    ///
+    /// Rendered by the module itself, so the bar layer holds no monitor
+    /// drawing of its own; the standalone processor, memory and temperature
+    /// entries render from the same sample through their own functions.
+    #[must_use]
+    pub fn bar_view<M>(
         &self,
-        (config, appearance, icons): Self::ViewData<'_>
-    ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
+        config: &SystemModuleConfig,
+        appearance: &Appearance,
+        icons: &IconTheme
+    ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)>
+    where
+        M: 'static + Clone + From<Message>
+    {
         view::build_indicator_view(
             &self.data,
             config,

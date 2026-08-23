@@ -160,7 +160,6 @@ impl<M> Module<M> for HydeMenu
 where
     M: 'static
 {
-    type ViewData<'a> = ();
     type RegistrationData<'a> = ();
 
     fn register(

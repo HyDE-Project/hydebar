@@ -13,7 +13,6 @@ impl<M> Module<M> for KeyboardSubmap
 where
     M: 'static
 {
-    type ViewData<'a> = ();
     type RegistrationData<'a> = ();
 
     fn register(

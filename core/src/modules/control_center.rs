@@ -20,4 +20,4 @@ pub use network::NetworkMessage;
 pub use power::PowerMessage;
 pub use state::{ControlCenter, Message, SubMenu};
 pub use upower::UPowerMessage;
-pub use view::{ControlCenterViewExt, quick_setting_button};
+pub use view::quick_setting_button;

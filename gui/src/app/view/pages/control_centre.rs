@@ -2,7 +2,7 @@
 
 use hydebar_core::{
     menu::{MenuSize, MenuType},
-    modules::control_center::{ControlCenterViewExt, audio::AudioMessage}
+    modules::control_center::audio::AudioMessage
 };
 use iced::SurfaceId as Id;
 

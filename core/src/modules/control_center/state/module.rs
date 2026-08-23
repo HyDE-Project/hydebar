@@ -1,4 +1,4 @@
-//! Module trait wiring for the settings menu.
+//! Registration of the five hardware services the quick settings own.
 
 use std::time::Duration;
 
@@ -10,14 +10,13 @@ use super::super::{
         audio_forwarder, bluetooth_forwarder, brightness_forwarder, network_forwarder,
         upower_forwarder
     },
-    network::NetworkMessage,
-    view::ControlCenterViewExt
+    network::NetworkMessage
 };
 use crate::{
     ModuleContext,
     attention::PollSchedule,
     event_bus::ModuleEvent,
-    modules::{Module, ModuleError, OnModulePress},
+    modules::{Module, ModuleError},
     services::{
         ServiceEvent,
         audio::AudioService,
@@ -73,9 +72,8 @@ impl ControlCenter {
 
 impl<M> Module<M> for ControlCenter
 where
-    M: 'static + Clone + From<Message>
+    M: 'static
 {
-    type ViewData<'a> = <Self as ControlCenterViewExt>::ViewData<'a>;
     type RegistrationData<'a> = ();
 
     fn register(
@@ -164,12 +162,5 @@ where
         self.refresh_access_points(ctx);
 
         Ok(())
-    }
-
-    fn view(
-        &self,
-        data: Self::ViewData<'_>
-    ) -> Option<(iced::Element<'static, M>, Option<OnModulePress<M>>)> {
-        self.control_center_view(data)
     }
 }

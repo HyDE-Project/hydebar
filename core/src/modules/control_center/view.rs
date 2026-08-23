@@ -1,3 +1,5 @@
+//! Drawing of the quick settings: the bar entry and the panel it opens.
+
 use iced::{Element, SurfaceId as Id};
 
 use super::state::{ControlCenter, Message};
@@ -15,36 +17,17 @@ mod standalone;
 
 pub use quick_button::quick_setting_button;
 
-/// How the quick settings draw themselves, bar entry and panel alike.
-pub trait ControlCenterViewExt {
-    /// What drawing them needs.
-    type ViewData<'a>;
-
-    /// Draws the bar entry.
-    fn control_center_view<M>(
+impl ControlCenter {
+    /// The bar entry: the quick settings gathered behind one glyph.
+    ///
+    /// Rendered by the module itself, so the bar layer holds no quick
+    /// settings drawing of its own; the standalone audio, network, bluetooth
+    /// and power entries render from the same state through their own
+    /// methods.
+    #[must_use]
+    pub fn bar_view<M>(
         &self,
-        data: Self::ViewData<'_>
-    ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)>
-    where
-        M: 'static + From<Message>;
-
-    /// Draws the panel the entry opens.
-    fn menu_view(
-        &self,
-        id: Id,
-        config: &ControlCenterModuleConfig,
-        opacity: f32,
-        position: Position,
         icons: &IconTheme
-    ) -> Element<'_, Message>;
-}
-
-impl ControlCenterViewExt for ControlCenter {
-    type ViewData<'a> = &'a IconTheme;
-
-    fn control_center_view<M>(
-        &self,
-        icons: Self::ViewData<'_>
     ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)>
     where
         M: 'static + From<Message>
@@ -52,7 +35,9 @@ impl ControlCenterViewExt for ControlCenter {
         Some(self.render_bar(icons))
     }
 
-    fn menu_view(
+    /// The panel the entry opens.
+    #[must_use]
+    pub fn menu_view(
         &self,
         id: Id,
         config: &ControlCenterModuleConfig,

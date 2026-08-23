@@ -18,7 +18,6 @@ impl<M> Module<M> for Workspaces
 where
     M: 'static
 {
-    type ViewData<'a> = ();
     type RegistrationData<'a> = &'a WorkspacesModuleConfig;
 
     fn register(

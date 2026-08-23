@@ -29,9 +29,8 @@ use crate::{
 
 impl<M> Module<M> for Custom
 where
-    M: 'static + Clone
+    M: 'static
 {
-    type ViewData<'a> = (&'a CustomModuleDef, &'a Appearance, &'a IconTheme);
     type RegistrationData<'a> = &'a CustomModuleDef;
 
     fn register(
@@ -46,11 +45,24 @@ where
     fn deregister(&mut self) {
         self.stop_listener();
     }
+}
 
-    fn view(
+impl Custom {
+    /// The bar entry: whatever the listener last printed, drawn the way the
+    /// definition asks.
+    ///
+    /// Rendered by the module itself, so the bar layer holds no custom module
+    /// drawing of its own.
+    #[must_use]
+    pub fn bar_view<M>(
         &self,
-        (config, appearance, icons): Self::ViewData<'_>
-    ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
+        config: &CustomModuleDef,
+        appearance: &Appearance,
+        icons: &IconTheme
+    ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)>
+    where
+        M: 'static + Clone
+    {
         Some((view::render(self, config, appearance, icons), None))
     }
 }

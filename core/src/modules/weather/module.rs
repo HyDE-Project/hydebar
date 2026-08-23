@@ -48,7 +48,6 @@ where
     M: 'static + Clone
 {
     type RegistrationData<'a> = &'a WeatherModuleConfig;
-    type ViewData<'a> = ();
 
     /// Restates the module for the given configuration and starts its
     /// refresh loop.

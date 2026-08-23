@@ -32,7 +32,6 @@ impl<M> Module<M> for Updates
 where
     M: 'static
 {
-    type ViewData<'a> = ();
     type RegistrationData<'a> = Option<&'a UpdatesModuleConfig>;
 
     /// Makes sure exactly one check schedule is running for `config`.

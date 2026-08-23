@@ -11,7 +11,6 @@ impl<M> Module<M> for Clock
 where
     M: 'static
 {
-    type ViewData<'a> = ();
     type RegistrationData<'a> = &'a ClockModuleConfig;
 
     fn register(
