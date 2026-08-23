@@ -100,7 +100,7 @@ impl App {
             ModuleName::KeyboardLayout => {
                 self.keyboard_layout.bar_view(&self.config.keyboard_layout)
             }
-            ModuleName::KeyboardSubmap => self.keyboard_submap.view(()),
+            ModuleName::KeyboardSubmap => self.keyboard_submap.bar_view(),
             ModuleName::Tray => {
                 crate::views::tray::render_tray(&self.tray, id, opacity, self.icons())
                     .map(|content| (content, None))
