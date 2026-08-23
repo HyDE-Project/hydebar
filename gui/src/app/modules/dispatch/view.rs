@@ -132,15 +132,15 @@ impl App {
             ModuleName::Network => self.control_center.network_bar(self.icons()),
             ModuleName::Bluetooth => self.control_center.bluetooth_bar(self.icons()),
             ModuleName::PowerProfile => self.control_center.power_profile_bar(self.icons()),
-            ModuleName::Settings => self.settings.view(self.icons()),
-            ModuleName::Themes => self.themes.view(self.icons()),
+            ModuleName::Settings => self.settings.bar_view(self.icons()),
+            ModuleName::Themes => self.themes.bar_view(self.icons()),
             ModuleName::Wallpaper => self.wallpaper.bar_view(self.icons()),
             ModuleName::BarLayout => self.bar_layout.bar_view(self.icons()),
             ModuleName::MediaPlayer => self
                 .media_player
                 .view((&self.config.media_player, self.icons())),
-            ModuleName::Notifications => self.notifications.view(self.icons()),
-            ModuleName::Screenshot => self.screenshot.view(self.icons()),
+            ModuleName::Notifications => self.notifications.bar_view(self.icons()),
+            ModuleName::Screenshot => self.screenshot.bar_view(self.icons()),
             ModuleName::IdleInhibitor => Some(hydebar_core::modules::idle_inhibitor::bar_view(
                 self.control_center.is_idle_inhibited(),
                 self.icons()

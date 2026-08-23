@@ -37,7 +37,7 @@ use iced::Element;
 pub use message::Message;
 pub use progress::{FRAME_INTERVAL, Spinner};
 
-use super::{Module, OnModulePress};
+use super::OnModulePress;
 use crate::{
     components::icons::{IconTheme, Icons, icon, icon_raw_sized},
     menu::MenuType
@@ -131,14 +131,8 @@ impl Themes {
     }
 }
 
-impl<M> Module<M> for Themes
-where
-    M: 'static + Clone
-{
-    type ViewData<'a> = &'a IconTheme;
-    type RegistrationData<'a> = ();
-
-    /// Renders the bar entry, with the indicator of a running switch beside it.
+impl Themes {
+    /// The bar entry, with the indicator of a running switch beside it.
     ///
     /// The indicator belongs on the bar and not only in the menu because the
     /// menu is not where the user is looking: a `HyDE` switch repaints the
@@ -146,10 +140,17 @@ where
     /// with it, and the bar is the one surface that is certainly still on
     /// screen. The module icon stays where it was so the entry is still
     /// recognisable as the one that was pressed.
-    fn view(
+    ///
+    /// Rendered by the module itself, so the bar layer holds no theme drawing
+    /// of its own.
+    #[must_use]
+    pub fn bar_view<M>(
         &self,
-        icons: Self::ViewData<'_>
-    ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
+        icons: &IconTheme
+    ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)>
+    where
+        M: 'static
+    {
         let entry: Element<'static, M> = if self.is_waiting() {
             iced::widget::Row::new()
                 .push(icon(icons, Icons::Themes))

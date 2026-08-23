@@ -45,9 +45,7 @@ impl App {
             ModuleName::Taskbar => &self.taskbar,
             ModuleName::Clock => &self.clock,
             ModuleName::HydeMenu => &self.hyde_menu,
-            ModuleName::Themes => &self.themes,
             ModuleName::Weather => &self.weather,
-            ModuleName::Settings => &self.settings,
             ModuleName::Privacy => &self.privacy,
             ModuleName::ControlCenter
             | ModuleName::Audio
@@ -57,10 +55,12 @@ impl App {
             | ModuleName::Brightness => &self.control_center,
             ModuleName::MediaPlayer => &self.media_player,
             ModuleName::Notifications => &self.notifications,
-            ModuleName::Screenshot => &self.screenshot,
             ModuleName::Battery
             | ModuleName::BarLayout
             | ModuleName::Wallpaper
+            | ModuleName::Themes
+            | ModuleName::Settings
+            | ModuleName::Screenshot
             | ModuleName::IdleInhibitor
             | ModuleName::KeybindHint
             | ModuleName::NightLight
@@ -100,9 +100,7 @@ impl App {
             ModuleName::Taskbar => &mut self.taskbar,
             ModuleName::Clock => &mut self.clock,
             ModuleName::HydeMenu => &mut self.hyde_menu,
-            ModuleName::Themes => &mut self.themes,
             ModuleName::Weather => &mut self.weather,
-            ModuleName::Settings => &mut self.settings,
             ModuleName::Privacy => &mut self.privacy,
             ModuleName::ControlCenter
             | ModuleName::Audio
@@ -112,10 +110,12 @@ impl App {
             | ModuleName::Brightness => &mut self.control_center,
             ModuleName::MediaPlayer => &mut self.media_player,
             ModuleName::Notifications => &mut self.notifications,
-            ModuleName::Screenshot => &mut self.screenshot,
             ModuleName::Battery
             | ModuleName::BarLayout
             | ModuleName::Wallpaper
+            | ModuleName::Themes
+            | ModuleName::Settings
+            | ModuleName::Screenshot
             | ModuleName::IdleInhibitor
             | ModuleName::KeybindHint
             | ModuleName::NightLight

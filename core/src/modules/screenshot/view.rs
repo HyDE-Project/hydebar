@@ -1,32 +1,34 @@
-//! Module trait wiring for the screenshot module.
+//! Drawing of the screenshot entry: the camera and the recording dot.
 
 use iced::{
     Alignment, Element,
     widget::{Row, container}
 };
 
-use super::{Screenshot, ScreenshotMessage};
+use super::Screenshot;
 use crate::{
     components::{
         icons::{IconTheme, Icons, icon},
         scale
     },
     menu::MenuType,
-    modules::{Module, OnModulePress}
+    modules::OnModulePress
 };
 
-impl<M> Module<M> for Screenshot
-where
-    M: 'static + Clone + From<ScreenshotMessage>
-{
-    type ViewData<'a> = &'a IconTheme;
-    type RegistrationData<'a> = ();
-
-    /// Render camera icon with recording indicator.
-    fn view(
+impl Screenshot {
+    /// The bar entry: the camera, with a dot beside it while a recording is
+    /// running.
+    ///
+    /// Rendered by the module itself, so the bar layer holds no camera
+    /// drawing of its own.
+    #[must_use]
+    pub fn bar_view<M>(
         &self,
-        icons: Self::ViewData<'_>
-    ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
+        icons: &IconTheme
+    ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)>
+    where
+        M: 'static
+    {
         let content = if self.is_recording {
             Row::new()
                 .push(icon(icons, Icons::Point))

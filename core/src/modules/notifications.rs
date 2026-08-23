@@ -1,8 +1,9 @@
 //! The notification center: a bell in the bar, the served store behind it.
 //!
-//! One folder, three rooms: [`state`] folds service events into a rendered
-//! snapshot, [`menu`] draws the notification center popup and [`module`]
-//! wires the module to the bar. The root holds the state the rooms share.
+//! One folder, four rooms: [`state`] folds service events into a rendered
+//! snapshot, [`menu`] draws the notification center popup, [`view`] paints
+//! the bell and [`module`] serves the bus while the layout hosts it. The root
+//! holds the state the rooms share.
 
 use crate::{
     ModuleEventSender,
@@ -15,6 +16,7 @@ use crate::{
 mod menu;
 mod module;
 mod state;
+mod view;
 
 /// Message emitted by the notifications module.
 #[derive(Debug, Clone)]

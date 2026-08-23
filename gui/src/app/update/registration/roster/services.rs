@@ -44,12 +44,5 @@ impl App {
             ctx,
             ()
         );
-        gate(
-            "screenshot",
-            hosts(ModuleName::Screenshot),
-            &mut self.screenshot,
-            ctx,
-            ()
-        );
     }
 }

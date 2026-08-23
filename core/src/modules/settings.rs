@@ -28,7 +28,7 @@ pub use message::{Message, announce_source};
 pub use tab::Tab;
 pub use writer::{SettingValue, SettingsWriteError, write_setting};
 
-use super::{Module, OnModulePress};
+use super::OnModulePress;
 use crate::{
     components::icons::{IconTheme, Icons, icon},
     menu::MenuType
@@ -111,17 +111,19 @@ impl Settings {
     }
 }
 
-impl<M> Module<M> for Settings
-where
-    M: 'static + Clone
-{
-    type ViewData<'a> = &'a IconTheme;
-    type RegistrationData<'a> = ();
-
-    fn view(
+impl Settings {
+    /// The bar entry: the settings glyph, opening the window it names.
+    ///
+    /// Rendered by the module itself, so the bar layer holds no settings
+    /// drawing of its own.
+    #[must_use]
+    pub fn bar_view<M>(
         &self,
-        icons: Self::ViewData<'_>
-    ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)> {
+        icons: &IconTheme
+    ) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)>
+    where
+        M: 'static
+    {
         Some((
             icon(icons, Icons::Settings).into(),
             Some(OnModulePress::ToggleMenu(MenuType::Settings))

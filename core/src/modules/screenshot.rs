@@ -2,13 +2,12 @@
 //!
 //! One folder, four rooms: [`capture`] takes the screenshots, [`recording`]
 //! starts and stops the recorder, [`menu`] draws the actions menu and
-//! [`module`] wires the module to the bar. The root holds the state the
-//! rooms share.
+//! [`view`] paints the bar entry. The root holds the state the rooms share.
 
 mod capture;
 mod menu;
-mod module;
 mod recording;
+mod view;
 
 /// Screenshot action types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
