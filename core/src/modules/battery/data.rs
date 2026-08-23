@@ -7,9 +7,13 @@ use crate::components::icons::Icons;
 /// Battery icon type based on capacity and charging state
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BatteryIcon {
+    /// Taking charge, at this share of full.
     Charging(u8),
+    /// Giving charge, at this share of full.
     Discharging(u8),
+    /// Charged, and holding.
     Full,
+    /// The daemon has not said.
     Unknown
 }
 
@@ -33,10 +37,14 @@ impl From<BatteryIcon> for Icons {
 /// Power management profile
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum PowerProfile {
+    /// Neither speed nor endurance favoured.
     #[default]
     Balanced,
+    /// Speed favoured over endurance.
     Performance,
+    /// Endurance favoured over speed.
     PowerSaver,
+    /// The daemon has not said.
     Unknown
 }
 
@@ -64,20 +72,30 @@ impl From<PowerProfile> for Icons {
 /// Visual indicator state for battery status
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum IndicatorState {
+    /// Nothing to say about it.
     Normal,
+    /// Worth a glance.
     Warning,
+    /// Worth acting on now.
     Danger,
+    /// In good order.
     Success
 }
 
 /// Complete battery state information for rendering
 #[derive(Debug, Clone)]
 pub struct BatteryData {
+    /// Charge left, as a share of full.
     pub capacity:        u8,
+    /// Whether the battery is taking charge.
     pub charging:        bool,
+    /// The glyph this reading is drawn with.
     pub icon:            BatteryIcon,
+    /// How long the charge is expected to last.
     pub time_remaining:  Option<Duration>,
+    /// The power profile in force.
     pub power_profile:   PowerProfile,
+    /// How much attention the reading deserves.
     pub indicator_state: IndicatorState,
     /// What the cell can still hold against what it was sold with.
     ///
@@ -155,9 +173,13 @@ impl BatteryData {
 /// Events emitted by battery module
 #[derive(Debug, Clone)]
 pub enum BatteryEvent {
+    /// The reading moved.
     StatusChanged(BatteryData),
+    /// The power profile changed.
     ProfileChanged(PowerProfile),
+    /// The charge fell past the point worth a warning.
     LowBattery(u8),
+    /// The charge fell past the point worth acting on.
     CriticalBattery(u8)
 }
 

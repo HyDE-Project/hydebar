@@ -8,29 +8,43 @@ use crate::components::icons::Icons;
 /// the settings UI.
 #[derive(Debug, Clone)]
 pub struct Device {
+    /// Name the server addresses the device by.
     pub name:        String,
+    /// Name a person would recognise it by.
     pub description: String,
+    /// Volume of every channel it carries.
     pub volume:      ChannelVolumes,
+    /// Whether the device is silenced.
     pub is_mute:     bool,
+    /// Whether anything is playing through it.
     pub in_use:      bool,
+    /// The sockets the device can route to.
     pub ports:       Vec<Port>
 }
 
 /// Represents a selectable device port and its metadata.
 #[derive(Debug, Clone)]
 pub struct Port {
+    /// Name the server addresses the port by.
     pub name:        String,
+    /// Name a person would recognise it by.
     pub description: String,
+    /// What kind of thing is plugged into it.
     pub device_type: DeviceType,
+    /// Whether this is the port in use.
     pub active:      bool
 }
 
 /// Enumerates known device categories.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum DeviceType {
+    /// Something worn over the ears.
     Headphones,
+    /// Something in the room.
     Speaker,
+    /// Headphones with a microphone.
     Headset,
+    /// Something on the other end of a display cable.
     Hdmi
 }
 
@@ -50,7 +64,9 @@ impl DeviceType {
 /// Server level metadata tracked by the audio service.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct ServerInfo {
+    /// The output everything plays to unless told otherwise.
     pub default_sink:   String,
+    /// The input everything records from unless told otherwise.
     pub default_source: String
 }
 
@@ -117,18 +133,26 @@ impl Sinks for Vec<Device> {
 /// Runtime state tracked by the audio service and exposed to the UI.
 #[derive(Debug, Clone, Default)]
 pub struct AudioData {
+    /// Which output and input the server holds as default.
     pub server_info:       ServerInfo,
+    /// Every output the server knows.
     pub sinks:             Vec<Device>,
+    /// Every input the server knows.
     pub sources:           Vec<Device>,
+    /// Volume of the default output, as a share of full scale.
     pub cur_sink_volume:   i32,
+    /// Volume of the default input, as a share of full scale.
     pub cur_source_volume: i32
 }
 
 /// Events produced by the backend to update the service state.
 #[derive(Debug, Clone)]
 pub enum AudioEvent {
+    /// The outputs the server knows have changed.
     Sinks(Vec<Device>),
+    /// The inputs the server knows have changed.
     Sources(Vec<Device>),
+    /// Which output or input is default has changed.
     ServerInfo(ServerInfo)
 }
 

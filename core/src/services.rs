@@ -1,3 +1,10 @@
+//! One conversation with the outside world each, and what they publish.
+//!
+//! A service owns a bus connection, a socket or a device and nothing else: it
+//! listens, it restates what it heard as an event of its own, and it hands
+//! that to whoever subscribed. Modules read services; services never read
+//! modules.
+
 use std::{future::Future, pin::Pin};
 
 use iced::{
@@ -7,22 +14,37 @@ use iced::{
 
 pub(crate) mod bus;
 
+/// The sound server: outputs, inputs and their volumes.
 pub mod audio;
+/// The bluetooth adapter and the devices paired with it.
 pub mod bluetooth;
+/// The backlight.
 pub mod brightness;
+/// Notices sent through the compositor.
 pub mod hyprland_notify;
+/// Keeping the screen awake.
 pub mod idle_inhibitor;
+/// Whatever is playing, through the media bus.
 pub mod mpris;
+/// Links, wireless networks and VPNs.
 pub mod network;
+/// The notification bus, when the bar serves it.
 pub mod notifications;
+/// Whether the microphone, camera or screen is being read.
 pub mod privacy;
+/// The icons applications register with the system tray.
 pub mod tray;
+/// The battery and the power profile.
 pub mod upower;
 
+/// What a service publishes over its lifetime.
 #[derive(Debug, Clone)]
 pub enum ServiceEvent<S: ReadOnlyService> {
+    /// The service connected, and this is what it found.
     Init(S),
+    /// Something changed.
     Update(S::UpdateEvent),
+    /// The conversation failed.
     Error(S::Error)
 }
 
@@ -46,26 +68,41 @@ pub(crate) fn reconnect_delay(failures: u32) -> std::time::Duration {
         .min(RECONNECT_MAX_DELAY)
 }
 
+/// A service that can be told to do something, not only listened to.
 pub trait Service: ReadOnlyService {
+    /// What this service accepts being told.
     type Command;
 
+    /// Tells the service to do something, and says what follows.
     fn command(&mut self, command: Self::Command) -> Task<ServiceEvent<Self>>;
 }
 
+/// A service that is only ever listened to.
 pub trait ReadOnlyService: Sized {
+    /// What this service publishes when something changes.
     type UpdateEvent;
+
+    /// How this service says the conversation failed.
     type Error: Clone;
 
+    /// Folds one published change into the state held here.
     fn update(&mut self, event: Self::UpdateEvent);
 
+    /// Starts the conversation and hands back what it publishes.
     fn subscribe() -> Subscription<ServiceEvent<Self>>;
 }
 
+/// Where a service driver hands what it has to publish.
+///
+/// A trait rather than the channel itself, so a driver can be exercised
+/// against something that records what it was told instead of a live bus.
 pub trait ServiceEventPublisher<S: ReadOnlyService> {
+    /// The future one publication completes through.
     type SendFuture<'a>: Future<Output = ()> + Send + 'a
     where
         Self: 'a;
 
+    /// Publishes one event.
     fn send(&mut self, event: ServiceEvent<S>) -> Self::SendFuture<'_>;
 }
 

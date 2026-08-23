@@ -16,10 +16,14 @@ use tokio::sync::Notify;
 
 use crate::modules;
 
+/// Everything the bus carries from a module to the bar.
 #[derive(Debug, Clone)]
 pub enum BusEvent {
+    /// Something moved; draw again.
     Redraw,
+    /// A popup opened or closed.
     PopupToggle,
+    /// A module has something to say.
     Module(ModuleEvent)
 }
 
@@ -74,26 +78,46 @@ enum SnapshotKind {
     Desk
 }
 
+/// What one module has to say, named by the module that says it.
 #[derive(Debug, Clone)]
 pub enum ModuleEvent {
+    /// Something happened in the update count.
     Updates(modules::updates::Message),
+    /// Something happened in the workspaces.
     Workspaces(modules::workspaces::Message),
+    /// Something happened in the focused window.
     WindowTitle(modules::window_title::Message),
+    /// Something happened in the machine readout.
     SystemInfo(modules::system_info::Message),
+    /// Something happened in the keyboard layout.
     KeyboardLayout(modules::keyboard_layout::Message),
+    /// Something happened in the keyboard submap.
     KeyboardSubmap(modules::keyboard_submap::Message),
+    /// Something happened in the system tray.
     Tray(modules::tray::TrayMessage),
+    /// Something happened in the window list.
     Taskbar(modules::taskbar::Message),
+    /// Something happened in the canvas.
     Desk(modules::desk::Message),
+    /// Something happened in the clock.
     Clock(modules::clock::Message),
+    /// Something happened in the battery.
     Battery(modules::battery::Message),
+    /// Something happened in the privacy indicators.
     Privacy(modules::privacy::PrivacyMessage),
+    /// Something happened in the quick settings.
     ControlCenter(modules::control_center::Message),
+    /// Something happened in the media player.
     MediaPlayer(modules::media_player::Message),
+    /// Something happened in the notices.
     Notifications(modules::notifications::NotificationsMessage),
+    /// Something happened in the weather.
     Weather(modules::weather::Message),
+    /// Something happened in a module the user wrote.
     Custom {
+        /// The key the module is named under.
         name:    Arc<str>,
+        /// What it has to say.
         message: modules::custom_module::Message
     }
 }

@@ -87,11 +87,17 @@ pub struct NetworkData {
 /// ```
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct AccessPoint {
+    /// Name the network broadcasts itself under.
     pub ssid:        String,
+    /// Signal, as a share of full scale.
     pub strength:    u8,
+    /// State of the device that can reach it.
     pub state:       DeviceState,
+    /// Whether the network is open, needing no secret.
     pub public:      bool,
+    /// Where the backend keeps the network on the bus.
     pub path:        OwnedObjectPath,
+    /// Where the backend keeps the device that reaches it.
     pub device_path: OwnedObjectPath
 }
 
@@ -112,7 +118,9 @@ pub struct AccessPoint {
 /// ```
 #[derive(Debug, Clone)]
 pub struct Vpn {
+    /// Name the connection is configured under.
     pub name: String,
+    /// Where the backend keeps the connection on the bus.
     pub path: OwnedObjectPath
 }
 
@@ -138,7 +146,9 @@ pub struct Vpn {
 /// ```
 #[derive(Debug, Clone)]
 pub enum KnownConnection {
+    /// A wireless network the machine has settings for.
     AccessPoint(AccessPoint),
+    /// A VPN the machine has settings for.
     Vpn(Vpn)
 }
 
@@ -159,17 +169,27 @@ pub enum KnownConnection {
 /// ```
 #[derive(Debug, Clone)]
 pub enum ActiveConnectionInfo {
+    /// A link over a cable.
     Wired {
+        /// Name of the connection.
         name:  String,
+        /// Negotiated speed, in megabits per second.
         speed: u32
     },
+    /// A link over the air.
     WiFi {
+        /// Identifier the backend addresses the connection by.
         id:       String,
+        /// Name the network broadcasts itself under.
         name:     String,
+        /// Signal, as a share of full scale.
         strength: u8
     },
+    /// A tunnel over whichever link is carrying it.
     Vpn {
+        /// Name the connection is configured under.
         name:        String,
+        /// Where the backend keeps the connection on the bus.
         object_path: OwnedObjectPath
     }
 }
@@ -207,10 +227,15 @@ impl ActiveConnectionInfo {
 /// Describes the system connectivity status.
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ConnectivityState {
+    /// Nothing is reachable.
     None,
+    /// A captive portal stands between the machine and the network.
     Portal,
+    /// The link is up and the wider network is not answering.
     Loss,
+    /// Everything is reachable.
     Full,
+    /// The backend has not said, or said something new.
     #[default]
     Unknown
 }
@@ -218,18 +243,31 @@ pub enum ConnectivityState {
 /// Describes the state of a device as reported by the backend.
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DeviceState {
+    /// The backend is not driving this device.
     Unmanaged,
+    /// The device is there and cannot be used.
     Unavailable,
+    /// The device is idle and holds no connection.
     Disconnected,
+    /// The device is getting ready to connect.
     Prepare,
+    /// The device is being configured for a connection.
     Config,
+    /// The connection is waiting for a secret.
     NeedAuth,
+    /// The device is asking for an address.
     IpConfig,
+    /// The address the device was given is being checked.
     IpCheck,
+    /// The connection is waiting on a dependent one.
     Secondaries,
+    /// The connection is up and carrying traffic.
     Activated,
+    /// The connection is being taken down.
     Deactivating,
+    /// The connection failed.
     Failed,
+    /// The backend has not said, or said something new.
     #[default]
     Unknown
 }

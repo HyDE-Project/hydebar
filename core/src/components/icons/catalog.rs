@@ -9,6 +9,16 @@ mod glyphs;
 mod names;
 mod roster;
 
+/// Every icon the bar knows how to draw.
+///
+/// One variant per glyph, each named after what it draws; the default glyph
+/// of each lives in [`glyphs`], the configuration key it answers to in
+/// [`names`].
+#[expect(
+    missing_docs,
+    reason = "a variant here is one icon, named after the thing it draws, and \
+              a line of prose restating the name would say less than the name"
+)]
 #[derive(Copy, Clone, Default, Debug, PartialEq, Eq, Hash)]
 pub enum Icons {
     #[default]

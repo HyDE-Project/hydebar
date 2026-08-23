@@ -6,7 +6,9 @@ use crate::{components::icons::Icons, utils::IndicatorState};
 
 #[derive(Clone, Copy, Debug)]
 pub struct BatteryData {
+    /// Charge left, as a share of full.
     pub capacity:   i64,
+    /// What the battery is doing, and for how long.
     pub status:     BatteryStatus,
     /// Share of the design charge the cell can still hold, in percent.
     pub health:     Option<u32>,
@@ -69,23 +71,33 @@ impl BatteryData {
 
 #[derive(Debug, Clone)]
 pub enum UPowerEvent {
+    /// A fresh battery reading.
     UpdateBattery(BatteryData),
+    /// The machine has no battery to read.
     NoBattery,
+    /// The power profile changed.
     UpdatePowerProfile(PowerProfile)
 }
 
 #[derive(Copy, Clone, Debug)]
 pub enum BatteryStatus {
+    /// Taking charge, full in this long.
     Charging(Duration),
+    /// Giving charge, empty in this long.
     Discharging(Duration),
+    /// Charged, and holding.
     Full
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PowerProfile {
+    /// Neither speed nor endurance favoured.
     Balanced,
+    /// Speed favoured over endurance.
     Performance,
+    /// Endurance favoured over speed.
     PowerSaver,
+    /// The daemon has not said.
     #[default]
     Unknown
 }

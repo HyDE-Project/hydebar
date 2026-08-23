@@ -5,37 +5,55 @@ use serde::Deserialize;
 /// `OpenWeatherMap` API response structures
 #[derive(Debug, Clone, Deserialize)]
 pub struct WeatherResponse {
+    /// The readings grouped under one heading.
     pub main:    MainWeather,
+    /// The conditions named for the hour.
     pub weather: Vec<WeatherCondition>,
+    /// What the wind is doing.
     pub wind:    Wind
 }
 
+/// The readings the service groups under one heading.
 #[derive(Debug, Clone, Deserialize)]
 pub struct MainWeather {
+    /// Temperature, in the unit the request asked for.
     pub temp:     f64,
+    /// Relative humidity, in percent.
     pub humidity: u32
 }
 
+/// One condition the service names for the hour.
 #[derive(Debug, Clone, Deserialize)]
 pub struct WeatherCondition {
+    /// What the condition is called, in words.
     pub description: String,
+    /// Key the service names its own glyph by.
     pub icon:        String
 }
 
+/// What the wind is doing.
 #[derive(Debug, Clone, Deserialize)]
 pub struct Wind {
+    /// Wind speed, in the unit the request asked for.
     pub speed: f64
 }
 
 /// Weather data for rendering
 #[derive(Debug, Clone)]
 pub struct WeatherData {
+    /// Temperature, written the way the bar draws it.
     pub temperature:  String,
+    /// What the sky is doing, in words.
     pub description:  String,
+    /// Relative humidity, written the way the bar draws it.
     pub humidity:     String,
+    /// Wind speed, written the way the bar draws it.
     pub wind_speed:   String,
+    /// The place the reading is for.
     pub location:     String,
+    /// Whether the temperature above is in Celsius.
     pub use_celsius:  bool,
+    /// When the reading arrived.
     pub last_updated: chrono::DateTime<chrono::Local>
 }
 
@@ -111,15 +129,20 @@ impl WeatherData {
 /// Events emitted by the weather module
 #[derive(Debug, Clone)]
 pub enum WeatherEvent {
+    /// A fresh reading arrived.
     Updated(WeatherData),
+    /// The reading could not be taken.
     Error(String)
 }
 
 /// Message type for GUI communication
 #[derive(Debug, Clone)]
 pub enum Message {
+    /// A fresh reading arrived.
     Update(WeatherData),
+    /// The reading could not be taken.
     Error(String),
+    /// Take a reading now.
     Refresh
 }
 

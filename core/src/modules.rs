@@ -6,32 +6,41 @@ use masterror::AppError;
 use crate::{attention::PollSchedule, menu::MenuType};
 
 pub mod bar;
+/// Bar entry stepping through the layouts the desktop ships.
 pub mod bar_layout;
 pub mod battery;
+/// The calendar the clock opens.
 pub mod calendar;
 pub mod clock;
+/// A bar entry whose whole behaviour is running one command.
 pub mod command_button;
+/// Bar entry gathering the quick settings, and the services behind them.
 pub mod control_center;
 pub mod cpu;
 pub mod cpu_temp;
 pub mod custom_module;
 pub mod desk;
 pub mod gpu_temp;
+/// The desktop's own buttons, drawn by a plain function.
 pub mod hyde_button;
 pub mod hyde_menu;
 pub mod idle_inhibitor;
 pub mod keyboard_layout;
+/// Bar entry naming the compositor submap the keyboard is in.
 pub mod keyboard_submap;
 pub mod media_player;
 pub mod memory;
 pub mod notifications;
 pub mod privacy;
 pub mod screenshot;
+/// Bar entry opening the window the bar is configured from.
 pub mod settings;
+/// Bar entry reading the machine, and the sample every readout shares.
 pub mod system_info;
 pub mod taskbar;
 pub mod themes;
 pub mod tray;
+/// Bar entry counting what is waiting to be installed.
 pub mod updates;
 pub mod wallpaper;
 pub mod weather;
@@ -41,14 +50,20 @@ pub mod workspaces;
 /// Action to perform when a module is pressed
 #[derive(Debug, Clone)]
 pub enum OnModulePress<M> {
+    /// Send this message.
     Action(Box<M>),
+    /// Open or close this menu.
     ToggleMenu(MenuType)
 }
 
 /// Module registration and operation errors
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ModuleError {
-    Registration { reason: Cow<'static, str> }
+    /// The module could not start the work it owns.
+    Registration {
+        /// What went wrong, in the module's own words.
+        reason: Cow<'static, str>
+    }
 }
 
 impl std::fmt::Display for ModuleError {
@@ -74,6 +89,8 @@ impl From<ModuleError> for AppError {
 }
 
 impl ModuleError {
+    /// A module that could not start its work, and why.
+    #[must_use]
     pub fn registration(reason: impl Into<Cow<'static, str>>) -> Self {
         Self::Registration {
             reason: reason.into()
@@ -89,7 +106,10 @@ impl ModuleError {
 /// `ARCHITECTURE.md` names every module still implementing this trait; a
 /// new module starts on the target convention, not here.
 pub trait Module<Message> {
+    /// What the module needs in order to draw itself.
     type ViewData<'a>;
+
+    /// What the module needs in order to start its work.
     type RegistrationData<'a>;
 
     /// Starts the module's background work, if it owns any.
@@ -151,6 +171,10 @@ pub trait Module<Message> {
         Ok(())
     }
 
+    /// Draws the bar entry, and names what pressing it does.
+    ///
+    /// The default draws nothing, which is right for a module that only owns
+    /// background work.
     fn view(
         &self,
         data: Self::ViewData<'_>
@@ -162,6 +186,10 @@ pub trait Module<Message> {
         None
     }
 
+    /// The stream the module produces on its own, if it produces one.
+    ///
+    /// The default produces none: nearly every module publishes through the
+    /// event bus instead, which costs no wakeup while nothing happens.
     fn subscription(&self) -> Option<iced::Subscription<Message>> {
         None
     }

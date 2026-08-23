@@ -1,4 +1,13 @@
+//! What the bar is made of: its modules, the services behind them and the
+//! bus that carries what they have to say.
+//!
+//! A module owns its data, its update logic and its rendering; a service owns
+//! one conversation with the outside world — a bus, a socket, a device — and
+//! publishes what it hears. Nothing here composes a bar: that is the interface
+//! crate's work, and this crate never calls into it.
+
 #![cfg_attr(coverage_nightly, feature(coverage_attribute))]
+#![warn(missing_docs)]
 
 /// Default height of the main status bar in logical pixels.
 pub const HEIGHT: f64 = 34.;
