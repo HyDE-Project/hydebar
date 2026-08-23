@@ -24,6 +24,17 @@ const HALO: f32 = 26.0;
 /// unfolding into a light show.
 const GLEAM: f32 = 0.4;
 
+/// A resting shadow, as much of it as the ground under it is still painted.
+///
+/// A shadow is cast by the thing above it: the pill fading out has to take
+/// its own shadow with it, or the canvas is left with a shadow of nothing.
+fn faded(resting: iced::Shadow, ground: f32) -> iced::Shadow {
+    iced::Shadow {
+        color: resting.color.scale_alpha(ground.clamp(0.0, 1.0)),
+        ..resting
+    }
+}
+
 /// The shadow a block wears while it is carrying `glow` of its journey's
 /// light.
 ///
@@ -56,6 +67,9 @@ fn halo(resting: iced::Shadow, lit: iced::Color, glow: f32) -> iced::Shadow {
 /// halves of a line still read as one line.
 const MEASURE: f32 = 30.0;
 
+/// How tall an island stands when the appearance states no height of its own.
+const ISLAND: f32 = 38.0;
+
 impl App {
     /// Draws one unit in the form the canvas has room for.
     ///
@@ -64,6 +78,14 @@ impl App {
     /// and a unit that stood as a bare island until it began to open would
     /// take its room only then, moving everything below it down the screen
     /// mid-flight.
+    ///
+    /// What arrived as an island stays, and the pill around it does not. The
+    /// pill is the strip's own shape — a readout with a bar's ground under it
+    /// — and the canvas is the other shape of the same bar: pills left
+    /// standing over the blocks they opened into gave the two shapes one look
+    /// between them. The ground fades as the block writes itself out, so what
+    /// the eye follows is one thing becoming another rather than a thing
+    /// being swapped, and the reading itself is never taken away.
     pub(super) fn desk_unit<'a>(
         &'a self,
         unit: &'a ModuleName,
@@ -73,7 +95,7 @@ impl App {
         bloom: f32,
         glow: f32
     ) -> Option<Element<'a, Message>> {
-        let island = self.desk_island(unit, id, glow)?;
+        let island = self.desk_island(unit, id, glow, bloom)?;
         let opened: Vec<Element<'a, Message>> = self.desk_opened(unit, side, ink, bloom);
 
         if opened.is_empty() {
@@ -101,7 +123,7 @@ impl App {
         unit: &ModuleName,
         id: Id
     ) -> bool {
-        self.desk_island(unit, id, 0.0).is_some()
+        self.desk_island(unit, id, 0.0, 0.0).is_some()
     }
 
     /// The room one unit takes when it is open, at the given ink.
@@ -110,7 +132,7 @@ impl App {
     /// column needs is what the column takes: the island it arrived as, the
     /// gap under it, and the room of every block it opens into.
     pub(in crate::app::view::desk) fn desk_unit_room(&self, unit: &ModuleName, ink: Ink) -> f32 {
-        let island = self.appearance().height.unwrap_or(38.0);
+        let island = self.appearance().height.unwrap_or(ISLAND);
         let opened = self.desk_room(unit, ink);
 
         if opened <= 0.0 {
@@ -196,7 +218,8 @@ impl App {
         &'a self,
         unit: &'a ModuleName,
         id: Id,
-        glow: f32
+        glow: f32,
+        bloom: f32
     ) -> Option<Element<'a, Message>> {
         let opacity = self.appearance().opacity;
         let (content, action) = self.get_module_view(unit, id, opacity)?;
@@ -204,16 +227,22 @@ impl App {
 
         Some(self.desk_pill(
             vec![self.module_element(content, actions, unit, id, true)],
-            glow
+            glow,
+            bloom
         ))
     }
 
-    /// The one pill a group of modules shares, as the strip paints it, lit by
-    /// however much of its journey's light it is carrying.
+    /// The ground a readout stands on while it is still the strip's.
+    ///
+    /// Painted in full while the block travels, gone by the time the block it
+    /// heads is written out: what left the strip has to arrive looking like
+    /// what left, and what stands on the canvas has to look like the canvas.
+    /// `glow` is however much of its journey's light it is carrying.
     fn desk_pill<'a>(
         &'a self,
         members: Vec<Element<'a, Message>>,
-        glow: f32
+        glow: f32,
+        bloom: f32
     ) -> Element<'a, Message> {
         use hydebar_proto::config::AppearanceStyle;
 
@@ -224,8 +253,9 @@ impl App {
 
         let islands = appearance.style == AppearanceStyle::Islands;
         let glow = glow.clamp(0.0, 1.0);
+        let ground = 1.0 - bloom.clamp(0.0, 1.0);
 
-        if !islands && glow <= 0.0 {
+        if (!islands || ground <= 0.0) && glow <= 0.0 {
             return row.into();
         }
 
@@ -240,14 +270,28 @@ impl App {
                 [0.0, 0.0]
             })
             .style(move |theme: &iced::Theme| iced::widget::container::Style {
-                background: islands
-                    .then(|| theme.palette().background.scale_alpha(opacity).into()),
+                background: (islands && ground > 0.0).then(|| {
+                    theme
+                        .palette()
+                        .background
+                        .scale_alpha(opacity * ground)
+                        .into()
+                }),
                 border: if islands {
-                    finish.border(radius)
+                    let edge = finish.border(radius);
+
+                    iced::Border {
+                        color: edge.color.scale_alpha(ground),
+                        ..edge
+                    }
                 } else {
                     iced::Border::default().rounded(radius)
                 },
-                shadow: halo(finish.shadow(), theme.palette().primary, glow),
+                shadow: halo(
+                    faded(finish.shadow(), ground),
+                    theme.palette().primary,
+                    glow
+                ),
                 ..iced::widget::container::Style::default()
             })
             .into()

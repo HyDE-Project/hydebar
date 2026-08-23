@@ -139,19 +139,18 @@ impl HydeMenu {
         view::tree_view(&self.tree, &self.expanded, id, opacity)
     }
 
-    /// What the menu offers at its top level, as the glyphs it draws them
-    /// with.
+    /// What the menu offers at its top level, each as its glyph and name.
     ///
     /// Read off the tree already in hand rather than the file it came from:
     /// the canvas asks this on every frame of an unfolding.
     #[must_use]
-    pub fn choices(&self) -> Vec<String> {
+    pub fn choices(&self) -> Vec<(String, String)> {
         choices_of(&self.tree)
     }
 }
 
-/// The choices the desktop's menu for `module` offers, as the glyphs it
-/// draws them with.
+/// The choices the desktop's menu for `module` offers, each as its glyph and
+/// the name it is called by.
 ///
 /// The desktop ships a menu beside several of its waybar modules — the power
 /// module above all — and a bar module the user wired to the same script has
@@ -164,14 +163,15 @@ impl HydeMenu {
 /// down now and shutting down presently — and a row that spelled out every
 /// leaf would say less by saying more.
 ///
-/// Glyphs only: a label here reads `󰍁  Lock`, and it is the glyph that
-/// carries it. A label written in letters alone is passed over rather than
-/// squeezed into a row meant for icons.
+/// A label here reads `󰍁  Lock`: the glyph
+/// leads and the name follows, and both are wanted — the canvas has the room
+/// to say what a choice is instead of leaving the glyph to carry it alone. A
+/// label written in letters alone carries no glyph and is passed over.
 ///
 /// Blocking on purpose, like everything else that reads the desktop's files:
 /// the caller decides which pool it runs on.
 #[must_use]
-pub fn desktop_choices(module: &str) -> Vec<String> {
+pub fn desktop_choices(module: &str) -> Vec<(String, String)> {
     let Some(definition) = definition::read_definition(module) else {
         return Vec::new();
     };
@@ -185,8 +185,8 @@ pub fn desktop_choices(module: &str) -> Vec<String> {
     )
 }
 
-/// The glyphs the top level of `tree` offers, in the order it lists them.
-fn choices_of(tree: &[Entry]) -> Vec<String> {
+/// The choices the top level of `tree` offers, in the order it lists them.
+fn choices_of(tree: &[Entry]) -> Vec<(String, String)> {
     tree.iter()
         .filter_map(|entry| match entry {
             Entry::Item {
@@ -194,21 +194,27 @@ fn choices_of(tree: &[Entry]) -> Vec<String> {
             }
             | Entry::Submenu {
                 label, ..
-            } => glyph_of(label),
+            } => named(label),
             Entry::Separator => None
         })
         .collect()
 }
 
-/// The glyph a menu label leads with, when it leads with one.
+/// A menu label split into the glyph it leads with and the name it carries.
 ///
 /// The desktop writes its labels glyph first and name after, and the two are
 /// told apart by what they are made of: a name is letters and digits, a glyph
-/// is neither.
-fn glyph_of(label: &str) -> Option<String> {
-    let leading = label.split_whitespace().next()?;
+/// is neither. A label that leads with letters carries no glyph, and nothing
+/// is made of it.
+fn named(label: &str) -> Option<(String, String)> {
+    let mut words = label.split_whitespace();
+    let leading = words.next()?;
 
-    (!leading.chars().any(char::is_alphanumeric)).then(|| leading.to_owned())
+    if leading.chars().any(char::is_alphanumeric) {
+        return None;
+    }
+
+    Some((leading.to_owned(), words.collect::<Vec<&str>>().join(" ")))
 }
 
 /// Reads the desktop's two menu files, as the message that folds them in.
@@ -244,14 +250,21 @@ mod tests {
     use super::*;
 
     #[test]
-    fn a_label_written_glyph_first_gives_up_its_glyph() {
-        assert_eq!(glyph_of("\u{f0341}  Lock"), Some("\u{f0341}".to_owned()));
+    fn a_label_gives_up_the_glyph_it_leads_with_and_the_name_it_carries() {
+        assert_eq!(
+            named("\u{f0341}  Lock"),
+            Some(("\u{f0341}".to_owned(), "Lock".to_owned()))
+        );
+        assert_eq!(
+            named("\u{f0bab}  Reboot to UEFI").map(|(_, name)| name),
+            Some("Reboot to UEFI".to_owned())
+        );
     }
 
     #[test]
-    fn a_label_of_letters_alone_offers_no_glyph() {
-        assert!(glyph_of("Lock").is_none());
-        assert!(glyph_of("").is_none());
+    fn a_label_of_letters_alone_offers_no_choice() {
+        assert!(named("Lock").is_none());
+        assert!(named("").is_none());
     }
 
     #[test]
@@ -274,7 +287,10 @@ mod tests {
 
         assert_eq!(
             choices_of(&tree),
-            vec!["\u{f0341}".to_owned(), "\u{f06a6}".to_owned()],
+            vec![
+                ("\u{f0341}".to_owned(), "Lock".to_owned()),
+                ("\u{f06a6}".to_owned(), "Shutdown".to_owned())
+            ],
             "a branch stands for what it unfolds into, and a rule for nothing"
         );
     }

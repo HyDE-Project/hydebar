@@ -20,12 +20,12 @@ use crate::{ModuleEventSender, services::ServiceEvent};
 pub struct Custom {
     pub(super) data:       CustomListenData,
     pub(super) last_error: Option<CustomCommandError>,
-    /// What the desktop's own menu for this module offers, as glyphs.
+    /// What the desktop's own menu for this module offers, glyph and name.
     ///
     /// Read once, where the module is made: a button module says nothing of
     /// itself, and this is the only thing it can show on a canvas that opens
     /// every module into a block of its own.
-    choices:               Vec<String>,
+    choices:               Vec<(String, String)>,
     registration:          Option<CustomRegistration>,
     sender:                Option<ModuleEventSender<Message>>,
     listener_task:         Option<JoinHandle<()>>
@@ -34,16 +34,16 @@ pub struct Custom {
 impl Custom {
     /// A module that carries the choices the desktop's menu for it offers.
     #[must_use]
-    pub fn with_choices(choices: Vec<String>) -> Self {
+    pub fn with_choices(choices: Vec<(String, String)>) -> Self {
         let mut module = Self::default();
         module.choices = choices;
 
         module
     }
 
-    /// What the desktop's own menu for this module offers, as glyphs.
+    /// What the desktop's own menu for this module offers, glyph and name.
     #[must_use]
-    pub fn choices(&self) -> &[String] {
+    pub fn choices(&self) -> &[(String, String)] {
         &self.choices
     }
 

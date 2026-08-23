@@ -107,7 +107,9 @@ fn drawing_room(panel: &Panel, ink: Ink) -> f32 {
             rooms, ..
         }) => ink.size.mul_add(0.28, overview::room(ink, rooms.len())),
         Some(Figure::Accordion(_)) => ink.size.mul_add(0.28, accordion::room(ink)),
-        Some(Figure::Choices(_)) => ink.size.mul_add(0.28, choices::room(ink)),
+        Some(Figure::Choices(offered)) => {
+            ink.size.mul_add(0.28, choices::room(offered.len(), ink))
+        }
         Some(Figure::Trace {
             ..
         }) => ink.size.mul_add(0.28, trace::room(ink)),

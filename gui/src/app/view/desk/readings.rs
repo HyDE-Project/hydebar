@@ -78,8 +78,9 @@ pub enum Figure {
     },
     /// A row of pictures with the one in force big in the middle of it.
     Accordion(hydebar_core::modules::desk::looks::Reel),
-    /// What pressing a module leads to, as the glyphs of its own menu.
-    Choices(Vec<String>),
+    /// What pressing a module leads to: every choice of its own menu, as the
+    /// glyph it is drawn with and the name it is called by.
+    Choices(Vec<(String, String)>),
     /// The last few minutes of one reading, oldest first.
     Trace {
         /// The readings themselves.
