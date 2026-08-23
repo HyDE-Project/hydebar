@@ -24,7 +24,6 @@ impl App {
     #[must_use]
     pub(crate) fn desk_is_unfolding(&self) -> bool {
         self.desk_returning.is_running()
-            || self.desk_leaving.is_running()
             || self.desk_clocks.values().any(|clock| clock.is_running())
     }
 
@@ -78,7 +77,7 @@ impl App {
     /// module already in its place is the one order this must not have.
     #[must_use]
     pub(crate) fn strip_wash(&self, screen: Option<&str>) -> f32 {
-        if !self.desk_holds(screen) || self.desk_leaving(screen).is_some() {
+        if !self.desk_holds(screen) {
             return self.desk_returning.progress();
         }
 

@@ -30,27 +30,6 @@ use super::{
     blocks::{Along, Ink, Side}
 };
 
-/// The curve the leaving runs on: away quickly, off the edge slowly.
-fn eased(leaving: f32) -> f32 {
-    let left = 1.0 - leaving.clamp(0.0, 1.0);
-
-    left.mul_add(-(left * left), 1.0)
-}
-
-/// How far along its journey a block is drawn, given the canvas is leaving.
-///
-/// On the way out every block leaves at one pace: they are all bound for the
-/// same two edges, and a queue out is the one thing this transition does not
-/// do. On the way in each keeps the share of the journey its own place in the
-/// column earned it.
-fn travel_of(travel: f32, leaving: f32) -> f32 {
-    if leaving > 0.0 {
-        1.0 - eased(leaving)
-    } else {
-        travel
-    }
-}
-
 impl App {
     /// Stacks one section of the layout into a column of the canvas.
     ///
@@ -85,8 +64,7 @@ impl App {
         ink: Ink,
         unfolding: f32,
         deepest: usize,
-        room: f32,
-        leaving: f32
+        room: f32
     ) -> Option<Element<'a, Message>> {
         let fan = self.fan_span();
         let runs = self.desk_runs(order, id, ink, room);
@@ -110,7 +88,6 @@ impl App {
                             glow: hydebar_core::animation::flare(unfolding, journey)
                         };
                         let block = self.desk_unit(unit, id, side, ink, along)?;
-                        let travel = travel_of(travel, leaving);
 
                         #[expect(
                             clippy::cast_precision_loss,
@@ -125,13 +102,9 @@ impl App {
                             &self.flip,
                             block
                         );
-                        let travelling = if leaving > 0.0 {
-                            travelling
-                        } else {
-                            travelling
-                                .departing_from(self.strip_row(id))
-                                .descending_first()
-                        };
+                        let travelling = travelling
+                            .departing_from(self.strip_row(id))
+                            .descending_first();
 
                         Some(
                             container(travelling)

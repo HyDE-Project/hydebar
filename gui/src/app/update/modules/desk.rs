@@ -16,19 +16,11 @@ const LONGEST_UNFOLDING: Duration = Duration::from_millis(2400);
 /// simply appearing.
 const RETURN_WASH: Duration = Duration::from_millis(190);
 
-/// How long the canvas takes to leave the screen sideways.
-///
-/// Shorter than the way out: the canvas leaves because a window has taken the
-/// screen, and a canvas still sliding off a window the user is already
-/// working in reads as the bar holding on. Long enough to be a leaving rather
-/// than a disappearance.
-const LEAVING: Duration = Duration::from_millis(260);
-
 mod travel;
 
 use iced::{Task, set_input_region};
 
-use super::super::super::state::{App, Leaving, Message};
+use super::super::super::state::{App, Message};
 
 impl App {
     /// Sends every screen's canvas towards unfolded or folded, as it stands.
@@ -50,9 +42,10 @@ impl App {
     /// The canvas travels out and snaps back. Unfolding happens on a screen
     /// nobody is using, so it can take its time; folding happens because a
     /// window has just taken the screen, and that window is on it already —
-    /// a strip still travelling home while the window waits for it reads as
-    /// the bar lagging behind the compositor, so the way back is not
-    /// travelled at all.
+    /// anything of the canvas still drawn then is drawn over the window the
+    /// user is working in, on the layer the bar keeps above them. So the way
+    /// back is not travelled at all: the canvas is off the screen on the very
+    /// frame the window takes it, and only the strip's own islands fly home.
     ///
     /// The returned task hands the canvas its pointer input, or takes it
     /// away: the surface spans the whole screen, so one left taking presses
@@ -73,7 +66,6 @@ impl App {
 
         for (surface, screen) in screens {
             let unfolded = enabled && self.desk.covers(screen.as_deref());
-            let screen_of = screen.clone();
             let clock = self.desk_clocks.entry(screen).or_default();
             let was_out = clock.is_out();
 
@@ -92,11 +84,9 @@ impl App {
 
             if unfolded != was_out {
                 if unfolded {
-                    self.desk_leaving_from = Leaving::Nothing;
                     self.flip.borrow_mut().depart();
                 } else {
                     self.send_the_islands_home(surface);
-                    self.send_the_canvas_away(screen_of);
                 }
 
                 tasks.push(set_input_region(
@@ -172,38 +162,6 @@ impl App {
         self.relayout.set_target(1.0);
     }
 
-    /// Starts the canvas of `screen` on its way off the two edges.
-    ///
-    /// The seats it travels to are the ones the strip's islands are flying in
-    /// from — the same book, read the other way — so a block leaves by the
-    /// edge its own section belongs to and arrives nowhere: the clock behind
-    /// it is what takes it off the screen for good.
-    fn send_the_canvas_away(&mut self, screen: Option<String>) {
-        if !self.config.appearance.animations.enabled {
-            self.desk_leaving_from = Leaving::Nothing;
-
-            return;
-        }
-
-        self.desk_leaving = hydebar_core::animation::Unfold::default();
-        self.desk_leaving.advance(Duration::from_millis(1), LEAVING);
-        self.desk_leaving_from = Leaving::Screen(screen);
-    }
-
-    /// How far the canvas of `screen` has got on its way out, if it is on one.
-    #[must_use]
-    pub(crate) fn desk_leaving(&self, screen: Option<&str>) -> Option<f32> {
-        let Leaving::Screen(leaving) = &self.desk_leaving_from else {
-            return None;
-        };
-
-        if leaving.as_deref() != screen || !self.desk_leaving.is_running() {
-            return None;
-        }
-
-        Some(self.desk_leaving.progress())
-    }
-
     /// How far the canvas of `screen` has unfolded, zero folded and one out.
     #[must_use]
     pub(crate) fn desk_presence(&self, screen: Option<&str>) -> f32 {
@@ -217,12 +175,6 @@ impl App {
     /// Reports whether any of them is still travelling.
     pub(crate) fn advance_desk(&mut self, elapsed: std::time::Duration) -> bool {
         let returning = self.desk_returning.advance(elapsed, RETURN_WASH);
-        let leaving = self.desk_leaving.advance(elapsed, LEAVING);
-
-        if !leaving {
-            self.desk_leaving_from = Leaving::Nothing;
-        }
-
         let total = self.unfolding_response();
         let bare: Vec<Option<String>> = self
             .desk_clocks
@@ -231,12 +183,11 @@ impl App {
             .cloned()
             .collect();
 
-        bare.into_iter()
-            .fold(returning | leaving, |running, screen| {
-                self.desk_clocks
-                    .get_mut(&screen)
-                    .is_some_and(|clock| clock.advance(elapsed, total))
-                    | running
-            })
+        bare.into_iter().fold(returning, |running, screen| {
+            self.desk_clocks
+                .get_mut(&screen)
+                .is_some_and(|clock| clock.advance(elapsed, total))
+                | running
+        })
     }
 }

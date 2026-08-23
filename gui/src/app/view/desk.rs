@@ -36,14 +36,12 @@ impl App {
     /// untouched by it.
     pub(super) fn desk_surface(&self, id: Id) -> Element<'_, Message> {
         let screen = self.outputs.screen_of(id).flatten();
-        let leaving = self.desk_leaving(screen);
 
-        if !self.desk_holds(screen) && leaving.is_none() {
+        if !self.desk_holds(screen) {
             return Row::new().into();
         }
 
-        let unfolding = Self::unfolding(leaving, || self.desk_presence(screen));
-        let leaving = leaving.unwrap_or_default();
+        let unfolding = self.desk_presence(screen);
 
         let ink = blocks::Ink {
             value: self.theme_cache.palette().text,
@@ -63,7 +61,7 @@ impl App {
         ]
         .into_iter()
         .filter_map(|(order, side)| {
-            self.desk_column(order, id, side, ink, unfolding, deepest, room, leaving)
+            self.desk_column(order, id, side, ink, unfolding, deepest, room)
         });
 
         let canvas = container(
@@ -81,11 +79,7 @@ impl App {
             left:   margin
         });
 
-        let ways = if leaving > 0.0 {
-            Vec::new()
-        } else {
-            self.desk_ways(id, unfolding, deepest, ink, room)
-        };
+        let ways = self.desk_ways(id, unfolding, deepest, ink, room);
 
         if ways.is_empty() {
             return canvas.into();
@@ -97,16 +91,6 @@ impl App {
             .width(Length::Fill)
             .height(Length::Fill)
             .into()
-    }
-
-    /// How far out the canvas is drawn, given how far out it is going.
-    ///
-    /// A canvas on its way out is drawn whole and carried sideways: what was
-    /// on the screen leaves by the edges rather than being switched off, so
-    /// it stays fully unfolded for the whole of its exit and only the
-    /// carrying moves it. One arriving is drawn as far out as it has come.
-    fn unfolding(leaving: Option<f32>, presence: impl FnOnce() -> f32) -> f32 {
-        if leaving.is_some() { 1.0 } else { presence() }
     }
 
     /// The way every block of this screen has come, for the trails behind them.
@@ -252,7 +236,7 @@ mod tests {
     }
 
     #[test]
-    fn a_canvas_taken_off_the_screen_leaves_by_the_edges_rather_than_at_once() {
+    fn a_canvas_a_window_took_the_screen_from_is_gone_on_that_very_frame() {
         let mut app = test_app_with(|config| config.desk.enabled = true);
         app.screen_width = Some(1920.0);
         open(&mut app);
@@ -264,14 +248,10 @@ mod tests {
         let _ = app.unfold_desk();
 
         assert!(
-            app.desk_leaving(None).is_some(),
-            "the canvas knows it is on its way out"
-        );
-        assert!(
             simulator(app.desk_surface(surface()))
                 .find("MEMORY")
-                .is_ok(),
-            "and is still drawn while it goes, not switched off"
+                .is_err(),
+            "the canvas is still drawn over the window that took the screen"
         );
 
         let beyond: Vec<f32> = app
@@ -295,14 +275,10 @@ mod tests {
         }
 
         assert!(
-            app.desk_leaving(None).is_none(),
-            "the canvas is gone once the leaving is over"
-        );
-        assert!(
             simulator(app.desk_surface(surface()))
                 .find("MEMORY")
                 .is_err(),
-            "and nothing of it is drawn after"
+            "and nothing of it comes back while the islands fly home"
         );
     }
 

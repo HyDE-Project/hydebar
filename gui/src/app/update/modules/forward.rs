@@ -70,10 +70,22 @@ impl App {
             Message::Desk(msg) => {
                 self.desk.update(msg);
 
-                Task::perform(
-                    hydebar_core::outputs::perch::strip_rows(),
-                    Message::StripRowsMeasured
-                )
+                // answered on this very frame rather than after the row
+                // measurement below: a window that took the screen is on it
+                // already, and the canvas is drawn above windows, so every
+                // frame it waits for an answer from the compositor is a frame
+                // of the bar's readings over the user's window. The measured
+                // rows come back to the same question a moment later, which
+                // is what the travel out is laid against.
+                let answered = self.unfold_desk();
+
+                Task::batch([
+                    answered,
+                    Task::perform(
+                        hydebar_core::outputs::perch::strip_rows(),
+                        Message::StripRowsMeasured
+                    )
+                ])
             }
             Message::Tray(msg) => {
                 let close_tray = match &msg {

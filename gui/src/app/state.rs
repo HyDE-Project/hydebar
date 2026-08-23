@@ -8,6 +8,6 @@ mod message;
 #[cfg(test)]
 pub(in crate::app) mod test_support;
 
+pub use app::App;
 pub(super) use app::GREETING_LIFETIME;
-pub use app::{App, Leaving};
 pub use message::Message;

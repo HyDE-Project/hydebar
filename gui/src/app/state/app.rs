@@ -34,20 +34,6 @@ use iced::SurfaceId as Id;
 pub(in crate::app) const GREETING_LIFETIME: std::time::Duration =
     std::time::Duration::from_secs(3);
 
-/// Whose canvas is on its way off the screen, if anyone's.
-///
-/// Named rather than an option of an option: a screen the compositor has not
-/// named is still a screen, and "the unnamed screen is leaving" has to be
-/// tellable from "nothing is leaving" at a glance.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub enum Leaving {
-    /// No canvas is leaving.
-    #[default]
-    Nothing,
-    /// The canvas of this screen is leaving; an unnamed screen is [`None`].
-    Screen(Option<String>)
-}
-
 /// Everything the bar is, at this moment, on every screen it stands on.
 pub struct App {
     pub(crate) config_path: PathBuf,
@@ -85,15 +71,6 @@ pub struct App {
     /// What the islands are sent beyond when they fly back onto the strip:
     /// off screen has to be off *this* screen, not a guessed distance.
     pub(crate) screen_width: Option<f32>,
-    /// How far the canvas has got on its way off the screen.
-    ///
-    /// The way out is not the way in run backwards: the canvas leaves because
-    /// a window has taken the screen, so it goes sideways past the two edges
-    /// while the strip's own islands fly in underneath it, and neither waits
-    /// for the other.
-    pub(crate) desk_leaving: hydebar_core::animation::Unfold,
-    /// The screen whose canvas is leaving, while one is.
-    pub(crate) desk_leaving_from: Leaving,
     /// What the machine has been doing for the last few minutes.
     ///
     /// One reading is a number and a run of them is a shape; the canvas draws
