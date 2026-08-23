@@ -35,10 +35,10 @@ pub mod position_button;
 pub mod services;
 /// How everything the bar draws is coloured and sized.
 pub mod style;
-pub mod tooltip;
-// Make test_utils available for both internal tests and cross-crate testing
+/// Fixtures the crate's own tests and the crates above it both build on.
 #[cfg(any(test, feature = "test-utils"))]
 pub mod test_utils;
+pub mod tooltip;
 /// Odds and ends: launching, supervising, reaping.
 pub mod utils;
 

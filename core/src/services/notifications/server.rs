@@ -25,6 +25,18 @@ impl std::fmt::Debug for NotificationsServer {
     }
 }
 
+/// The urgency a caller stated in its hints.
+///
+/// Notices arrive with the urgency as an untyped hint, and a caller that
+/// states none, or states one the specification does not name, means an
+/// ordinary notice — not the loudest one.
+fn urgency_of(hints: &std::collections::HashMap<String, zbus::zvariant::Value<'_>>) -> Urgency {
+    hints
+        .get("urgency")
+        .and_then(|value| value.downcast_ref::<u8>().ok())
+        .map_or(Urgency::Normal, Urgency::from)
+}
+
 impl NotificationsServer {
     /// A server holding this storage and publishing through this sender.
     pub const fn new(
@@ -105,14 +117,10 @@ impl NotificationsServer {
             "Notification: {app_name} - {summary} (icon: {app_icon}, timeout: {expire_timeout})"
         );
 
-        // Parse urgency from hints
-        let urgency = hints
-            .get("urgency")
-            .and_then(|v| v.downcast_ref::<u8>().ok())
-            .map_or(Urgency::Normal, Urgency::from);
+        let urgency = urgency_of(&hints);
 
         let notification = Notification {
-            id: 0, // Will be set by storage
+            id: 0,
             app_name,
             icon: app_icon,
             summary: summary.clone(),
@@ -125,13 +133,11 @@ impl NotificationsServer {
 
         let mut storage = self.storage();
 
-        // Check if should show (DND mode)
         if !storage.should_show(&urgency) {
             debug!("Notification suppressed by DND: {summary}");
             return 0;
         }
 
-        // Handle replaces_id
         let id = if replaces_id > 0 {
             storage.replace(replaces_id, notification.clone());
             replaces_id
@@ -167,16 +173,21 @@ impl NotificationsServer {
 }
 
 impl NotificationsServer {
+    /// Plays the sound the session assigns to a notice of this urgency.
+    ///
+    /// Handed to the freedesktop sound system, which is where a session
+    /// states what its notices sound like; a machine without it is answered
+    /// with a line in the journal rather than silence nobody can explain.
+    ///
+    /// The player is waited on from a thread of its own: left unreaped it
+    /// would leave a zombie behind for every notice the session shows.
     fn play_notification_sound(urgency: &Urgency) {
-        // Use libcanberra or aplay to play sound
         let sound_name = match urgency {
             Urgency::Critical => "message-new-urgent",
             Urgency::Normal => "message-new-instant",
             Urgency::Low => "message"
         };
 
-        // Try canberra first (standard freedesktop sound system); waiting on
-        // a thread reaps the player instead of leaving a zombie per sound
         match std::process::Command::new("canberra-gtk-play")
             .args(["-i", sound_name, "-d", "New notification"])
             .spawn()

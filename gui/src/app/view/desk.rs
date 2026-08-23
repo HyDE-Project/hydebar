@@ -42,13 +42,7 @@ impl App {
             return Row::new().into();
         }
 
-        // a canvas on its way out is drawn whole and carried sideways: what
-        // was on the screen leaves by the edges rather than being switched off
-        let unfolding = if leaving.is_some() {
-            1.0
-        } else {
-            self.desk_presence(screen)
-        };
+        let unfolding = Self::unfolding(leaving, || self.desk_presence(screen));
         let leaving = leaving.unwrap_or_default();
 
         let ink = blocks::Ink {
@@ -103,6 +97,16 @@ impl App {
             .width(Length::Fill)
             .height(Length::Fill)
             .into()
+    }
+
+    /// How far out the canvas is drawn, given how far out it is going.
+    ///
+    /// A canvas on its way out is drawn whole and carried sideways: what was
+    /// on the screen leaves by the edges rather than being switched off, so
+    /// it stays fully unfolded for the whole of its exit and only the
+    /// carrying moves it. One arriving is drawn as far out as it has come.
+    fn unfolding(leaving: Option<f32>, presence: impl FnOnce() -> f32) -> f32 {
+        if leaving.is_some() { 1.0 } else { presence() }
     }
 
     /// The way every block of this screen has come, for the trails behind them.

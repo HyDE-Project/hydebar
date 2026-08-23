@@ -37,6 +37,20 @@ fn eased(leaving: f32) -> f32 {
     left.mul_add(-(left * left), 1.0)
 }
 
+/// How far along its journey a block is drawn, given the canvas is leaving.
+///
+/// On the way out every block leaves at one pace: they are all bound for the
+/// same two edges, and a queue out is the one thing this transition does not
+/// do. On the way in each keeps the share of the journey its own place in the
+/// column earned it.
+fn travel_of(travel: f32, leaving: f32) -> f32 {
+    if leaving > 0.0 {
+        1.0 - eased(leaving)
+    } else {
+        travel
+    }
+}
+
 impl App {
     /// Stacks one section of the layout into a column of the canvas.
     ///
@@ -93,14 +107,7 @@ impl App {
                             Self::reach(within, deepest)
                         );
                         let block = self.desk_unit(unit, id, side, ink, bloom)?;
-                        // on the way out every block leaves at one pace: they
-                        // are all bound for the same two edges, and a queue
-                        // out is the one thing this transition does not do
-                        let travel = if leaving > 0.0 {
-                            1.0 - eased(leaving)
-                        } else {
-                            travel
-                        };
+                        let travel = travel_of(travel, leaving);
 
                         #[expect(
                             clippy::cast_precision_loss,
