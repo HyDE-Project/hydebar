@@ -172,7 +172,8 @@ mod tests {
 
     #[test]
     fn short_labels_fill_the_minimum_box() {
-        // The reference theme resolves to a 6px glyph advance and a 16px minimum.
+        // The reference theme resolves to a 6px glyph advance and a 16px
+        // minimum.
         assert_eq!(label_box_width("1", 6.0, 16.0), Length::Fixed(16.0));
         assert_eq!(label_box_width("10", 6.0, 16.0), Length::Fixed(16.0));
         assert_eq!(label_box_width("100", 6.0, 16.0), Length::Shrink);
