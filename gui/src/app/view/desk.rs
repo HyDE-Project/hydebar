@@ -148,7 +148,10 @@ mod tests {
     use iced_test::simulator;
 
     use super::{
-        super::super::state::{App, test_support::test_app_with},
+        super::super::state::{
+            App,
+            test_support::{seed_machine_readings, test_app_with}
+        },
         *
     };
 
@@ -238,6 +241,7 @@ mod tests {
     #[test]
     fn a_canvas_a_window_took_the_screen_from_is_gone_on_that_very_frame() {
         let mut app = test_app_with(|config| config.desk.enabled = true);
+        seed_machine_readings(&mut app);
         app.screen_width = Some(1920.0);
         open(&mut app);
 
@@ -285,6 +289,7 @@ mod tests {
     #[test]
     fn a_bare_screen_unfolds_the_bar_into_its_blocks() {
         let mut app = test_app_with(|config| config.desk.enabled = true);
+        seed_machine_readings(&mut app);
         open(&mut app);
 
         let mut ui = simulator(app.desk_surface(surface()));
@@ -480,6 +485,7 @@ mod tests {
         use hydebar_core::animation::Journey;
 
         let mut app = test_app_with(|config| config.desk.enabled = true);
+        seed_machine_readings(&mut app);
         set_off(&mut app);
 
         let deepest = app.deepest_column();
@@ -523,6 +529,7 @@ mod tests {
                 hydebar_proto::config::ModuleDef::Single(hydebar_core::config::ModuleName::Memory),
             ];
         });
+        seed_machine_readings(&mut app);
         set_off(&mut app);
 
         let mut wrote_before_landing = false;
@@ -579,6 +586,7 @@ mod tests {
             config.modules.center = Vec::new();
             config.modules.right = Vec::new();
         });
+        seed_machine_readings(&mut app);
         set_off(&mut app);
 
         let mut near = None;
@@ -618,6 +626,7 @@ mod tests {
     #[test]
     fn nothing_shifts_in_the_column_while_the_blocks_open() {
         let mut app = test_app_with(|config| config.desk.enabled = true);
+        seed_machine_readings(&mut app);
         set_off(&mut app);
 
         let mut seat = None;
@@ -662,6 +671,7 @@ mod tests {
             config.modules.center = Vec::new();
             config.modules.right = Vec::new();
         });
+        seed_machine_readings(&mut app);
         set_off(&mut app);
 
         let shown = |app: &App| {
@@ -750,6 +760,7 @@ mod tests {
             config.modules.center = Vec::new();
             config.modules.right = Vec::new();
         });
+        seed_machine_readings(&mut app);
         open(&mut app);
 
         let (left, _, _) = App::desk_columns(&app.config.modules);
@@ -791,6 +802,7 @@ mod tests {
             config.modules.center = Vec::new();
             config.modules.right = Vec::new();
         });
+        seed_machine_readings(&mut app);
         app.screen_width = Some(1920.0);
         open(&mut app);
 
@@ -810,6 +822,7 @@ mod tests {
         use hydebar_core::animation::Journey;
 
         let mut app = test_app_with(|config| config.desk.enabled = true);
+        seed_machine_readings(&mut app);
 
         assert!(
             app.strip_still_holds(None),
@@ -841,6 +854,7 @@ mod tests {
         use hydebar_core::config::ModuleName;
 
         let mut app = test_app_with(|config| config.desk.enabled = true);
+        seed_machine_readings(&mut app);
         set_off(&mut app);
 
         let watched = [ModuleName::Clock, ModuleName::SystemInfo];
@@ -888,6 +902,7 @@ mod tests {
             config.modules.center = Vec::new();
             config.modules.right = Vec::new();
         });
+        seed_machine_readings(&mut app);
         app.screen_width = Some(1920.0);
         open(&mut app);
 
@@ -928,6 +943,7 @@ mod tests {
             config.modules.center = Vec::new();
             config.modules.right = Vec::new();
         });
+        seed_machine_readings(&mut app);
         open(&mut app);
 
         let nearest = on_screen(&app)
@@ -949,7 +965,8 @@ mod tests {
 
     #[test]
     fn the_islands_leave_the_strip_from_the_seats_they_held_on_it() {
-        let app = test_app_with(|config| config.desk.enabled = true);
+        let mut app = test_app_with(|config| config.desk.enabled = true);
+        seed_machine_readings(&mut app);
 
         let mut ui = simulator(app.bar_surface(surface()));
         let _ = ui.snapshot(&iced::Theme::Dark).expect("the strip draws");
@@ -965,6 +982,7 @@ mod tests {
     #[test]
     fn a_screen_taken_by_a_window_sends_its_islands_beyond_the_edge() {
         let mut app = test_app_with(|config| config.desk.enabled = true);
+        seed_machine_readings(&mut app);
         app.screen_width = Some(1920.0);
         open(&mut app);
 
@@ -1013,6 +1031,7 @@ mod tests {
                 hydebar_core::config::ModuleName::CpuTemp
             )];
         });
+        seed_machine_readings(&mut app);
         open(&mut app);
 
         let mut ui = on_screen(&app);

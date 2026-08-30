@@ -1,11 +1,14 @@
 //! Helpers shared by the state tests.
 
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 
 use flexi_logger::LoggerHandle;
-use hydebar_core::config::Config;
+use hydebar_core::{
+    config::Config,
+    modules::system_info::{Message, SystemInfoData}
+};
 
-use super::App;
+use super::{App, Message as AppMessage};
 
 /// The one logger every state test shares, started on first use.
 pub(in crate::app) fn test_logger() -> LoggerHandle {
@@ -58,4 +61,36 @@ pub(in crate::app) fn test_app_with(shape: impl FnOnce(&mut Config)) -> App {
 /// The bar with the stock configuration.
 pub(in crate::app) fn test_app() -> App {
     test_app_with(|_| {})
+}
+
+/// Replaces the machine sample with deterministic readings.
+///
+/// Tests that render `CpuTemp`, `Memory`, `SystemInfo` or `Processor` blocks
+/// would otherwise inherit the real hardware sample taken when the app was
+/// built, which has no temperature sensor on GitHub runners and can vary
+/// between developer machines. Seeding the same sample through the normal
+/// `Message::SystemInfo` path makes every layout see the same panels.
+pub(in crate::app) fn seed_machine_readings(app: &mut App) {
+    const GIB: u64 = 1024 * 1024 * 1024;
+
+    let data = SystemInfoData {
+        cpu_usage: 12,
+        cpu_count: 8,
+        memory_usage: 34,
+        memory_used: 8 * GIB,
+        memory_total: 32 * GIB,
+        memory_cached: 2 * GIB,
+        memory_swap_usage: 5,
+        memory_swap_used: GIB,
+        memory_swap_total: 8 * GIB,
+        cpu_temperature: Some(42),
+        cpu_temperature_source: Some("test-sensor".to_owned()),
+        cpu_model: Some("Test CPU".to_owned()),
+        cpu_cores: Some(4),
+        cpu_max_mhz: Some(3200),
+        kernel: Some("6.0.0-test".to_owned()),
+        ..SystemInfoData::default()
+    };
+
+    let _task = app.update(AppMessage::SystemInfo(Message::Sampled(Arc::new(data))));
 }
