@@ -84,7 +84,7 @@ pub fn cooling(data: &SystemInfoData) -> Option<Panel> {
 mod tests {
     use hydebar_core::modules::system_info::{DiskData, NetworkData};
 
-    use super::{store::*, *};
+    use super::*;
 
     /// A machine that reported nothing at all, filled in per test.
     ///

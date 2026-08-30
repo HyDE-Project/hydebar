@@ -70,7 +70,7 @@ mod tests {
 
         assert_eq!((width, height), (16, 16));
         assert_eq!(bytes.len(), 16 * 16 * 4);
-        assert!(bytes.chunks_exact(4).all(|pixel| pixel[3] == 255));
+        assert!(bytes.as_chunks::<4>().0.iter().all(|pixel| pixel[3] == 255));
     }
 
     #[test]

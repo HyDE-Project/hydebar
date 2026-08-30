@@ -46,7 +46,7 @@ impl FormatCycle {
     ///
     /// A cursor pointing past the end of a shrunken list of alternatives wraps
     /// instead of falling back to the primary format alone.
-    pub fn resolve<'a, T>(&self, primary: &'a T, alternatives: &'a [T]) -> &'a T {
+    pub const fn resolve<'a, T>(&self, primary: &'a T, alternatives: &'a [T]) -> &'a T {
         match self.index % (alternatives.len() + 1) {
             0 => primary,
             position => &alternatives[position - 1]

@@ -20,7 +20,7 @@ pub fn icon_from_pixmaps(pixmaps: Vec<Icon>) -> Option<TrayIcon> {
             (icon.width, icon.height)
         })
         .map(|mut icon| {
-            for pixel in icon.bytes.chunks_exact_mut(4) {
+            for pixel in icon.bytes.as_chunks_mut::<4>().0 {
                 pixel.rotate_left(1);
             }
 
@@ -80,7 +80,7 @@ fn pixmap_width(width: u32) -> u32 {
 
 /// Converts premultiplied RGBA to the straight alpha the renderer expects.
 fn straight_alpha(mut bytes: Vec<u8>) -> Vec<u8> {
-    for pixel in bytes.chunks_exact_mut(4) {
+    for pixel in bytes.as_chunks_mut::<4>().0 {
         let alpha = u16::from(pixel[3]);
 
         if alpha > 0 && alpha < 255 {

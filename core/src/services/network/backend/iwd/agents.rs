@@ -29,6 +29,7 @@ impl PWAgent {
     #[zbus(name = "RequestPassphrase")]
     #[expect(
         clippy::unused_async,
+        clippy::unused_async_trait_impl,
         reason = "the zbus interface macro exposes this handler as an async D-Bus method"
     )]
     pub(super) async fn request_passphrase(

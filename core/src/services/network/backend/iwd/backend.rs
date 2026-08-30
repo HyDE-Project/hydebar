@@ -67,6 +67,10 @@ impl NetworkBackend for IwdDbus<'_> {
 
     /// iwd does not natively support VPN management; implementing it would
     /// need additional VPN management tools.
+    #[expect(
+        clippy::unused_async_trait_impl,
+        reason = "the trait is async for backends that talk to D-Bus; iwd answers without waiting"
+    )]
     async fn set_vpn(
         &self,
         path: OwnedObjectPath,

@@ -36,6 +36,7 @@ impl WebcamWatcher {
 
     #[expect(
         clippy::unused_async,
+        clippy::unused_async_trait_impl,
         reason = "the subscribe adapter boxes this call as the source future, so it must stay async"
     )]
     async fn create_stream(&self) -> Result<PrivacyStream, PrivacyError> {

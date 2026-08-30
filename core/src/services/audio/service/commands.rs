@@ -86,6 +86,7 @@ impl AudioService {
 
     #[expect(
         clippy::unused_async,
+        clippy::unused_async_trait_impl,
         reason = "kept async to match the service command runner signature expected by the control center"
     )]
     /// Carries out one command and says what came of it.
