@@ -760,11 +760,11 @@ mod tests {
             "the icons part, so each takes a place of its own"
         );
 
-        let far = simulator(app.desk_surface(surface()))
+        let far = on_screen(&app)
             .find("MEMORY")
             .expect("the member that stood nearer its own edge")
             .bounds();
-        let near = simulator(app.desk_surface(surface()))
+        let near = on_screen(&app)
             .find("CPU TEMPERATURE")
             .expect("the member that stood nearer the middle")
             .bounds();
@@ -891,11 +891,11 @@ mod tests {
         app.screen_width = Some(1920.0);
         open(&mut app);
 
-        let nearest = simulator(app.desk_surface(surface()))
+        let nearest = on_screen(&app)
             .find("CPU TEMPERATURE")
             .expect("the module nearest the left edge")
             .bounds();
-        let inner = simulator(app.desk_surface(surface()))
+        let inner = on_screen(&app)
             .find("MEMORY")
             .expect("the module nearer the middle")
             .bounds();
@@ -930,12 +930,12 @@ mod tests {
         });
         open(&mut app);
 
-        let nearest = simulator(app.desk_surface(surface()))
+        let nearest = on_screen(&app)
             .find("CPU TEMPERATURE")
             .expect("the module nearest the left edge")
             .bounds()
             .y;
-        let inner = simulator(app.desk_surface(surface()))
+        let inner = on_screen(&app)
             .find("MEMORY")
             .expect("the module nearer the middle")
             .bounds()
@@ -1015,7 +1015,7 @@ mod tests {
         });
         open(&mut app);
 
-        let mut ui = simulator(app.desk_surface(surface()));
+        let mut ui = on_screen(&app);
 
         assert!(
             ui.find("CPU TEMPERATURE").is_ok(),
