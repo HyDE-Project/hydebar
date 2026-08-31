@@ -273,8 +273,8 @@ primary_color = "#cba6f7"
 
 1. Update Rust:
 ```bash
-rustup update stable
-rustc --version  # Should match rust-version in Cargo.toml (1.97)
+rustup update
+rustc --version  
 ```
 
 2. Clean and rebuild:

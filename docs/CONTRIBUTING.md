@@ -79,7 +79,7 @@ Help others understand hydebar:
 
 ### Prerequisites
 
-- **Rust** 1.97+ (edition 2024, see `rust-version` in `Cargo.toml`)
+- **Rust** (edition 2024, see `rust-version` in `Cargo.toml`)
 - **Cargo** package manager
 - **Hyprland** compositor (for testing)
 - **Wayland** development libraries

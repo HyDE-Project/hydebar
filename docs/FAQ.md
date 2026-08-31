@@ -322,7 +322,7 @@ Yes! Contributions welcome. See [Contributing](#contributing) section below.
 
 ### What's the development stack?
 
-- **Language:** 100% Rust (edition 2024, rust-version 1.97)
+- **Language:** 100% Rust (edition 2024, rust-version latest stable (1.98))
 - **GUI:** iced via the `iced_layershell` fork (Wayland layer-shell)
 - **IPC:** the compositor's own sockets, read directly
 - **D-Bus:** zbus for system integration
