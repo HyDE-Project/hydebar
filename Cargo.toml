@@ -5,7 +5,7 @@ resolver = "3"
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.97"
+rust-version = "1.98"
 license = "GPL-3.0-or-later"
 repository = "https://github.com/HyDE-Project/hydebar"
 homepage = "https://github.com/HyDE-Project/hydebar"
@@ -57,7 +57,7 @@ shellexpand = { version = "3", features = ["path"] }
 inotify = "0.11"
 libc = "0.2"
 signal-hook-registry = "1"
-masterror = "0.29"
+masterror = "0.30"
 futures = "0.3"
 dirs = "6"
 reqwest = { version = "0.13", features = ["json"] }
