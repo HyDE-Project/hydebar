@@ -95,7 +95,18 @@ pub fn metrics(
     };
 
     let by_pixels = scale_factor(width / scale, height / scale);
-    let by_size = physical_factor(physical.0, physical.1);
+
+    // When the compositor already scales the output, its scale factor
+    // compensates for screen density and viewing distance.  Applying
+    // physical_factor on top would double-count the same signal — a 4K
+    // television at compositor scale 2 already presents logical 1080p,
+    // so the bar must not grow again for the physical diagonal.
+    let by_size = if scale > 1.0 {
+        MIN_FACTOR
+    } else {
+        physical_factor(physical.0, physical.1)
+    };
+
     let factor = by_pixels.max(by_size).clamp(MIN_FACTOR, MAX_FACTOR);
 
     AutoMetrics {
@@ -314,6 +325,15 @@ mod tests {
     #[test]
     fn a_screen_the_compositor_already_scales_is_not_scaled_twice() {
         assert_eq!(metrics(3840.0, 2160.0, 2.0, REFERENCE_MM).scale, 1.0);
+    }
+
+    #[test]
+    fn a_television_with_compositor_scaling_ignores_physical_size() {
+        // A 4K television at compositor scale 2 presents logical 1080p.
+        // The physical diagonal must not cause a second magnification.
+        let scale = metrics(3840.0, 2160.0, 2.0, TELEVISION_MM);
+
+        assert_eq!(scale.scale, 1.0);
     }
 
     #[test]
