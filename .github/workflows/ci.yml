@@ -205,17 +205,25 @@ jobs:
       - name: Analyze commits and bump version
         id: bump
         run: |
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null \
-            || echo "v0.0.0")
-          echo "Latest tag: $LATEST_TAG"
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null) || true
 
-          COMMITS=$(git log ${LATEST_TAG}..HEAD --pretty=format:"%s")
+          if [ -z "$LATEST_TAG" ]; then
+            CURRENT="0.0.0"
+            RANGE="HEAD"
+          else
+            echo "Latest tag: $LATEST_TAG"
+            CURRENT="${LATEST_TAG#v}"
+            RANGE="${LATEST_TAG}..HEAD"
+          fi
+
+          COMMITS=$(git log ${RANGE} --pretty=format:"%s")
 
           HAS_BREAKING=false
           HAS_FEAT=false
           HAS_FIX=false
 
           while IFS= read -r commit; do
+            [ -z "$commit" ] && continue
             if echo "$commit" | grep -qE "^[^:]+!:|BREAKING CHANGE"; then
               HAS_BREAKING=true
             elif echo "$commit" | grep -qE "^(feat|#[0-9]+ feat):"; then
@@ -234,6 +242,8 @@ jobs:
             NEW_VERSION="${MAJOR}.$((MINOR + 1)).0"
           elif [ "$HAS_FIX" = true ]; then
             NEW_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
+          elif [ -z "$LATEST_TAG" ]; then
+            NEW_VERSION="0.1.0"
           else
             echo "version_bumped=false" >> $GITHUB_OUTPUT
             echo "No version bump needed"
