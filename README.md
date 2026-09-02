@@ -5,6 +5,24 @@
 </div>
 <div align = center><img src="https://raw.githubusercontent.com/prasanthrangan/hyprdots/main/Source/assets/hyde_banner.png"><br><br></div>
 
+### Demo
+
+> **Early beta** — API and configuration may change.
+> Feature requests and contributions from the community are welcome.
+
+https://github.com/RAprogramm/hydebar/assets/hydebar-demo.mp4
+
+### Installation
+
+Available on [AUR](https://aur.archlinux.org/packages/hydebar):
+
+```bash
+# Build from source
+paru -S hydebar
+
+# Prebuilt binary
+paru -S hydebar-bin
+```
 
 ---
 

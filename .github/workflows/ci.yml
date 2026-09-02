@@ -6,8 +6,18 @@ name: CI
     branches: [main]
     tags:
       - 'v*'
+    paths-ignore:
+      - 'README.md'
+      - 'LICENSE*'
+      - '*.mp4'
+      - 'docs/**'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - 'README.md'
+      - 'LICENSE*'
+      - '*.mp4'
+      - 'docs/**'
 
 env:
   CARGO_TERM_COLOR: always
