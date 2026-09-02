@@ -10,7 +10,7 @@
 > **Early beta** — API and configuration may change.
 > Feature requests and contributions from the community are welcome.
 
-https://github.com/HyDE-Project/hydebar/releases/download/v0.1.2/hydebar-demo.mp4
+![demo](assets/demo.mp4)
 
 ### Installation
 
