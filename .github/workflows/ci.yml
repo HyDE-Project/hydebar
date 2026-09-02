@@ -121,7 +121,7 @@ jobs:
         with:
           tool: cargo-llvm-cov
       - run: cargo +nightly llvm-cov --workspace --all-features --lcov --output-path lcov.info
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      - uses: actions/upload-artifact@v4
         with:
           name: lcov
           path: lcov.info
@@ -314,7 +314,7 @@ jobs:
           FILE="hydebar-${VERSION}-x86_64-linux-gnu.tar.gz"
           sha256sum "${FILE}" > "${FILE}.sha256"
           cat "${FILE}.sha256"
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      - uses: actions/upload-artifact@v4
         with:
           name: release-archive
           path: |
@@ -331,7 +331,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: v${{ needs.release-gate.outputs.version }}
-      - uses: actions/download-artifact@ca5e97ea5d8b9ed36e5244720ccda0532ec9b7ed
+      - uses: actions/download-artifact@v4
         with:
           name: release-archive
       - name: Create release
@@ -398,7 +398,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: v${{ needs.release-gate.outputs.version }}
-      - uses: actions/download-artifact@ca5e97ea5d8b9ed36e5244720ccda0532ec9b7ed
+      - uses: actions/download-artifact@v4
         with:
           name: release-archive
       - name: Download and calculate checksum
