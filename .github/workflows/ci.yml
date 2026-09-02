@@ -1,25 +1,13 @@
+---
 name: CI
 
-on:
+"on":
   push:
-    branches: ["main"]
+    branches: [main]
+    tags:
+      - 'v*'
   pull_request:
-    branches: ["main"]
-    types:
-      - opened
-      - reopened
-      - synchronize
-      - ready_for_review
-  workflow_dispatch:
-
-# A newer push to the same branch makes the run in flight pointless. Pushes to
-# main are left alone so every commit on the trunk keeps a verdict of its own.
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
-permissions:
-  contents: read
+    branches: [main]
 
 env:
   CARGO_TERM_COLOR: always
@@ -27,158 +15,144 @@ env:
   CARGO_NET_RETRY: 10
   RUSTUP_MAX_RETRIES: 10
   RUST_BACKTRACE: short
-  # The widget tests render through the CPU backend. A runner has no GPU, and
-  # letting the renderer choose would make a red build depend on the machine
-  # that ran it.
   ICED_TEST_BACKEND: tiny-skia
 
 jobs:
+  # ============================================================================
+  # QUALITY CHECKS
+  # ============================================================================
+
   format:
     name: Format
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-
-      # The formatting settings the repository is written to are nightly-only,
-      # so a stable rustfmt would reformat the tree rather than check it.
-      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
         with:
           toolchain: nightly
           components: rustfmt
-
-      - name: Check formatting
-        run: cargo +nightly fmt --all -- --check
+      - run: cargo +nightly fmt --all -- --check
 
   lint:
     name: Lint
+    needs: [format]
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-
-      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
         with:
           toolchain: stable
           components: clippy
-
       - uses: ./.github/actions/system-deps
-
-      - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
+      - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16
         with:
           key: lint
-
-      - name: Clippy
-        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
-
-  test:
-    name: Test
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master
-        with:
-          toolchain: stable
-
-      - uses: ./.github/actions/system-deps
-
-      - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
-        with:
-          key: test
-
-      - name: Test
-        run: cargo test --workspace --all-features
+      - run: cargo clippy --workspace --all-targets --all-features -- -D warnings
 
   supply-chain:
     name: Supply chain
+    needs: [format]
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-
-      # Advisories, licences and dependency sources are answered by the policy
-      # in `deny.toml`, so a new advisory or an unfamiliar licence fails the
-      # build instead of joining a tally nobody reads.
-      - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
+      - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25
         with:
           command: check
 
   msrv:
     name: Minimum supported Rust
+    needs: [format]
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-
-      # The version the workspace declares it can be built with. Kept as its
-      # own job so a bump is a deliberate edit rather than something a new
-      # compiler quietly grants.
-      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
         with:
           toolchain: "1.98"
-
       - uses: ./.github/actions/system-deps
-
-      - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
+      - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16
         with:
           key: msrv
+      - run: cargo check --workspace --all-targets --all-features
 
-      - name: Check
-        run: cargo check --workspace --all-targets --all-features
+  test:
+    name: Test
+    needs: [lint]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: stable
+      - uses: ./.github/actions/system-deps
+      - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16
+        with:
+          key: test
+      - run: cargo test --workspace --all-features
 
   coverage:
     name: Coverage
+    needs: [lint]
     runs-on: ubuntu-24.04
     env:
-      # Read back by the upload step, which is skipped where the token is not
-      # configured — a fork has no access to it and must not fail for that.
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-
-      # Test modules carry `#[cfg_attr(coverage_nightly, coverage(off))]`, and
-      # that attribute is only honoured by a nightly compiler. On stable the
-      # report would count the tests as covered code and flatter every number.
-      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
         with:
           toolchain: nightly
           components: llvm-tools-preview
-
       - uses: ./.github/actions/system-deps
-
-      - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
+      - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16
         with:
           key: coverage
-
-      - uses: taiki-e/install-action@37f7c5781271959fb65b6b35224e28652ff2b63d # v2.87.0
+      - uses: taiki-e/install-action@37f7c5781271959fb65b6b35224e28652ff2b63d
         with:
           tool: cargo-llvm-cov
-
-      - name: Measure coverage
-        run: cargo +nightly llvm-cov --workspace --all-features --lcov --output-path lcov.info
-
-      - name: Keep the report
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - run: cargo +nightly llvm-cov --workspace --all-features --lcov --output-path lcov.info
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: lcov
           path: lcov.info
           retention-days: 14
-
       - name: Upload to Codecov
         if: ${{ env.CODECOV_TOKEN != '' }}
-        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f
         with:
           files: lcov.info
           fail_ci_if_error: true
+
+  release-build:
+    name: Release Build
+    needs: [lint]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: stable
+      - uses: ./.github/actions/system-deps
+      - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16
+        with:
+          key: release
+      - run: cargo build --release --all-features --workspace
+
+  # ============================================================================
+  # VERSION BUMP - only on push to main, AFTER all checks pass
+  # ============================================================================
 
   version-bump:
     name: Version Bump
@@ -186,10 +160,11 @@ jobs:
     needs:
       - format
       - lint
-      - test
       - supply-chain
       - msrv
+      - test
       - coverage
+      - release-build
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -197,7 +172,7 @@ jobs:
       new_version: ${{ steps.bump.outputs.new_version }}
       version_bumped: ${{ steps.bump.outputs.version_bumped }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -233,7 +208,6 @@ jobs:
             fi
           done <<< "$COMMITS"
 
-          CURRENT="${LATEST_TAG#v}"
           IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
 
           if [ "$HAS_BREAKING" = true ]; then
@@ -274,3 +248,209 @@ jobs:
           git tag "v${NEW_VERSION}"
           git push origin main
           git push origin "v${NEW_VERSION}"
+
+  # ============================================================================
+  # RELEASE PIPELINE - runs after version bump OR on tag push
+  # ============================================================================
+
+  release-gate:
+    name: Release Gate
+    needs:
+      - format
+      - lint
+      - supply-chain
+      - msrv
+      - test
+      - coverage
+      - release-build
+      - version-bump
+    if: >-
+      always() &&
+      needs.format.result == 'success' &&
+      needs.lint.result == 'success' &&
+      needs.supply-chain.result == 'success' &&
+      needs.msrv.result == 'success' &&
+      needs.test.result == 'success' &&
+      needs.coverage.result == 'success' &&
+      needs.release-build.result == 'success' &&
+      (
+        (github.event_name == 'push' &&
+          startsWith(github.ref, 'refs/tags/v')) ||
+        needs.version-bump.outputs.version_bumped == 'true'
+      )
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Determine version
+        id: version
+        run: |
+          if [ -n "${{ needs.version-bump.outputs.new_version }}" ]; then
+            VER="${{ needs.version-bump.outputs.new_version }}"
+          else
+            VER="${GITHUB_REF#refs/tags/v}"
+          fi
+          echo "version=${VER}" >> $GITHUB_OUTPUT
+
+  build-release:
+    name: Build Release
+    needs: [release-gate]
+    runs-on: ubuntu-24.04
+    container:
+      image: archlinux:latest
+    steps:
+      - name: Cache pacman packages
+        uses: actions/cache@v5
+        with:
+          path: /var/cache/pacman/pkg
+          key: pacman-${{ hashFiles('.github/workflows/ci.yml') }}
+      - name: Install dependencies
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm \
+            base-devel rust clang dbus pipewire libpulse \
+            wayland xkbcommon llvm pkg-config git
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: v${{ needs.release-gate.outputs.version }}
+      - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16
+      - name: Build
+        run: cargo build --release --all-features
+      - name: Strip binaries
+        run: strip target/release/hydebar
+      - name: Create archive
+        run: |
+          VERSION="${{ needs.release-gate.outputs.version }}"
+          mkdir -p release
+          cp target/release/hydebar release/
+          cp scripts/theme-switch release/hydebar-theme-switch
+          cp assets/dbus/org.freedesktop.Notifications.service release/
+          cp README.md LICENSE.MIT release/
+          tar -czf "hydebar-${VERSION}-x86_64-linux-gnu.tar.gz" -C release .
+      - name: Generate SHA-256 checksum
+        run: |
+          VERSION="${{ needs.release-gate.outputs.version }}"
+          FILE="hydebar-${VERSION}-x86_64-linux-gnu.tar.gz"
+          sha256sum "${FILE}" > "${FILE}.sha256"
+          cat "${FILE}.sha256"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: release-archive
+          path: |
+            hydebar-*.tar.gz
+            hydebar-*.tar.gz.sha256
+
+  create-release:
+    name: Create GitHub Release
+    needs: [release-gate, build-release]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: v${{ needs.release-gate.outputs.version }}
+      - uses: actions/download-artifact@ca5e97ea5d8b9ed36e5244720ccda0532ec9b7ed
+        with:
+          name: release-archive
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ needs.release-gate.outputs.version }}"
+          gh release create "v${VERSION}" \
+            --title "Release v${VERSION}" \
+            --generate-notes \
+            hydebar-*.tar.gz \
+            hydebar-*.tar.gz.sha256
+
+  # ============================================================================
+  # AUR PUBLISHING
+  # ============================================================================
+
+  publish-aur:
+    name: Publish to AUR
+    needs: [release-gate, create-release]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: v${{ needs.release-gate.outputs.version }}
+      - name: Generate .SRCINFO
+        run: |
+          docker run --rm -v "$PWD:/pkg" archlinux:latest bash -c "
+            pacman -Sy --noconfirm base-devel sudo &&
+            useradd -m builder &&
+            chown -R builder:builder /pkg &&
+            cd /pkg &&
+            sudo -u builder makepkg --printsrcinfo > .SRCINFO
+          "
+      - name: Publish
+        env:
+          AUR_SSH_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+        run: |
+          VERSION="${{ needs.release-gate.outputs.version }}"
+          mkdir -p ~/.ssh
+          echo "$AUR_SSH_KEY" > ~/.ssh/aur
+          chmod 600 ~/.ssh/aur
+          ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts
+          export GIT_SSH_COMMAND="ssh -i ~/.ssh/aur"
+
+          git clone ssh://aur@aur.archlinux.org/hydebar.git /tmp/aur
+          cd /tmp/aur
+          git checkout -B master origin/master || git checkout -b master
+          cp "$GITHUB_WORKSPACE/PKGBUILD" .
+          cp "$GITHUB_WORKSPACE/.SRCINFO" .
+
+          git config user.name "RAprogramm"
+          git config user.email "andrey.rozanov.vl@gmail.com"
+          git add -A
+          git diff --cached --quiet || \
+            git commit -m "Update to version ${VERSION}"
+          git push origin master
+
+  publish-aur-bin:
+    name: Publish to AUR (binary)
+    needs: [release-gate, create-release]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: v${{ needs.release-gate.outputs.version }}
+      - uses: actions/download-artifact@ca5e97ea5d8b9ed36e5244720ccda0532ec9b7ed
+        with:
+          name: release-archive
+      - name: Download and calculate checksum
+        run: |
+          VERSION="${{ needs.release-gate.outputs.version }}"
+          BASE="https://github.com/HyDE-Project/hydebar/releases"
+          FILE="hydebar-${VERSION}-x86_64-linux-gnu.tar.gz"
+          URL="${BASE}/download/v${VERSION}/${FILE}"
+          curl -sSL -o archive.tar.gz "${URL}"
+          SHA=$(sha256sum archive.tar.gz | cut -d' ' -f1)
+          echo "sha256sum=${SHA}" >> $GITHUB_ENV
+      - name: Update PKGBUILD.bin version
+        run: |
+          VERSION="${{ needs.release-gate.outputs.version }}"
+          sed -i "s/^pkgver=.*/pkgver=${VERSION}/" PKGBUILD.bin
+          sed -i "s/^sha256sums=.*/sha256sums=('${sha256sum}')/" PKGBUILD.bin
+      - name: Generate .SRCINFO
+        run: |
+          docker run --rm -v "$PWD:/pkg" archlinux:latest bash -c "
+            pacman -Sy --noconfirm base-devel sudo &&
+            useradd -m builder &&
+            chown -R builder:builder /pkg &&
+            cd /pkg &&
+            sudo -u builder makepkg --printsrcinfo \
+              -p PKGBUILD.bin > .SRCINFO.bin
+          "
+      - name: Publish
+        uses: KSXGitHub/github-actions-deploy-aur@v4.1.1
+        with:
+          pkgname: hydebar-bin
+          pkgbuild: ./PKGBUILD.bin
+          commit_username: RAprogramm
+          commit_email: andrey.rozanov.vl@gmail.com
+          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          commit_message: >-
+            Update to version ${{ needs.release-gate.outputs.version }}
