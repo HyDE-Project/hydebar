@@ -10,7 +10,7 @@
 > **Early beta** — API and configuration may change.
 > Feature requests and contributions from the community are welcome.
 
-![demo](assets/demo.gif)
+<img src="assets/demo.gif" width="100%">
 
 ### Installation
 
