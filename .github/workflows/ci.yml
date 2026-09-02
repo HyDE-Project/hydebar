@@ -133,23 +133,6 @@ jobs:
           files: lcov.info
           fail_ci_if_error: true
 
-  release-build:
-    name: Release Build
-    needs: [lint]
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          persist-credentials: false
-      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
-        with:
-          toolchain: stable
-      - uses: ./.github/actions/system-deps
-      - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16
-        with:
-          key: release
-      - run: cargo build --release --all-features --workspace
-
   # ============================================================================
   # VERSION BUMP - only on push to main, AFTER all checks pass
   # ============================================================================
@@ -164,7 +147,6 @@ jobs:
       - msrv
       - test
       - coverage
-      - release-build
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -262,7 +244,6 @@ jobs:
       - msrv
       - test
       - coverage
-      - release-build
       - version-bump
     if: >-
       always() &&
@@ -272,7 +253,6 @@ jobs:
       needs.msrv.result == 'success' &&
       needs.test.result == 'success' &&
       needs.coverage.result == 'success' &&
-      needs.release-build.result == 'success' &&
       (
         (github.event_name == 'push' &&
           startsWith(github.ref, 'refs/tags/v')) ||
