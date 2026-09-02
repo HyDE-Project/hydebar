@@ -308,8 +308,9 @@ jobs:
         run: |
           pacman -Syu --noconfirm
           pacman -S --noconfirm \
-            base-devel rust clang dbus pipewire libpulse \
-            wayland xkbcommon llvm pkg-config git
+            base-devel rust clang dbus systemd-libs \
+            wayland libxkbcommon llvm pkg-config git \
+            pipewire libpulse
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: v${{ needs.release-gate.outputs.version }}
