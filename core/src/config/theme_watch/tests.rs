@@ -346,7 +346,10 @@ async fn a_colour_written_in_the_bar_configuration_survives_a_palette_switch() {
                 applied.config.appearance.background_color,
                 AppearanceColor::Simple(HexColor::rgb(1, 2, 3))
             );
-            assert_eq!(applied.config.appearance.font_size, Some(17.0));
+            assert_eq!(
+                applied.config.appearance.font_size,
+                Some(hydebar_proto::config::SizeValue::Pixels(17.0))
+            );
         }
         other => panic!("unexpected event: {other:?}")
     }

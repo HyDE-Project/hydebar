@@ -81,7 +81,7 @@ impl Config {
     fn validate_appearance(&self) -> Result<(), ConfigValidationError> {
         let appearance = &self.appearance;
 
-        if let Some(font_size) = appearance.font_size {
+        if let Some(font_size) = appearance.font_size.map(|v| v.resolve(0.0)) {
             in_range(
                 "appearance.font_size",
                 f64::from(font_size),
@@ -91,7 +91,7 @@ impl Config {
             )?;
         }
 
-        if let Some(height) = appearance.height {
+        if let Some(height) = appearance.height_px() {
             in_range(
                 "appearance.height",
                 f64::from(height),
@@ -148,7 +148,7 @@ impl Config {
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::{super::CustomModuleDef, *};
-    use crate::config::Modules;
+    use crate::config::{Modules, appearance::SizeValue};
 
     fn custom_module(name: &str) -> CustomModuleDef {
         CustomModuleDef {
@@ -239,7 +239,7 @@ mod tests {
     #[test]
     fn a_negative_font_size_is_refused() {
         let mut config = Config::default();
-        config.appearance.font_size = Some(-3.0);
+        config.appearance.font_size = Some(SizeValue::Pixels(-3.0));
 
         assert!(config.validate().is_err());
     }

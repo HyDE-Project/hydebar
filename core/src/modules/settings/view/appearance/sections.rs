@@ -15,6 +15,7 @@ pub(super) use size::size_rows;
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
+    use hydebar_proto::config::SizeValue;
     use iced_test::simulator;
 
     use super::{
@@ -71,7 +72,7 @@ mod tests {
     fn a_hand_sized_bar_offers_its_measurements() {
         let mut config = config();
         config.appearance.auto_scale = false;
-        config.appearance.height = Some(40.0);
+        config.appearance.height = Some(SizeValue::Pixels(40.0));
 
         let mut ui = simulator(size_rows(&config, 1.0, FONT, 1.0));
 
@@ -112,7 +113,7 @@ mod tests {
     fn the_sizes_are_shown_as_the_file_spells_them_not_as_the_screen_scales_them() {
         let mut config = config();
         config.appearance.auto_scale = false;
-        config.appearance.height = Some(68.0);
+        config.appearance.height = Some(SizeValue::Pixels(68.0));
 
         let mut ui = simulator(size_rows(&config, 2.0, FONT, 1.0));
 

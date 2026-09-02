@@ -65,8 +65,15 @@ pub fn run(runtime_handle: Handle) -> Result<(), MainError> {
 
     let mut raw_config = raw_config;
 
+    let screen = startup_scale::focused_screen();
+
+    if let Some(geo) = screen {
+        let logical_height = geo.pixels.1 / geo.scale;
+        raw_config.appearance.resolve_percentages(logical_height);
+    }
+
     let magnification = if raw_config.appearance.auto_scale {
-        startup_scale::focused_screen().map_or(1.0, startup_scale::ScreenGeometry::magnification)
+        screen.map_or(1.0, startup_scale::ScreenGeometry::magnification)
     } else {
         1.0
     };

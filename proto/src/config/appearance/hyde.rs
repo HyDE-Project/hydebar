@@ -9,7 +9,8 @@ use super::{
         default_workspace_colors
     },
     defaults::{default_bar_opacity, default_opacity},
-    settings::Appearance
+    settings::Appearance,
+    size_value::SizeValue
 };
 use crate::theme_source::{HydeTheme, Rgba};
 
@@ -31,11 +32,11 @@ impl Appearance {
         }
 
         if self.font_size.is_none() {
-            self.font_size = theme.font_size_px;
+            self.font_size = theme.font_size_px.map(SizeValue::Pixels);
         }
 
         if self.radius.is_none() {
-            self.radius = theme.radius_px;
+            self.radius = theme.radius_px.map(SizeValue::Pixels);
         }
 
         if let Some(module_background) = theme.module_background {
@@ -181,8 +182,8 @@ mod tests {
             appearance.font_name.as_deref(),
             Some("JetBrainsMono Nerd Font")
         );
-        assert_eq!(appearance.font_size, Some(10.0));
-        assert_eq!(appearance.radius, Some(4.0));
+        assert_eq!(appearance.font_size, Some(SizeValue::Pixels(10.0)));
+        assert_eq!(appearance.radius, Some(SizeValue::Pixels(4.0)));
         assert_eq!(appearance.pill_radius(), 4.0);
         assert_eq!(appearance.opacity, 0.8);
         assert_eq!(appearance.bar_opacity, 0.25);
@@ -277,8 +278,8 @@ mod tests {
     fn hyde_theme_leaves_user_set_values_untouched() {
         let configured = Appearance {
             font_name: Some(String::from("Fira Sans")),
-            font_size: Some(14.0),
-            radius: Some(0.0),
+            font_size: Some(SizeValue::Pixels(14.0)),
+            radius: Some(SizeValue::Pixels(0.0)),
             opacity: 0.5,
             bar_opacity: 0.9,
             background_color: AppearanceColor::Simple(HexColor::rgb(1, 1, 1)),
@@ -310,7 +311,7 @@ mod tests {
 
         appearance.apply_hyde_theme(&hyde_theme());
 
-        assert_eq!(appearance.font_size, Some(10.0));
+        assert_eq!(appearance.font_size, Some(SizeValue::Pixels(10.0)));
         assert_ne!(appearance.module_gap(), fallback_gap);
         assert_ne!(appearance.module_padding(), fallback_padding);
         assert_eq!(appearance.module_gap(), 10.0 * MODULE_GAP_EM);

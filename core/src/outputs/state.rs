@@ -127,7 +127,7 @@ impl Outputs {
             position,
             config.menu_keyboard_focus,
             config.appearance.scale_factor,
-            config.appearance.height,
+            config.appearance.height_px(),
             config.layer
         );
 
@@ -140,7 +140,7 @@ impl Outputs {
                     position,
                     style,
                     scale_factor: config.appearance.scale_factor,
-                    height: config.appearance.height,
+                    height: config.appearance.height_px(),
                     tooltip_id,
                     tooltip: None,
                     desk_id,

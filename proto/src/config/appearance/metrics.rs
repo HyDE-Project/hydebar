@@ -1,7 +1,7 @@
 //! Layout metrics of the bar, stated as factors of the themed font size, and
 //! the [`Appearance`] accessors resolving them into pixels.
 
-use super::settings::Appearance;
+use super::{settings::Appearance, size_value::SizeValue};
 
 /// Corner radius used when neither the configuration nor the `HyDE` theme names
 /// one, in pixels.
@@ -111,7 +111,7 @@ impl Appearance {
     /// Returns the pill corner radius to render with.
     #[must_use]
     pub fn pill_radius(&self) -> f32 {
-        self.radius.unwrap_or(DEFAULT_RADIUS)
+        self.radius.map_or(DEFAULT_RADIUS, |v| v.resolve(0.0))
     }
 
     /// Multiplies every size of this appearance by `factor`.
@@ -123,10 +123,22 @@ impl Appearance {
     /// same pixels as the height beside it, so it has to grow with the bar or
     /// a magnified bar would hug the screen edge.
     pub fn magnify(&mut self, factor: f32) {
-        self.font_size = Some(self.font_size_px() * factor);
-        self.height = self.height.map(|height| height * factor);
-        self.radius = self.radius.map(|radius| radius * factor);
-        self.side_padding = self.side_padding.map(|padding| padding * factor);
+        self.font_size = self.font_size.map(|v| match v {
+            SizeValue::Pixels(px) => SizeValue::Pixels(px * factor),
+            SizeValue::Percent(pct) => SizeValue::Percent(pct * factor)
+        });
+        self.height = self.height.map(|v| match v {
+            SizeValue::Pixels(px) => SizeValue::Pixels(px * factor),
+            SizeValue::Percent(pct) => SizeValue::Percent(pct * factor)
+        });
+        self.radius = self.radius.map(|v| match v {
+            SizeValue::Pixels(px) => SizeValue::Pixels(px * factor),
+            SizeValue::Percent(pct) => SizeValue::Percent(pct * factor)
+        });
+        self.side_padding = self.side_padding.map(|v| match v {
+            SizeValue::Pixels(px) => SizeValue::Pixels(px * factor),
+            SizeValue::Percent(pct) => SizeValue::Percent(pct * factor)
+        });
     }
 
     /// Returns the text size the bar renders with, in pixels.
@@ -136,7 +148,7 @@ impl Appearance {
     /// would pick on its own.
     #[must_use]
     pub fn font_size_px(&self) -> f32 {
-        self.font_size.unwrap_or(DEFAULT_FONT_SIZE)
+        self.font_size.map_or(DEFAULT_FONT_SIZE, |v| v.resolve(0.0))
     }
 
     /// Converts a spacing expressed in `em` into pixels of the themed font.
@@ -171,7 +183,7 @@ impl Appearance {
         [
             self.spacing(BAR_PADDING_EM[0]),
             self.side_padding
-                .unwrap_or_else(|| self.spacing(BAR_PADDING_EM[1]))
+                .map_or_else(|| self.spacing(BAR_PADDING_EM[1]), |v| v.resolve(0.0))
         ]
     }
 
@@ -218,7 +230,7 @@ mod tests {
     #[test]
     fn workspace_spacing_matches_the_reference_theme() {
         let themed = Appearance {
-            font_size: Some(10.0),
+            font_size: Some(SizeValue::Pixels(10.0)),
             ..Appearance::default()
         };
 
@@ -235,7 +247,7 @@ mod tests {
         assert_eq!(Appearance::default().font_size_px(), DEFAULT_FONT_SIZE);
 
         let themed = Appearance {
-            font_size: Some(10.0),
+            font_size: Some(SizeValue::Pixels(10.0)),
             ..Appearance::default()
         };
         assert_eq!(themed.font_size_px(), 10.0);
@@ -249,7 +261,7 @@ mod tests {
         assert_eq!(fallback.spacing(0.5), DEFAULT_FONT_SIZE * 0.5);
 
         let themed = Appearance {
-            font_size: Some(10.0),
+            font_size: Some(SizeValue::Pixels(10.0)),
             ..Appearance::default()
         };
         assert_eq!(themed.spacing(0.4), 4.0);
@@ -259,7 +271,7 @@ mod tests {
     #[test]
     fn derived_spacing_matches_the_reference_theme() {
         let themed = Appearance {
-            font_size: Some(10.0),
+            font_size: Some(SizeValue::Pixels(10.0)),
             ..Appearance::default()
         };
 
@@ -273,8 +285,8 @@ mod tests {
     #[test]
     fn a_known_side_padding_replaces_the_font_derived_one() {
         let aligned = Appearance {
-            font_size: Some(10.0),
-            side_padding: Some(6.0),
+            font_size: Some(SizeValue::Pixels(10.0)),
+            side_padding: Some(SizeValue::Pixels(6.0)),
             ..Appearance::default()
         };
 
@@ -284,13 +296,13 @@ mod tests {
     #[test]
     fn magnifying_grows_the_side_padding_with_the_bar() {
         let mut appearance = Appearance {
-            side_padding: Some(6.0),
+            side_padding: Some(SizeValue::Pixels(6.0)),
             ..Appearance::default()
         };
 
         appearance.magnify(2.0);
 
-        assert_eq!(appearance.side_padding, Some(12.0));
+        assert_eq!(appearance.side_padding, Some(SizeValue::Pixels(12.0)));
     }
 
     #[test]
@@ -300,5 +312,23 @@ mod tests {
         appearance.magnify(2.0);
 
         assert_eq!(appearance.side_padding, None);
+    }
+
+    #[test]
+    fn resolve_percentages_converts_to_pixels() {
+        let mut appearance = Appearance {
+            font_size: Some(SizeValue::Percent(0.5)),
+            height: Some(SizeValue::Percent(1.5)),
+            radius: Some(SizeValue::Pixels(4.0)),
+            side_padding: Some(SizeValue::Percent(0.8)),
+            ..Appearance::default()
+        };
+
+        appearance.resolve_percentages(2160.0);
+
+        assert_eq!(appearance.font_size, Some(SizeValue::Pixels(10.8)));
+        assert_eq!(appearance.height, Some(SizeValue::Pixels(32.4)));
+        assert_eq!(appearance.radius, Some(SizeValue::Pixels(4.0)));
+        assert_eq!(appearance.side_padding, Some(SizeValue::Pixels(17.28)));
     }
 }

@@ -99,7 +99,7 @@ impl Outputs {
                     position,
                     style,
                     scale_factor: config.appearance.scale_factor,
-                    height: config.appearance.height,
+                    height: config.appearance.height_px(),
                     tooltip_id,
                     tooltip: None,
                     desk_id,

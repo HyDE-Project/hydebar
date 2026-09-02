@@ -4,6 +4,7 @@
 //! ten keeps rounding them by ten, while a bar that says nothing follows the
 //! windows around it.
 
+use super::size_value::SizeValue;
 use crate::{
     compositor_look::CompositorLook,
     config::{Appearance, WindowBorder, WindowShadow}
@@ -18,13 +19,13 @@ impl Appearance {
     /// that switch is a desktop that does not move.
     pub fn follow_compositor(&mut self, look: &CompositorLook) {
         if self.radius.is_none() {
-            self.radius = look.rounding;
+            self.radius = look.rounding.map(SizeValue::Pixels);
         }
 
         if self.side_padding.is_none() {
             self.side_padding = look
                 .gaps_out
-                .map(|gap| unscaled_padding(gap, self.scale_factor));
+                .map(|gap| SizeValue::Pixels(unscaled_padding(gap, self.scale_factor)));
         }
 
         if look.animations == Some(false) {
@@ -116,19 +117,19 @@ mod tests {
 
         appearance.follow_compositor(&look());
 
-        assert_eq!(appearance.radius, Some(3.0));
+        assert_eq!(appearance.radius, Some(SizeValue::Pixels(3.0)));
     }
 
     #[test]
     fn a_configured_radius_is_kept() {
         let mut appearance = Appearance {
-            radius: Some(10.0),
+            radius: Some(SizeValue::Pixels(10.0)),
             ..Appearance::default()
         };
 
         appearance.follow_compositor(&look());
 
-        assert_eq!(appearance.radius, Some(10.0));
+        assert_eq!(appearance.radius, Some(SizeValue::Pixels(10.0)));
     }
 
     #[test]
@@ -181,20 +182,20 @@ mod tests {
 
         appearance.follow_compositor(&look());
 
-        assert_eq!(appearance.side_padding, Some(8.0));
+        assert_eq!(appearance.side_padding, Some(SizeValue::Pixels(8.0)));
         assert_eq!(appearance.bar_padding()[1], 8.0);
     }
 
     #[test]
     fn a_configured_side_padding_is_kept() {
         let mut appearance = Appearance {
-            side_padding: Some(20.0),
+            side_padding: Some(SizeValue::Pixels(20.0)),
             ..Appearance::default()
         };
 
         appearance.follow_compositor(&look());
 
-        assert_eq!(appearance.side_padding, Some(20.0));
+        assert_eq!(appearance.side_padding, Some(SizeValue::Pixels(20.0)));
     }
 
     #[test]
@@ -207,7 +208,7 @@ mod tests {
 
         appearance.follow_compositor(&look());
 
-        assert_eq!(appearance.side_padding, Some(4.0));
+        assert_eq!(appearance.side_padding, Some(SizeValue::Pixels(4.0)));
     }
 
     #[test]
@@ -219,15 +220,15 @@ mod tests {
     #[test]
     fn a_magnified_bar_still_starts_at_the_window_gap() {
         let mut appearance = Appearance {
-            font_size: Some(10.0),
+            font_size: Some(SizeValue::Pixels(10.0)),
             side_padding: None,
             ..Appearance::default()
         };
 
         appearance.adopt_screen(2.0, &look());
 
-        assert_eq!(appearance.font_size, Some(20.0));
-        assert_eq!(appearance.side_padding, Some(8.0));
+        assert_eq!(appearance.font_size, Some(SizeValue::Pixels(20.0)));
+        assert_eq!(appearance.side_padding, Some(SizeValue::Pixels(8.0)));
         assert_eq!(appearance.bar_padding()[1], 8.0);
     }
 
@@ -235,7 +236,7 @@ mod tests {
     fn adopting_a_screen_twice_over_reports_the_same_gap() {
         let load = |magnification: f32| {
             let mut appearance = Appearance {
-                font_size: Some(10.0),
+                font_size: Some(SizeValue::Pixels(10.0)),
                 side_padding: None,
                 ..Appearance::default()
             };
@@ -259,26 +260,26 @@ mod tests {
 
         appearance.adopt_screen(1.0, &look());
 
-        assert_eq!(appearance.radius, Some(3.0));
-        assert_eq!(appearance.side_padding, Some(8.0));
+        assert_eq!(appearance.radius, Some(SizeValue::Pixels(3.0)));
+        assert_eq!(appearance.side_padding, Some(SizeValue::Pixels(8.0)));
     }
 
     #[test]
     fn a_configured_side_padding_grows_with_the_bar_and_survives() {
         let mut appearance = Appearance {
-            side_padding: Some(6.0),
+            side_padding: Some(SizeValue::Pixels(6.0)),
             ..Appearance::default()
         };
 
         appearance.adopt_screen(2.0, &look());
 
-        assert_eq!(appearance.side_padding, Some(12.0));
+        assert_eq!(appearance.side_padding, Some(SizeValue::Pixels(12.0)));
     }
 
     #[test]
     fn a_silent_compositor_leaves_a_margin_that_grew_once() {
         let mut appearance = Appearance {
-            font_size: Some(10.0),
+            font_size: Some(SizeValue::Pixels(10.0)),
             side_padding: None,
             ..Appearance::default()
         };

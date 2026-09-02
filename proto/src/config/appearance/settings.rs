@@ -14,6 +14,7 @@ use super::{
         default_opacity, default_scale_factor, opacity_deserializer, scale_factor_deserializer
     },
     menu::MenuAppearance,
+    size_value::SizeValue,
     style::AppearanceStyle,
     window::{WindowBorder, WindowShadow}
 };
@@ -28,42 +29,45 @@ pub struct Appearance {
     #[serde(default)]
     /// Family every widget is written in, taken from the desktop when unset.
     pub font_name:                Option<String>,
-    /// Default text size, in pixels, applied to every widget that does not set
-    /// its own.
+    /// Default text size, in pixels or as a percentage of the screen height,
+    /// applied to every widget that does not set its own.
     ///
     /// Left unset the renderer default is used; set it to match another bar,
-    /// for example `10.0` for waybar's default font size.
+    /// for example `10.0` for waybar's default font size, or `"0.5%"` for a
+    /// screen-relative size.
     #[serde(default)]
-    pub font_size:                Option<f32>,
+    pub font_size:                Option<SizeValue>,
     #[serde(
         deserialize_with = "scale_factor_deserializer",
         default = "default_scale_factor"
     )]
     /// Multiplier applied to every size the bar draws at.
     pub scale_factor:             f64,
-    /// Corner radius of the island pills, in pixels.
+    /// Corner radius of the island pills, in pixels or as a percentage of the
+    /// screen height.
     ///
     /// Left unset the bar falls back to [`DEFAULT_RADIUS`], the radius of the
     /// reference waybar theme.
     ///
     /// [`DEFAULT_RADIUS`]: super::DEFAULT_RADIUS
     #[serde(default)]
-    pub radius:                   Option<f32>,
-    /// Height of the bar, in pixels.
+    pub radius:                   Option<SizeValue>,
+    /// Height of the bar, in pixels or as a percentage of the screen height.
     ///
     /// Left unset the bar keeps its built-in height. Set it to match another
-    /// bar, for example `38.0` for the height the `HyDE` waybar theme reserves.
+    /// bar, for example `38.0` for the height the `HyDE` waybar theme reserves,
+    /// or `"1.5%"` for a screen-relative height.
     #[serde(default)]
-    pub height:                   Option<f32>,
+    pub height:                   Option<SizeValue>,
     /// Padding kept between the screen edge and the outermost island, in
-    /// pixels.
+    /// pixels or as a percentage of the screen height.
     ///
     /// Left unset the bar takes the gap the compositor keeps outside its
     /// windows, so the leftmost module starts on the same column a window does
     /// and the rightmost one ends on the same column. Set it to pin the padding
     /// to a value of its own, whatever the compositor is configured with.
     #[serde(default)]
-    pub side_padding:             Option<f32>,
+    pub side_padding:             Option<SizeValue>,
     /// Whether the appearance follows the theme published by the `HyDE`
     /// Project.
     ///
@@ -146,6 +150,46 @@ pub struct Appearance {
     pub window_shadow:            Option<WindowShadow>
 }
 
+impl Appearance {
+    /// Resolves every percentage-based size against the screen height.
+    ///
+    /// Call this once at startup, after the compositor reports the focused
+    /// screen and before [`magnify`](Self::magnify) or any layout pass.
+    /// Plain pixel values are left untouched.
+    pub fn resolve_percentages(&mut self, screen_height: f32) {
+        self.font_size = self
+            .font_size
+            .map(|v| SizeValue::Pixels(v.resolve(screen_height)));
+        self.height = self
+            .height
+            .map(|v| SizeValue::Pixels(v.resolve(screen_height)));
+        self.radius = self
+            .radius
+            .map(|v| SizeValue::Pixels(v.resolve(screen_height)));
+        self.side_padding = self
+            .side_padding
+            .map(|v| SizeValue::Pixels(v.resolve(screen_height)));
+    }
+
+    /// Returns the bar height in pixels, or `None` when unset.
+    #[must_use]
+    pub fn height_px(&self) -> Option<f32> {
+        self.height.map(|v| v.resolve(0.0))
+    }
+
+    /// Returns the pill corner radius in pixels, or `None` when unset.
+    #[must_use]
+    pub fn radius_px(&self) -> Option<f32> {
+        self.radius.map(|v| v.resolve(0.0))
+    }
+
+    /// Returns the side padding in pixels, or `None` when unset.
+    #[must_use]
+    pub fn side_padding_px(&self) -> Option<f32> {
+        self.side_padding.map(|v| v.resolve(0.0))
+    }
+}
+
 impl Default for Appearance {
     fn default() -> Self {
         Self {
@@ -203,7 +247,7 @@ mod tests {
 
         let with_font_size: Appearance =
             toml::from_str("font_size = 10.0").expect("font_size should deserialize");
-        assert_eq!(with_font_size.font_size, Some(10.0));
+        assert_eq!(with_font_size.font_size, Some(SizeValue::Pixels(10.0)));
     }
 
     #[test]
@@ -216,7 +260,7 @@ mod tests {
 
         let with_height: Appearance =
             toml::from_str("height = 38.0").expect("height should deserialize");
-        assert_eq!(with_height.height, Some(38.0));
+        assert_eq!(with_height.height, Some(SizeValue::Pixels(38.0)));
     }
 
     #[test]
@@ -229,7 +273,7 @@ mod tests {
 
         let with_padding: Appearance =
             toml::from_str("side_padding = 8.0").expect("side_padding should deserialize");
-        assert_eq!(with_padding.side_padding, Some(8.0));
+        assert_eq!(with_padding.side_padding, Some(SizeValue::Pixels(8.0)));
     }
 
     #[test]

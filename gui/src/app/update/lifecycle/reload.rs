@@ -116,7 +116,7 @@ impl App {
                 config.position,
                 &config,
                 self.config.appearance.scale_factor,
-                self.config.appearance.height
+                self.config.appearance.height_px()
             ));
         }
 

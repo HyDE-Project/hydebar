@@ -13,11 +13,11 @@ use log::debug;
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ScreenGeometry {
     /// Resolution in physical pixels.
-    pub(crate) pixels:   (f32, f32),
+    pub pixels:   (f32, f32),
     /// Physical size in millimetres, zero when the screen does not report it.
-    pub(crate) physical: (f32, f32),
+    pub physical: (f32, f32),
     /// Scale the compositor already applies to the surface.
-    pub(crate) scale:    f32
+    pub scale:    f32
 }
 
 impl ScreenGeometry {

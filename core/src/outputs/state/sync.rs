@@ -30,7 +30,7 @@ impl Outputs {
     ///     config.position,
     ///     &config,
     ///     config.appearance.scale_factor,
-    ///     config.appearance.height
+    ///     config.appearance.height_px()
     /// );
     /// # let _ = task;
     /// ```
@@ -131,7 +131,7 @@ impl Outputs {
             if let Some(shell_info) = shell_info
                 && (shell_info.style != style
                     || shell_info.scale_factor != config.appearance.scale_factor
-                    || shell_info.height != config.appearance.height)
+                    || shell_info.height != config.appearance.height_px())
             {
                 Some(shell_info)
             } else {
@@ -140,15 +140,18 @@ impl Outputs {
         }) {
             debug!(
                 "Change style, scale_factor or height for output: {:?}, new style {:?}, new scale_factor {:?}, new height {:?}",
-                shell_info.id, style, config.appearance.scale_factor, config.appearance.height
+                shell_info.id,
+                style,
+                config.appearance.scale_factor,
+                config.appearance.height_px()
             );
             shell_info.style = style;
             shell_info.scale_factor = config.appearance.scale_factor;
-            shell_info.height = config.appearance.height;
+            shell_info.height = config.appearance.height_px();
             let height = layer_height(
                 style,
                 config.appearance.scale_factor,
-                config.appearance.height
+                config.appearance.height_px()
             );
             #[expect(
                 clippy::cast_possible_truncation,

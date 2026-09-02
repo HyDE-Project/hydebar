@@ -132,7 +132,7 @@ impl App {
                         info.id,
                         &self.config,
                         appearance.scale_factor,
-                        appearance.height
+                        appearance.height_px()
                     );
 
                     let unfold = self.unfold_desk();

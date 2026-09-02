@@ -355,7 +355,7 @@ mod tests {
     fn the_bar_height_switches_immediately() {
         let mut transition = AppearanceTransition::new(Appearance::default());
         let target = Appearance {
-            height: Some(38.0),
+            height: Some(hydebar_proto::config::SizeValue::Pixels(38.0)),
             background_color: AppearanceColor::Simple(hex(200)),
             ..Appearance::default()
         };
@@ -363,6 +363,9 @@ mod tests {
         transition.set_target(target, true);
 
         assert!(transition.is_animating());
-        assert_eq!(transition.current().height, Some(38.0));
+        assert_eq!(
+            transition.current().height,
+            Some(hydebar_proto::config::SizeValue::Pixels(38.0))
+        );
     }
 }

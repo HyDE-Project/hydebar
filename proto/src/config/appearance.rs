@@ -14,6 +14,7 @@ mod hyde;
 mod menu;
 mod metrics;
 mod settings;
+mod size_value;
 mod style;
 mod window;
 
@@ -27,5 +28,6 @@ pub use metrics::{
     WORKSPACE_MIN_HEIGHT_EM, WORKSPACE_MIN_WIDTH_EM, WORKSPACE_PADDING_EM
 };
 pub use settings::Appearance;
+pub use size_value::SizeValue;
 pub use style::AppearanceStyle;
 pub use window::{WindowBorder, WindowShadow};

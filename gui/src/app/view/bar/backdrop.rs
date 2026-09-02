@@ -447,8 +447,12 @@ mod tests {
 
     #[test]
     fn a_bar_naming_its_own_height_is_drawn_to_it() {
-        let tall = test_app_with(|config| config.appearance.height = Some(48.0));
-        let short = test_app_with(|config| config.appearance.height = Some(24.0));
+        let tall = test_app_with(|config| {
+            config.appearance.height = Some(hydebar_proto::config::SizeValue::Pixels(48.0));
+        });
+        let short = test_app_with(|config| {
+            config.appearance.height = Some(hydebar_proto::config::SizeValue::Pixels(24.0));
+        });
 
         let tall = simulator(tall.bar_surface(surface()))
             .snapshot(&iced::Theme::Dark)

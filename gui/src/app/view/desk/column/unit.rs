@@ -181,7 +181,7 @@ impl App {
         use hydebar_proto::config::AppearanceStyle;
 
         let appearance = self.appearance();
-        let band = appearance.height.unwrap_or(ISLAND);
+        let band = appearance.height_px().unwrap_or(ISLAND);
 
         if appearance.style == AppearanceStyle::Islands {
             appearance.bar_padding()[0].mul_add(-2.0, band)

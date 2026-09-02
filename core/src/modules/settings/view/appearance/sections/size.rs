@@ -23,7 +23,7 @@ pub fn size_rows(
 ) -> Element<'_, Message> {
     let appearance: &Appearance = &config.appearance;
     let written_font_size = font_size / magnification;
-    let height = appearance.height.unwrap_or(FALLBACK_HEIGHT) / magnification;
+    let height = appearance.height_px().unwrap_or(FALLBACK_HEIGHT) / magnification;
     let side_padding = appearance.bar_padding()[1] / magnification;
 
     row_stack(font_size)

@@ -76,7 +76,7 @@ impl App {
         self.strip_top(id)
             + self
                 .appearance()
-                .height
+                .height_px()
                 .unwrap_or(hydebar_core::HEIGHT as f32)
     }
 }

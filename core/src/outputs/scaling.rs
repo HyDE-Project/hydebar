@@ -6,11 +6,11 @@
 //! reports about an output into a text size and a bar height, so a fresh
 //! install is readable before anything is configured.
 
-/// Diagonal of the screen the built in sizes were tuned for, in pixels.
+/// Height of the screen the built in sizes were tuned for, in logical pixels.
 ///
 /// A full high definition screen: the sizes of the reference waybar theme are
 /// comfortable there, and every other screen is expressed relative to it.
-const REFERENCE_DIAGONAL_PX: f32 = 2202.9072;
+const REFERENCE_HEIGHT_PX: f32 = 1080.0;
 
 /// Never shrink below the reference: a smaller screen keeps the tuned sizes
 /// rather than becoming unreadable.
@@ -45,17 +45,15 @@ pub struct AutoMetrics {
 /// Factor the reference sizes are multiplied by on a screen of `width` by
 /// `height` logical pixels.
 ///
-/// The diagonal is used rather than either side so an ultrawide screen is not
+/// The height is used rather than the diagonal so an ultrawide screen is not
 /// mistaken for a screen twice as tall.
 #[must_use]
-pub fn scale_factor(width: f32, height: f32) -> f32 {
-    if width <= 0.0 || height <= 0.0 {
+pub fn scale_factor(_width: f32, height: f32) -> f32 {
+    if height <= 0.0 {
         return MIN_FACTOR;
     }
 
-    let diagonal = width.hypot(height);
-
-    (diagonal / REFERENCE_DIAGONAL_PX).clamp(MIN_FACTOR, MAX_FACTOR)
+    (height / REFERENCE_HEIGHT_PX).clamp(MIN_FACTOR, MAX_FACTOR)
 }
 
 /// Factor a screen of `width` by `height` millimetres calls for.

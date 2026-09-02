@@ -72,7 +72,7 @@ impl App {
             clippy::cast_possible_truncation,
             reason = "the bar height constant is exactly representable in f32"
         )]
-        let bar = self.appearance().height.unwrap_or(HEIGHT as f32);
+        let bar = self.appearance().height_px().unwrap_or(HEIGHT as f32);
 
         self.screen_height
             .map(|screen| self.appearance().font_size_px().mul_add(-6.0, screen - bar))

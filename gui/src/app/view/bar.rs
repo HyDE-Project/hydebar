@@ -59,7 +59,7 @@ impl App {
             clippy::cast_possible_truncation,
             reason = "the bar height constant is exactly representable in f32"
         )]
-        let bar_height = self.appearance().height.unwrap_or(HEIGHT as f32);
+        let bar_height = self.appearance().height_px().unwrap_or(HEIGHT as f32);
 
         let centerbox = centerbox::Centerbox::new([left, center, right])
             .spacing(self.appearance().group_gap())

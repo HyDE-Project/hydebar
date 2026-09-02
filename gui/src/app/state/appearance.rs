@@ -80,14 +80,17 @@ impl App {
         let metrics = (
             appearance.style,
             appearance.scale_factor.to_bits(),
-            appearance.height.map(f32::to_bits)
+            appearance.height_px().map(f32::to_bits)
         );
         let resize = if self.stated_layer_metrics == Some(metrics) {
             Task::none()
         } else {
             self.stated_layer_metrics = Some(metrics);
-            self.outputs
-                .resize(appearance.style, appearance.scale_factor, appearance.height)
+            self.outputs.resize(
+                appearance.style,
+                appearance.scale_factor,
+                appearance.height_px()
+            )
         };
 
         let incoming = self
@@ -170,7 +173,7 @@ mod tests {
     use std::{num::NonZeroUsize, path::PathBuf, sync::Arc};
 
     use hydebar_core::{config::ConfigManager, event_bus::EventBus, test_utils::MockHyprlandPort};
-    use hydebar_proto::ports::hyprland::HyprlandPort;
+    use hydebar_proto::{config::SizeValue, ports::hyprland::HyprlandPort};
 
     use super::{super::test_support::test_logger, *};
 
@@ -216,12 +219,12 @@ mod tests {
     fn a_reloaded_config_keeps_the_islands_at_the_window_gap() {
         let app = test_app(2.0);
         let mut config = Config::default();
-        config.appearance.font_size = Some(10.0);
+        config.appearance.font_size = Some(SizeValue::Pixels(10.0));
         config.appearance.side_padding = None;
 
         let reloaded = app.adopted_with(&config, &window_look());
 
-        assert_eq!(reloaded.appearance.side_padding, Some(8.0));
+        assert_eq!(reloaded.appearance.side_padding_px(), Some(8.0));
         assert_eq!(reloaded.appearance.bar_padding()[1], 8.0);
     }
 
@@ -229,7 +232,7 @@ mod tests {
     fn reloading_over_and_over_never_moves_the_islands() {
         let app = test_app(2.0);
         let mut config = Config::default();
-        config.appearance.font_size = Some(10.0);
+        config.appearance.font_size = Some(SizeValue::Pixels(10.0));
 
         let once = app.adopted_with(&config, &window_look());
         let twice = app.adopted_with(&config, &window_look());
@@ -238,7 +241,10 @@ mod tests {
             once.appearance.bar_padding(),
             twice.appearance.bar_padding()
         );
-        assert_eq!(once.appearance.font_size, twice.appearance.font_size);
+        assert_eq!(
+            once.appearance.font_size_px(),
+            twice.appearance.font_size_px()
+        );
     }
 
     #[test]
@@ -248,6 +254,6 @@ mod tests {
 
         let reloaded = app.adopted_with(&config, &window_look());
 
-        assert_eq!(reloaded.appearance.side_padding, Some(8.0));
+        assert_eq!(reloaded.appearance.side_padding_px(), Some(8.0));
     }
 }
