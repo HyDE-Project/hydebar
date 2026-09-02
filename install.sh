@@ -71,7 +71,7 @@ cargo build --release
 # place the bar looks for it. 'hydebar-theme-switch' is the name it carries in
 # a shared binary directory; inside a checkout the same file is
 # 'scripts/theme-switch'.
-sudo install -Dm755 "$SOURCE_DIR/target/release/hydebar-app" "$PREFIX/bin/hydebar"
+sudo install -Dm755 "$SOURCE_DIR/target/release/hydebar" "$PREFIX/bin/hydebar"
 sudo install -Dm755 "$SOURCE_DIR/scripts/theme-switch" "$PREFIX/bin/hydebar-theme-switch"
 
 # Let the bus start the bar when a notification arrives and nothing is serving

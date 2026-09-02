@@ -1,0 +1,145 @@
+name: Publish to AUR
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-release:
+    name: Build Release
+    runs-on: ubuntu-24.04
+    container:
+      image: archlinux:latest
+    steps:
+      - name: Cache pacman packages
+        uses: actions/cache@v5
+        with:
+          path: /var/cache/pacman/pkg
+          key: pacman-${{ hashFiles('.github/workflows/aur.yml') }}
+      - name: Install dependencies
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm \
+            base-devel rust clang dbus pipewire libpulse \
+            wayland xkbcommon llvm pkg-config git
+      - uses: actions/checkout@v6
+      - uses: Swatinem/rust-cache@v2
+      - name: Build
+        run: cargo build --release --all-features
+      - name: Strip binaries
+        run: strip target/release/hydebar
+      - name: Create archive
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          mkdir -p release
+          cp target/release/hydebar release/
+          cp scripts/theme-switch release/hydebar-theme-switch
+          cp assets/dbus/org.freedesktop.Notifications.service release/
+          cp README.md LICENSE.MIT release/
+          tar -czf "hydebar-${VERSION}-x86_64-linux-gnu.tar.gz" -C release .
+      - name: Generate SHA-256 checksum
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          FILE="hydebar-${VERSION}-x86_64-linux-gnu.tar.gz"
+          sha256sum "${FILE}" > "${FILE}.sha256"
+          cat "${FILE}.sha256"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: release-archive
+          path: |
+            hydebar-*.tar.gz
+            hydebar-*.tar.gz.sha256
+
+  publish-aur:
+    name: Publish to AUR
+    needs: [build-release]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.ref }}
+      - name: Generate .SRCINFO
+        run: |
+          docker run --rm -v "$PWD:/pkg" archlinux:latest bash -c "
+            pacman -Sy --noconfirm base-devel sudo &&
+            useradd -m builder &&
+            chown -R builder:builder /pkg &&
+            cd /pkg &&
+            sudo -u builder makepkg --printsrcinfo > .SRCINFO
+          "
+      - name: Publish
+        env:
+          AUR_SSH_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          mkdir -p ~/.ssh
+          echo "$AUR_SSH_KEY" > ~/.ssh/aur
+          chmod 600 ~/.ssh/aur
+          ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts
+          export GIT_SSH_COMMAND="ssh -i ~/.ssh/aur"
+
+          git clone ssh://aur@aur.archlinux.org/hydebar.git /tmp/aur
+          cd /tmp/aur
+          git checkout -B master origin/master || git checkout -b master
+          cp "$GITHUB_WORKSPACE/PKGBUILD" .
+          cp "$GITHUB_WORKSPACE/.SRCINFO" .
+
+          git config user.name "RAprogramm"
+          git config user.email "andrey.rozanov.vl@gmail.com"
+          git add -A
+          git diff --cached --quiet || \
+            git commit -m "Update to version ${VERSION}"
+          git push origin master
+
+  publish-aur-bin:
+    name: Publish to AUR (binary)
+    needs: [build-release]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.ref }}
+      - uses: actions/download-artifact@v7
+        with:
+          name: release-archive
+      - name: Download and calculate checksum
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          BASE="https://github.com/HyDE-Project/hydebar/releases"
+          FILE="hydebar-${VERSION}-x86_64-linux-gnu.tar.gz"
+          URL="${BASE}/download/v${VERSION}/${FILE}"
+          curl -sSL -o archive.tar.gz "${URL}"
+          SHA=$(sha256sum archive.tar.gz | cut -d' ' -f1)
+          echo "sha256sum=${SHA}" >> $GITHUB_ENV
+      - name: Update PKGBUILD.bin version
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          sed -i "s/^pkgver=.*/pkgver=${VERSION}/" PKGBUILD.bin
+          sed -i "s/^sha256sums=.*/sha256sums=('${sha256sum}')/" PKGBUILD.bin
+      - name: Generate .SRCINFO
+        run: |
+          docker run --rm -v "$PWD:/pkg" archlinux:latest bash -c "
+            pacman -Sy --noconfirm base-devel sudo &&
+            useradd -m builder &&
+            chown -R builder:builder /pkg &&
+            cd /pkg &&
+            sudo -u builder makepkg --printsrcinfo \
+              -p PKGBUILD.bin > .SRCINFO.bin
+          "
+      - name: Publish
+        uses: KSXGitHub/github-actions-deploy-aur@v4.1.1
+        with:
+          pkgname: hydebar-bin
+          pkgbuild: ./PKGBUILD.bin
+          commit_username: RAprogramm
+          commit_email: andrey.rozanov.vl@gmail.com
+          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          commit_message: >-
+            Update to version ${{ github.ref_name }}
