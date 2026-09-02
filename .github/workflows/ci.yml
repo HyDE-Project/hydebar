@@ -179,3 +179,88 @@ jobs:
         with:
           files: lcov.info
           fail_ci_if_error: true
+
+  version-bump:
+    name: Version Bump
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs:
+      - format
+      - lint
+      - test
+      - supply-chain
+      - msrv
+      - coverage
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    outputs:
+      new_version: ${{ steps.bump.outputs.new_version }}
+      version_bumped: ${{ steps.bump.outputs.version_bumped }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Analyze commits and bump version
+        id: bump
+        run: |
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null \
+            || echo "v0.0.0")
+          echo "Latest tag: $LATEST_TAG"
+
+          COMMITS=$(git log ${LATEST_TAG}..HEAD --pretty=format:"%s")
+
+          HAS_BREAKING=false
+          HAS_FEAT=false
+          HAS_FIX=false
+
+          while IFS= read -r commit; do
+            if echo "$commit" | grep -qE "^[^:]+!:|BREAKING CHANGE"; then
+              HAS_BREAKING=true
+            elif echo "$commit" | grep -qE "^(feat|#[0-9]+ feat):"; then
+              HAS_FEAT=true
+            elif echo "$commit" | grep -qE "^(fix|#[0-9]+ fix):"; then
+              HAS_FIX=true
+            fi
+          done <<< "$COMMITS"
+
+          CURRENT="${LATEST_TAG#v}"
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+
+          if [ "$HAS_BREAKING" = true ]; then
+            NEW_VERSION="$((MAJOR + 1)).0.0"
+          elif [ "$HAS_FEAT" = true ]; then
+            NEW_VERSION="${MAJOR}.$((MINOR + 1)).0"
+          elif [ "$HAS_FIX" = true ]; then
+            NEW_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
+          else
+            echo "version_bumped=false" >> $GITHUB_OUTPUT
+            echo "No version bump needed"
+            exit 0
+          fi
+
+          echo "new_version=${NEW_VERSION}" >> $GITHUB_OUTPUT
+          echo "version_bumped=true" >> $GITHUB_OUTPUT
+          echo "New version: $NEW_VERSION"
+
+      - name: Update files and create tag
+        if: steps.bump.outputs.version_bumped == 'true'
+        run: |
+          NEW_VERSION="${{ steps.bump.outputs.new_version }}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          sed -i "/^\[workspace\.package\]/,/^\[/{s/^version = \".*\"/version = \"${NEW_VERSION}\"/}" Cargo.toml
+          sed -i "s/^pkgver=.*/pkgver=${NEW_VERSION}/" PKGBUILD
+          sed -i "s/^pkgver=.*/pkgver=${NEW_VERSION}/" PKGBUILD.bin
+
+          date=$(date '+%Y-%m-%d')
+          sed -i "s/\[Unreleased\]/&\n\n## [${NEW_VERSION}] - ${date}/" CHANGELOG.md
+
+          git add Cargo.toml PKGBUILD PKGBUILD.bin CHANGELOG.md
+          git commit -m "chore: bump version to ${NEW_VERSION}"
+          git tag "v${NEW_VERSION}"
+          git push origin main
+          git push origin "v${NEW_VERSION}"
