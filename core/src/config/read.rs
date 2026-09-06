@@ -1,7 +1,9 @@
 //! Reading and parsing the configuration file from disk.
 //!
-//! One read is one pass: the file is read to a string, parsed as TOML, and
-//! handed to the `HyDE` overlay in [`super::hyde`] before it is returned.
+//! One read is one pass: the file is read to a string, parsed as TOML, a
+//! named theme is stood in for its file when one answers beside the
+//! configuration, and the result is handed to the `HyDE` overlay in
+//! [`super::hyde`] before it is returned.
 //! Whether the file declared a `[modules]` section of its own is noted while
 //! the raw table is still in hand, because that presence — not its content —
 //! is what pins the layout against the desktop's.
@@ -18,9 +20,10 @@ use hydebar_proto::{
     theme_source::{self, HydeTheme}
 };
 
-use self::unknown::read_naming_unknown;
+use self::{theme::resolve_named_theme, unknown::read_naming_unknown};
 use super::hyde::follow_hyde;
 
+mod theme;
 mod unknown;
 
 #[derive(Debug)]
@@ -101,11 +104,12 @@ where
             source
         })?;
 
-    let table: toml::Table =
+    let mut table: toml::Table =
         toml::from_str(&content).map_err(|source| ConfigReadError::Parse {
             path: path.to_path_buf(),
             source
         })?;
+    resolve_named_theme(&mut table, path)?;
     let declared = declares_modules(&table);
 
     read_naming_unknown(table, path)

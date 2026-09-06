@@ -12,6 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Design tokens in `[appearance]`: `spacing_scale` loosens or tightens
   every font-derived gap at once, and `damping_ratio` sets the character
   of the menu entrance spring without touching hover feedback.
+- User theme files: a whole appearance table in
+  `~/.config/hydebar/themes/<name>.toml` answers to
+  `appearance = "<name>"`, shadowing the shipped theme of the same name.
+  Unknown names fail with the list of shipped themes and theme files.
+- Preset themes are stored as embedded TOML tables instead of Rust code,
+  so contributing a theme is a new file plus one roster row.
 
 ## [0.2.0] - 2026-09-02
 
