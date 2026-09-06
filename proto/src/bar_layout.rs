@@ -32,6 +32,7 @@ use std::{fs, path::PathBuf};
 pub use jsonc::plain_json;
 pub use labels::display_label;
 use log::{debug, warn};
+pub use mapping::module_for;
 pub use parse::parse;
 
 use crate::{

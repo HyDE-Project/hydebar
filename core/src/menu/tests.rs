@@ -72,6 +72,53 @@ fn disabled_animations_snap_to_the_target() {
     assert_eq!(menu.get_opacity(), config.appearance.menu.opacity);
 }
 
+#[test]
+fn a_soft_menu_spring_overshoots_before_settling() {
+    let mut config = Config::default();
+    config.appearance.animations.damping_ratio = 0.6;
+    let mut menu = Menu::new(Id::unique(), None);
+
+    let _task: Task<()> = menu.open(MenuType::Calendar, button_ref(), &config);
+
+    let target = config.appearance.menu.opacity;
+    let mut peak = 0.0f32;
+    let mut frames = 0;
+    while menu
+        .tick_animation::<()>(&config.appearance.animations, Duration::from_millis(8))
+        .0
+    {
+        peak = peak.max(menu.get_opacity());
+        frames += 1;
+        assert!(frames < 1000, "menu fade failed to settle");
+    }
+
+    assert!(peak > target, "a soft spring overshoots its target");
+    assert_eq!(menu.get_opacity(), target);
+}
+
+#[test]
+fn a_critically_damped_menu_never_overshoots() {
+    let config = Config::default();
+    assert_eq!(config.appearance.animations.damping_ratio, 1.0);
+    let mut menu = Menu::new(Id::unique(), None);
+
+    let _task: Task<()> = menu.open(MenuType::Calendar, button_ref(), &config);
+
+    let target = config.appearance.menu.opacity;
+    let mut peak = 0.0f32;
+    let mut frames = 0;
+    while menu
+        .tick_animation::<()>(&config.appearance.animations, Duration::from_millis(8))
+        .0
+    {
+        peak = peak.max(menu.get_opacity());
+        frames += 1;
+        assert!(frames < 1000, "menu fade failed to settle");
+    }
+
+    assert!(peak <= target + f32::EPSILON);
+}
+
 fn open_type(menu: &Menu) -> Option<&MenuType> {
     menu.menu_info.as_ref().map(|(menu_type, _)| menu_type)
 }

@@ -37,6 +37,27 @@ pub(super) const fn default_bar_opacity() -> f32 {
     0.0
 }
 
+pub(super) const fn default_spacing_scale() -> f32 {
+    1.0
+}
+
+pub(super) fn spacing_scale_deserializer<'de, D>(deserializer: D) -> Result<f32, D::Error>
+where
+    D: Deserializer<'de>
+{
+    let value = f32::deserialize(deserializer)?;
+
+    if value <= 0.0 {
+        return Err(D::Error::custom("Spacing scale must be greater than 0.0"));
+    }
+
+    if value > 2.0 {
+        return Err(D::Error::custom("Spacing scale cannot be greater than 2.0"));
+    }
+
+    Ok(value)
+}
+
 pub(super) const fn default_scale_factor() -> f64 {
     1.0
 }
@@ -90,5 +111,23 @@ mod tests {
         let err_large: DeError = opacity_deserializer(F32Deserializer::<DeError>::new(1.1))
             .expect_err("opacity > 1 should error");
         assert!(err_large.to_string().contains("greater than 1.0"));
+    }
+
+    #[test]
+    fn spacing_scale_deserializer_rejects_out_of_bounds_values() {
+        let err_small: DeError = spacing_scale_deserializer(F32Deserializer::<DeError>::new(0.0))
+            .expect_err("spacing scale <= 0 should error");
+        assert!(err_small.to_string().contains("greater than 0.0"));
+
+        let err_large: DeError = spacing_scale_deserializer(F32Deserializer::<DeError>::new(2.5))
+            .expect_err("spacing scale > 2 should error");
+        assert!(err_large.to_string().contains("greater than 2.0"));
+    }
+
+    #[test]
+    fn spacing_scale_deserializer_accepts_the_neutral_value() {
+        let value: f32 = spacing_scale_deserializer(F32Deserializer::<DeError>::new(1.0))
+            .expect("the neutral spacing scale should deserialize");
+        assert_eq!(value, 1.0);
     }
 }

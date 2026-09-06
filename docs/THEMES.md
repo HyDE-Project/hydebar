@@ -153,21 +153,24 @@ appearance = "tokyo-night-light"
 Start with a theme and tweak specific colors:
 
 ```toml
-appearance = "catppuccin-mocha"
-
 [appearance]
+theme = "catppuccin-mocha"
+
 # Override just the primary color
 primary_color = "#ff0000"
 ```
+
+The named theme is the base and your keys win over it, so a tweak never
+needs the whole palette copied. Nested tables merge too: overriding one
+`[appearance.menu]` value keeps the rest of the menu it came with.
 
 ### Adjust Opacity
 
 Make themes more or less transparent:
 
 ```toml
-appearance = "nord"
-
 [appearance]
+theme = "nord"
 opacity = 0.85  # More transparent
 
 [appearance.menu]
@@ -180,13 +183,32 @@ backdrop = 0.5  # Dim the screen behind an open menu
 Themes work with all styles:
 
 ```toml
-appearance = "dracula"
-
 [appearance]
+theme = "dracula"
 style = "Islands"   # Default
 # style = "Solid"   # No gaps between modules
 # style = "Gradient" # Gradient backgrounds
 ```
+
+### Tune Motion and Density
+
+Two design tokens scale the whole bar at once, whatever the theme:
+
+```toml
+[appearance]
+spacing_scale = 1.25  # Loosen every gap; 1.0 keeps reference proportions
+damping_ratio = 0.8   # Let menus overshoot and settle with a bounce
+
+[appearance.animations]
+menu_fade_duration_ms = 250
+hover_duration_ms = 120
+```
+
+`spacing_scale` multiplies every font-derived padding and gap, so the
+layout breathes without touching the text size. `damping_ratio` sets the
+character of the menu entrance spring: `1.0` rides in critically damped
+and never overshoots, lower values bounce, higher values slow the approach
+down. Hovers stay critically damped either way.
 
 ---
 
@@ -194,7 +216,43 @@ style = "Islands"   # Default
 
 Don't see your favorite theme? Create your own!
 
+### Theme Files
+
+The simplest way is a theme file: drop a whole appearance table into
+`~/.config/hydebar/themes/my-theme.toml` and name it from the config:
+
 ```toml
+appearance = "my-theme"
+```
+
+```toml
+# ~/.config/hydebar/themes/my-theme.toml
+background_color = "#1a1b26"
+primary_color = "#7aa2f7"
+secondary_color = "#16161e"
+success_color = "#9ece6a"
+danger_color = "#f7768e"
+warning_color = "#e0af68"
+text_color = "#c0caf5"
+
+workspace_colors = [
+    "#7aa2f7",
+    "#bb9af7",
+    "#7dcfff"
+]
+
+special_workspace_colors = ["#f7768e"]
+```
+
+Anything the file leaves out falls back to the built-in defaults, so a
+theme can be three lines long. A file shadows the shipped theme of the
+same name, which is how you experiment safely. A name nothing answers to
+fails with the list of what would have: the shipped themes and the files
+beside your configuration. Changes apply on reload — no rebuild needed.
+
+### Inline Appearance
+
+Alternatively, spell the appearance out in `config.toml` itself:
 [appearance]
 style = "Islands"
 opacity = 0.95
@@ -260,7 +318,9 @@ text = "#1a1b26"      # Text on this background
 
 ## Contributing Themes
 
-Want to add a new theme? See [Contributing Guide](CONTRIBUTING.md) for details.
+Want to add a new theme? Copy one of the files in `proto/src/config/themes/`
+to a new kebab-case name, recolor it, and add one row to the roster there —
+no Rust logic changes. See [Contributing Guide](CONTRIBUTING.md) for details.
 
 Popular themes to consider:
 - Solarized Dark/Light

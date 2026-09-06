@@ -167,7 +167,7 @@ mod tests {
         let app = test_app();
 
         for module_name in ModuleName::BUILT_IN {
-            let _ = app.get_module_view(&module_name, surface(), 1.0);
+            let _ = app.get_module_view(module_name, surface(), 1.0);
         }
     }
 
@@ -176,7 +176,7 @@ mod tests {
         let app = test_app();
 
         for module_name in ModuleName::BUILT_IN {
-            if let Some((content, _)) = app.get_module_view(&module_name, surface(), 1.0) {
+            if let Some((content, _)) = app.get_module_view(module_name, surface(), 1.0) {
                 let mut ui = simulator(content);
 
                 assert!(

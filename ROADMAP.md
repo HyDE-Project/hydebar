@@ -89,6 +89,28 @@ controls, weather and calendar) — are **delivered**. What remains:
 - Gesture controls
 - Compositor-agnostic mode (feature flags for the Hyprland-only modules)
 
+## Phase: Theme Morph (future epic)
+
+**Goal:** switching themes flows instead of cutting — every surface morphs
+from the palette and geometry it had to the one it needs, staged on one
+timeline. No Linux bar does this; it is the "most beautiful" differentiator.
+
+**Foundation (already in tree):** `blend_appearance` color interpolation,
+spring physics with mid-flight retargeting, the 1100ms palette sweep across
+islands, live HyDE repaint without restart.
+
+- **Stage 1 — scalars:** radius, borders, paddings and sizes ride springs
+  the way opacity already does; the design tokens expose the knobs.
+- **Stage 2 — geometry:** FLIP — snapshot the layout before and after the
+  switch, invert the difference, play it back through the springs.
+- **Stage 3 — choreography:** appearing and disappearing modules fade and
+  slide on the same timeline; text crossfades, content never morphs.
+- **Honest limits:** font families cannot morph and always crossfade;
+  content (clock, percentages) is replaced, not interpolated; discrete
+  changes (Islands to Solid) go through fade choreography.
+- **Budgets:** sub-1% idle CPU holds; transitions never block input;
+  `animations.enabled = false` snaps everything instantly.
+
 ---
 
 ## Success Metrics

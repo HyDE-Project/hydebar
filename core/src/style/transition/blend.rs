@@ -1,11 +1,15 @@
 //! The arithmetic of mixing two appearance snapshots.
 //!
-//! Colours and opacities interpolate channel by channel; discrete settings
-//! such as the layout style or the scale factor take the target's value
-//! outright, because the compositor side of the shell has to be reconfigured
-//! for them anyway.
+//! Colours, opacities and the continuous geometry — corner radii and the
+//! spacing scale every gap derives from — interpolate channel by channel;
+//! discrete settings such as the layout style or the scale factor take the
+//! target's value outright, because the compositor side of the shell has to
+//! be reconfigured for them anyway. Font sizes stay snapped as well: the
+//! global scale base and the icon theme rebuild from the target on reload,
+//! so a blended size would move the text but leave its metrics behind.
 
 use hex_color::HexColor;
+use hydebar_proto::config::SizeValue;
 
 use crate::config::{Appearance, AppearanceColor, MenuAppearance};
 
@@ -14,9 +18,10 @@ pub(super) fn blend_appearance(from: &Appearance, to: &Appearance, t: f32) -> Ap
     Appearance {
         font_name:                to.font_name.clone(),
         font_size:                to.font_size,
-        radius:                   to.radius,
+        radius:                   blend_size(from.radius, to.radius, t),
         height:                   to.height,
         side_padding:             to.side_padding,
+        spacing_scale:            blend_f32(from.spacing_scale, to.spacing_scale, t),
         follow_hyde:              to.follow_hyde,
         auto_scale:               to.auto_scale,
         scale_factor:             to.scale_factor,
@@ -50,6 +55,23 @@ pub(super) fn blend_appearance(from: &Appearance, to: &Appearance, t: f32) -> Ap
 
 fn blend_f32(from: f32, to: f32, t: f32) -> f32 {
     (to - from).mul_add(t, from)
+}
+
+/// Interpolates two optional sizes sharing a unit.
+///
+/// Pixels melt into pixels and percents into percents; anything else —
+/// including a size appearing out of nothing — takes the target's value,
+/// because there is no common unit to travel in.
+fn blend_size(from: Option<SizeValue>, to: Option<SizeValue>, t: f32) -> Option<SizeValue> {
+    match (from, to) {
+        (Some(SizeValue::Pixels(from)), Some(SizeValue::Pixels(to))) => {
+            Some(SizeValue::Pixels(blend_f32(from, to, t)))
+        }
+        (Some(SizeValue::Percent(from)), Some(SizeValue::Percent(to))) => {
+            Some(SizeValue::Percent(blend_f32(from, to, t)))
+        }
+        (_, to) => to
+    }
 }
 
 fn blend_u8(from: u8, to: u8, t: f32) -> u8 {
@@ -154,10 +176,69 @@ fn blend_optional_colors(
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
+    #![allow(clippy::float_cmp)]
+
     use super::*;
 
     fn hex(value: u8) -> HexColor {
         HexColor::rgb(value, value, value)
+    }
+
+    #[test]
+    fn radii_melt_when_they_share_a_unit() {
+        let from = Appearance {
+            radius: Some(SizeValue::Pixels(4.0)),
+            ..Appearance::default()
+        };
+        let to = Appearance {
+            radius: Some(SizeValue::Pixels(12.0)),
+            ..Appearance::default()
+        };
+
+        let blended = blend_appearance(&from, &to, 0.5);
+
+        assert_eq!(blended.radius, Some(SizeValue::Pixels(8.0)));
+    }
+
+    #[test]
+    fn radii_without_a_common_unit_take_the_target() {
+        let pixels = Appearance {
+            radius: Some(SizeValue::Pixels(4.0)),
+            ..Appearance::default()
+        };
+        let percent = Appearance {
+            radius: Some(SizeValue::Percent(2.0)),
+            ..Appearance::default()
+        };
+
+        assert_eq!(
+            blend_appearance(&pixels, &percent, 0.5).radius,
+            Some(SizeValue::Percent(2.0))
+        );
+        assert_eq!(
+            blend_appearance(&percent, &pixels, 0.5).radius,
+            pixels.radius
+        );
+        assert_eq!(
+            blend_appearance(&Appearance::default(), &pixels, 0.5).radius,
+            pixels.radius
+        );
+    }
+
+    #[test]
+    fn spacing_scale_breathes_with_the_blend() {
+        let from = Appearance {
+            spacing_scale: 1.0,
+            ..Appearance::default()
+        };
+        let to = Appearance {
+            spacing_scale: 2.0,
+            ..Appearance::default()
+        };
+
+        let blended = blend_appearance(&from, &to, 0.5);
+
+        assert_eq!(blended.spacing_scale, 1.5);
     }
 
     #[test]
