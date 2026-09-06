@@ -1,0 +1,36 @@
+# The Dracula preset palette.
+#
+# A whole appearance table: every key the `[appearance]` section of
+# `config.toml` accepts works here, anything left out falls back to the
+# built-in defaults. Copy this file to start a custom theme.
+
+style = "Islands"
+opacity = 0.95
+bar_opacity = 0.0
+greeting = true
+follow_hyde = true
+auto_scale = false
+scale_factor = 1.0
+island_borders = false
+
+background_color = "#282a36"
+primary_color = "#bd93f9"
+secondary_color = "#8be9fd"
+success_color = "#50fa7b"
+danger_color = "#ff5555"
+warning_color = "#fab387"
+text_color = "#f8f8f2"
+
+workspace_colors = [
+    "#8be9fd",
+    "#bd93f9",
+    "#ff79c6",
+    "#ffb86c",
+    "#f1fa8c",
+    "#50fa7b",
+]
+special_workspace_colors = ["#ff5555"]
+
+[menu]
+opacity = 0.95
+backdrop = 0.3

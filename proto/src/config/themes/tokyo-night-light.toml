@@ -1,0 +1,38 @@
+# The light Tokyo Night preset palette.
+#
+# A whole appearance table: every key the `[appearance]` section of
+# `config.toml` accepts works here, anything left out falls back to the
+# built-in defaults. Copy this file to start a custom theme.
+
+style = "Islands"
+opacity = 0.95
+bar_opacity = 0.0
+greeting = true
+follow_hyde = true
+auto_scale = false
+scale_factor = 1.0
+island_borders = false
+
+background_color = "#d5d6db"
+primary_color = "#795eac"
+secondary_color = "#346cc5"
+success_color = "#339933"
+danger_color = "#b91d47"
+warning_color = "#fab387"
+text_color = "#3c3e49"
+
+workspace_colors = [
+    "#346cc5",
+    "#795eac",
+    "#b91d47",
+    "#a65818",
+    "#8f5e15",
+    "#339933",
+    "#0f9b8e",
+    "#1d82b7",
+]
+special_workspace_colors = ["#b91d47"]
+
+[menu]
+opacity = 0.95
+backdrop = 0.3

@@ -1,0 +1,40 @@
+# The Catppuccin Latte preset palette.
+#
+# A whole appearance table: every key the `[appearance]` section of
+# `config.toml` accepts works here, anything left out falls back to the
+# built-in defaults. Copy this file to start a custom theme.
+
+style = "Islands"
+opacity = 0.95
+bar_opacity = 0.0
+greeting = true
+follow_hyde = true
+auto_scale = false
+scale_factor = 1.0
+island_borders = false
+
+background_color = "#eff1f5"
+primary_color = "#8839ef"
+secondary_color = "#1e66f5"
+success_color = "#40a02b"
+danger_color = "#d20f39"
+warning_color = "#fab387"
+text_color = "#4c4f69"
+
+workspace_colors = [
+    "#1e66f5",
+    "#8839ef",
+    "#ea76cb",
+    "#fe640b",
+    "#df8e1d",
+    "#40a02b",
+    "#04a59f",
+    "#179299",
+    "#04a5e5",
+    "#7287fd",
+]
+special_workspace_colors = ["#e64553"]
+
+[menu]
+opacity = 0.95
+backdrop = 0.3

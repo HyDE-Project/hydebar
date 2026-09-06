@@ -51,7 +51,7 @@ pub use system_info::{
     MemoryFormat, SystemIndicator, SystemInfoCpu, SystemInfoDisk, SystemInfoGpu, SystemInfoMemory,
     SystemInfoTemperature, SystemModuleConfig
 };
-pub use themes::PresetTheme;
+pub use themes::{preset_appearance, preset_names};
 pub use updates::{HydeBranch, UpdatesModuleConfig};
 pub use validation::ConfigValidationError;
 pub use weather::WeatherModuleConfig;

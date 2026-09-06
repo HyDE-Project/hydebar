@@ -1,0 +1,36 @@
+# The Nord preset palette.
+#
+# A whole appearance table: every key the `[appearance]` section of
+# `config.toml` accepts works here, anything left out falls back to the
+# built-in defaults. Copy this file to start a custom theme.
+
+style = "Islands"
+opacity = 0.95
+bar_opacity = 0.0
+greeting = true
+follow_hyde = true
+auto_scale = false
+scale_factor = 1.0
+island_borders = false
+
+background_color = "#2e3440"
+primary_color = "#88c0d0"
+secondary_color = "#81a1c1"
+success_color = "#a3be8c"
+danger_color = "#bf616a"
+warning_color = "#fab387"
+text_color = "#eceff4"
+
+workspace_colors = [
+    "#81a1c1",
+    "#88c0d0",
+    "#8fbcbb",
+    "#a3be8c",
+    "#ebcb8b",
+    "#d08770",
+]
+special_workspace_colors = ["#bf616a"]
+
+[menu]
+opacity = 0.95
+backdrop = 0.3
