@@ -29,6 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   <config.toml>]` reuses the layout mapping to restate modules, pill
   groups, clock format, layer and position, carrying scripted customs over
   with their commands and reporting entries with no counterpart.
+- Theme morph prototype: corner radii and the spacing scale ride the
+  appearance transition instead of snapping, so a theme switch breathes
+  the gaps and corners over with the palette. Font sizes, heights and
+  discrete settings still snap: the global scale base, the icon theme and
+  the compositor surfaces rebuild from the target.
 
 ### Fixed
 

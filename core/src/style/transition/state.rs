@@ -99,9 +99,10 @@ impl AppearanceTransition {
     /// Blends towards `appearance`, or applies it immediately when `animated`
     /// is false.
     ///
-    /// Colours and opacities cross-fade; discrete settings such as the layout
-    /// style or the scale factor switch instantly because the compositor side
-    /// of the shell has to be reconfigured for them anyway.
+    /// Colours, opacities and the continuous geometry cross-fade; discrete
+    /// settings such as the layout style or the scale factor switch
+    /// instantly because the compositor side of the shell has to be
+    /// reconfigured for them anyway.
     ///
     /// A target the transition is already aimed at changes nothing at all,
     /// and one landing mid-flight only re-aims the running travel: a theme

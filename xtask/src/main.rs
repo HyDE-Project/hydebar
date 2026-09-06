@@ -10,6 +10,8 @@ mod checklist;
 mod generate;
 mod import;
 mod import_emit;
+mod import_scope;
+mod import_source;
 mod kinds;
 mod names;
 
