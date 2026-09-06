@@ -21,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Module roster as a single declarative list: the `ModuleName` variants,
   the shipped roster and both spellings grow from one macro invocation,
   so adding a module touches one row instead of three files.
+- Module scaffolding: `cargo xtask new-module <name> --kind
+  simple|polling|listener|menu` writes the configuration, state, view and
+  trait files and prints the wiring checklist that turns the skeleton into
+  a module; the contributing guide walks through the whole flow.
 
 ### Fixed
 

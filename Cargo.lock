@@ -1895,6 +1895,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "hydebar-xtask"
+version = "0.2.0"
+
+[[package]]
 name = "hyper"
 version = "1.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

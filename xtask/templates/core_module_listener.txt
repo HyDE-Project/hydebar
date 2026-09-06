@@ -1,0 +1,48 @@
+//! Registration of the event stream the {{label}} module owns.
+
+use std::future::pending;
+
+use super::{{Pascal}};
+use crate::{
+    ModuleContext,
+    event_bus::ModuleEvent,
+    modules::{Module, ModuleError}
+};
+
+impl<M> Module<M> for {{Pascal}}
+where
+    M: 'static
+{
+    type RegistrationData<'a> = ();
+
+    fn register(
+        &mut self,
+        ctx: &ModuleContext,
+        (): Self::RegistrationData<'_>
+    ) -> Result<(), ModuleError> {
+        // TODO: add a `{{Pascal}}(crate::modules::{{Snake}}::Message)`
+        // variant to `ModuleEvent` first; the line below names it.
+        self.sender = Some(ctx.module_sender(ModuleEvent::{{Pascal}}));
+
+        if let Some(handle) = self.task.take() {
+            handle.abort();
+        }
+
+        // TODO: spawn the real listener and send `Message` values through
+        // the sender instead of parking an idle task.
+        if self.sender.is_some() {
+            self.task = Some(ctx.runtime_handle().spawn(pending()));
+        }
+
+        Ok(())
+    }
+
+    /// Drops the event stream once the entry leaves the bar.
+    fn deregister(&mut self) {
+        if let Some(task) = self.task.take() {
+            task.abort();
+        }
+
+        self.sender = None;
+    }
+}

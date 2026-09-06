@@ -425,29 +425,33 @@ appearance = "your-theme-name"
 
 ### Creating a New Module
 
-A module lives in `core/src/modules/` and implements the
-`Module` trait from `core/src/modules.rs` (`register`,
-`deregister`, `poll_schedule`/`poll`, `view`, `subscription`). Wiring it up
-touches four places:
+Scaffold it instead of copying an existing one:
 
-1. **Name** - add a variant to `ModuleName` (and its `BUILT_IN` list,
-   `as_str`, `label`) in `proto/src/config/modules.rs`
-2. **Module** - the state, logic and iced view in
-   `core/src/modules/your_module.rs`, or in `core/src/modules/your_module/`
-   once its code passes 150 lines (see [File size](#file-size))
-3. **Events** - a `ModuleEvent` variant in
-   `core/src/event_bus.rs` if the module publishes background
-   updates
-4. **Registration and dispatch** - `gui/src/app/` —
-   `update/registration.rs` (register while hosted, release when not),
-   `update/modules.rs` and the module actions/element wiring under
-   `app/modules/`
+```bash
+cargo xtask new-module demo --kind polling --label "Demo" --doc "What it does."
+```
 
-Any per-module configuration gets its own file under
-`proto/src/config/` and a field on `Config`.
+Kinds: `simple` for a static entry, `polling` for a sampled readout,
+`listener` for an entry fed by an event stream it owns, `menu` for a
+listener entry opening a menu on press. The command writes the
+configuration, state, view and trait files, then prints the wiring
+checklist: the roster row, the `Config` field, the bus event and menu kind
+where the shape needs them, and the gui dispatch arms mirroring the clock
+module. Follow it top to bottom — every step keeps the tree compiling, and
+`cargo check --workspace` names any arm left behind. Finish with `cargo
+fmt`, `cargo clippy` and `cargo test` like any other change.
 
-See existing modules for reference: `modules/cpu.rs` is a small self-contained
-one, `modules/media_player/` a large one split into `state`, `messages`,
+What lands on disk: `proto/src/config/<name>.rs` holds the module
+configuration, `core/src/modules/<name>.rs` the shared state and messages,
+`core/src/modules/<name>/{module,state,view}.rs` the trait implementation,
+the message folding and the drawing. Fill the marked `TODO`s, replacing the
+placeholder readout, events and cadences with the real ones. A module
+lives in `core/src/modules/` and implements the `Module` trait from
+`core/src/modules.rs` (`register`, `deregister`, `poll_schedule`/`poll`,
+`subscription`); drawing stays in the module's own `bar_view`.
+
+See existing modules for reference: `keyboard_submap` is a small listener
+one, `media_player/` a large one split into `state`, `messages`,
 `commands` and `view`.
 
 ---
