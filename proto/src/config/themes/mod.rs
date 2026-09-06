@@ -76,6 +76,29 @@ pub fn preset_appearance(name: &str) -> Option<Appearance> {
     }
 }
 
+/// Borrows the TOML source of the named preset.
+///
+/// The configuration loader parses a base theme out of this instead of going
+/// through [`preset_appearance`], so an `[appearance]` table naming a `theme`
+/// merges key by key rather than replacing the whole palette. Returns
+/// [`None`] when no shipped theme answers to `name`.
+///
+/// # Examples
+///
+/// ```
+/// use hydebar_proto::config::preset_source;
+///
+/// assert!(preset_source("nord").is_some());
+/// assert!(preset_source("no-such-theme").is_none());
+/// ```
+#[must_use]
+pub fn preset_source(name: &str) -> Option<&'static str> {
+    THEME_SOURCES
+        .iter()
+        .find(|(known, _)| *known == name)
+        .map(|(_, source)| *source)
+}
+
 /// Accepts either a preset name or a whole appearance table.
 ///
 /// # Errors

@@ -19,6 +19,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Preset themes are stored as embedded TOML tables instead of Rust code,
   so contributing a theme is a new file plus one roster row.
 
+### Fixed
+
+- The theme override examples in the theming guide named a preset and an
+  `[appearance]` table in the same file, which TOML rejects as a duplicate
+  key. Overrides now work through a `theme` key inside `[appearance]` that
+  layers the named theme under the keys beside it.
+
 ## [0.2.0] - 2026-09-02
 
 ## [0.1.3] - 2026-09-02

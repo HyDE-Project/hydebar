@@ -20,10 +20,13 @@ use hydebar_proto::{
     theme_source::{self, HydeTheme}
 };
 
-use self::{theme::resolve_named_theme, unknown::read_naming_unknown};
+use self::{
+    theme::resolve_named_theme, theme_base::resolve_theme_base, unknown::read_naming_unknown
+};
 use super::hyde::follow_hyde;
 
-mod theme;
+pub(super) mod theme;
+mod theme_base;
 mod unknown;
 
 #[derive(Debug)]
@@ -110,6 +113,7 @@ where
             source
         })?;
     resolve_named_theme(&mut table, path)?;
+    resolve_theme_base(&mut table, path)?;
     let declared = declares_modules(&table);
 
     read_naming_unknown(table, path)

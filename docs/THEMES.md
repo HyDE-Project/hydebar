@@ -153,21 +153,24 @@ appearance = "tokyo-night-light"
 Start with a theme and tweak specific colors:
 
 ```toml
-appearance = "catppuccin-mocha"
-
 [appearance]
+theme = "catppuccin-mocha"
+
 # Override just the primary color
 primary_color = "#ff0000"
 ```
+
+The named theme is the base and your keys win over it, so a tweak never
+needs the whole palette copied. Nested tables merge too: overriding one
+`[appearance.menu]` value keeps the rest of the menu it came with.
 
 ### Adjust Opacity
 
 Make themes more or less transparent:
 
 ```toml
-appearance = "nord"
-
 [appearance]
+theme = "nord"
 opacity = 0.85  # More transparent
 
 [appearance.menu]
@@ -180,9 +183,8 @@ backdrop = 0.5  # Dim the screen behind an open menu
 Themes work with all styles:
 
 ```toml
-appearance = "dracula"
-
 [appearance]
+theme = "dracula"
 style = "Islands"   # Default
 # style = "Solid"   # No gaps between modules
 # style = "Gradient" # Gradient backgrounds

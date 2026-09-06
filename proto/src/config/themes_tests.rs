@@ -1,7 +1,7 @@
 #![allow(clippy::float_cmp)]
 use hex_color::HexColor;
 
-use super::themes::{preset_appearance, preset_names};
+use super::themes::{preset_appearance, preset_names, preset_source};
 use crate::config::{Appearance, AppearanceColor, AppearanceStyle};
 
 /// Background, primary and text shades plus the workspace palette length of
@@ -103,6 +103,19 @@ fn eleven_presets_ship_with_the_bar() {
     assert_eq!(names.len(), PALETTE_CHECKS.len());
     assert!(names.contains(&"dracula"));
     assert!(names.contains(&"tokyo-night-storm"));
+}
+
+#[test]
+fn every_preset_exposes_a_parseable_source_table() {
+    for check in PALETTE_CHECKS {
+        let source =
+            preset_source(check.name).unwrap_or_else(|| panic!("source for '{}'", check.name));
+        let table: ::toml::Table = ::toml::from_str(source).expect("preset source parses");
+
+        assert!(table.contains_key("background_color"), "{}", check.name);
+    }
+
+    assert!(preset_source("mocha").is_none());
 }
 
 #[test]

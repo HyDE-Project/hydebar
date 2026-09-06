@@ -13,19 +13,20 @@
 
 use std::{fs, path::Path};
 
-use hydebar_proto::config::{preset_appearance, preset_names};
+use hydebar_proto::config::{preset_names, preset_source};
 use serde::de::Error as _;
 
 use super::ConfigReadError;
 
 /// Subdirectory beside the configuration file holding user theme files.
-const THEMES_DIRECTORY: &str = "themes";
+pub(super) const THEMES_DIRECTORY: &str = "themes";
 
-/// Replaces a named `appearance` with the user's theme file when one answers.
+/// Replaces a named `appearance` with the theme it answers to.
 ///
 /// An inline appearance table, or no appearance at all, passes through
-/// untouched. A name the shipped themes know passes through as well — the
-/// serde bridge resolves those — unless a file of the same name shadows it.
+/// untouched. A name answers in two places — a `themes` directory beside
+/// the configuration file first, the themes shipped inside the binary
+/// second — and a file shadows the shipped theme of the same name.
 /// Anything else is a parse error naming every theme that would have
 /// answered: the shipped ones and the files beside the configuration.
 pub(super) fn resolve_named_theme(
@@ -41,59 +42,68 @@ pub(super) fn resolve_named_theme(
     };
 
     if !is_plain_name(&name) {
-        return Err(ConfigReadError::Parse {
-            path:   config_path.to_path_buf(),
-            source: toml::de::Error::custom(format!(
-                "invalid theme name '{name}': names stay within one directory"
-            ))
-        });
+        return Err(invalid_name_error(config_path, &name));
     }
 
     let themes_dir = config_path
         .parent()
         .map(|parent| parent.join(THEMES_DIRECTORY));
-    let candidate = themes_dir
-        .as_ref()
-        .map(|dir| dir.join(format!("{name}.toml")));
+    let base = base_table(&name, themes_dir.as_deref(), config_path)?;
+    table.insert("appearance".to_owned(), toml::Value::Table(base));
 
-    if let Some(path) = candidate.filter(|path| path.is_file()) {
-        return substitute_file(table, &path);
+    Ok(())
+}
+
+/// Reads the theme `name` answers to into a table.
+///
+/// Files beside the configuration win over the shipped themes; a base that
+/// neither answers to is the same helpful error the loader reports for an
+/// unknown name.
+pub(super) fn base_table(
+    name: &str,
+    themes_dir: Option<&Path>,
+    config_path: &Path
+) -> Result<toml::Table, ConfigReadError> {
+    if let Some(path) = themes_dir
+        .map(|dir| dir.join(format!("{name}.toml")))
+        .filter(|path| path.is_file())
+    {
+        let content = fs::read_to_string(&path).map_err(|source| ConfigReadError::Read {
+            path: path.clone(),
+            source
+        })?;
+        return toml::from_str(&content).map_err(|source| ConfigReadError::Parse {
+            path,
+            source
+        });
     }
 
-    if preset_appearance(&name).is_some() {
-        return Ok(());
+    if let Some(source) = preset_source(name) {
+        return toml::from_str(source).map_err(|source| ConfigReadError::Parse {
+            path: config_path.to_path_buf(),
+            source
+        });
     }
 
-    Err(unknown_theme_error(
-        config_path,
-        &name,
-        themes_dir.as_deref()
-    ))
+    Err(unknown_theme_error(config_path, name, themes_dir))
 }
 
 /// Whether `name` can name a file inside the themes directory.
 ///
 /// Slashes and parent references would climb out of it, so they are refused
 /// before any path is even built.
-fn is_plain_name(name: &str) -> bool {
+pub(super) fn is_plain_name(name: &str) -> bool {
     !(name.is_empty() || name == "." || name == ".." || name.contains('/') || name.contains('\\'))
 }
 
-/// Reads the theme file and stands it in for the name that pointed at it.
-fn substitute_file(table: &mut toml::Table, path: &Path) -> Result<(), ConfigReadError> {
-    let content = fs::read_to_string(path).map_err(|source| ConfigReadError::Read {
-        path: path.to_path_buf(),
-        source
-    })?;
-    let theme: toml::Table =
-        toml::from_str(&content).map_err(|source| ConfigReadError::Parse {
-            path: path.to_path_buf(),
-            source
-        })?;
-
-    table.insert("appearance".to_owned(), toml::Value::Table(theme));
-
-    Ok(())
+/// Builds the parse error for a theme name that climbs out of its directory.
+pub(super) fn invalid_name_error(config_path: &Path, name: &str) -> ConfigReadError {
+    ConfigReadError::Parse {
+        path:   config_path.to_path_buf(),
+        source: toml::de::Error::custom(format!(
+            "invalid theme name '{name}': names stay within one directory"
+        ))
+    }
 }
 
 /// Builds the parse error for a name nothing answers to.
@@ -167,7 +177,7 @@ mod tests {
     }
 
     #[test]
-    fn a_builtin_name_passes_through_without_a_themes_directory() {
+    fn a_builtin_name_resolves_to_its_palette() {
         let root = TempDir::new().expect("temporary directory");
         let path = config_in(root.path(), "nord");
         let mut table: toml::Table =
@@ -175,11 +185,15 @@ mod tests {
 
         resolve_named_theme(&mut table, &path).expect("a builtin name resolves");
 
-        assert!(
-            table
-                .get("appearance")
-                .and_then(toml::Value::as_str)
-                .is_some()
+        let appearance = table
+            .get("appearance")
+            .and_then(toml::Value::as_table)
+            .expect("the name stands in for its table");
+        assert_eq!(
+            appearance
+                .get("background_color")
+                .and_then(toml::Value::as_str),
+            Some("#2e3440")
         );
     }
 
