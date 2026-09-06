@@ -164,8 +164,8 @@ mod tests {
         let mut app = test_app();
 
         for module_name in ModuleName::BUILT_IN {
-            let owned = app.module_owner(&module_name).is_some();
-            let owned_mut = app.module_owner_mut(&module_name).is_some();
+            let owned = app.module_owner(module_name).is_some();
+            let owned_mut = app.module_owner_mut(module_name).is_some();
 
             assert_eq!(
                 owned, owned_mut,

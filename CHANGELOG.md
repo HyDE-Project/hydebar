@@ -18,6 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Unknown names fail with the list of shipped themes and theme files.
 - Preset themes are stored as embedded TOML tables instead of Rust code,
   so contributing a theme is a new file plus one roster row.
+- Module roster as a single declarative list: the `ModuleName` variants,
+  the shipped roster and both spellings grow from one macro invocation,
+  so adding a module touches one row instead of three files.
 
 ### Fixed
 
