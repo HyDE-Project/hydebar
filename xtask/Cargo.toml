@@ -13,6 +13,11 @@ name = "xtask"
 path = "src/main.rs"
 
 [dependencies]
+hydebar-proto = { path = "../proto" }
+serde_json.workspace = true
+
+[dev-dependencies]
+toml.workspace = true
 
 [lints]
 workspace = true

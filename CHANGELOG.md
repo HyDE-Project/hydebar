@@ -25,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   simple|polling|listener|menu` writes the configuration, state, view and
   trait files and prints the wiring checklist that turns the skeleton into
   a module; the contributing guide walks through the whole flow.
+- Waybar migration: `cargo xtask import-waybar <config.jsonc> [--out
+  <config.toml>]` reuses the layout mapping to restate modules, pill
+  groups, clock format, layer and position, carrying scripted customs over
+  with their commands and reporting entries with no counterpart.
 
 ### Fixed
 

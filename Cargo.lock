@@ -1897,6 +1897,11 @@ dependencies = [
 [[package]]
 name = "hydebar-xtask"
 version = "0.2.0"
+dependencies = [
+ "hydebar-proto",
+ "serde_json",
+ "toml",
+]
 
 [[package]]
 name = "hyper"

@@ -15,7 +15,20 @@ use crate::config::ModuleName;
 /// built-in tables answer for the rest, and a name nothing answers for is
 /// skipped, which is how a layout survives entries we have no counterpart
 /// for.
-pub(super) fn module_for(name: &str, custom: &BTreeSet<&str>) -> Option<ModuleName> {
+///
+/// # Examples
+///
+/// ```
+/// use std::collections::BTreeSet;
+///
+/// use hydebar_proto::{bar_layout::module_for, config::ModuleName};
+///
+/// let custom = BTreeSet::new();
+/// assert_eq!(module_for("clock", &custom), Some(ModuleName::Clock));
+/// assert_eq!(module_for("no-such-module", &custom), None);
+/// ```
+#[must_use]
+pub fn module_for(name: &str, custom: &BTreeSet<&str>) -> Option<ModuleName> {
     let name = name.split('#').next().unwrap_or(name);
 
     if let Some(tail) = name.strip_prefix("custom/") {

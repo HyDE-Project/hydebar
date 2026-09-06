@@ -8,13 +8,15 @@ use std::{env, path::PathBuf, process::ExitCode};
 
 mod checklist;
 mod generate;
+mod import;
+mod import_emit;
 mod kinds;
 mod names;
 
 use kinds::ModuleKind;
 
-/// Usage line printed for any invocation the parser refuses.
-const USAGE: &str = "usage: cargo xtask new-module <name> [--kind simple|polling|listener|menu] [--label \"...\"] [--doc \"...\"]";
+/// Usage lines printed for any invocation the parser refuses.
+const USAGE: &str = "usage:\n  cargo xtask new-module <name> [--kind simple|polling|listener|menu] [--label \"...\"] [--doc \"...\"]\n  cargo xtask import-waybar <config.jsonc> [--out <config.toml>]";
 
 /// Command-line flags of `new-module`, in the order they are read.
 struct Args {
@@ -100,6 +102,10 @@ fn fs_contains_workspace(manifest: &std::path::Path) -> bool {
 
 fn run() -> Result<(), String> {
     let arguments: Vec<String> = env::args().skip(1).collect();
+
+    if arguments.first().map(String::as_str) == Some("import-waybar") {
+        return import::run_command(&arguments[1..]);
+    }
 
     if arguments.first().map(String::as_str) != Some("new-module") {
         return Err(USAGE.to_owned());
