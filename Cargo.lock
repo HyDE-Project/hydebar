@@ -1795,7 +1795,7 @@ dependencies = [
 
 [[package]]
 name = "hydebar-app"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "clap",
  "flexi_logger",
@@ -1811,7 +1811,7 @@ dependencies = [
 
 [[package]]
 name = "hydebar-core"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "chrono",
  "dirs 6.0.0",
@@ -1856,7 +1856,7 @@ dependencies = [
 
 [[package]]
 name = "hydebar-gui"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "flexi_logger",
  "hydebar-core",
@@ -1871,7 +1871,7 @@ dependencies = [
 
 [[package]]
 name = "hydebar-proto"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "hex_color",
  "log",
@@ -5234,9 +5234,9 @@ dependencies = [
 
 [[package]]
 name = "toml"
-version = "1.1.4+spec-1.1.0"
+version = "1.1.5+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3aace63f4bbcdfc2c965b059de67119c89c4017a70d633be6c104910f67056f5"
+checksum = "12c0ba9680044b4ce98d391a62094047eada0d64860b80166c39f4a6b5640785"
 dependencies = [
  "indexmap 2.14.1",
  "serde_core",
