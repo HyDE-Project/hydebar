@@ -31,6 +31,8 @@ impl Menu {
             self.opacity.set_response(Duration::from_millis(
                 animation_config.menu_fade_duration_ms
             ));
+            self.opacity
+                .set_damping_ratio(animation_config.damping_ratio);
             self.opacity.set_target(target);
         } else {
             self.opacity.snap_to(target);

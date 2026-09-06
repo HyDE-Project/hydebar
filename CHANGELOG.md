@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Design tokens in `[appearance]`: `spacing_scale` loosens or tightens
+  every font-derived gap at once, and `damping_ratio` sets the character
+  of the menu entrance spring without touching hover feedback.
+
 ## [0.2.0] - 2026-09-02
 
 ## [0.1.3] - 2026-09-02

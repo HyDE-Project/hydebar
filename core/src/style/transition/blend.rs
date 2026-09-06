@@ -17,6 +17,7 @@ pub(super) fn blend_appearance(from: &Appearance, to: &Appearance, t: f32) -> Ap
         radius:                   to.radius,
         height:                   to.height,
         side_padding:             to.side_padding,
+        spacing_scale:            to.spacing_scale,
         follow_hyde:              to.follow_hyde,
         auto_scale:               to.auto_scale,
         scale_factor:             to.scale_factor,

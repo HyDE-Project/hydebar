@@ -188,6 +188,26 @@ style = "Islands"   # Default
 # style = "Gradient" # Gradient backgrounds
 ```
 
+### Tune Motion and Density
+
+Two design tokens scale the whole bar at once, whatever the theme:
+
+```toml
+[appearance]
+spacing_scale = 1.25  # Loosen every gap; 1.0 keeps reference proportions
+damping_ratio = 0.8   # Let menus overshoot and settle with a bounce
+
+[appearance.animations]
+menu_fade_duration_ms = 250
+hover_duration_ms = 120
+```
+
+`spacing_scale` multiplies every font-derived padding and gap, so the
+layout breathes without touching the text size. `damping_ratio` sets the
+character of the menu entrance spring: `1.0` rides in critically damped
+and never overshoots, lower values bounce, higher values slow the approach
+down. Hovers stay critically damped either way.
+
 ---
 
 ## Creating Custom Themes
