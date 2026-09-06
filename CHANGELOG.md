@@ -36,6 +36,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `[appearance]` table in the same file, which TOML rejects as a duplicate
   key. Overrides now work through a `theme` key inside `[appearance]` that
   layers the named theme under the keys beside it.
+- A custom module with only a click command and no readout failed to parse,
+  although the guide documents exactly that and the runtime supports it:
+  `listen_cmd` and `exec` are optional now.
+- The FAQ pointed at a `README.md#custom-modules` section that does not
+  exist; custom modules have their own guide with copy-paste examples now.
 
 ## [0.2.0] - 2026-09-02
 
