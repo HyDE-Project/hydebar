@@ -127,11 +127,11 @@ jobs:
       - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16
         with:
           key: coverage
-      - uses: taiki-e/install-action@37f7c5781271959fb65b6b35224e28652ff2b63d
+      - uses: taiki-e/install-action@e67fa11c4b9316fa714ddf0abed07a0c3143b95b
         with:
           tool: cargo-llvm-cov
       - run: cargo +nightly llvm-cov --workspace --all-features --lcov --output-path lcov.info
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: lcov
           path: lcov.info
@@ -290,7 +290,7 @@ jobs:
       image: archlinux:latest
     steps:
       - name: Cache pacman packages
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: /var/cache/pacman/pkg
           key: pacman-${{ hashFiles('.github/workflows/ci.yml') }}
@@ -326,7 +326,7 @@ jobs:
           FILE="hydebar-${VERSION}-x86_64-linux-gnu.tar.gz"
           sha256sum "${FILE}" > "${FILE}.sha256"
           cat "${FILE}.sha256"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: release-archive
           path: |
@@ -343,7 +343,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: v${{ needs.release-gate.outputs.version }}
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: release-archive
       - name: Create release
@@ -410,7 +410,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: v${{ needs.release-gate.outputs.version }}
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: release-archive
       - name: Download and calculate checksum
@@ -438,7 +438,7 @@ jobs:
               -p PKGBUILD.bin > .SRCINFO.bin
           "
       - name: Publish
-        uses: KSXGitHub/github-actions-deploy-aur@v4.1.1
+        uses: KSXGitHub/github-actions-deploy-aur@v4.2.0
         with:
           pkgname: hydebar-bin
           pkgbuild: ./PKGBUILD.bin
