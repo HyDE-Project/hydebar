@@ -40,8 +40,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   materialising at full size; scrolling boxes grow towards their room.
 - Opt-in screen frame: `[appearance.frame]` paints a ring along any
   combination of screen edges on the desk surface, with rounded outer
-  corners, a rounded joint where a strip meets the bar band, per-edge width
-  overrides and its own opacity (see `docs/FRAME.md`). The docked edge
+  corners, a rounded joint where a strip meets the bar band and per-edge
+  width overrides (see `docs/FRAME.md`). The ring paints the bar palette's
+  background at the island opacity from the same theme cache the islands
+  draw from — one source of truth, morphing with the bar. The docked edge
   never paints its run, which the bar band covers.
 
 ### Fixed

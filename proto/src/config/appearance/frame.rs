@@ -20,8 +20,6 @@
 
 use serde::Deserialize;
 
-use super::defaults::{default_opacity, opacity_deserializer};
-
 /// Default thickness of a frame strip, in pixels.
 const fn default_thickness() -> f32 {
     10.0
@@ -94,11 +92,16 @@ pub struct FrameWidths {
 
 /// The ring the bar draws around the screen.
 ///
-/// Disabled by default: the frame is a surface of its own on every output,
-/// and a user who never asked for one should not pay for it.
+/// Disabled by default: the frame paints on the desk surface of every
+/// output, and a user who never asked for one should see none of it.
+///
+/// The frame states no colour of its own: it paints the bar palette's
+/// background at the island opacity, the exact expression the island
+/// buttons rest at, so the ring and the bar are one paint by construction
+/// rather than by matching numbers.
 #[derive(Deserialize, Clone, Copy, Debug, PartialEq)]
 pub struct FrameConfig {
-    /// Whether the frame surface is created and drawn.
+    /// Whether the frame is painted on the desk surface.
     #[serde(default)]
     pub enabled:   bool,
     /// Thickness of a frame strip, in pixels.
@@ -107,12 +110,6 @@ pub struct FrameConfig {
     /// Radius of the outer corners and of the joints with the bar band.
     #[serde(default = "default_rounding")]
     pub rounding:  f32,
-    /// Opacity of the frame paint.
-    ///
-    /// Deliberately not the bar opacity: that one is transparent by default
-    /// on island styles, which would paint an invisible frame.
-    #[serde(deserialize_with = "opacity_deserializer", default = "default_opacity")]
-    pub opacity:   f32,
     /// Which screen edges carry the frame.
     #[serde(default)]
     pub edges:     FrameEdges,
@@ -127,7 +124,6 @@ impl Default for FrameConfig {
             enabled:   false,
             thickness: default_thickness(),
             rounding:  default_rounding(),
-            opacity:   default_opacity(),
             edges:     FrameEdges::default(),
             widths:    FrameWidths::default()
         }
@@ -169,7 +165,6 @@ mod tests {
         assert!(!config.enabled);
         assert_eq!(config.thickness, default_thickness());
         assert_eq!(config.rounding, default_rounding());
-        assert_eq!(config.opacity, default_opacity());
         assert_eq!(config.edges, FrameEdges::default());
     }
 

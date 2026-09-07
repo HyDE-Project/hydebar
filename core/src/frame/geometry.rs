@@ -216,7 +216,6 @@ mod tests {
             enabled: true,
             thickness,
             rounding: 25.0,
-            opacity: 1.0,
             edges: FrameEdges {
                 top:    true,
                 bottom: true,

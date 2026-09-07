@@ -1,19 +1,18 @@
-//! The frame surface: the ring around the screen.
+//! The frame: the ring around the screen, painted on the desk surface.
 //!
 //! The surface covers the whole screen but paints only the strips the user
-//! switched on, in the bar's own background colour at the frame's own
-//! opacity — so the frame reads as one surface with the bar rather than as
-//! a second bar. With the frame disabled, or before the compositor reports
-//! the screen size, the surface stays an empty drawing, exactly like a
-//! tooltip surface with nothing to show.
+//! switched on, in the exact paint the island buttons rest at — the bar
+//! palette's background at the island opacity, read from the same theme
+//! cache the buttons draw from. One source of truth, not two matching
+//! numbers: a theme morph repaints the ring with the bar, frame by frame.
+//! With the frame disabled, or before the compositor reports the screen
+//! size, nothing is painted.
 
 use hydebar_core::{
     HEIGHT,
     config::Appearance,
-    frame::{geometry::frame_pieces, program::FrameCanvas},
-    style::painted
+    frame::{geometry::frame_pieces, program::FrameCanvas}
 };
-use hydebar_proto::theme_source::Rgba;
 use iced::{Element, Length, widget::canvas};
 
 use super::super::state::{App, Message};
@@ -32,11 +31,11 @@ impl App {
         }
 
         let appearance: &Appearance = self.appearance();
-        let base = appearance.background_color.get_base();
-        let color = painted(Rgba {
-            a: frame.opacity,
-            ..base
-        });
+        let color = self
+            .theme_cache
+            .palette()
+            .background
+            .scale_alpha(appearance.opacity);
 
         #[expect(
             clippy::cast_possible_truncation,

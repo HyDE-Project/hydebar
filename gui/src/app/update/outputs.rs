@@ -4,7 +4,7 @@ use hydebar_core::outputs::{
     auto_metrics,
     scaling::{ScreenGeometry, screen_geometry}
 };
-use iced::{OutputEvent, Task};
+use iced::{OutputEvent, Task, set_input_region};
 use log::info;
 
 use super::super::state::{App, Message};
@@ -61,6 +61,25 @@ fn measure_screen(name: String) -> Task<Message> {
 }
 
 impl App {
+    /// Empties the input region of the desk surface standing on `name`.
+    ///
+    /// The frame canvas stretches that surface over the whole screen, and on
+    /// any layer above the background nothing shrinks it back: the region
+    /// stated together with the creation is dropped while the surface does
+    /// not exist yet. The measurement arrives over an async round-trip, by
+    /// which time the surface is mapped and the region sticks. An unfolded
+    /// desk is left alone: it owns its input while it is out.
+    fn strip_desk_input(&self, name: &str) -> Option<Task<Message>> {
+        if !self.config.appearance.frame.enabled || self.desk_presence(Some(name)) > 0.0 {
+            return None;
+        }
+
+        self.outputs
+            .desk_surfaces()
+            .find(|(_, screen)| *screen == Some(name))
+            .map(|(id, _)| set_input_region(id, Some(Vec::new())))
+    }
+
     /// Handles the messages this module owns.
     pub(super) fn update_outputs(&mut self, message: Message) -> Task<Message> {
         match message {
@@ -84,8 +103,14 @@ impl App {
                     return Task::none();
                 };
 
-                if self.outputs.has_name(&name) && self.adopt_measured(geometry) {
-                    self.refresh_appearance()
+                if self.outputs.has_name(&name) {
+                    let mut tasks = self.strip_desk_input(&name).into_iter().collect::<Vec<_>>();
+
+                    if self.adopt_measured(geometry) {
+                        tasks.push(self.refresh_appearance());
+                    }
+
+                    Task::batch(tasks)
                 } else {
                     Task::none()
                 }

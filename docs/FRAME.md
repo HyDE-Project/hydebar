@@ -11,7 +11,6 @@ neither is true of the frame.
 enabled = true
 thickness = 10.0
 rounding = 25.0
-opacity = 1.0
 
 [appearance.frame.edges]
 top = false
@@ -21,6 +20,22 @@ right = true
 
 [appearance.frame.widths]
 left = 14.0
+```
+
+## Single source of truth
+
+The frame states no colour of its own. It paints the bar palette's
+background at the island opacity, read from the same theme cache the island
+buttons draw from — the exact expression the islands rest at. A theme morph
+repaints the ring with the bar, frame by frame, because both read the
+sampled appearance.
+
+Blur is compositor-side and keys on the surface namespace: the frame rides
+the desk surface, so a blur rule for the bar strip does not reach it. Mirror
+the rule for the desk layer:
+
+```ini
+layerrule = blur, hydebar-desk-layer
 ```
 
 ## Model
@@ -38,11 +53,12 @@ ending at a bare screen corner rounds its outer corner. Inner corners stay
 square: the frame is flat 2D paint, not a signed-distance field, so there is
 no gooey merge where a panel meets the ring.
 
-The frame is painted in the bar's background colour at the frame's own
-opacity, on the strip's own layer — the desk surface shares the strip's
-level, so both read the same blur background. A compositor blur rule for
-the desk layer blurs behind the frame too. The desk surface takes no pointer
-input while folded, so clicks pass through to the desktop underneath.
+The frame is painted in the bar's background colour at the island opacity,
+on the strip's own layer — the desk surface shares the strip's level, so
+both read the same blur background. The desk surface takes no pointer input
+while folded, so clicks pass through to the desktop underneath; the empty
+region is stated once the screen is measured, because the region stated
+with the creation is dropped before the surface exists.
 
 ## Honest limits
 
