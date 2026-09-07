@@ -12,8 +12,8 @@ use iced::{
     OutputId, SurfaceId as Id, Task, destroy_layer_surface, new_layer_surface, set_input_region
 };
 pub use settings::{
-    desk_settings, frame_settings, layer_height, main_settings, menu_settings,
-    notifications_settings, tooltip_settings
+    desk_settings, layer_height, main_settings, menu_settings, notifications_settings,
+    tooltip_settings
 };
 
 use crate::config::{AppearanceStyle, BarLayer, Position};
@@ -45,13 +45,6 @@ const MENU_NAMESPACE: &str = "hydebar-menu-layer";
 /// rule written for the menu backdrop must not fire because a workspace was
 /// cleared.
 pub const DESK_NAMESPACE: &str = "hydebar-desk-layer";
-
-/// Namespace of the surface the frame is drawn on.
-///
-/// Kept apart from the bar for the same reason as the tooltips: the frame
-/// covers the screen edges for as long as the bar runs, and a blur rule
-/// written for the bar strip must not fire because a frame edge is showing.
-pub const FRAME_NAMESPACE: &str = "hydebar-frame-layer";
 
 /// Namespace of the surface the notification popups are drawn on.
 ///
@@ -87,7 +80,6 @@ pub struct LayerSurfaceCreation<Message> {
     pub(crate) menu_id:          Id,
     pub(crate) tooltip_id:       Id,
     pub(crate) desk_id:          Id,
-    pub(crate) frame_id:         Id,
     pub(crate) notifications_id: Id,
     pub(crate) task:             Task<Message>
 }
@@ -120,7 +112,6 @@ pub fn create_layer_surfaces<Message: 'static>(
     let (menu_id, menu_task) = new_layer_surface(menu_settings(output));
     let (tooltip_id, tooltip_task) = new_layer_surface(tooltip_settings(output));
     let (desk_id, desk_task) = new_layer_surface(desk_settings(output, layer));
-    let (frame_id, frame_task) = new_layer_surface(frame_settings(output, layer));
     let (notifications_id, notifications_task) =
         new_layer_surface(notifications_settings(output, position));
 
@@ -129,7 +120,6 @@ pub fn create_layer_surfaces<Message: 'static>(
         menu_id,
         tooltip_id,
         desk_id,
-        frame_id,
         notifications_id,
         task: Task::batch(vec![
             main_task,
@@ -138,8 +128,6 @@ pub fn create_layer_surfaces<Message: 'static>(
             draw_only(tooltip_id),
             desk_task,
             draw_only(desk_id),
-            frame_task,
-            draw_only(frame_id),
             notifications_task,
             draw_only(notifications_id),
         ])
@@ -151,7 +139,6 @@ pub fn destroy_layer_surfaces<Message: 'static>(
     menu_id: Id,
     tooltip_id: Id,
     desk_id: Id,
-    frame_id: Id,
     notifications_id: Id
 ) -> Task<Message> {
     Task::batch(vec![
@@ -159,7 +146,6 @@ pub fn destroy_layer_surfaces<Message: 'static>(
         destroy_layer_surface(menu_id),
         destroy_layer_surface(tooltip_id),
         destroy_layer_surface(desk_id),
-        destroy_layer_surface(frame_id),
         destroy_layer_surface(notifications_id),
     ])
 }

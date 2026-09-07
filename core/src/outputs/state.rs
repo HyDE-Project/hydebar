@@ -36,8 +36,6 @@ struct ShellInfo {
     tooltip:          Option<(ModuleName, TooltipInfo)>,
     /// Surface the desk of this output is drawn on.
     desk_id:          Id,
-    /// Surface the frame of this output is drawn on.
-    frame_id:         Id,
     /// Surface the notification popups of this output are drawn on.
     notifications_id: Id
 }
@@ -45,11 +43,7 @@ struct ShellInfo {
 impl ShellInfo {
     /// Reports whether `id` names one of the surfaces of this output.
     fn owns(&self, id: Id) -> bool {
-        self.id == id
-            || self.menu.id == id
-            || self.tooltip_id == id
-            || self.desk_id == id
-            || self.frame_id == id
+        self.id == id || self.menu.id == id || self.tooltip_id == id || self.desk_id == id
     }
 }
 
@@ -91,8 +85,6 @@ pub enum HasOutput<'a> {
     ///
     /// What screen it stands on is read back with [`Outputs::screen_of`].
     Desk,
-    /// The identifier refers to the surface the frame is drawn on.
-    Frame,
     /// The identifier refers to the surface the notification popups are drawn
     /// on.
     Notifications
@@ -127,7 +119,6 @@ impl Outputs {
             menu_id,
             tooltip_id,
             desk_id,
-            frame_id,
             notifications_id,
             task
         } = create_layer_surfaces(
@@ -153,7 +144,6 @@ impl Outputs {
                     tooltip_id,
                     tooltip: None,
                     desk_id,
-                    frame_id,
                     notifications_id
                 }),
                 None

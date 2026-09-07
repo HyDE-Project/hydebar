@@ -10,18 +10,14 @@
 //!     config::Position,
 //!     frame::{geometry::frame_pieces, program::FrameCanvas}
 //! };
-//! use hydebar_proto::config::FrameEdges;
+//! use hydebar_proto::config::FrameConfig;
 //! use iced::Color;
 //!
-//! let pieces = frame_pieces(
-//!     1920.0,
-//!     1080.0,
-//!     10.0,
-//!     25.0,
-//!     FrameEdges::default(),
-//!     Position::Top,
-//!     38.0
-//! );
+//! let frame = FrameConfig {
+//!     enabled: true,
+//!     ..FrameConfig::default()
+//! };
+//! let pieces = frame_pieces(1920.0, 1080.0, &frame, Position::Top, 38.0);
 //! let canvas = FrameCanvas {
 //!     pieces,
 //!     color: Color::BLACK

@@ -8,13 +8,17 @@
 //!
 //! ```rust
 //! use hydebar_core::{config::Position, frame::geometry::frame_pieces};
-//! use hydebar_proto::config::FrameEdges;
+//! use hydebar_proto::config::{FrameConfig, FrameEdges};
 //!
-//! let edges = FrameEdges {
-//!     top: false,
-//!     ..FrameEdges::default()
+//! let frame = FrameConfig {
+//!     enabled: true,
+//!     edges: FrameEdges {
+//!         top: false,
+//!         ..FrameEdges::default()
+//!     },
+//!     ..FrameConfig::default()
 //! };
-//! let pieces = frame_pieces(1920.0, 1080.0, 10.0, 25.0, edges, Position::Top, 38.0);
+//! let pieces = frame_pieces(1920.0, 1080.0, &frame, Position::Top, 38.0);
 //!
 //! assert!(pieces.iter().all(|piece| piece.w > 0.0 && piece.h > 0.0));
 //! ```

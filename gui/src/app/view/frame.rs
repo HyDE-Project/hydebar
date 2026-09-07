@@ -1,11 +1,11 @@
 //! The frame surface: the ring around the screen.
 //!
 //! The surface covers the whole screen but paints only the strips the user
-//! switched on, in the bar's own background colour at the bar's opacity — so
-//! the frame reads as one surface with the bar rather than as a second bar.
-//! With the frame disabled, or before the compositor reports the screen size,
-//! the surface stays an empty drawing, exactly like a tooltip surface with
-//! nothing to show.
+//! switched on, in the bar's own background colour at the frame's own
+//! opacity — so the frame reads as one surface with the bar rather than as
+//! a second bar. With the frame disabled, or before the compositor reports
+//! the screen size, the surface stays an empty drawing, exactly like a
+//! tooltip surface with nothing to show.
 
 use hydebar_core::{
     HEIGHT,
@@ -34,7 +34,7 @@ impl App {
         let appearance: &Appearance = self.appearance();
         let base = appearance.background_color.get_base();
         let color = painted(Rgba {
-            a: appearance.bar_opacity,
+            a: frame.opacity,
             ..base
         });
 
@@ -44,15 +44,7 @@ impl App {
         )]
         let bar_height = appearance.height_px().unwrap_or(HEIGHT as f32);
 
-        let pieces = frame_pieces(
-            screen_w,
-            screen_h,
-            frame.thickness,
-            frame.rounding,
-            frame.edges,
-            self.config.position,
-            bar_height
-        );
+        let pieces = frame_pieces(screen_w, screen_h, frame, self.config.position, bar_height);
 
         canvas(FrameCanvas {
             pieces,

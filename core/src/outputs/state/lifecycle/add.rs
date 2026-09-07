@@ -57,7 +57,6 @@ impl Outputs {
                 menu_id,
                 tooltip_id,
                 desk_id,
-                frame_id,
                 notifications_id,
                 task
             } = create_layer_surfaces(
@@ -84,7 +83,6 @@ impl Outputs {
                     tooltip_id,
                     tooltip: None,
                     desk_id,
-                    frame_id,
                     notifications_id
                 }),
                 Some(wl_output)

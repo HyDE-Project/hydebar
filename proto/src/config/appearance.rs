@@ -22,7 +22,7 @@ mod window;
 
 pub use animation::AnimationConfig;
 pub use color::AppearanceColor;
-pub use frame::{FrameConfig, FrameEdges};
+pub use frame::{FrameConfig, FrameEdges, FrameWidths};
 pub use menu::MenuAppearance;
 pub use metrics::{
     BAR_PADDING_EM, DEFAULT_FONT_SIZE, DEFAULT_RADIUS, GROUP_GAP_EM, ICON_LABEL_GAP_EM,

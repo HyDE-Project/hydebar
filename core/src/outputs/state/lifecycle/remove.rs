@@ -50,7 +50,6 @@ impl Outputs {
                         shell_info.menu.id,
                         shell_info.tooltip_id,
                         shell_info.desk_id,
-                        shell_info.frame_id,
                         shell_info.notifications_id
                     )
                 } else {
@@ -69,7 +68,6 @@ impl Outputs {
                         menu_id,
                         tooltip_id,
                         desk_id,
-                        frame_id,
                         notifications_id,
                         task
                     } = create_layer_surfaces(
@@ -94,7 +92,6 @@ impl Outputs {
                             tooltip_id,
                             tooltip: None,
                             desk_id,
-                            frame_id,
                             notifications_id
                         }),
                         None
@@ -131,7 +128,6 @@ impl Outputs {
                     shell_info.menu.id,
                     shell_info.tooltip_id,
                     shell_info.desk_id,
-                    shell_info.frame_id,
                     shell_info.notifications_id
                 )
             })

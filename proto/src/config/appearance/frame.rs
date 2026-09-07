@@ -1,11 +1,11 @@
 //! Frame slice of the appearance configuration: the ring around the screen.
 //!
-//! The frame is an opt-in perimeter the bar draws on its own layer surface,
-//! after the fashion of the `Caelestia` shell: a strip along any combination
-//! of screen edges, with rounded outer corners and a rounded joint where a
-//! strip meets the bar band. Each edge is switched on its own, so a bar
-//! docked to the top can stand on a left edge alone, on the left and bottom
-//! edges, or on the full ring.
+//! The frame is an opt-in perimeter the bar draws on its desk surface, after
+//! the fashion of the `Caelestia` shell: a strip along any combination of
+//! screen edges, with rounded outer corners and a rounded joint where a
+//! strip meets the bar band. Each edge is switched and sized on its own, so
+//! a bar docked to the top can stand on a left edge alone, on the left and
+//! bottom edges, or on the full ring.
 //!
 //! ```toml
 //! [appearance.frame]
@@ -13,9 +13,14 @@
 //!
 //! [appearance.frame.edges]
 //! top = false
+//!
+//! [appearance.frame.widths]
+//! left = 14.0
 //! ```
 
 use serde::Deserialize;
+
+use super::defaults::{default_opacity, opacity_deserializer};
 
 /// Default thickness of a frame strip, in pixels.
 const fn default_thickness() -> f32 {
@@ -68,6 +73,25 @@ impl Default for FrameEdges {
     }
 }
 
+/// Per-edge widths of the frame, overriding the shared thickness.
+///
+/// Every width defaults to unset, which paints the edge at `thickness`.
+#[derive(Deserialize, Clone, Copy, Debug, Default, PartialEq)]
+pub struct FrameWidths {
+    /// Width of the top strip, when it is not the shared thickness.
+    #[serde(default)]
+    pub top:    Option<f32>,
+    /// Width of the bottom strip, when it is not the shared thickness.
+    #[serde(default)]
+    pub bottom: Option<f32>,
+    /// Width of the left strip, when it is not the shared thickness.
+    #[serde(default)]
+    pub left:   Option<f32>,
+    /// Width of the right strip, when it is not the shared thickness.
+    #[serde(default)]
+    pub right:  Option<f32>
+}
+
 /// The ring the bar draws around the screen.
 ///
 /// Disabled by default: the frame is a surface of its own on every output,
@@ -83,9 +107,18 @@ pub struct FrameConfig {
     /// Radius of the outer corners and of the joints with the bar band.
     #[serde(default = "default_rounding")]
     pub rounding:  f32,
+    /// Opacity of the frame paint.
+    ///
+    /// Deliberately not the bar opacity: that one is transparent by default
+    /// on island styles, which would paint an invisible frame.
+    #[serde(deserialize_with = "opacity_deserializer", default = "default_opacity")]
+    pub opacity:   f32,
     /// Which screen edges carry the frame.
     #[serde(default)]
-    pub edges:     FrameEdges
+    pub edges:     FrameEdges,
+    /// Per-edge widths, each falling back to `thickness` when unset.
+    #[serde(default)]
+    pub widths:    FrameWidths
 }
 
 impl Default for FrameConfig {
@@ -94,7 +127,9 @@ impl Default for FrameConfig {
             enabled:   false,
             thickness: default_thickness(),
             rounding:  default_rounding(),
-            edges:     FrameEdges::default()
+            opacity:   default_opacity(),
+            edges:     FrameEdges::default(),
+            widths:    FrameWidths::default()
         }
     }
 }
@@ -134,6 +169,7 @@ mod tests {
         assert!(!config.enabled);
         assert_eq!(config.thickness, default_thickness());
         assert_eq!(config.rounding, default_rounding());
+        assert_eq!(config.opacity, default_opacity());
         assert_eq!(config.edges, FrameEdges::default());
     }
 
@@ -144,5 +180,19 @@ mod tests {
         assert!(config.enabled);
         assert!(!config.edges.top);
         assert!(config.edges.bottom && config.edges.left && config.edges.right);
+    }
+
+    #[test]
+    fn an_edge_width_overrides_the_shared_thickness() {
+        let config: FrameConfig = toml::from_str(
+            r"
+            [widths]
+            left = 14.0
+            "
+        )
+        .expect("the widths fixture names a valid configuration");
+
+        assert_eq!(config.widths.left, Some(14.0));
+        assert_eq!(config.widths.top, None);
     }
 }

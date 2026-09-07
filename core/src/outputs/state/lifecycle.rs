@@ -34,19 +34,11 @@ impl Outputs {
                         menu,
                         tooltip_id,
                         desk_id,
-                        frame_id,
                         notifications_id,
                         ..
                     } = shell_info;
 
-                    destroy_layer_surfaces(
-                        id,
-                        menu.id,
-                        tooltip_id,
-                        desk_id,
-                        frame_id,
-                        notifications_id
-                    )
+                    destroy_layer_surfaces(id, menu.id, tooltip_id, desk_id, notifications_id)
                 }),
             _ => Task::none()
         }

@@ -46,7 +46,6 @@ impl App {
                 )
             }
             Some(HasOutput::Desk) => self.desk_surface(id),
-            Some(HasOutput::Frame) => self.frame_surface(),
             Some(HasOutput::Notifications) => notifications_popup::view(
                 &self.notification_popups,
                 self.appearance(),
