@@ -35,7 +35,7 @@ pub(super) fn blend_appearance(from: &Appearance, to: &Appearance, t: f32) -> Ap
             opacity:  blend_f32(from.menu.opacity, to.menu.opacity, t),
             backdrop: blend_f32(from.menu.backdrop, to.menu.backdrop, t)
         },
-        frame:                    to.frame,
+        frame:                    to.frame.clone(),
         animations:               to.animations.clone(),
         greeting:                 to.greeting,
         background_color:         blend_color(from.background_color, to.background_color, t),

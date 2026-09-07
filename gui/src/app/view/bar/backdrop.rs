@@ -55,8 +55,10 @@ impl App {
     ///
     /// One colour for every style, because what it is wanted for is the going
     /// out: the styles differ in how the strip is painted at rest and not in
-    /// what is left of it as it leaves.
-    fn strip_ground(&self, theme: &iced::Theme) -> Color {
+    /// what is left of it as it leaves. The frame paints itself in this very
+    /// colour: the ring is the strip continued around the screen, and two
+    /// paints for one ground would read as two bars.
+    pub(crate) fn strip_ground(&self, theme: &iced::Theme) -> Color {
         let appearance = self.appearance();
         let opacity = if appearance.style == AppearanceStyle::Islands {
             appearance.bar_opacity

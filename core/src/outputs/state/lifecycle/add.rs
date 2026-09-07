@@ -10,11 +10,16 @@ use log::debug;
 
 use super::super::{Outputs, ShellInfo};
 use crate::{
+    HEIGHT,
     config::{self, AppearanceStyle, Position},
+    frame::panel_widths,
     menu::Menu,
     outputs::{
         config::is_output_requested,
-        wayland::{LayerSurfaceCreation, create_layer_surfaces}
+        wayland::{
+            LayerSurfaceCreation, PanelSurfaces, create_layer_surfaces, create_panel_surfaces,
+            frame_settings, new_layer_surface
+        }
     }
 };
 
@@ -69,6 +74,28 @@ impl Outputs {
                 config.layer
             );
 
+            let PanelSurfaces {
+                top_id,
+                left_id,
+                right_id,
+                bottom_id,
+                task: panel_task
+            } = create_panel_surfaces(
+                Some(wl_output),
+                config.layer,
+                position,
+                config.appearance.height_px().unwrap_or(HEIGHT as f32),
+                panel_widths(&config.appearance.frame, config.appearance.scale_factor)
+            );
+
+            let (frame_id, frame_task) = if config.appearance.frame.enabled {
+                let (id, task) = new_layer_surface(frame_settings(Some(wl_output), config.layer));
+
+                (Some(id), Some(task))
+            } else {
+                (None, None)
+            };
+
             let destroy_task = self.destroy_matching(|entry| entry.0.as_deref() == Some(name));
 
             self.0.push((
@@ -83,14 +110,25 @@ impl Outputs {
                     tooltip_id,
                     tooltip: None,
                     desk_id,
-                    notifications_id
+                    notifications_id,
+                    frame_id,
+                    left_panel_id: Some(left_id),
+                    right_panel_id: Some(right_id),
+                    bottom_panel_id: Some(bottom_id),
+                    top_panel_id: Some(top_id)
                 }),
                 Some(wl_output)
             ));
 
             let destroy_fallback_task = self.destroy_matching(|entry| entry.0.is_none());
 
-            Task::batch(vec![destroy_task, destroy_fallback_task, task])
+            let mut tasks = vec![destroy_task, destroy_fallback_task, task, panel_task];
+
+            if let Some(frame_task) = frame_task {
+                tasks.push(frame_task);
+            }
+
+            Task::batch(tasks)
         } else {
             let destroy_task = self.destroy_matching(|entry| entry.0.as_deref() == Some(name));
 

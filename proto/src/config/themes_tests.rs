@@ -234,14 +234,14 @@ fn deserialize_frame_edges_under_appearance() {
         [appearance.frame]
         enabled = true
 
-        [appearance.frame.edges]
-        top = false
+        [appearance.frame.edges.top]
+        enabled = false
     ";
 
     let config: TestConfig = ::toml::from_str(toml_content).expect("Failed to deserialize");
     assert!(config.appearance.frame.enabled);
-    assert!(!config.appearance.frame.edges.top);
-    assert!(config.appearance.frame.edges.left);
+    assert!(!config.appearance.frame.edges.top.enabled);
+    assert!(config.appearance.frame.edges.left.enabled);
 }
 
 #[test]

@@ -92,7 +92,12 @@ impl Outputs {
                             tooltip_id,
                             tooltip: None,
                             desk_id,
-                            notifications_id
+                            notifications_id,
+                            frame_id: None,
+                            left_panel_id: None,
+                            right_panel_id: None,
+                            bottom_panel_id: None,
+                            top_panel_id: None
                         }),
                         None
                     ));

@@ -8,15 +8,16 @@
 
 mod settings;
 
-use iced::{
+pub use iced::{
     OutputId, SurfaceId as Id, Task, destroy_layer_surface, new_layer_surface, set_input_region
 };
 pub use settings::{
-    desk_settings, layer_height, main_settings, menu_settings, notifications_settings,
-    tooltip_settings
+    desk_settings, frame_settings, layer_height, main_settings, menu_settings,
+    notifications_settings, panel_settings, tooltip_settings, PanelEdge
 };
 
 use crate::config::{AppearanceStyle, BarLayer, Position};
+use crate::frame::PanelWidths;
 
 /// Namespace of the surface the bar itself is drawn on.
 ///
@@ -70,7 +71,12 @@ pub const NOTIFICATIONS_WIDTH: u32 = 520;
 ///
 /// The empty region is stated *after* creation because the settings carry no
 /// region of their own.
-fn draw_only<Message: 'static>(id: Id) -> Task<Message> {
+/// States an empty pointer-input region on a surface, best effort.
+///
+/// The compositor keeps the region the surface was registered with; a region
+/// stated while the surface does not exist yet is dropped. Callers restate
+/// it once the surface is measured, which is what makes the region stick.
+pub fn draw_only<Message: 'static>(id: Id) -> Task<Message> {
     set_input_region(id, Some(Vec::new()))
 }
 
@@ -132,6 +138,87 @@ pub fn create_layer_surfaces<Message: 'static>(
             draw_only(notifications_id),
         ])
     }
+}
+
+/// Creates the three side panels of the frame for one screen.
+///
+/// Every panel exists for the whole life of the surface group, whether its
+/// edge is enabled or not: a config flip resizes the panel in place, and a
+/// window that only appears when the user turns a strip on would not be
+/// mapped in time for the desktop to be pushed off it. The widths come from
+/// the frame configuration, scaled like the bar's own height; a zero width
+/// is what a switched-off edge looks like.
+#[must_use]
+pub fn create_panel_surfaces<Message: 'static>(
+    output: Option<OutputId>,
+    layer: BarLayer,
+    dock: Position,
+    bar_height: f32,
+    widths: PanelWidths
+) -> PanelSurfaces<Message> {
+    let (top_id, top_task) = new_layer_surface(panel_settings(
+        PanelEdge::Top,
+        output,
+        layer,
+        dock,
+        bar_height,
+        widths.top
+    ));
+    let (left_id, left_task) = new_layer_surface(panel_settings(
+        PanelEdge::Left,
+        output,
+        layer,
+        dock,
+        bar_height,
+        widths.left
+    ));
+    let (right_id, right_task) = new_layer_surface(panel_settings(
+        PanelEdge::Right,
+        output,
+        layer,
+        dock,
+        bar_height,
+        widths.right
+    ));
+    let (bottom_id, bottom_task) = new_layer_surface(panel_settings(
+        PanelEdge::Bottom,
+        output,
+        layer,
+        dock,
+        bar_height,
+        widths.bottom
+    ));
+
+    PanelSurfaces {
+        top_id,
+        left_id,
+        right_id,
+        bottom_id,
+        task: Task::batch(vec![top_task, left_task, right_task, bottom_task])
+    }
+}
+
+/// The four panels of one screen, and the task that creates them.
+pub struct PanelSurfaces<Message> {
+    pub(crate) top_id:    Id,
+    pub(crate) left_id:   Id,
+    pub(crate) right_id:  Id,
+    pub(crate) bottom_id: Id,
+    pub(crate) task:      Task<Message>
+}
+
+/// Destroys the surfaces of this list that exist.
+///
+/// The ring and the panels are optional on a surface group: the fallback
+/// group of a bar without screens owns none of them, and a group whose user
+/// switched the frame off carries no ring. Destruction follows ownership
+/// instead of asking the caller to know which is which.
+pub fn destroy_optional_surfaces<Message: 'static>(ids: &[Option<Id>]) -> Task<Message> {
+    Task::batch(
+        ids.iter()
+            .filter_map(|id| id.map(destroy_layer_surface))
+            .collect::<Vec<_>>()
+    )
 }
 
 pub fn destroy_layer_surfaces<Message: 'static>(

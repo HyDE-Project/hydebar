@@ -105,6 +105,7 @@ impl App {
         )]
         let outputs_need_sync = impact.outputs_changed
             || impact.position_changed
+            || impact.frame_changed
             || self.config.appearance.style != config.appearance.style
             || self.config.appearance.scale_factor != config.appearance.scale_factor;
 
@@ -118,6 +119,10 @@ impl App {
                 self.config.appearance.scale_factor,
                 self.config.appearance.height_px()
             ));
+
+            for name in self.outputs.screens().flatten() {
+                tasks.push(super::super::outputs::measure_screen(name.to_owned()));
+            }
         }
 
         if impact.custom_modules_changed {

@@ -9,6 +9,7 @@ use super::{
         default_workspace_colors
     },
     defaults::{default_bar_opacity, default_opacity},
+    frame::default_rounding,
     settings::Appearance,
     size_value::SizeValue
 };
@@ -37,6 +38,16 @@ impl Appearance {
 
         if self.radius.is_none() {
             self.radius = theme.radius_px.map(SizeValue::Pixels);
+        }
+
+        #[expect(
+            clippy::float_cmp,
+            reason = "checks whether the field still holds its exact serde default"
+        )]
+        if let Some(radius) = theme.radius_px
+            && self.frame.rounding == default_rounding()
+        {
+            self.frame.rounding = radius;
         }
 
         if let Some(module_background) = theme.module_background {

@@ -36,6 +36,20 @@ struct ShellInfo {
     tooltip:          Option<(ModuleName, TooltipInfo)>,
     /// Surface the desk of this output is drawn on.
     desk_id:          Id,
+    /// Surface the ring of this output is painted on.
+    ///
+    /// The ring is the fullscreen, click-through paint of the frame; it is
+    /// absent while the frame is switched off or while no real screen owns
+    /// this group yet, which is why the identifier is optional.
+    frame_id:         Option<Id>,
+    /// Surface the left panel of this output is drawn on.
+    left_panel_id:    Option<Id>,
+    /// Surface the right panel of this output is drawn on.
+    right_panel_id:   Option<Id>,
+    /// Surface the bottom panel of this output is drawn on.
+    bottom_panel_id:  Option<Id>,
+    /// Surface the top panel of this output is drawn on.
+    top_panel_id:     Option<Id>,
     /// Surface the notification popups of this output are drawn on.
     notifications_id: Id
 }
@@ -43,7 +57,15 @@ struct ShellInfo {
 impl ShellInfo {
     /// Reports whether `id` names one of the surfaces of this output.
     fn owns(&self, id: Id) -> bool {
-        self.id == id || self.menu.id == id || self.tooltip_id == id || self.desk_id == id
+        self.id == id
+            || self.menu.id == id
+            || self.tooltip_id == id
+            || self.desk_id == id
+            || self.frame_id == Some(id)
+            || self.left_panel_id == Some(id)
+            || self.right_panel_id == Some(id)
+            || self.bottom_panel_id == Some(id)
+            || self.top_panel_id == Some(id)
     }
 }
 
@@ -85,6 +107,16 @@ pub enum HasOutput<'a> {
     ///
     /// What screen it stands on is read back with [`Outputs::screen_of`].
     Desk,
+    /// The identifier refers to the surface the ring of the frame is painted
+    /// on.
+    ///
+    /// What screen it stands on is read back with [`Outputs::screen_of`].
+    Frame,
+    /// The identifier refers to the surface one panel of the frame is drawn
+    /// on.
+    ///
+    /// Which edge it stands on is read back with [`Outputs::panel_edge_of`].
+    Panel,
     /// The identifier refers to the surface the notification popups are drawn
     /// on.
     Notifications
@@ -144,7 +176,12 @@ impl Outputs {
                     tooltip_id,
                     tooltip: None,
                     desk_id,
-                    notifications_id
+                    notifications_id,
+                    frame_id: None,
+                    left_panel_id: None,
+                    right_panel_id: None,
+                    bottom_panel_id: None,
+                    top_panel_id: None
                 }),
                 None
             )]),

@@ -3,6 +3,7 @@
 use iced::SurfaceId as Id;
 
 use super::{HasOutput, Outputs};
+use crate::outputs::wayland::PanelEdge;
 
 impl Outputs {
     /// Attempt to resolve a window [`Id`] to a tracked output or menu surface.
@@ -32,6 +33,14 @@ impl Outputs {
                     Some(HasOutput::Notifications)
                 } else if info.desk_id == id {
                     Some(HasOutput::Desk)
+                } else if info.frame_id == Some(id) {
+                    Some(HasOutput::Frame)
+                } else if info.left_panel_id == Some(id)
+                    || info.right_panel_id == Some(id)
+                    || info.bottom_panel_id == Some(id)
+                    || info.top_panel_id == Some(id)
+                {
+                    Some(HasOutput::Panel)
                 } else if info.tooltip_id == id {
                     Some(HasOutput::Tooltip)
                 } else {
@@ -113,6 +122,68 @@ impl Outputs {
     pub fn desk_surfaces(&self) -> impl Iterator<Item = (Id, Option<&str>)> {
         self.0.iter().filter_map(|(name, info, _)| {
             info.as_ref().map(|info| (info.desk_id, name.as_deref()))
+        })
+    }
+
+    /// Every ring surface the bar owns, with the screen it stands on.
+    ///
+    /// The ring covers the whole screen and must swallow nothing, so the
+    /// caller states its empty region again once the surface is mapped: the
+    /// region stated together with the creation is dropped while the surface
+    /// does not exist yet.
+    pub fn frame_surfaces(&self) -> impl Iterator<Item = (Id, Option<&str>)> {
+        self.0.iter().filter_map(|(name, info, _)| {
+            let name = name.as_deref();
+
+            info.as_ref().and_then(|info| {
+                info.frame_id.map(|frame_id| (frame_id, name))
+            })
+        })
+    }
+
+    /// Which edge of the frame the panel surface `id` stands on.
+    ///
+    /// A panel is named by its edge because that is everything the caller
+    /// needs to paint or place a widget on it; the strip's own geometry
+    /// follows from the screen the edge runs along.
+    #[must_use]
+    pub fn panel_edge_of(&self, id: Id) -> Option<PanelEdge> {
+        self.0.iter().find_map(|(_, info, _)| {
+            info.as_ref().and_then(|info| {
+                if info.top_panel_id == Some(id) {
+                    Some(PanelEdge::Top)
+                } else if info.left_panel_id == Some(id) {
+                    Some(PanelEdge::Left)
+                } else if info.right_panel_id == Some(id) {
+                    Some(PanelEdge::Right)
+                } else if info.bottom_panel_id == Some(id) {
+                    Some(PanelEdge::Bottom)
+                } else {
+                    None
+                }
+            })
+        })
+    }
+
+    /// Every side panel the bar owns, with the screen it stands on.
+    ///
+    /// The panels are real strips the user's desktop is pushed off of, so
+    /// their identifiers come back through [`Outputs::screen_of`] whenever
+    /// the caller has to know which screen a repaint belongs to.
+    pub fn panel_surfaces(&self) -> impl Iterator<Item = (Id, Option<&str>)> {
+        self.0.iter().flat_map(|(name, info, _)| {
+            let name = name.as_deref();
+
+            info.as_ref().into_iter().flat_map(move |info| {
+                [
+                    (info.top_panel_id, name),
+                    (info.left_panel_id, name),
+                    (info.right_panel_id, name),
+                    (info.bottom_panel_id, name)
+                ]
+                .into_iter()
+                .filter_map(|(id, name)| id.map(|id| (id, name)))
+            })
         })
     }
 

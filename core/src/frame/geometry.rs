@@ -23,7 +23,7 @@
 //! assert_eq!(pieces.len(), 3);
 //! ```
 
-use hydebar_proto::config::{FrameConfig, Position};
+use hydebar_proto::config::{FrameConfig, FrameEdge, Position};
 
 /// One painted rectangle of the frame, with a radius per corner.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -64,15 +64,16 @@ pub fn frame_pieces(
     let radius = frame.rounding.max(0.0);
     let wide = screen_w / 2.0;
     let high = screen_h / 2.0;
-    let width = |edge: Option<f32>| edge.unwrap_or(frame.thickness);
+    let width = |edge: &FrameEdge| edge.width.unwrap_or(frame.thickness);
 
-    let top_w = width(frame.widths.top).clamp(0.0, high);
-    let bottom_w = width(frame.widths.bottom).clamp(0.0, high);
-    let left_w = width(frame.widths.left).clamp(0.0, wide);
-    let right_w = width(frame.widths.right).clamp(0.0, wide);
+    let top_w = width(&frame.edges.top).clamp(0.0, high);
+    let bottom_w = width(&frame.edges.bottom).clamp(0.0, high);
+    let left_w = width(&frame.edges.left).clamp(0.0, wide);
+    let right_w = width(&frame.edges.right).clamp(0.0, wide);
 
-    let top_drawn = frame.edges.top && top_w > 0.0 && !matches!(dock, Position::Top);
-    let bottom_drawn = frame.edges.bottom && bottom_w > 0.0 && !matches!(dock, Position::Bottom);
+    let top_drawn = frame.edges.top.enabled && top_w > 0.0 && !matches!(dock, Position::Top);
+    let bottom_drawn = frame.edges.bottom.enabled && bottom_w > 0.0
+        && !matches!(dock, Position::Bottom);
 
     let mut pieces = Vec::with_capacity(4);
 
@@ -105,7 +106,7 @@ pub fn frame_pieces(
     let top_gap = if top_drawn { top_w } else { 0.0 };
     let bottom_gap = if bottom_drawn { bottom_w } else { 0.0 };
 
-    if frame.edges.left && left_w > 0.0 {
+    if frame.edges.left.enabled && left_w > 0.0 {
         VerticalRun {
             screen_h,
             strip: left_w,
@@ -118,7 +119,7 @@ pub fn frame_pieces(
         .push(&mut pieces, 0.0, true);
     }
 
-    if frame.edges.right && right_w > 0.0 {
+    if frame.edges.right.enabled && right_w > 0.0 {
         VerticalRun {
             screen_h,
             strip: right_w,
@@ -206,7 +207,7 @@ impl VerticalRun {
 mod tests {
     #![allow(clippy::float_cmp)]
 
-    use hydebar_proto::config::{FrameConfig, FrameEdges, FrameWidths};
+    use hydebar_proto::config::{FrameConfig, FrameEdge, FrameEdges};
 
     use super::*;
     use crate::frame::vertical;
@@ -217,16 +218,10 @@ mod tests {
             thickness,
             rounding: 25.0,
             edges: FrameEdges {
-                top:    true,
-                bottom: true,
-                left:   true,
-                right:  true
-            },
-            widths: FrameWidths {
-                top:    None,
-                bottom: None,
-                left:   None,
-                right:  None
+                top:    FrameEdge::drawn(),
+                bottom: FrameEdge::drawn(),
+                left:   FrameEdge::drawn(),
+                right:  FrameEdge::drawn()
             }
         }
     }
@@ -243,9 +238,9 @@ mod tests {
     fn a_lone_left_edge_rounds_its_joint_with_the_bar() {
         let mut config = frame(10.0);
 
-        config.edges.top = false;
-        config.edges.bottom = false;
-        config.edges.right = false;
+        config.edges.top.enabled = false;
+        config.edges.bottom.enabled = false;
+        config.edges.right.enabled = false;
 
         let pieces = frame_pieces(1920.0, 1080.0, &config, Position::Top, 38.0);
 
@@ -305,7 +300,7 @@ mod tests {
     fn a_left_width_overrides_the_shared_thickness() {
         let mut config = frame(10.0);
 
-        config.widths.left = Some(14.0);
+        config.edges.left.width = Some(14.0);
 
         let pieces = frame_pieces(1920.0, 1080.0, &config, Position::Top, 38.0);
         let left = pieces

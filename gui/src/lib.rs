@@ -20,15 +20,26 @@ pub use app::{App, Message};
 
 /// Builds the logger specification for a configured level.
 ///
+/// The configured level governs what the user asked to see. A debug build
+/// keeps tracing the bar's own crates down to `debug` on top of it, so a
+/// `cargo run` session can follow every frame and every surface decision
+/// even when the configuration quiets the rest of the world down to `warn`.
+///
 /// A level that does not parse falls back to `info` instead of failing: the
 /// same string arrives from a live configuration reload, where a panic would
 /// take the whole bar down over a typo in one key.
 #[must_use]
 pub fn get_log_spec(log_level: &str) -> LogSpecification {
-    LogSpecification::env_or_parse(log_level).unwrap_or_else(|err| {
-        log::warn!("unreadable log level `{log_level}`, staying on `info`: {err}");
-        LogSpecification::info()
-    })
+    let level = log_level.parse().unwrap_or(log::LevelFilter::Info);
+
+    if cfg!(debug_assertions) {
+        LogSpecification::builder()
+            .default(level)
+            .module("hydebar", log::LevelFilter::Debug)
+            .build()
+    } else {
+        LogSpecification::builder().default(level).build()
+    }
 }
 
 #[cfg(test)]
@@ -41,18 +52,26 @@ mod tests {
         let spec = get_log_spec("debug");
 
         assert_eq!(
-            spec.module_filters()[0].level_filter,
-            log::LevelFilter::Debug
+            spec.level_for_module(None),
+            Some(log::LevelFilter::Debug)
         );
+    }
+
+    #[test]
+    fn the_bar_keeps_its_own_tracing_in_a_debug_build() {
+        let spec = get_log_spec("warn");
+
+        assert_eq!(
+            spec.level_for_module(Some("hydebar")),
+            Some(log::LevelFilter::Debug)
+        );
+        assert_eq!(spec.level_for_module(None), Some(log::LevelFilter::Warn));
     }
 
     #[test]
     fn an_unreadable_level_falls_back_to_info_instead_of_panicking() {
         let spec = get_log_spec("hydebar=very-loud");
 
-        assert_eq!(
-            spec.module_filters()[0].level_filter,
-            log::LevelFilter::Info
-        );
+        assert_eq!(spec.level_for_module(None), Some(log::LevelFilter::Info));
     }
 }

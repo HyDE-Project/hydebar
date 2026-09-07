@@ -6,7 +6,7 @@
 use iced::{OutputId, Task};
 
 use super::{Outputs, ShellInfo};
-use crate::outputs::wayland::destroy_layer_surfaces;
+use crate::outputs::wayland::{destroy_layer_surfaces, destroy_optional_surfaces};
 
 mod add;
 mod remove;
@@ -35,10 +35,28 @@ impl Outputs {
                         tooltip_id,
                         desk_id,
                         notifications_id,
+                        frame_id,
+                        left_panel_id,
+                        right_panel_id,
+                        bottom_panel_id,
                         ..
                     } = shell_info;
 
-                    destroy_layer_surfaces(id, menu.id, tooltip_id, desk_id, notifications_id)
+                    Task::batch(vec![
+                        destroy_layer_surfaces(
+                            id,
+                            menu.id,
+                            tooltip_id,
+                            desk_id,
+                            notifications_id
+                        ),
+                        destroy_optional_surfaces(&[
+                            frame_id,
+                            left_panel_id,
+                            right_panel_id,
+                            bottom_panel_id,
+                        ])
+                    ])
                 }),
             _ => Task::none()
         }

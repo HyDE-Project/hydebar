@@ -37,26 +37,10 @@ impl App {
     pub(super) fn desk_surface(&self, id: Id) -> Element<'_, Message> {
         let screen = self.outputs.screen_of(id).flatten();
 
-        let content: Element<'_, Message> = if self.desk_holds(screen) {
-            self.desk_canvas(id, screen)
-        } else {
-            Row::new().into()
-        };
-
-        if !self.config.appearance.frame.enabled {
-            return content;
+        if !self.desk_holds(screen) {
+            return Row::new().into();
         }
 
-        iced::widget::Stack::new()
-            .push(content)
-            .push(self.frame_surface())
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .into()
-    }
-
-    /// The unfolded modules of one output, travelling with the desk spring.
-    fn desk_canvas(&self, id: Id, screen: Option<&str>) -> Element<'_, Message> {
         let unfolding = self.desk_presence(screen);
 
         let ink = blocks::Ink {

@@ -14,19 +14,28 @@ use crate::error::MainError;
 /// The log rotates daily and keeps a week of files. The returned handle stays
 /// with the caller so the level can be tightened once the configuration is
 /// read.
+///
+/// The level is split the way a debug build and a release build differ: a
+/// debug build (`cargo run` during development) traces the bar's own crates
+/// down to `debug`, so every frame and every surface decision can be
+/// followed; a release build ships `info` and above only, and the
+/// development tracing is compiled in but never passes the filter.
 pub fn init() -> Result<LoggerHandle, MainError> {
-    let logger = Logger::with(
-        LogSpecBuilder::new()
-            .default(log::LevelFilter::Info)
-            .build()
-    )
-    .log_to_file(FileSpec::default().directory("/tmp/hydebar"))
-    .duplicate_to_stdout(flexi_logger::Duplicate::All)
-    .rotate(
-        Criterion::Age(Age::Day),
-        Naming::Timestamps,
-        Cleanup::KeepLogFiles(7)
-    );
+    let mut spec = LogSpecBuilder::new();
+    spec.default(log::LevelFilter::Info);
+
+    if cfg!(debug_assertions) {
+        spec.module("hydebar", log::LevelFilter::Debug);
+    }
+
+    let logger = Logger::with(spec.build())
+        .log_to_file(FileSpec::default().directory("/tmp/hydebar"))
+        .duplicate_to_stdout(flexi_logger::Duplicate::All)
+        .rotate(
+            Criterion::Age(Age::Day),
+            Naming::Timestamps,
+            Cleanup::KeepLogFiles(7)
+        );
     let logger = if cfg!(debug_assertions) {
         logger.duplicate_to_stdout(flexi_logger::Duplicate::All)
     } else {
