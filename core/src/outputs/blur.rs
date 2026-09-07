@@ -64,10 +64,12 @@ struct Rule {
 
 /// Rules that make the compositor blur what shows through `namespace`.
 ///
-/// Only the surface the bar itself is drawn on is named. The menus, the
-/// tooltips and the notifications live on surfaces that span the screen so
-/// their content can be placed anywhere on it, and a blur rule matching those
-/// would blur the whole desktop for as long as one of them is up.
+/// The bar strip carries these for its own paint. The desk carries them for
+/// the frame, which paints on it at the island opacity exactly as the
+/// islands do. The menus, the tooltips and the notifications live on
+/// surfaces that span the screen so their content can be placed anywhere on
+/// it, and a blur rule matching those would blur the whole desktop for as
+/// long as one of them is up.
 fn rules(namespace: &str) -> [Rule; 2] {
     let matched = format!("^({namespace})$");
 
@@ -188,7 +190,7 @@ fn try_spelling(command: &str, argument: &str) -> bool {
     state_rule(command, &spelled).is_some_and(|answer| accepted(&answer))
 }
 
-/// Asks the compositor to blur what shows through the bar.
+/// Asks the compositor to blur what shows through the bar and the frame.
 ///
 /// Does nothing anywhere the compositor is not Hyprland, and nothing beyond
 /// wasting a moment where the desktop already states the same rule or has blur
@@ -204,8 +206,10 @@ pub fn request() {
         return;
     }
 
-    for rule in rules(MAIN_NAMESPACE) {
-        state(&rule);
+    for namespace in [MAIN_NAMESPACE, DESK_NAMESPACE] {
+        for rule in rules(namespace) {
+            state(&rule);
+        }
     }
 }
 
@@ -238,6 +242,22 @@ mod tests {
         assert_eq!(
             ignore_alpha.keyword,
             "ignore_alpha 0.0, match:namespace ^(hydebar-main-layer)$"
+        );
+    }
+
+    #[test]
+    fn the_desk_asks_for_the_same_blur_behind_its_frame() {
+        // the frame paints at the island opacity exactly as the islands do;
+        // one blurred and the other sharp would read as two different paints
+        let [blur, ignore_alpha] = rules(DESK_NAMESPACE);
+
+        assert_eq!(
+            blur.keyword,
+            "blur true, match:namespace ^(hydebar-desk-layer)$"
+        );
+        assert_eq!(
+            ignore_alpha.keyword,
+            "ignore_alpha 0.0, match:namespace ^(hydebar-desk-layer)$"
         );
     }
 

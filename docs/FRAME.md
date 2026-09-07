@@ -30,13 +30,14 @@ buttons draw from — the exact expression the islands rest at. A theme morph
 repaints the ring with the bar, frame by frame, because both read the
 sampled appearance.
 
-Blur is compositor-side and keys on the surface namespace: the frame rides
-the desk surface, so a blur rule for the bar strip does not reach it. Mirror
-the rule for the desk layer:
+## Blur
 
-```ini
-layerrule = blur, hydebar-desk-layer
-```
+The bar asks the compositor for blur itself — the same `layerrule` handshake
+it makes for the strip — naming both the bar surface and the desk surface
+the frame paints on. No manual rule is needed, and a `HyDE` theme switch
+re-states the rules after the desktop reloads, as it already does for the
+bar. Pixels the frame paints fully clear are skipped by the compositor
+(`ignore_alpha 0.0`), so the blur is only paid for behind the strips.
 
 ## Model
 
@@ -54,11 +55,11 @@ square: the frame is flat 2D paint, not a signed-distance field, so there is
 no gooey merge where a panel meets the ring.
 
 The frame is painted in the bar's background colour at the island opacity,
-on the strip's own layer — the desk surface shares the strip's level, so
-both read the same blur background. The desk surface takes no pointer input
-while folded, so clicks pass through to the desktop underneath; the empty
-region is stated once the screen is measured, because the region stated
-with the creation is dropped before the surface exists.
+on the strip's own layer — the desk surface shares the strip's level, and
+the bar states blur for both surfaces in one handshake. The desk surface
+takes no pointer input while folded, so clicks pass through to the desktop
+underneath; the empty region is stated once the screen is measured, because
+the region stated with the creation is dropped before the surface exists.
 
 ## Honest limits
 

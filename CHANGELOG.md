@@ -43,8 +43,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   corners, a rounded joint where a strip meets the bar band and per-edge
   width overrides (see `docs/FRAME.md`). The ring paints the bar palette's
   background at the island opacity from the same theme cache the islands
-  draw from — one source of truth, morphing with the bar. The docked edge
-  never paints its run, which the bar band covers.
+  draw from — one source of truth, morphing with the bar — and the bar
+  asks the compositor to blur behind it exactly as it blurs the strip.
+  The docked edge never paints its run, which the bar band covers.
 
 ### Fixed
 
