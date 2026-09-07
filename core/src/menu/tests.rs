@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use iced::{Point, SurfaceId as Id, Task};
 
-use super::{kind::MenuType, state::Menu};
+use super::{kind::MenuType, state::Menu, wrapper::grown_height};
 use crate::{config::Config, position_button::ButtonUIRef};
 
 fn button_ref() -> ButtonUIRef {
@@ -294,4 +294,28 @@ fn closing_mid_open_starts_the_successor_from_dark() {
         "the successor surface must not inherit a half-travelled fade"
     );
     assert!(!menu.is_animating());
+}
+
+#[test]
+fn a_growing_box_rides_the_travelled_share_of_its_resting_height() {
+    assert_eq!(grown_height(100.0, 10.0, None, 0.5), 60.0);
+    assert_eq!(grown_height(100.0, 10.0, None, 1.0), 120.0);
+    assert_eq!(grown_height(100.0, 10.0, None, 0.0), 0.0);
+}
+
+#[test]
+fn a_box_taller_than_its_room_grows_towards_the_room() {
+    assert_eq!(grown_height(100.0, 10.0, Some(80.0), 0.5), 40.0);
+    assert_eq!(grown_height(100.0, 10.0, Some(80.0), 1.0), 80.0);
+}
+
+#[test]
+fn a_roomy_cap_leaves_a_fitting_box_alone() {
+    assert_eq!(grown_height(100.0, 10.0, Some(500.0), 0.5), 60.0);
+}
+
+#[test]
+fn growth_clamps_a_runaway_progress() {
+    assert_eq!(grown_height(100.0, 10.0, None, 1.5), 120.0);
+    assert_eq!(grown_height(100.0, 10.0, None, -0.5), 0.0);
 }

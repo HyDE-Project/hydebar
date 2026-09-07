@@ -60,6 +60,22 @@ pub struct MenuLayout {
     pub progress: f32
 }
 
+/// Height the box takes while the open animation is still travelling.
+///
+/// The box grows out of the bar edge instead of materialising at full size:
+/// `progress` below one pins it to the travelled share of its resting height,
+/// clipped so the content is revealed rather than squeezed. At one the caller
+/// keeps the resting height, so the end of the animation lands exactly where
+/// the box would sit without one. `cap` is the screen room that caps a tall
+/// box into scrolling; a box that fits grows to its content instead.
+#[must_use]
+pub fn grown_height(content: f32, padding: f32, cap: Option<f32>, progress: f32) -> f32 {
+    let full = padding.mul_add(2.0, content);
+    let rest = cap.filter(|room| full > *room).unwrap_or(full);
+
+    rest * progress.clamp(0.0, 1.0)
+}
+
 /// Wraps `content` into a menu box anchored under `button_ui_ref`.
 ///
 /// The box takes the width `menu_size` asks for on the output it lands on,
@@ -84,6 +100,16 @@ pub fn menu_wrapper<Message: Clone + 'static>(
         _ => false
     };
 
+    let growing = match layout.content_height {
+        Some(content) if layout.progress < 1.0 => Some(grown_height(
+            content,
+            padding,
+            layout.available_height,
+            layout.progress
+        )),
+        _ => None
+    };
+
     let body: Element<'_, Message> = if overflows {
         scrollable(content)
             .width(Length::Fill)
@@ -97,16 +123,21 @@ pub fn menu_wrapper<Message: Clone + 'static>(
         .height(Length::Shrink)
         .width(Length::Fill)
         .max_width(width)
-        .padding(padding)
-        .style(menu_container_style(
-            layout.opacity,
-            layout.radius,
-            layout.finish
-        ));
+        .padding(padding);
 
     if overflows && let Some(room) = layout.available_height {
         menu_box = menu_box.height(Length::Fixed(room));
     }
+
+    if let Some(height) = growing {
+        menu_box = menu_box.height(Length::Fixed(height)).clip(true);
+    }
+
+    let menu_box = menu_box.style(menu_container_style(
+        layout.opacity,
+        layout.radius,
+        layout.finish
+    ));
 
     mouse_area(
         container(

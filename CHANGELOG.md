@@ -35,6 +35,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   palette. Font sizes and discrete settings still snap: the global scale
   base, the icon theme and the compositor surfaces rebuild from the
   target.
+- Menus with a measured height grow out of the bar edge while they fade
+  in, clipped to the travelled share of their resting height, instead of
+  materialising at full size; scrolling boxes grow towards their room.
 
 ### Fixed
 
