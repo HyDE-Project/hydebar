@@ -95,6 +95,13 @@ pub(super) async fn serve(
     SessionEnd::Failed
 }
 
+/// Whether the unreplaceable-daemon refusal has already been reported.
+///
+/// The service retries the claim for as long as it runs, and a daemon that
+/// refuses replacement answers the same verdict every time: one report is a
+/// diagnosis, every further one is noise.
+static UNREPLACEABLE_REPORTED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
 /// Claims the notification name, deposing a holder that can be stopped.
 ///
 /// # Errors
@@ -117,10 +124,14 @@ async fn claim_name(
         }
         Ok(RequestNameReply::InQueue) => {
             let Some(unit) = takeover::replaceable_unit(connection).await else {
-                error!(
-                    "a notification daemon the bar cannot safely replace holds the bus; \
-                     stop it to let the bar draw its own popups"
-                );
+                if UNREPLACEABLE_REPORTED.swap(true, std::sync::atomic::Ordering::Relaxed) {
+                    debug!("a notification daemon the bar cannot safely replace still holds the bus");
+                } else {
+                    error!(
+                        "a notification daemon the bar cannot safely replace holds the bus; \
+                         stop it to let the bar draw its own popups"
+                    );
+                }
                 return Err(SessionEnd::Failed);
             };
 
