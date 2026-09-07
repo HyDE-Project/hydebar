@@ -6,10 +6,25 @@ use super::{
     DESK_NAMESPACE, MAIN_NAMESPACE, MENU_NAMESPACE, NOTIFICATIONS_NAMESPACE, NOTIFICATIONS_WIDTH,
     TOOLTIP_NAMESPACE
 };
+
 use crate::{
     HEIGHT,
     config::{AppearanceStyle, BarLayer, Position}
 };
+
+/// One of the four panels of the frame: the strips ringing the screen, one
+/// per edge.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PanelEdge {
+    /// The strip along the top edge of the screen.
+    Top,
+    /// The strip along the right edge of the screen.
+    Right,
+    /// The strip along the bottom edge of the screen.
+    Bottom,
+    /// The strip along the left edge of the screen.
+    Left
+}
 
 /// Maps the configured bar layer onto the compositor layer it is created on.
 const fn surface_layer(layer: BarLayer) -> Layer {
@@ -130,6 +145,97 @@ pub fn desk_settings(output: Option<OutputId>, layer: BarLayer) -> LayerShellSet
         output,
         anchor: Anchor::TOP | Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT,
         exclusive_zone: -1,
+        ..Default::default()
+    }
+}
+
+/// Settings of the surface the ring of the frame is painted on.
+///
+/// The ring is one fullscreen, click-through paint of every strip the user
+/// switched on, drawn as a single shape so the outer corners can round past
+/// the thickness of a strip: a bezel one strip wide with wide corners is one
+/// thing, and only a surface spanning the whole screen can paint it. It
+/// reserves no space on its own — pushing windows off the strips is the
+/// panels' work — and it carries the bar's namespace, for the ring is the
+/// same paint continued around the screen and is blurred by the same rule.
+pub fn frame_settings(output: Option<OutputId>, layer: BarLayer) -> LayerShellSettings {
+    LayerShellSettings {
+        namespace: MAIN_NAMESPACE.to_string(),
+        size: Some((0, 0)),
+        layer: surface_layer(layer),
+        keyboard_interactivity: KeyboardInteractivity::None,
+        output,
+        anchor: Anchor::TOP | Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT,
+        exclusive_zone: -1,
+        input_region: Some(Vec::new()),
+        ..Default::default()
+    }
+}
+
+/// Settings of the surface one panel of the frame is drawn on.
+///
+/// A panel is the bar's own sibling strip, not an overlay: it is anchored to
+/// its edge, and while the user enabled that edge it reserves its width as
+/// its exclusive zone — the desktop is pushed off the strip exactly the way
+/// the bar pushes it off the top. A panel the user switched off reserves
+/// nothing: the surface exists, sized to nothing, so a config flip only has
+/// to resize it rather than create a window mid-run.
+///
+/// The surface carries the bar's own namespace on purpose: it is part of the
+/// bar, painted in the bar palette, and the blur rule the bar asks for keys
+/// on the namespace — sharing it is what blurs behind the strips without a
+/// second rule or a second paint. The margin keeps the panel clear of the
+/// bar band when the bar is docked to a horizontal edge the panel meets.
+///
+/// A zero width is anchored to all four edges instead of its own: the layer
+/// shell protocol forbids a zero size along a dimension the surface is not
+/// anchored to both ends of, and a compositor answers the violation by
+/// killing the whole connection — every surface, not the offending one.
+pub fn panel_settings(
+    edge:       PanelEdge,
+    output:     Option<OutputId>,
+    layer:      BarLayer,
+    dock:       Position,
+    bar_height: f32,
+    width:      u32
+) -> LayerShellSettings {
+    let clearance = match (dock, edge) {
+        (Position::Top, PanelEdge::Left | PanelEdge::Right) => {
+            #[expect(
+                clippy::cast_possible_truncation,
+                clippy::cast_sign_loss,
+                reason = "the bar height is a small positive pixel count"
+            )]
+            (bar_height.round() as i32, 0, 0, 0)
+        }
+        (Position::Bottom, PanelEdge::Left | PanelEdge::Right) => {
+            #[expect(
+                clippy::cast_possible_truncation,
+                clippy::cast_sign_loss,
+                reason = "the bar height is a small positive pixel count"
+            )]
+            (0, 0, bar_height.round() as i32, 0)
+        }
+        _ => (0, 0, 0, 0)
+    };
+    let (anchor, size) = match (edge, width == 0) {
+        (_, true) => (Anchor::all(), (0, 0)),
+        (PanelEdge::Left, false) => (Anchor::LEFT | Anchor::TOP | Anchor::BOTTOM, (width, 0)),
+        (PanelEdge::Right, false) => (Anchor::RIGHT | Anchor::TOP | Anchor::BOTTOM, (width, 0)),
+        (PanelEdge::Top, false) => (Anchor::TOP | Anchor::LEFT | Anchor::RIGHT, (0, width)),
+        (PanelEdge::Bottom, false) => (Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT, (0, width))
+    };
+
+    LayerShellSettings {
+        namespace: MAIN_NAMESPACE.to_string(),
+        size: Some(size),
+        layer: surface_layer(layer),
+        keyboard_interactivity: KeyboardInteractivity::None,
+        output,
+        anchor,
+        exclusive_zone: i32::try_from(width).unwrap_or(i32::MAX),
+        margin: clearance,
+        input_region: Some(Vec::new()),
         ..Default::default()
     }
 }
