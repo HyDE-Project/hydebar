@@ -1,8 +1,8 @@
 //! The arithmetic of mixing two appearance snapshots.
 //!
-//! Colours, opacities and the continuous geometry — corner radii and the
-//! spacing scale every gap derives from — interpolate channel by channel;
-//! discrete settings such as the layout style or the scale factor take the
+//! Colours, opacities and the continuous geometry — corner radii, the bar
+//! height, the side padding and the spacing scale every gap derives from —
+//! interpolate channel by channel; discrete settings such as the layout
 //! target's value outright, because the compositor side of the shell has to
 //! be reconfigured for them anyway. Font sizes stay snapped as well: the
 //! global scale base and the icon theme rebuild from the target on reload,
@@ -19,8 +19,8 @@ pub(super) fn blend_appearance(from: &Appearance, to: &Appearance, t: f32) -> Ap
         font_name:                to.font_name.clone(),
         font_size:                to.font_size,
         radius:                   blend_size(from.radius, to.radius, t),
-        height:                   to.height,
-        side_padding:             to.side_padding,
+        height:                   blend_size(from.height, to.height, t),
+        side_padding:             blend_size(from.side_padding, to.side_padding, t),
         spacing_scale:            blend_f32(from.spacing_scale, to.spacing_scale, t),
         follow_hyde:              to.follow_hyde,
         auto_scale:               to.auto_scale,
@@ -239,6 +239,25 @@ mod tests {
         let blended = blend_appearance(&from, &to, 0.5);
 
         assert_eq!(blended.spacing_scale, 1.5);
+    }
+
+    #[test]
+    fn bar_geometry_breathes_with_the_blend() {
+        let from = Appearance {
+            height: Some(SizeValue::Pixels(30.0)),
+            side_padding: Some(SizeValue::Pixels(4.0)),
+            ..Appearance::default()
+        };
+        let to = Appearance {
+            height: Some(SizeValue::Pixels(40.0)),
+            side_padding: Some(SizeValue::Pixels(12.0)),
+            ..Appearance::default()
+        };
+
+        let blended = blend_appearance(&from, &to, 0.5);
+
+        assert_eq!(blended.height, Some(SizeValue::Pixels(35.0)));
+        assert_eq!(blended.side_padding, Some(SizeValue::Pixels(8.0)));
     }
 
     #[test]
