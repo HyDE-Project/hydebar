@@ -223,6 +223,28 @@ fn deserialize_custom_appearance() {
 }
 
 #[test]
+fn deserialize_frame_edges_under_appearance() {
+    #[derive(serde::Deserialize)]
+    struct TestConfig {
+        #[serde(deserialize_with = "super::themes::deserialize_theme_or_appearance")]
+        appearance: Appearance
+    }
+
+    let toml_content = r"
+        [appearance.frame]
+        enabled = true
+
+        [appearance.frame.edges]
+        top = false
+    ";
+
+    let config: TestConfig = ::toml::from_str(toml_content).expect("Failed to deserialize");
+    assert!(config.appearance.frame.enabled);
+    assert!(!config.appearance.frame.edges.top);
+    assert!(config.appearance.frame.edges.left);
+}
+
+#[test]
 fn preset_theme_takes_precedence_over_appearance_fields() {
     #[derive(serde::Deserialize)]
     struct TestConfig {

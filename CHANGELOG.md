@@ -38,6 +38,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Menus with a measured height grow out of the bar edge while they fade
   in, clipped to the travelled share of their resting height, instead of
   materialising at full size; scrolling boxes grow towards their room.
+- Opt-in screen frame: `[appearance.frame]` draws a ring along any
+  combination of screen edges on its own input-free surface, with rounded
+  outer corners and a rounded joint where a strip meets the bar band (see
+  `docs/FRAME.md`). The docked edge never paints its run, which the bar
+  band covers.
 
 ### Fixed
 

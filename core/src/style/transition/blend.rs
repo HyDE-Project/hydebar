@@ -6,7 +6,10 @@
 //! target's value outright, because the compositor side of the shell has to
 //! be reconfigured for them anyway. Font sizes stay snapped as well: the
 //! global scale base and the icon theme rebuild from the target on reload,
-//! so a blended size would move the text but leave its metrics behind.
+//! so a blended size would move the text but leave its metrics behind. The
+//! frame rides along with the target outright: it lives on a surface of its
+//! own, and growing its strips mid-flight would resize that surface under
+//! the compositor while the palette is still travelling.
 
 use hex_color::HexColor;
 use hydebar_proto::config::SizeValue;
@@ -32,6 +35,7 @@ pub(super) fn blend_appearance(from: &Appearance, to: &Appearance, t: f32) -> Ap
             opacity:  blend_f32(from.menu.opacity, to.menu.opacity, t),
             backdrop: blend_f32(from.menu.backdrop, to.menu.backdrop, t)
         },
+        frame:                    to.frame,
         animations:               to.animations.clone(),
         greeting:                 to.greeting,
         background_color:         blend_color(from.background_color, to.background_color, t),

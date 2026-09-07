@@ -14,6 +14,7 @@ use super::{
         default_opacity, default_scale_factor, default_spacing_scale, opacity_deserializer,
         scale_factor_deserializer, spacing_scale_deserializer
     },
+    frame::FrameConfig,
     menu::MenuAppearance,
     size_value::SizeValue,
     style::AppearanceStyle,
@@ -117,6 +118,9 @@ pub struct Appearance {
     /// How an open menu is drawn, and how far it stands from the bar.
     pub menu:                     MenuAppearance,
     #[serde(default)]
+    /// The ring the bar draws around the screen, off unless asked for.
+    pub frame:                    FrameConfig,
+    #[serde(default)]
     /// How long the bar's motion takes, and how it eases.
     pub animations:               AnimationConfig,
     /// Whether the bar greets the user while it is born.
@@ -218,6 +222,7 @@ impl Default for Appearance {
             opacity:                  default_opacity(),
             bar_opacity:              default_bar_opacity(),
             menu:                     MenuAppearance::default(),
+            frame:                    FrameConfig::default(),
             animations:               AnimationConfig::default(),
             greeting:                 default_greeting(),
             background_color:         default_background_color(),

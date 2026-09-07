@@ -14,7 +14,7 @@ use crate::{
     menu::Menu,
     outputs::{
         config::is_output_requested,
-        wayland::{LayerSurfaceCreation, create_layer_surfaces, destroy_layer_surfaces}
+        wayland::{LayerSurfaceCreation, create_layer_surfaces}
     }
 };
 
@@ -57,6 +57,7 @@ impl Outputs {
                 menu_id,
                 tooltip_id,
                 desk_id,
+                frame_id,
                 notifications_id,
                 task
             } = create_layer_surfaces(
@@ -69,27 +70,7 @@ impl Outputs {
                 config.layer
             );
 
-            let destroy_task = match self
-                .0
-                .iter()
-                .position(|(key, _, _)| key.as_deref() == Some(name))
-            {
-                Some(index) => {
-                    let old_output = self.0.swap_remove(index);
-
-                    match old_output.1 {
-                        Some(shell_info) => destroy_layer_surfaces(
-                            shell_info.id,
-                            shell_info.menu.id,
-                            shell_info.tooltip_id,
-                            shell_info.desk_id,
-                            shell_info.notifications_id
-                        ),
-                        _ => Task::none()
-                    }
-                }
-                _ => Task::none()
-            };
+            let destroy_task = self.destroy_matching(|entry| entry.0.as_deref() == Some(name));
 
             self.0.push((
                 Some(name.to_owned()),
@@ -103,52 +84,17 @@ impl Outputs {
                     tooltip_id,
                     tooltip: None,
                     desk_id,
+                    frame_id,
                     notifications_id
                 }),
                 Some(wl_output)
             ));
 
-            let destroy_fallback_task = match self.0.iter().position(|(key, _, _)| key.is_none()) {
-                Some(index) => {
-                    let old_output = self.0.swap_remove(index);
-
-                    match old_output.1 {
-                        Some(shell_info) => destroy_layer_surfaces(
-                            shell_info.id,
-                            shell_info.menu.id,
-                            shell_info.tooltip_id,
-                            shell_info.desk_id,
-                            shell_info.notifications_id
-                        ),
-                        _ => Task::none()
-                    }
-                }
-                _ => Task::none()
-            };
+            let destroy_fallback_task = self.destroy_matching(|entry| entry.0.is_none());
 
             Task::batch(vec![destroy_task, destroy_fallback_task, task])
         } else {
-            let destroy_task = match self
-                .0
-                .iter()
-                .position(|(key, _, _)| key.as_deref() == Some(name))
-            {
-                Some(index) => {
-                    let old_output = self.0.swap_remove(index);
-
-                    match old_output.1 {
-                        Some(shell_info) => destroy_layer_surfaces(
-                            shell_info.id,
-                            shell_info.menu.id,
-                            shell_info.tooltip_id,
-                            shell_info.desk_id,
-                            shell_info.notifications_id
-                        ),
-                        _ => Task::none()
-                    }
-                }
-                _ => Task::none()
-            };
+            let destroy_task = self.destroy_matching(|entry| entry.0.as_deref() == Some(name));
 
             self.0.push((Some(name.to_owned()), None, Some(wl_output)));
 

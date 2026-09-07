@@ -22,6 +22,8 @@ pub mod config;
 /// Event bus primitives for communicating UI updates across the core.
 pub mod event_bus;
 pub mod format_cycle;
+/// The ring around the screen, drawn on a surface of its own.
+pub mod frame;
 pub mod menu;
 /// What a module is handed in order to start its work.
 pub mod module_context;

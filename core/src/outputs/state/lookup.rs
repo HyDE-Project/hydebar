@@ -32,6 +32,8 @@ impl Outputs {
                     Some(HasOutput::Notifications)
                 } else if info.desk_id == id {
                     Some(HasOutput::Desk)
+                } else if info.frame_id == id {
+                    Some(HasOutput::Frame)
                 } else if info.tooltip_id == id {
                     Some(HasOutput::Tooltip)
                 } else {

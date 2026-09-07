@@ -3,8 +3,8 @@
 use iced::{Anchor, KeyboardInteractivity, Layer, LayerShellSettings, OutputId};
 
 use super::{
-    DESK_NAMESPACE, MAIN_NAMESPACE, MENU_NAMESPACE, NOTIFICATIONS_NAMESPACE, NOTIFICATIONS_WIDTH,
-    TOOLTIP_NAMESPACE
+    DESK_NAMESPACE, FRAME_NAMESPACE, MAIN_NAMESPACE, MENU_NAMESPACE, NOTIFICATIONS_NAMESPACE,
+    NOTIFICATIONS_WIDTH, TOOLTIP_NAMESPACE
 };
 use crate::{
     HEIGHT,
@@ -134,6 +134,27 @@ pub fn desk_settings(output: Option<OutputId>, layer: BarLayer) -> LayerShellSet
     }
 }
 
+/// Settings of the surface the frame is drawn on.
+///
+/// Created input-free through [`super::draw_only`], on the same level as the
+/// strip it grows out of, for the same blur reason the desk shares it: the
+/// frame reads as one surface with the bar, and a canvas laid on another
+/// level would blur or dim against the wrong background. The exclusive zone
+/// is -1 so the surface covers the whole screen: the strips hug the screen
+/// edges, and the joints with the bar band sit inside the strip's own band.
+pub fn frame_settings(output: Option<OutputId>, layer: BarLayer) -> LayerShellSettings {
+    LayerShellSettings {
+        namespace: FRAME_NAMESPACE.to_string(),
+        size: Some((0, 0)),
+        layer: surface_layer(layer),
+        keyboard_interactivity: KeyboardInteractivity::None,
+        output,
+        anchor: Anchor::TOP | Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT,
+        exclusive_zone: -1,
+        ..Default::default()
+    }
+}
+
 /// Settings of the surface the notification popups are drawn on.
 ///
 /// Created input-free through [`draw_only`], stated as a follow-up task.
@@ -196,6 +217,10 @@ mod tests {
             notifications_settings(None, Position::Top).namespace,
             NOTIFICATIONS_NAMESPACE
         );
+        assert_eq!(
+            frame_settings(None, BarLayer::Top).namespace,
+            FRAME_NAMESPACE
+        );
     }
 
     #[test]
@@ -206,6 +231,19 @@ mod tests {
         // crossing its band
         for layer in [BarLayer::Background, BarLayer::Bottom, BarLayer::Top] {
             let settings = desk_settings(None, layer);
+
+            assert_eq!(settings.layer, surface_layer(layer));
+            assert_eq!(settings.exclusive_zone, -1);
+        }
+    }
+
+    #[test]
+    fn the_frame_covers_the_whole_screen_on_the_strips_level() {
+        // the strips hug the screen edges, so the surface needs the whole
+        // screen including the bar band; sharing the strip's level keeps the
+        // frame and the bar on the same blur background
+        for layer in [BarLayer::Background, BarLayer::Bottom, BarLayer::Top] {
+            let settings = frame_settings(None, layer);
 
             assert_eq!(settings.layer, surface_layer(layer));
             assert_eq!(settings.exclusive_zone, -1);

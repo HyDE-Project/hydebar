@@ -3,6 +3,7 @@
 mod bar;
 mod chrome;
 pub mod desk;
+mod frame;
 mod measured;
 mod menu;
 mod pages;
