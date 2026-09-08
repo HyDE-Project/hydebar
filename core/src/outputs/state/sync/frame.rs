@@ -170,3 +170,203 @@ impl Outputs {
 fn bar_height(config: &config::Config) -> f32 {
     config.appearance.height_px().unwrap_or(HEIGHT as f32)
 }
+
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
+mod tests {
+    use iced::SurfaceId as Id;
+
+    use super::*;
+    use crate::config::Config;
+
+    fn config_with(frame_enabled: bool) -> Config {
+        let mut config = Config::default();
+        config.appearance.frame.enabled = frame_enabled;
+
+        config
+    }
+
+    fn outputs_with<Message: 'static>(frame_enabled: bool) -> (Outputs, Option<Id>, Config) {
+        let mut config = config_with(frame_enabled);
+        config.outputs = crate::config::Outputs::Targets(vec!["DP-1".to_owned()]);
+
+        let (outputs, _) =
+            Outputs::new::<Message>(config.appearance.style, config.position, &config);
+
+        let id = iced::OutputId::for_tests();
+
+        let mut outputs = outputs;
+        let task = outputs.add::<Message>(
+            config.appearance.style,
+            &config.outputs,
+            config.position,
+            "DP-1",
+            id,
+            &config,
+            1.0,
+            None
+        );
+        let _ = task;
+
+        let specs = outputs
+            .0
+            .iter()
+            .find(|(name, _, _)| name.as_deref() == Some("DP-1"))
+            .expect("a requested output leaves a record")
+            .1
+            .as_ref()
+            .expect("a requested output gains a group");
+        let ring = specs.frame_id;
+
+        (outputs, ring, config)
+    }
+
+    #[test]
+    fn a_switched_on_frame_arrives_with_a_ring_and_reservations() {
+        let (outputs, ring, _) = outputs_with::<()>(true);
+
+        assert!(ring.is_some());
+
+        let specs = outputs
+            .0
+            .iter()
+            .find(|(name, _, _)| name.as_deref() == Some("DP-1"))
+            .expect("the output keeps its record")
+            .1
+            .as_ref()
+            .expect("the group stands");
+
+        assert!(specs.frame_enabled);
+        assert_eq!(specs.reservations.top, 0);
+        assert_eq!(specs.reservations.left, 10);
+        assert_eq!(specs.reservations.right, 10);
+        assert_eq!(specs.reservations.bottom, 10);
+        assert!(specs.left_panel_id.is_some());
+        assert!(specs.right_panel_id.is_some());
+        assert!(specs.bottom_panel_id.is_some());
+        assert!(specs.top_panel_id.is_none());
+    }
+
+    #[test]
+    fn a_switch_off_takes_the_ring_down_with_every_reservation() {
+        let (mut outputs, ring, _config) = outputs_with::<()>(true);
+        assert!(ring.is_some());
+
+        let config = config_with(false);
+        let task = outputs.sync::<()>(
+            config.appearance.style,
+            &config.outputs,
+            config.position,
+            &config,
+            1.0,
+            None
+        );
+        let _ = task;
+
+        let specs = outputs
+            .0
+            .iter()
+            .find(|(name, _, _)| name.as_deref() == Some("DP-1"))
+            .expect("the output keeps its record")
+            .1
+            .as_ref()
+            .expect("the group stands");
+
+        assert!(!specs.frame_enabled);
+        assert!(specs.frame_id.is_none());
+        assert_eq!(specs.reservations, PanelWidths::default());
+        assert!(specs.left_panel_id.is_none());
+        assert!(specs.right_panel_id.is_none());
+        assert!(specs.bottom_panel_id.is_none());
+        assert!(specs.top_panel_id.is_none());
+    }
+
+    #[test]
+    fn a_switch_back_keeps_the_bar_edge_free_of_reservations() {
+        let (mut outputs, _ring, _config) = outputs_with::<()>(true);
+
+        let config = config_with(false);
+        let task = outputs.sync::<()>(
+            config.appearance.style,
+            &config.outputs,
+            config.position,
+            &config,
+            1.0,
+            None
+        );
+        let _ = task;
+
+        let config = config_with(true);
+        let task = outputs.sync::<()>(
+            config.appearance.style,
+            &config.outputs,
+            config.position,
+            &config,
+            1.0,
+            None
+        );
+        let _ = task;
+
+        let specs = outputs
+            .0
+            .iter()
+            .find(|(name, _, _)| name.as_deref() == Some("DP-1"))
+            .expect("the output keeps its record")
+            .1
+            .as_ref()
+            .expect("the group stands");
+
+        assert!(specs.frame_id.is_some());
+        assert!(specs.left_panel_id.is_some());
+        assert!(specs.right_panel_id.is_some());
+        assert!(specs.bottom_panel_id.is_some());
+        assert!(specs.top_panel_id.is_none());
+    }
+
+    #[test]
+    fn an_unchanged_sync_turns_nothing_down() {
+        let (mut outputs, ring, config) = outputs_with::<()>(true);
+
+        let task = outputs.sync::<()>(
+            config.appearance.style,
+            &config.outputs,
+            config.position,
+            &config,
+            1.0,
+            None
+        );
+        let _ = task;
+
+        let specs = outputs
+            .0
+            .iter()
+            .find(|(name, _, _)| name.as_deref() == Some("DP-1"))
+            .expect("the output keeps its record")
+            .1
+            .as_ref()
+            .expect("the group stands");
+
+        assert_eq!(specs.frame_id, ring);
+        assert!(specs.left_panel_id.is_some());
+    }
+
+    #[test]
+    fn a_disabled_frame_from_the_start_nets_no_surfaces() {
+        let (outputs, ring, _) = outputs_with::<()>(false);
+
+        assert!(ring.is_none());
+
+        let specs = outputs
+            .0
+            .iter()
+            .find(|(name, _, _)| name.as_deref() == Some("DP-1"))
+            .expect("the output keeps its record")
+            .1
+            .as_ref()
+            .expect("the group stands");
+
+        assert!(!specs.frame_enabled);
+        assert!(specs.left_panel_id.is_none());
+        assert_eq!(specs.reservations, PanelWidths::default());
+    }
+}

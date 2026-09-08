@@ -387,4 +387,88 @@ mod tests {
         );
         assert_eq!(layer_height(AppearanceStyle::Solid, 0.5, Some(38.0)), 15.0);
     }
+
+    #[test]
+    fn the_ring_surface_paints_everywhere_and_reserves_nothing() {
+        // the ring is one paint travelling around the screen, so it covers
+        // the whole output, takes no pointer and pushes no windows
+        let settings = frame_settings(Some(OutputId::for_tests()), BarLayer::Top);
+
+        assert_eq!(settings.anchor, Anchor::all());
+        assert_eq!(settings.exclusive_zone, -1);
+        assert_eq!(settings.input_region, Some(Vec::new()));
+        assert_eq!(settings.namespace, MAIN_NAMESPACE);
+    }
+
+    #[test]
+    fn a_reservation_anchors_its_edge_and_reserves_its_width() {
+        // a left panel is anchored between the screen's own top and bottom
+        // and reserves its width along the left
+        let settings = panel_settings(
+            PanelEdge::Left,
+            None,
+            BarLayer::Top,
+            Position::Bottom,
+            38.0,
+            10
+        );
+
+        assert_eq!(settings.anchor, Anchor::LEFT | Anchor::TOP | Anchor::BOTTOM);
+        assert_eq!(settings.size, Some((10, 0)));
+        assert_eq!(settings.exclusive_zone, 10);
+        assert_eq!(settings.input_region, Some(Vec::new()));
+        // the margin order is (top, right, bottom, left)
+        let (_top, _right, bottom, _left) = settings.margin;
+
+        assert_eq!(bottom, 38);
+    }
+
+    #[test]
+    fn a_side_panel_beside_a_top_bar_starts_below_its_band() {
+        let settings = panel_settings(
+            PanelEdge::Right,
+            None,
+            BarLayer::Top,
+            Position::Top,
+            30.0,
+            10
+        );
+        // the margin order is (top, right, bottom, left)
+        let (top, _right, _bottom, _left) = settings.margin;
+
+        assert_eq!(top, 30);
+    }
+
+    #[test]
+    fn a_zero_width_reservation_stays_protocol_safe() {
+        // a surface sized to nothing along its own edge would be protocol
+        // -invalid: a zero width anchors both ends instead
+        let settings = panel_settings(PanelEdge::Top, None, BarLayer::Top, Position::Top, 30.0, 0);
+
+        assert_eq!(settings.anchor, Anchor::all());
+        assert_eq!(settings.size, Some((0, 0)));
+        assert_eq!(settings.exclusive_zone, 0);
+    }
+
+    #[test]
+    fn the_anchor_and_the_size_follow_the_edge_named() {
+        let (anchor, size) = panel_anchor(PanelEdge::Bottom, 14);
+
+        assert_eq!(anchor, Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT);
+        assert_eq!(size, (0, 14));
+    }
+
+    #[test]
+    fn the_clearance_sits_where_the_bar_is() {
+        // the margin order is (top, right, bottom, left): a top bar pushes
+        // the side panels down from the top, a bottom bar holds them clear
+        // from the bottom
+        let below = panel_clearance(Position::Top, PanelEdge::Left, 38.0);
+        let above = panel_clearance(Position::Bottom, PanelEdge::Left, 38.0);
+        let none = panel_clearance(Position::Top, PanelEdge::Top, 38.0);
+
+        assert_eq!(below, (38, 0, 0, 0));
+        assert_eq!(above, (0, 0, 38, 0));
+        assert_eq!(none, (0, 0, 0, 0));
+    }
 }
