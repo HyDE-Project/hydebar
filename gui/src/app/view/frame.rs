@@ -54,16 +54,16 @@ impl App {
         )]
         let bar_height = appearance.height_px().unwrap_or(HEIGHT as f32);
 
-        let pieces = frame_pieces(screen_w, screen_h, frame, self.config.position, bar_height);
+        let shape = frame_pieces(screen_w, screen_h, frame, self.config.position, bar_height);
 
         log::debug!(
-            "frame: enabled, drawing {} piece(s) over {}x{}, wash {wash}",
-            pieces.len(),
-            screen_w,
-            screen_h
+            "frame: enabled, drawing the ring over {screen_w}x{screen_h}, wash {wash}, shape {shape:?}"
         );
 
-        canvas(FrameCanvas { pieces, color })
+        canvas(FrameCanvas {
+            shape,
+            color
+        })
         .width(Length::Fill)
         .height(Length::Fill)
         .into()

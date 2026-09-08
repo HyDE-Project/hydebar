@@ -1,15 +1,16 @@
 //! The ring around the screen, drawn on a surface of its own.
 //!
-//! The frame is a set of strips along the screen edges the user switches on
-//! one by one, after the fashion of the `Caelestia` shell. [`geometry`] turns
-//! the configuration into disjoint painted pieces with per-corner radii — a
-//! strip beside the bar stops where the bar band ends and rounds the joint —
-//! so the canvas program in [`program`] only fills the pieces and never
-//! reasons about edges itself.
+//! The ring is one shape: the screen, square at its corners, less an inner
+//! content aperture rounded where the content faces it — the way the
+//! `Caelestia` shell frames its desktop. [`geometry`] turns the
+//! configuration into that outline, the canvas program in [`program`] fills
+//! a single even-odd path of it, and [`panel_widths`] names the widths of
+//! the layer-shell reservations that push the desktop off the drawn edges;
+//! drawing and reservation are separate concerns all the way down.
 //!
 //! ```rust
 //! use hydebar_core::{config::Position, frame::geometry::frame_pieces};
-//! use hydebar_proto::config::{FrameConfig, FrameEdges};
+//! use hydebar_proto::config::{FrameConfig, FrameEdge, FrameEdges};
 //!
 //! let frame = FrameConfig {
 //!     enabled: true,
@@ -22,24 +23,27 @@
 //!     },
 //!     ..FrameConfig::default()
 //! };
-//! let pieces = frame_pieces(1920.0, 1080.0, &frame, Position::Top, 38.0);
+//! let shape = frame_pieces(1920.0, 1080.0, &frame, Position::Top, 38.0);
 //!
-//! assert!(pieces.iter().all(|piece| piece.w > 0.0 && piece.h > 0.0));
+//! assert_eq!(shape.inner.x, 10.0);
+//! assert!(shape.inner.w > 0.0 && shape.inner.h > 0.0);
 //! ```
 
-use hydebar_proto::config::{FrameConfig, FrameEdge};
+use hydebar_proto::config::{FrameConfig, FrameEdge, Position};
 
 pub mod geometry;
 pub mod program;
-pub mod vertical;
 
-
-/// Widths of the four panels of one screen, scaled like the bar's own height.
+/// Widths of the four panel reservations of one screen, scaled the way the
+/// bar's own height scales.
 ///
-/// Every edge paints at its own override when one is set, at the shared
+/// A reservation exists only for a drawn edge of an enabled frame: the
+/// switched-off strip reserves nothing, and the edge the bar is docked to is
+/// the bar's own exclusive zone, never reserved a second time. Each drawn
+/// edge reserves its own override width when one is set, the shared
 /// thickness else, and the scale factor stretches the pixels the way it
 /// stretches the bar.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct PanelWidths {
     /// Width of the top strip, in physical pixels.
     pub top:    u32,
@@ -51,34 +55,48 @@ pub struct PanelWidths {
     pub left:   u32
 }
 
-/// Widths of the four panels, scaled by the output's scale factor.
+/// Widths of the four panel reservations, scaled by the output's scale
+/// factor.
 ///
-/// An edge the user switched off gets no width at all: the panel exists so a
-/// config flip only has to resize it, but a switched-off strip reserves
-/// nothing. A drawn edge paints at its own override when one is set, at the
-/// shared thickness else, and the scale factor stretches the pixels the way
-/// it stretches the bar.
+/// The docked bar already reserves its own edge, so that edge receives no
+/// panel at all. An edge the user switched off reserves nothing as well: the
+/// surface exists so a config flip only has to resize it, and a zero width
+/// is what a switched-off strip looks like. A drawn edge reserves its own
+/// override width when one is set, the shared thickness else, and the scale
+/// factor stretches the pixels the way it stretches the bar.
 #[must_use]
-pub fn panel_widths(frame: &FrameConfig, scale_factor: f64) -> PanelWidths {
+pub fn panel_widths(frame: &FrameConfig, dock: Position, scale_factor: f64) -> PanelWidths {
+    #[expect(
+        clippy::cast_sign_loss,
+        clippy::cast_possible_truncation,
+        reason = "strip widths are small positive pixel counts"
+    )]
+    let scaled = |pixels: f32, scale: f64| -> u32 { (pixels * scale as f32) as u32 };
+
+    let enabled = frame.enabled;
+
     let width = |edge: &FrameEdge| {
-        if edge.enabled {
+        if enabled && edge.enabled {
             edge.width.unwrap_or(frame.thickness)
         } else {
             0.0
         }
     };
 
-    #[expect(
-        clippy::cast_sign_loss,
-        clippy::cast_possible_truncation,
-        reason = "strip widths are small positive pixel counts"
-    )]
-    let scaled = |pixels: f32| (pixels * scale_factor as f32) as u32;
+    let docked = if dock == Position::Top {
+        |panel: &mut PanelWidths| panel.top = 0
+    } else {
+        |panel: &mut PanelWidths| panel.bottom = 0
+    };
 
-    PanelWidths {
-        top:    scaled(width(&frame.edges.top)),
-        right:  scaled(width(&frame.edges.right)),
-        bottom: scaled(width(&frame.edges.bottom)),
-        left:   scaled(width(&frame.edges.left))
-    }
+    let mut widths = PanelWidths {
+        top:    scaled(width(&frame.edges.top), scale_factor),
+        right:  scaled(width(&frame.edges.right), scale_factor),
+        bottom: scaled(width(&frame.edges.bottom), scale_factor),
+        left:   scaled(width(&frame.edges.left), scale_factor)
+    };
+
+    docked(&mut widths);
+
+    widths
 }

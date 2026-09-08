@@ -64,7 +64,7 @@ pub enum EntryAlignment {
 /// its module identifier and states where along the strip the widget stands,
 /// so the same widget can sit on any edge without the widget itself knowing
 /// what an edge is.
-#[derive(Deserialize, Clone, Debug, PartialEq)]
+#[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct FrameEntry {
     /// Identifier of the widget module placed here.
     pub id:        String,

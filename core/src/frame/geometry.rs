@@ -144,14 +144,10 @@ mod tests {
 
     use super::*;
 
-    fn frame(
-        thickness: f32,
-        rounding: f32,
-        top: bool,
-        bottom: bool,
-        left: bool,
-        right: bool
-    ) -> FrameConfig {
+    /// Builds a frame config from enabled flags, in the edge order
+    /// `[top, bottom, left, right]`.
+    fn frame(thickness: f32, rounding: f32, enabled: [bool; 4]) -> FrameConfig {
+        let [top, bottom, left, right] = enabled;
         let edge = |enabled: bool| FrameEdge {
             enabled,
             width: None,
@@ -176,7 +172,7 @@ mod tests {
         let shape = frame_pieces(
             1920.0,
             1080.0,
-            &frame(10.0, 25.0, true, true, true, true),
+            &frame(10.0, 25.0, [true, true, true, true]),
             Position::Top,
             38.0
         );
@@ -200,7 +196,7 @@ mod tests {
         let shape = frame_pieces(
             1920.0,
             1080.0,
-            &frame(10.0, 25.0, true, true, true, true),
+            &frame(10.0, 25.0, [true, true, true, true]),
             Position::Top,
             38.0
         );
@@ -218,7 +214,7 @@ mod tests {
         let shape = frame_pieces(
             1920.0,
             1080.0,
-            &frame(10.0, 25.0, false, false, false, false),
+            &frame(10.0, 25.0, [false, false, false, false]),
             Position::Top,
             38.0
         );
@@ -232,7 +228,7 @@ mod tests {
         let shape = frame_pieces(
             1920.0,
             1080.0,
-            &frame(10.0, 25.0, true, true, true, true),
+            &frame(10.0, 25.0, [true, true, true, true]),
             Position::Bottom,
             38.0
         );
@@ -248,7 +244,7 @@ mod tests {
         let shape = frame_pieces(
             1920.0,
             1080.0,
-            &frame(10.0, 25.0, true, false, false, false),
+            &frame(10.0, 25.0, [true, false, false, false]),
             Position::Top,
             0.0
         );
@@ -264,7 +260,7 @@ mod tests {
         let shape = frame_pieces(
             1920.0,
             1080.0,
-            &frame(10.0, 25.0, false, true, true, false),
+            &frame(10.0, 25.0, [false, true, true, false]),
             Position::Top,
             0.0
         );
@@ -282,7 +278,7 @@ mod tests {
         let shape = frame_pieces(
             1920.0,
             1080.0,
-            &frame(10.0, 25.0, false, false, true, false),
+            &frame(10.0, 25.0, [false, false, true, false]),
             Position::Top,
             38.0
         );
@@ -298,7 +294,7 @@ mod tests {
         let shape = frame_pieces(
             100.0,
             100.0,
-            &frame(10.0, 80.0, true, true, true, true),
+            &frame(10.0, 80.0, [true, true, true, true]),
             Position::Top,
             0.0
         );
@@ -349,7 +345,7 @@ mod tests {
         let shape = frame_pieces(
             0.0,
             0.0,
-            &frame(10.0, 25.0, true, true, true, true),
+            &frame(10.0, 25.0, [true, true, true, true]),
             Position::Top,
             38.0
         );

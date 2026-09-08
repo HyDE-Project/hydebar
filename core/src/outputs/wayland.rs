@@ -216,11 +216,7 @@ pub struct PanelSurfaces<Message> {
 /// switched the frame off carries no ring. Destruction follows ownership
 /// instead of asking the caller to know which is which.
 pub fn destroy_optional_surfaces<Message: 'static>(ids: &[Option<Id>]) -> Task<Message> {
-    Task::batch(
-        ids.iter()
-            .filter_map(|id| id.map(destroy_layer_surface))
-            .collect::<Vec<_>>()
-    )
+    Task::batch(ids.iter().filter_map(|id| id.map(destroy_layer_surface)))
 }
 
 pub fn destroy_layer_surfaces<Message: 'static>(

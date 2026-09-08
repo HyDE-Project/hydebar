@@ -12,7 +12,10 @@ use super::super::{Outputs, ShellInfo};
 use crate::{
     config::{AppearanceStyle, Position},
     menu::Menu,
-    outputs::wayland::{LayerSurfaceCreation, create_layer_surfaces, destroy_layer_surfaces}
+    outputs::wayland::{
+        LayerSurfaceCreation, create_layer_surfaces, destroy_layer_surfaces,
+        destroy_optional_surfaces
+    }
 };
 
 impl Outputs {
@@ -45,13 +48,24 @@ impl Outputs {
                 let (name, shell_info, wl_output) = self.0.swap_remove(index_to_remove);
 
                 let destroy_task = if let Some(shell_info) = shell_info {
-                    destroy_layer_surfaces(
-                        shell_info.id,
-                        shell_info.menu.id,
-                        shell_info.tooltip_id,
-                        shell_info.desk_id,
-                        shell_info.notifications_id
-                    )
+                    let frame_and_panels = destroy_optional_surfaces(&[
+                        shell_info.frame_id,
+                        shell_info.left_panel_id,
+                        shell_info.right_panel_id,
+                        shell_info.bottom_panel_id,
+                        shell_info.top_panel_id
+                    ]);
+
+                    Task::batch(vec![
+                        destroy_layer_surfaces(
+                            shell_info.id,
+                            shell_info.menu.id,
+                            shell_info.tooltip_id,
+                            shell_info.desk_id,
+                            shell_info.notifications_id
+                        ),
+                        frame_and_panels,
+                    ])
                 } else {
                     Task::none()
                 };
@@ -128,13 +142,24 @@ impl Outputs {
             .iter_mut()
             .filter_map(|(_, shell_info, _)| shell_info.take())
             .map(|shell_info| {
-                destroy_layer_surfaces(
-                    shell_info.id,
-                    shell_info.menu.id,
-                    shell_info.tooltip_id,
-                    shell_info.desk_id,
-                    shell_info.notifications_id
-                )
+                let frame_and_panels = destroy_optional_surfaces(&[
+                    shell_info.frame_id,
+                    shell_info.left_panel_id,
+                    shell_info.right_panel_id,
+                    shell_info.bottom_panel_id,
+                    shell_info.top_panel_id
+                ]);
+
+                Task::batch(vec![
+                    destroy_layer_surfaces(
+                        shell_info.id,
+                        shell_info.menu.id,
+                        shell_info.tooltip_id,
+                        shell_info.desk_id,
+                        shell_info.notifications_id
+                    ),
+                    frame_and_panels,
+                ])
             })
             .collect::<Vec<_>>();
 

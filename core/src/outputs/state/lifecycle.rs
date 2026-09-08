@@ -39,6 +39,7 @@ impl Outputs {
                         left_panel_id,
                         right_panel_id,
                         bottom_panel_id,
+                        top_panel_id,
                         ..
                     } = shell_info;
 
@@ -48,7 +49,8 @@ impl Outputs {
                             frame_id,
                             left_panel_id,
                             right_panel_id,
-                            bottom_panel_id
+                            bottom_panel_id,
+                            top_panel_id
                         ]),
                     ])
                 }),

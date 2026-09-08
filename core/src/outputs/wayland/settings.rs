@@ -203,8 +203,7 @@ pub fn panel_settings(
         {
             #[expect(
                 clippy::cast_possible_truncation,
-                clippy::cast_sign_loss,
-                reason = "the bar height is a small positive pixel count"
+                reason = "the bar height rounds to a small positive pixel count"
             )]
             (bar_height.round() as i32, 0, 0, 0)
         }
@@ -212,8 +211,7 @@ pub fn panel_settings(
         {
             #[expect(
                 clippy::cast_possible_truncation,
-                clippy::cast_sign_loss,
-                reason = "the bar height is a small positive pixel count"
+                reason = "the bar height rounds to a small positive pixel count"
             )]
             (0, 0, bar_height.round() as i32, 0)
         }
@@ -236,8 +234,7 @@ pub fn panel_settings(
         anchor,
         exclusive_zone: i32::try_from(width).unwrap_or(i32::MAX),
         margin: clearance,
-        input_region: Some(Vec::new()),
-        ..Default::default()
+        input_region: Some(Vec::new())
     }
 }
 

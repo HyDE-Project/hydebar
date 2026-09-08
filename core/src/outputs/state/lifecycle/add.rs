@@ -74,6 +74,12 @@ impl Outputs {
                 config.layer
             );
 
+            #[expect(
+                clippy::cast_possible_truncation,
+                reason = "the bar height constant is small enough for pixel counts"
+            )]
+            let fallback_bar_height = HEIGHT as f32;
+
             let PanelSurfaces {
                 top_id,
                 left_id,
@@ -84,8 +90,12 @@ impl Outputs {
                 Some(wl_output),
                 config.layer,
                 position,
-                config.appearance.height_px().unwrap_or(HEIGHT as f32),
-                panel_widths(&config.appearance.frame, config.appearance.scale_factor)
+                config.appearance.height_px().unwrap_or(fallback_bar_height),
+                panel_widths(
+                    &config.appearance.frame,
+                    position,
+                    config.appearance.scale_factor
+                )
             );
 
             let (frame_id, frame_task) = if config.appearance.frame.enabled {
