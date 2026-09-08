@@ -70,3 +70,127 @@ impl App {
         .into()
     }
 }
+
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
+mod tests {
+    #![allow(clippy::float_cmp)]
+
+    use hydebar_core::config::Outputs as Requested;
+    use iced_test::simulator;
+
+    use super::{
+        super::super::state::{Message, test_support::test_app_with},
+        *
+    };
+
+    fn tracked(app: &mut App, name: &str) {
+        let style = app.config.appearance.style;
+        let position = app.config.position;
+        let task = app.outputs.add::<Message>(
+            style,
+            &app.config.outputs,
+            position,
+            name,
+            iced::OutputId::for_tests(),
+            &app.config,
+            1.0,
+            None
+        );
+        let _ = task;
+    }
+
+    fn ring_of(app: &App) -> iced::SurfaceId {
+        app.outputs
+            .frame_surfaces()
+            .next()
+            .map(|(id, _)| id)
+            .expect("a tracked output with a frame owns a ring")
+    }
+
+    #[test]
+    fn an_enabled_frame_paints_its_output() {
+        let mut app = test_app_with(|config| {
+            config.outputs = Requested::Targets(vec!["DP-1".to_owned()]);
+            config.appearance.frame.enabled = true;
+        });
+
+        tracked(&mut app, "DP-1");
+        app.screen_sizes.insert("DP-1".to_owned(), (1920.0, 1080.0));
+
+        let mut ui = simulator(app.frame_surface(ring_of(&app)));
+
+        assert!(ui.snapshot(&iced::Theme::Dark).is_ok(), "the ring paints");
+    }
+
+    #[test]
+    fn a_frame_without_a_measured_output_paints_nothing() {
+        let mut app = test_app_with(|config| {
+            config.outputs = Requested::Targets(vec!["DP-1".to_owned()]);
+            config.appearance.frame.enabled = true;
+        });
+
+        tracked(&mut app, "DP-1");
+
+        let mut ui = simulator(app.frame_surface(ring_of(&app)));
+
+        assert!(
+            ui.snapshot(&iced::Theme::Dark).is_ok(),
+            "an unmeasured output paints nothing, and paints it cleanly"
+        );
+    }
+
+    #[test]
+    fn a_disabled_frame_paints_nothing() {
+        let app = test_app_with(|_| {});
+
+        let mut ui = simulator(app.frame_surface(iced::SurfaceId::unique()));
+
+        assert!(
+            ui.snapshot(&iced::Theme::Dark).is_ok(),
+            "a disabled frame paints nothing, and paints it cleanly"
+        );
+    }
+
+    #[test]
+    fn a_surface_the_bar_does_not_own_paints_nothing() {
+        let app = test_app_with(|config| {
+            config.appearance.frame.enabled = true;
+        });
+
+        let mut ui = simulator(app.frame_surface(iced::SurfaceId::unique()));
+
+        assert!(
+            ui.snapshot(&iced::Theme::Dark).is_ok(),
+            "a stranger surface paints nothing, and paints it cleanly"
+        );
+    }
+
+    #[test]
+    fn a_frame_gone_with_the_strip_paints_nothing() {
+        let mut app = test_app_with(|config| {
+            config.desk.enabled = true;
+            config.outputs = Requested::Targets(vec!["DP-1".to_owned()]);
+            config.appearance.frame.enabled = true;
+        });
+
+        tracked(&mut app, "DP-1");
+        app.screen_sizes.insert("DP-1".to_owned(), (1920.0, 1080.0));
+
+        // the canvas holds the screen: the strip, and the ring with it, is
+        // gone until the blocks travel home
+        app.desk_clocks
+            .entry(Some("DP-1".to_owned()))
+            .or_default()
+            .open();
+
+        assert_eq!(app.strip_wash(Some("DP-1")), 0.0, "the strip is gone");
+
+        let mut ui = simulator(app.frame_surface(ring_of(&app)));
+
+        assert!(
+            ui.snapshot(&iced::Theme::Dark).is_ok(),
+            "a gone strip takes its ring with it, cleanly"
+        );
+    }
+}

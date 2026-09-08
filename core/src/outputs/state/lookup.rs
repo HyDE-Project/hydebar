@@ -1,6 +1,6 @@
 //! Lookups by surface id and monitor name.
 
-use iced::SurfaceId as Id;
+use iced::{OutputId, SurfaceId as Id};
 
 use super::{HasOutput, Outputs};
 use crate::outputs::wayland::PanelEdge;
@@ -70,6 +70,30 @@ impl Outputs {
         self.0.iter().find_map(|(name, info, _)| {
             info.as_ref()
                 .and_then(|info| if info.id == id { name.as_deref() } else { None })
+        })
+    }
+
+    /// Retrieve the monitor name behind a Wayland output identifier.
+    ///
+    /// Removal events name the output, not one of its surfaces: the caller
+    /// asks what record the departing output owned before it takes the
+    /// surfaces down. Returns [`None`] when no tracked output answers to
+    /// the identifier.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use hydebar_core::outputs::Outputs;
+    /// # use hydebar_core::config::Config;
+    /// # use iced::OutputId;
+    /// let config = Config::default();
+    /// let (outputs, _task) = Outputs::new::<()>(config.appearance.style, config.position, &config);
+    /// assert!(outputs.output_name(OutputId::for_tests()).is_none());
+    /// ```
+    #[must_use]
+    pub fn output_name(&self, id: OutputId) -> Option<&str> {
+        self.0.iter().find_map(|(name, _, output)| {
+            (*output == Some(id)).then_some(name.as_deref()).flatten()
         })
     }
 
@@ -202,5 +226,116 @@ impl Outputs {
         self.0
             .iter()
             .any(|(n, info, _)| info.is_some() && n.as_deref() == Some(name))
+    }
+}
+
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
+mod tests {
+    use super::*;
+    use crate::config::Config;
+
+    fn tracked() -> Outputs {
+        let mut config = Config::default();
+        config.appearance.frame.enabled = true;
+        config.outputs = crate::config::Outputs::Targets(vec!["DP-1".to_owned()]);
+
+        let (mut outputs, _) =
+            Outputs::new::<()>(config.appearance.style, config.position, &config);
+        let task = outputs.add::<()>(
+            config.appearance.style,
+            &config.outputs,
+            config.position,
+            "DP-1",
+            iced::OutputId::for_tests(),
+            &config,
+            1.0,
+            None
+        );
+        let _ = task;
+
+        outputs
+    }
+
+    fn group(outputs: &Outputs) -> &super::super::ShellInfo {
+        outputs
+            .0
+            .iter()
+            .find(|(name, _, _)| name.as_deref() == Some("DP-1"))
+            .expect("the output keeps its record")
+            .1
+            .as_ref()
+            .expect("the group stands")
+    }
+
+    #[test]
+    fn every_surface_of_the_group_resolves() {
+        let outputs = tracked();
+        let specs = group(&outputs);
+
+        assert_eq!(outputs.has(specs.id), Some(HasOutput::Main));
+        assert!(matches!(
+            outputs.has(specs.menu.id),
+            Some(HasOutput::Menu(_))
+        ));
+        assert_eq!(outputs.has(specs.tooltip_id), Some(HasOutput::Tooltip));
+        assert_eq!(outputs.has(specs.desk_id), Some(HasOutput::Desk));
+        assert_eq!(
+            outputs.has(specs.frame_id.expect("the ring stands")),
+            Some(HasOutput::Frame)
+        );
+        assert_eq!(
+            outputs.has(specs.left_panel_id.expect("the strip stands")),
+            Some(HasOutput::Panel)
+        );
+        assert_eq!(
+            outputs.has(specs.notifications_id),
+            Some(HasOutput::Notifications)
+        );
+        assert!(outputs.has(Id::unique()).is_none());
+    }
+
+    #[test]
+    fn every_surface_reports_its_screen() {
+        let outputs = tracked();
+        let specs = group(&outputs);
+
+        assert_eq!(outputs.get_monitor_name(specs.id), Some("DP-1"));
+        assert!(outputs.get_monitor_name(Id::unique()).is_none());
+
+        for id in [
+            specs.id,
+            specs.tooltip_id,
+            specs.desk_id,
+            specs.frame_id.expect("the ring stands"),
+            specs.left_panel_id.expect("the strip stands"),
+            specs.notifications_id
+        ] {
+            assert_eq!(outputs.screen_of(id), Some(Some("DP-1")));
+        }
+
+        assert!(outputs.screen_of(Id::unique()).is_none());
+    }
+
+    #[test]
+    fn every_group_lists_its_surfaces() {
+        let outputs = tracked();
+
+        assert!(outputs.has_name("DP-1"));
+        assert!(!outputs.has_name("HDMI-1"));
+        assert_eq!(outputs.screens().collect::<Vec<_>>(), vec![Some("DP-1")]);
+        assert_eq!(outputs.desk_surfaces().count(), 1);
+        assert_eq!(outputs.frame_surfaces().count(), 1);
+        assert_eq!(outputs.panel_surfaces().count(), 3);
+
+        assert_eq!(
+            outputs.panel_edge_of(
+                group(&outputs).top_panel_id.unwrap_or_else(|| {
+                    group(&outputs).left_panel_id.expect("the strip stands")
+                })
+            ),
+            Some(PanelEdge::Left)
+        );
+        assert!(outputs.panel_edge_of(Id::unique()).is_none());
     }
 }

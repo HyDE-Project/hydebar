@@ -21,18 +21,23 @@ left = 14.0
 
 ## Model
 
-The frame is the screen square, less a rounded inner aperture. The screen
-boundary stays square — the physical corners of the output are fully
-painted — and every rounding lives on the aperture, where the content
-faces it. The configured `rounding` names the aperture radius directly:
-a thickness of 10 leaves a requested radius of 25 a radius of 25, ready
-to continue the strip's own arc. A corner one drawn side gives way on
-stays square; a corner two drawn sides meet at reads rounded.
+The frame is the screen square, less a rounded inner aperture, less the
+band of the docked bar. The screen boundary stays square — the physical
+corners of the output are fully painted wherever the bar's own band does
+not cover them — and every rounding lives on the aperture, where the
+content faces it. The configured `rounding` names the aperture radius
+directly: a thickness of 10 leaves a requested radius of 25 a radius of
+25, ready to continue the strip's own arc. A corner one drawn side gives
+way on stays square; a corner two drawn sides meet at reads rounded.
 
 The aperture sits below the band of the docked bar even when no strip is
-drawn along its edge, so the ring reads as one paint travelling out of the
-strip and around the screen. The edge the bar is docked to is the bar's
-own exclusive zone, never a second frame reservation.
+drawn along its edge, and the band itself is cut straight out of the ring:
+the bar paints that rectangle itself, so the ring never lays a second coat
+under it. The cut ends where the aperture begins, and the two stay disjoint
+by construction — the even-odd fill clears each exactly once. The ring
+reads as one paint travelling out of the strip and around the screen. The
+edge the bar is docked to is the bar's own exclusive zone, never a second
+frame reservation.
 
 ## Single source of truth
 

@@ -171,3 +171,187 @@ impl Outputs {
         Task::batch(tasks)
     }
 }
+
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
+mod tests {
+    use super::*;
+    use crate::config::Config;
+
+    fn config_with(frame_enabled: bool) -> Config {
+        let mut config = Config::default();
+        config.appearance.frame.enabled = frame_enabled;
+        config.outputs = crate::config::Outputs::Targets(vec!["DP-1".to_owned()]);
+
+        config
+    }
+
+    fn tracked(config: &Config) -> (Outputs, iced::OutputId) {
+        let (mut outputs, _) =
+            Outputs::new::<()>(config.appearance.style, config.position, config);
+        let id = iced::OutputId::for_tests();
+        let task = outputs.add::<()>(
+            config.appearance.style,
+            &config.outputs,
+            config.position,
+            "DP-1",
+            id,
+            config,
+            1.0,
+            None
+        );
+        let _ = task;
+
+        (outputs, id)
+    }
+
+    #[test]
+    fn a_departed_output_keeps_its_name_but_holds_no_surfaces() {
+        let config = config_with(true);
+        let (mut outputs, id) = tracked(&config);
+
+        let task = outputs.remove::<()>(config.appearance.style, config.position, id, &config);
+        let _ = task;
+
+        // the record stays so a return finds it again; the surfaces are
+        // stated destroyed, ring and panels included
+        let (_, info, _) = outputs
+            .0
+            .iter()
+            .find(|(name, _, _)| name.as_deref() == Some("DP-1"))
+            .expect("the record stays");
+
+        assert!(info.is_none());
+    }
+
+    #[test]
+    fn the_last_output_out_leaves_a_fallback_behind() {
+        let config = config_with(true);
+        let (mut outputs, id) = tracked(&config);
+
+        let task = outputs.remove::<()>(config.appearance.style, config.position, id, &config);
+        let _ = task;
+
+        assert!(
+            outputs
+                .0
+                .iter()
+                .any(|(name, info, _)| name.is_none() && info.is_some())
+        );
+    }
+
+    #[test]
+    fn destroying_everything_holds_no_group() {
+        let config = config_with(true);
+        let (mut outputs, _) = tracked(&config);
+
+        let task = outputs.destroy_all::<()>();
+        let _ = task;
+
+        assert!(outputs.0.iter().all(|(_, info, _)| info.is_none()));
+    }
+
+    #[test]
+    fn removing_a_stranger_changes_nothing() {
+        let config = config_with(true);
+        let (mut outputs, _) = tracked(&config);
+        let before = outputs.0.len();
+
+        let task = outputs.remove::<()>(
+            config.appearance.style,
+            config.position,
+            iced::OutputId::for_tests(),
+            &config
+        );
+        let _ = task;
+
+        assert_eq!(outputs.0.len(), before);
+    }
+
+    #[test]
+    fn removing_a_surface_free_record_restates_nothing() {
+        let config = config_with(true);
+        let (mut outputs, _) =
+            Outputs::new::<()>(config.appearance.style, config.position, &config);
+        let id = iced::OutputId::for_tests();
+
+        // the configurator never asked for this screen: the record stands
+        // surface-free, and taking it down states no destruction at all
+        let task = outputs.add::<()>(
+            config.appearance.style,
+            &config.outputs,
+            config.position,
+            "HDMI-1",
+            id,
+            &config,
+            1.0,
+            None
+        );
+        let _ = task;
+
+        let task = outputs.remove::<()>(config.appearance.style, config.position, id, &config);
+        let _ = task;
+
+        let (_, info, _) = outputs
+            .0
+            .iter()
+            .find(|(name, _, _)| name.as_deref() == Some("HDMI-1"))
+            .expect("the record stays");
+
+        assert!(info.is_none());
+    }
+
+    #[test]
+    fn removing_one_of_two_leaves_the_other_standing() {
+        let mut config = config_with(true);
+        config.outputs =
+            crate::config::Outputs::Targets(vec!["DP-1".to_owned(), "HDMI-1".to_owned()]);
+
+        let (mut outputs, _) =
+            Outputs::new::<()>(config.appearance.style, config.position, &config);
+        let dp = iced::OutputId::for_tests();
+        let hdmi = iced::OutputId::for_tests();
+
+        for (name, id) in [("DP-1", dp), ("HDMI-1", hdmi)] {
+            let task = outputs.add::<()>(
+                config.appearance.style,
+                &config.outputs,
+                config.position,
+                name,
+                id,
+                &config,
+                1.0,
+                None
+            );
+            let _ = task;
+        }
+
+        let task = outputs.remove::<()>(config.appearance.style, config.position, dp, &config);
+        let _ = task;
+
+        // the departed record holds no surfaces, the other group is
+        // untouched, and no fallback appears while a group still stands
+        let departed = outputs
+            .0
+            .iter()
+            .find(|(name, _, _)| name.as_deref() == Some("DP-1"))
+            .expect("the record stays");
+        assert!(departed.1.is_none());
+
+        let staying = outputs
+            .0
+            .iter()
+            .find(|(name, _, _)| name.as_deref() == Some("HDMI-1"))
+            .expect("the other group stands");
+        assert!(
+            staying
+                .1
+                .as_ref()
+                .expect("the group stands")
+                .frame_id
+                .is_some()
+        );
+
+        assert!(outputs.0.iter().all(|(name, _, _)| name.is_some()));
+    }
+}

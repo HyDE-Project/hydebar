@@ -369,4 +369,157 @@ mod tests {
         assert!(specs.left_panel_id.is_none());
         assert_eq!(specs.reservations, PanelWidths::default());
     }
+
+    fn tracked_group(outputs: &mut Outputs, name: &str, config: &Config) {
+        let task = outputs.add::<()>(
+            config.appearance.style,
+            &config.outputs,
+            config.position,
+            name,
+            iced::OutputId::for_tests(),
+            config,
+            1.0,
+            None
+        );
+        let _ = task;
+    }
+
+    fn group_of<'a>(outputs: &'a Outputs, name: &str) -> &'a ShellInfo {
+        outputs
+            .0
+            .iter()
+            .find(|(entry, _, _)| entry.as_deref() == Some(name))
+            .expect("the output keeps its record")
+            .1
+            .as_ref()
+            .expect("the group stands")
+    }
+
+    #[test]
+    fn two_outputs_own_two_rings_and_lose_both_together() {
+        let mut config = config_with(true);
+        config.outputs =
+            crate::config::Outputs::Targets(vec!["DP-1".to_owned(), "HDMI-1".to_owned()]);
+
+        let (mut outputs, _) =
+            Outputs::new::<()>(config.appearance.style, config.position, &config);
+
+        tracked_group(&mut outputs, "DP-1", &config);
+        tracked_group(&mut outputs, "HDMI-1", &config);
+
+        // every output owns its surfaces: two rings, two sets of panels, no
+        // shared identifiers
+        let dp_ring = group_of(&outputs, "DP-1").frame_id;
+        let hdmi_ring = group_of(&outputs, "HDMI-1").frame_id;
+
+        assert!(dp_ring.is_some());
+        assert!(hdmi_ring.is_some());
+        assert_ne!(dp_ring, hdmi_ring);
+        assert_ne!(
+            group_of(&outputs, "DP-1").left_panel_id,
+            group_of(&outputs, "HDMI-1").left_panel_id
+        );
+
+        let off = config_with(false);
+        let task = outputs.sync::<()>(
+            off.appearance.style,
+            &config.outputs,
+            off.position,
+            &off,
+            1.0,
+            None
+        );
+        let _ = task;
+
+        // one flip takes both rings down, group by group
+        assert!(group_of(&outputs, "DP-1").frame_id.is_none());
+        assert!(group_of(&outputs, "HDMI-1").frame_id.is_none());
+        assert!(group_of(&outputs, "DP-1").left_panel_id.is_none());
+        assert!(group_of(&outputs, "HDMI-1").left_panel_id.is_none());
+    }
+
+    #[test]
+    fn a_sync_with_no_real_output_touches_nothing() {
+        let config = config_with(true);
+        let (mut outputs, _) =
+            Outputs::new::<()>(config.appearance.style, config.position, &config);
+
+        // the fallback group owns no frame and no panels: the pass reads
+        // real outputs only and leaves the fallback exactly as it found it
+        let task = outputs.sync::<()>(
+            config.appearance.style,
+            &config.outputs,
+            config.position,
+            &config,
+            1.0,
+            None
+        );
+        let _ = task;
+
+        assert_eq!(outputs.0.len(), 1);
+
+        let (_, info, _) = &outputs.0[0];
+        let specs = info.as_ref().expect("the fallback stands");
+
+        assert!(!specs.frame_enabled);
+        assert!(specs.frame_id.is_none());
+    }
+
+    #[test]
+    fn a_ring_lost_outside_the_sync_is_not_destroyed_twice() {
+        let (mut outputs, _ring, _) = outputs_with::<()>(true);
+
+        // the switch still reads on while the surface is already gone: the
+        // sync takes the record down without stating a second destruction
+        for (_, info, _) in &mut outputs.0 {
+            if let Some(specs) = info {
+                specs.frame_id = None;
+            }
+        }
+
+        let mut off = config_with(false);
+        off.outputs = crate::config::Outputs::Targets(vec!["DP-1".to_owned()]);
+        let task = outputs.sync::<()>(
+            off.appearance.style,
+            &off.outputs,
+            off.position,
+            &off,
+            1.0,
+            None
+        );
+        let _ = task;
+
+        let specs = group_of(&outputs, "DP-1");
+
+        assert!(!specs.frame_enabled);
+        assert!(specs.frame_id.is_none());
+    }
+
+    #[test]
+    fn every_surface_answers_to_its_own_output() {
+        let (outputs, _ring, _) = outputs_with::<()>(true);
+        let specs = group_of(&outputs, "DP-1");
+
+        // each surface of the group resolves back to the owning output, and
+        // each panel names its own edge
+        assert_eq!(outputs.screen_of(specs.id), Some(Some("DP-1")));
+        assert_eq!(
+            outputs.screen_of(specs.frame_id.expect("the ring stands")),
+            Some(Some("DP-1"))
+        );
+        assert_eq!(
+            outputs.screen_of(specs.left_panel_id.expect("the strip stands")),
+            Some(Some("DP-1"))
+        );
+        assert_eq!(
+            outputs.panel_edge_of(specs.left_panel_id.expect("the strip stands")),
+            Some(PanelEdge::Left)
+        );
+        assert_eq!(
+            outputs.panel_edge_of(specs.bottom_panel_id.expect("the strip stands")),
+            Some(PanelEdge::Bottom)
+        );
+        assert_eq!(outputs.output_name(iced::OutputId::for_tests()), None);
+        assert!(outputs.screen_of(iced::SurfaceId::unique()).is_none());
+    }
 }

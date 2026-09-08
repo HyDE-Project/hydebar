@@ -3,9 +3,10 @@
 //! The program owns no geometry of its own: the outline arrives ready to
 //! fill, computed by [`super::geometry`], and the colour rides the bar
 //! palette the way every other surface does. The ring is one even-odd path:
-//! the square outer screen rect with the rounded inner hole cut out of it —
-//! two subpaths of one fill, so no seam can show whatever the colour's
-//! transparency, and the aperture rounds like the `Caelestia` border.
+//! the square outer screen rect, the rounded inner hole cut out of it, and
+//! the straight cut under the docked bar — the hole and the cut are disjoint
+//! by construction, so each clears exactly once, whatever the colour's
+//! transparency.
 //!
 //! ```rust
 //! use hydebar_core::{
@@ -35,8 +36,8 @@ use iced::{
 
 use super::geometry::{FramePiece, FrameShape};
 
-/// Paints the frame: one even-odd path over the outer rect and the inner
-/// hole.
+/// Paints the frame: one even-odd path over the outer rect, the inner hole
+/// and the band cut.
 #[derive(Debug, Clone)]
 pub struct FrameCanvas {
     /// The outline to fill, computed by [`super::geometry::frame_pieces`].
@@ -67,6 +68,10 @@ impl<Message> Program<Message> for FrameCanvas {
 
                 piece_subpath(&mut builder, shape.outer);
                 piece_subpath(&mut builder, shape.inner);
+
+                if let Some(band) = shape.band {
+                    piece_subpath(&mut builder, band);
+                }
 
                 let path = builder.build();
 

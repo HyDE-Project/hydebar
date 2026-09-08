@@ -226,7 +226,7 @@ before it is complete.
 
 ## A1. Required Geometric Model
 
-The frame is a square output rectangle minus a rounded inner aperture.
+The frame is a square output rectangle minus a rounded inner aperture, minus the docked bar band.
 
 ```text
 outer = Rect(0, 0, viewport.width, viewport.height)
@@ -238,8 +238,16 @@ aperture.width = viewport.width - left_inset - right_inset
 aperture.height = viewport.height - top_inset - bottom_inset
 aperture corner radii = configured inward rounding, clamped to aperture dimensions
 
-paint = outer minus aperture
+paint = outer minus aperture minus bar band (when the bar is docked)
 ```
+
+The bar paints its own band: the ring MUST NOT paint a pixel the bar
+paints, or translucent styles gain a second coat under the strip. The band
+cut is a straight full-width rectangle of the bar's height on the docked
+edge; it ends where the aperture begins — the docked inset already reaches
+at least the bar height — so the two stay disjoint by construction and the
+even-odd fill clears each exactly once. This disjointness MUST be asserted
+by test, not assumed.
 
 For a bar docked to the top:
 
@@ -254,11 +262,11 @@ reservation.
 
 The visual result MUST satisfy:
 
-- the exact physical screen corner is painted;
-- the screen-facing boundary is square;
+- the screen-facing boundary is square wherever the ring paints;
 - the content-facing boundary is rounded inward;
 - the configured rounding is not reduced by frame thickness;
 - translucent paint is applied exactly once at every point;
+- no ring pixel falls inside the bar's own band;
 - the aperture center remains fully transparent.
 
 The old interpretation `inner_radius = outer_radius - thickness` MUST NOT be used. It models a
@@ -466,7 +474,7 @@ Alpha-sensitive tests MUST detect double paint.
 
 Workstream A is complete only when:
 
-- outer corners are square in geometry and raster tests;
+- outer corners are square in geometry and raster tests wherever the ring paints;
 - inner rounding visually matches the configured radius;
 - no global screen dimensions are used by the frame renderer;
 - frame enablement and edge widths hot-reload correctly;
@@ -1374,7 +1382,7 @@ The professional visual milestone is complete only when all statements below are
 
 ## Frame
 
-- The frame has square screen-facing corners and rounded content-facing corners.
+- The frame has square screen-facing corners wherever the ring paints, and rounded content-facing corners.
 - The configured radius directly controls inward aperture rounding.
 - Each output uses its own actual logical render bounds.
 - The docked bar edge is not double-reserved.

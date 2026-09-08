@@ -12,8 +12,10 @@ pub use iced::{
     OutputId, SurfaceId as Id, Task, destroy_layer_surface, new_layer_surface, set_input_region
 };
 pub use settings::{
-    PanelEdge, desk_settings, frame_settings, layer_height, main_settings, menu_settings,
-    notifications_settings, panel_anchor, panel_clearance, panel_settings, tooltip_settings
+    desk_settings, frame_settings, layer_height, main_settings, menu_settings,
+    notifications_settings,
+    panel::{PanelEdge, panel_anchor, panel_clearance, panel_settings},
+    tooltip_settings
 };
 
 use crate::{
