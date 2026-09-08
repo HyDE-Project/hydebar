@@ -89,7 +89,7 @@ impl App {
                 if self.outputs.has_name(&name) {
                     log::debug!("frame: screen {name} measured");
 
-                    if self.adopt_measured(name.clone(), geometry) {
+                    if self.adopt_measured(name, geometry) {
                         self.refresh_appearance()
                     } else {
                         Task::none()
