@@ -71,6 +71,13 @@ pub struct App {
     /// What the islands are sent beyond when they fly back onto the strip:
     /// off screen has to be off *this* screen, not a guessed distance.
     pub(crate) screen_width: Option<f32>,
+    /// Logical sizes each measured monitor calls for, by its name.
+    ///
+    /// Every output rings itself in its own numbers: a 4K panel and a 1080p
+    /// one report different sizes, and whichever report arrived last is what
+    /// the desk and the islands travel with, but the frame of a screen is a
+    /// shape of that screen and no other.
+    pub(crate) screen_sizes: HashMap<String, (f32, f32)>,
     /// What the machine has been doing for the last few minutes.
     ///
     /// One reading is a number and a run of them is a shape; the canvas draws

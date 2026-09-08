@@ -7,44 +7,45 @@
 //! whatever the bar looks like, the ring is the same paint continued around
 //! the screen, and it parts together with the strip's own wash. Nothing is
 //! painted while the frame is disabled, the strip is gone, or the
-//! compositor has not reported the screen size yet.
+//! compositor has not reported this screen's size yet.
+//!
+//! The geometry is the output's own measured logical size, never a screen
+//! another output reported: a 4K panel and a 1080p one ring themselves each
+//! in their own numbers.
 
 use hydebar_core::{
     HEIGHT,
     frame::{geometry::frame_pieces, program::FrameCanvas}
 };
-use iced::{Element, Length, widget::canvas};
+use iced::{Element, Length, SurfaceId as Id, widget::canvas};
 
 use super::super::state::{App, Message};
 
 impl App {
     /// Draws the frame of one output: the enabled edge strips, or nothing.
-    pub(super) fn frame_surface(&self) -> Element<'_, Message> {
+    pub(super) fn frame_surface(&self, id: Id) -> Element<'_, Message> {
         let frame = &self.config.appearance.frame;
-
-        log::debug!(
-            "frame surface view: enabled={}, screen={:?}x{:?}",
-            frame.enabled,
-            self.screen_width,
-            self.screen_height
-        );
-
-        let (Some(screen_w), Some(screen_h)) = (self.screen_width, self.screen_height) else {
-            return iced::widget::Row::new().into();
-        };
+        let empty = iced::widget::Row::new().into();
 
         if !frame.enabled {
-            return iced::widget::Row::new().into();
+            return empty;
+        }
+
+        let Some(name) = self.outputs.screen_of(id).flatten() else {
+            return empty;
+        };
+
+        let Some(&(screen_w, screen_h)) = self.screen_sizes.get(name) else {
+            return empty;
+        };
+
+        let wash = self.strip_wash(Some(name));
+
+        if wash <= 0.0 {
+            return empty;
         }
 
         let appearance = self.appearance();
-        let screen = self.outputs.screens().next().flatten();
-        let wash = self.strip_wash(screen);
-
-        if wash <= 0.0 {
-            return iced::widget::Row::new().into();
-        }
-
         let theme = &self.theme_cache;
         let color = self.strip_ground(theme);
 
@@ -57,7 +58,7 @@ impl App {
         let shape = frame_pieces(screen_w, screen_h, frame, self.config.position, bar_height);
 
         log::debug!(
-            "frame: enabled, drawing the ring over {screen_w}x{screen_h}, wash {wash}, shape {shape:?}"
+            "frame: drawing the ring of {name} over {screen_w}x{screen_h}, wash {wash}, shape {shape:?}"
         );
 
         canvas(FrameCanvas {

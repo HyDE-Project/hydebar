@@ -89,7 +89,7 @@ impl App {
                 if self.outputs.has_name(&name) {
                     log::debug!("frame: screen {name} measured");
 
-                    if self.adopt_measured(geometry) {
+                    if self.adopt_measured(name.clone(), geometry) {
                         self.refresh_appearance()
                     } else {
                         Task::none()
@@ -176,16 +176,21 @@ impl App {
     /// The compositor scale is handed on so the sizes are not scaled a second
     /// time by a compositor that already scales the surface, and the scale the
     /// bar applies to its own surface is divided out for the same reason.
-    /// Reports whether the sizes changed.
-    fn adopt_measured(&mut self, geometry: ScreenGeometry) -> bool {
+    /// The sizes are kept per monitor as well, because each output rings
+    /// itself in its own numbers. Reports whether the shared metrics changed.
+    fn adopt_measured(&mut self, name: String, geometry: ScreenGeometry) -> bool {
         #[expect(
             clippy::cast_possible_truncation,
             reason = "surface scale factors are small values that fit f32"
         )]
         let surface_scale = self.config.appearance.scale_factor as f32;
 
-        self.screen_height = Some(geometry.pixels.1 / geometry.scale.max(f32::EPSILON));
-        self.screen_width = Some(geometry.pixels.0 / geometry.scale.max(f32::EPSILON));
+        let height = geometry.pixels.1 / geometry.scale.max(f32::EPSILON);
+        let width = geometry.pixels.0 / geometry.scale.max(f32::EPSILON);
+
+        self.screen_height = Some(height);
+        self.screen_width = Some(width);
+        self.screen_sizes.insert(name, (width, height));
 
         let metrics = auto_metrics(
             geometry.pixels.0,
