@@ -1,11 +1,11 @@
-//! Canvas program painting the frame pieces.
+//! Canvas program painting the frame shape.
 //!
-//! The program owns no geometry of its own: the pieces arrive ready to fill,
-//! computed by [`super::geometry`], and the colour rides the bar palette the
-//! way every other surface does. Every piece is a subpath of one shape
-//! filled under the even-odd rule — the pieces tile without overlap, so one
-//! fill paints the whole ring and no seam can show where two pieces meet,
-//! whatever the colour's transparency.
+//! The program owns no geometry of its own: the outline arrives ready to
+//! fill, computed by [`super::geometry`], and the colour rides the bar
+//! palette the way every other surface does. The ring is one even-odd path:
+//! the square outer screen rect with the rounded inner hole cut out of it —
+//! two subpaths of one fill, so no seam can show whatever the colour's
+//! transparency, and the aperture rounds like the `Caelestia` border.
 //!
 //! ```rust
 //! use hydebar_core::{
@@ -19,30 +19,30 @@
 //!     enabled: true,
 //!     ..FrameConfig::default()
 //! };
-//! let pieces = frame_pieces(1920.0, 1080.0, &frame, Position::Top, 38.0);
+//! let shape = frame_pieces(1920.0, 1080.0, &frame, Position::Top, 38.0);
 //! let canvas = FrameCanvas {
-//!     pieces,
+//!     shape,
 //!     color: Color::BLACK
 //! };
 //!
-//! assert_eq!(canvas.pieces.len(), 3);
+//! assert_eq!(canvas.shape.inner.w, 1900.0);
 //! ```
 
 use iced::{
     Color, Point,
-    border::Radius,
     widget::canvas::{Frame, Geometry, Program, fill, path}
 };
 
-use super::geometry::FramePiece;
+use super::geometry::{FramePiece, FrameShape};
 
-/// Paints the frame: one even-odd path over the pieces, in one colour.
+/// Paints the frame: one even-odd path over the outer rect and the inner
+/// hole.
 #[derive(Debug, Clone)]
 pub struct FrameCanvas {
-    /// Pieces to fill, computed by [`super::geometry::frame_pieces`].
-    pub pieces: Vec<FramePiece>,
+    /// The outline to fill, computed by [`super::geometry::frame_pieces`].
+    pub shape: FrameShape,
     /// Colour of the frame, from the bar palette.
-    pub color:  Color
+    pub color: Color
 }
 
 impl<Message> Program<Message> for FrameCanvas {
@@ -58,80 +58,71 @@ impl<Message> Program<Message> for FrameCanvas {
     ) -> Vec<Geometry> {
         use iced::widget::canvas::Cache;
 
-        let pieces = self.pieces.clone();
+        let shape = self.shape;
         let color = self.color;
 
-        vec![Cache::new().draw(renderer, bounds.size(), |frame: &mut Frame| {
-            let mut builder = path::Builder::new();
+        vec![
+            Cache::new().draw(renderer, bounds.size(), |frame: &mut Frame| {
+                let mut builder = path::Builder::new();
 
-            for piece in &pieces {
-                rounded_subpath(
-                    &mut builder,
-                    piece.x,
-                    piece.y,
-                    piece.w,
-                    piece.h,
-                    Radius {
-                        top_left:     piece.top_left,
-                        top_right:    piece.top_right,
-                        bottom_right: piece.bottom_right,
-                        bottom_left:  piece.bottom_left
+                piece_subpath(&mut builder, shape.outer);
+                piece_subpath(&mut builder, shape.inner);
+
+                let path = builder.build();
+
+                frame.fill(
+                    &path,
+                    fill::Fill {
+                        style: color.into(),
+                        rule:  fill::Rule::EvenOdd
                     }
                 );
-            }
-
-            let shape = builder.build();
-
-            frame.fill(
-                &shape,
-                fill::Fill {
-                    style: color.into(),
-                    rule:  fill::Rule::EvenOdd
-                }
-            );
-        })]
+            }),
+        ]
     }
 }
 
-/// Traces one rounded rectangle into the builder.
+/// Traces one rectangle into the builder.
 ///
 /// A corner's radius is clamped to the lengths of the two edges it sweeps —
-/// not to half the piece, which would halve a strip end's rounding: a
-/// 10-pixel strip with a 10-pixel radius rounds its end over the full
-/// thickness, the way a `Caelestia` joint does. Where both corners of one
-/// side round past the width between them, the pair shares what is left.
-fn rounded_subpath(builder: &mut path::Builder, x: f32, y: f32, w: f32, h: f32, radius: Radius) {
-    let mut top_left = radius.top_left.max(0.0);
-    let mut top_right = radius.top_right.max(0.0);
-    let mut bottom_right = radius.bottom_right.max(0.0);
-    let mut bottom_left = radius.bottom_left.max(0.0);
+/// not to half the rect's width alone; where the edges are short the path
+/// stays square. A fully square rect (the outer screen bound) traces
+/// straight.
+fn piece_subpath(builder: &mut path::Builder, piece: FramePiece) {
+    let FramePiece {
+        x,
+        y,
+        w,
+        h,
+        top_left,
+        top_right,
+        bottom_right,
+        bottom_left
+    } = piece;
 
-    let pair = |a: &mut f32, b: &mut f32, length: f32| {
-        if *a + *b > length {
-            let scale = length / (*a + *b);
+    let pair = |a: f32, b: f32, length: f32| {
+        let total = a.max(0.0) + b.max(0.0);
 
-            *a *= scale;
-            *b *= scale;
+        if total > length && total > 0.0 {
+            (a * length / total, b * length / total)
+        } else {
+            (a.max(0.0), b.max(0.0))
         }
     };
 
-    pair(&mut top_left, &mut top_right, w);
-    pair(&mut bottom_left, &mut bottom_right, w);
-    pair(&mut top_left, &mut bottom_left, h);
-    pair(&mut top_right, &mut bottom_right, h);
+    let (tl, tr) = pair(top_left, top_right, w);
+    let (bl, br) = pair(bottom_left, bottom_right, w);
+    let (tl, bl) = pair(tl, bl, h);
+    let (tr, br) = pair(tr, br, h);
 
-    builder.move_to(Point::new(x + top_left, y));
-    builder.line_to(Point::new(x + w - top_right, y));
-    builder.arc_to(Point::new(x + w, y), Point::new(x + w, y + top_right), top_right);
-    builder.line_to(Point::new(x + w, y + h - bottom_right));
-    builder.arc_to(
-        Point::new(x + w, y + h),
-        Point::new(x + w - bottom_right, y + h),
-        bottom_right
-    );
-    builder.line_to(Point::new(x + bottom_left, y + h));
-    builder.arc_to(Point::new(x, y + h), Point::new(x, y + h - bottom_left), bottom_left);
-    builder.line_to(Point::new(x, y + top_left));
-    builder.arc_to(Point::new(x, y), Point::new(x + top_left, y), top_left);
+    builder.move_to(Point::new(x + tl, y));
+    builder.line_to(Point::new(x + w - tr, y));
+    builder.arc_to(Point::new(x + w, y), Point::new(x + w, y + tr), tr);
+    builder.line_to(Point::new(x + w, y + h - br));
+    builder.arc_to(Point::new(x + w, y + h), Point::new(x + w - br, y + h), br);
+    builder.line_to(Point::new(x + bl, y + h));
+    builder.arc_to(Point::new(x, y + h), Point::new(x, y + h - bl), bl);
+    builder.line_to(Point::new(x, y + tl));
+    builder.arc_to(Point::new(x, y), Point::new(x + tl, y), tl);
     builder.close();
 }
