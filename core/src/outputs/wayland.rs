@@ -12,12 +12,14 @@ pub use iced::{
     OutputId, SurfaceId as Id, Task, destroy_layer_surface, new_layer_surface, set_input_region
 };
 pub use settings::{
-    desk_settings, frame_settings, layer_height, main_settings, menu_settings,
-    notifications_settings, panel_settings, tooltip_settings, PanelEdge
+    PanelEdge, desk_settings, frame_settings, layer_height, main_settings, menu_settings,
+    notifications_settings, panel_settings, tooltip_settings
 };
 
-use crate::config::{AppearanceStyle, BarLayer, Position};
-use crate::frame::PanelWidths;
+use crate::{
+    config::{AppearanceStyle, BarLayer, Position},
+    frame::PanelWidths
+};
 
 /// Namespace of the surface the bar itself is drawn on.
 ///

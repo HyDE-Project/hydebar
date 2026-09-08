@@ -67,7 +67,7 @@ pub enum EntryAlignment {
 #[derive(Deserialize, Clone, Debug, PartialEq)]
 pub struct FrameEntry {
     /// Identifier of the widget module placed here.
-    pub id: String,
+    pub id:        String,
     /// Where along the strip the widget stands.
     #[serde(default)]
     pub alignment: EntryAlignment
@@ -82,13 +82,13 @@ pub struct FrameEntry {
 pub struct FrameEdge {
     /// Whether the strip along this edge is drawn at all.
     #[serde(default = "enabled_edge")]
-    pub enabled:  bool,
+    pub enabled: bool,
     /// Width of the strip, when it is not the shared `thickness`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub width:    Option<f32>,
+    pub width:   Option<f32>,
     /// Widgets the user placed on this strip, in paint order.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub entries:  Vec<FrameEntry>
+    pub entries: Vec<FrameEntry>
 }
 
 impl Default for FrameEdge {

@@ -135,9 +135,8 @@ impl Outputs {
         self.0.iter().filter_map(|(name, info, _)| {
             let name = name.as_deref();
 
-            info.as_ref().and_then(|info| {
-                info.frame_id.map(|frame_id| (frame_id, name))
-            })
+            info.as_ref()
+                .and_then(|info| info.frame_id.map(|frame_id| (frame_id, name)))
         })
     }
 

@@ -6,7 +6,6 @@ use super::{
     DESK_NAMESPACE, MAIN_NAMESPACE, MENU_NAMESPACE, NOTIFICATIONS_NAMESPACE, NOTIFICATIONS_WIDTH,
     TOOLTIP_NAMESPACE
 };
-
 use crate::{
     HEIGHT,
     config::{AppearanceStyle, BarLayer, Position}
@@ -192,15 +191,16 @@ pub fn frame_settings(output: Option<OutputId>, layer: BarLayer) -> LayerShellSe
 /// anchored to both ends of, and a compositor answers the violation by
 /// killing the whole connection — every surface, not the offending one.
 pub fn panel_settings(
-    edge:       PanelEdge,
-    output:     Option<OutputId>,
-    layer:      BarLayer,
-    dock:       Position,
+    edge: PanelEdge,
+    output: Option<OutputId>,
+    layer: BarLayer,
+    dock: Position,
     bar_height: f32,
-    width:      u32
+    width: u32
 ) -> LayerShellSettings {
     let clearance = match (dock, edge) {
-        (Position::Top, PanelEdge::Left | PanelEdge::Right) => {
+        (Position::Top, PanelEdge::Left | PanelEdge::Right) =>
+        {
             #[expect(
                 clippy::cast_possible_truncation,
                 clippy::cast_sign_loss,
@@ -208,7 +208,8 @@ pub fn panel_settings(
             )]
             (bar_height.round() as i32, 0, 0, 0)
         }
-        (Position::Bottom, PanelEdge::Left | PanelEdge::Right) => {
+        (Position::Bottom, PanelEdge::Left | PanelEdge::Right) =>
+        {
             #[expect(
                 clippy::cast_possible_truncation,
                 clippy::cast_sign_loss,

@@ -43,19 +43,13 @@ impl Outputs {
                     } = shell_info;
 
                     Task::batch(vec![
-                        destroy_layer_surfaces(
-                            id,
-                            menu.id,
-                            tooltip_id,
-                            desk_id,
-                            notifications_id
-                        ),
+                        destroy_layer_surfaces(id, menu.id, tooltip_id, desk_id, notifications_id),
                         destroy_optional_surfaces(&[
                             frame_id,
                             left_panel_id,
                             right_panel_id,
-                            bottom_panel_id,
-                        ])
+                            bottom_panel_id
+                        ]),
                     ])
                 }),
             _ => Task::none()

@@ -51,10 +51,7 @@ mod tests {
     fn a_valid_level_parses_into_a_spec() {
         let spec = get_log_spec("debug");
 
-        assert_eq!(
-            spec.level_for_module(None),
-            Some(log::LevelFilter::Debug)
-        );
+        assert_eq!(spec.level_for_module(None), Some(log::LevelFilter::Debug));
     }
 
     #[test]

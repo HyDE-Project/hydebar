@@ -100,7 +100,8 @@ pub(super) async fn serve(
 /// The service retries the claim for as long as it runs, and a daemon that
 /// refuses replacement answers the same verdict every time: one report is a
 /// diagnosis, every further one is noise.
-static UNREPLACEABLE_REPORTED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+static UNREPLACEABLE_REPORTED: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
 
 /// Claims the notification name, deposing a holder that can be stopped.
 ///
@@ -125,7 +126,9 @@ async fn claim_name(
         Ok(RequestNameReply::InQueue) => {
             let Some(unit) = takeover::replaceable_unit(connection).await else {
                 if UNREPLACEABLE_REPORTED.swap(true, std::sync::atomic::Ordering::Relaxed) {
-                    debug!("a notification daemon the bar cannot safely replace still holds the bus");
+                    debug!(
+                        "a notification daemon the bar cannot safely replace still holds the bus"
+                    );
                 } else {
                     error!(
                         "a notification daemon the bar cannot safely replace holds the bus; \
