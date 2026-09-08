@@ -79,6 +79,11 @@ impl Outputs {
                 reason = "the bar height constant is small enough for pixel counts"
             )]
             let fallback_bar_height = HEIGHT as f32;
+            let widths = panel_widths(
+                &config.appearance.frame,
+                position,
+                config.appearance.scale_factor
+            );
 
             let PanelSurfaces {
                 top_id,
@@ -91,11 +96,7 @@ impl Outputs {
                 config.layer,
                 position,
                 config.appearance.height_px().unwrap_or(fallback_bar_height),
-                panel_widths(
-                    &config.appearance.frame,
-                    position,
-                    config.appearance.scale_factor
-                )
+                widths
             );
 
             let (frame_id, frame_task) = if config.appearance.frame.enabled {
@@ -122,10 +123,12 @@ impl Outputs {
                     desk_id,
                     notifications_id,
                     frame_id,
-                    left_panel_id: Some(left_id),
-                    right_panel_id: Some(right_id),
-                    bottom_panel_id: Some(bottom_id),
-                    top_panel_id: Some(top_id)
+                    frame_enabled: config.appearance.frame.enabled,
+                    reservations: widths,
+                    left_panel_id: left_id,
+                    right_panel_id: right_id,
+                    bottom_panel_id: bottom_id,
+                    top_panel_id: top_id
                 }),
                 Some(wl_output)
             ));

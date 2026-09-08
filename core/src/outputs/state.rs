@@ -11,6 +11,7 @@ use iced::{OutputId, SurfaceId as Id, Task};
 use super::wayland::{LayerSurfaceCreation, create_layer_surfaces};
 use crate::{
     config::{AppearanceStyle, ModuleName, Position},
+    frame::PanelWidths,
     menu::{Menu, MenuType},
     position_button::ButtonUIRef,
     tooltip::TooltipInfo
@@ -42,6 +43,19 @@ struct ShellInfo {
     /// absent while the frame is switched off or while no real screen owns
     /// this group yet, which is why the identifier is optional.
     frame_id:         Option<Id>,
+    /// Whether the frame was switched on when this group was last synced.
+    ///
+    /// The stored switch is what the next sync reads before it decides the
+    /// ring surface has to be created or destroyed, so a config flip never
+    /// leaves a stale fullscreen surface behind.
+    frame_enabled:    bool,
+    /// Reservation widths the panels were last sized to, in layer-shell
+    /// pixels.
+    ///
+    /// A flipped edge width is a `set_size` away from real; comparing the
+    /// stored numbers against the freshly computed ones is how the sync
+    /// resizes exactly the panels that moved.
+    reservations:     PanelWidths,
     /// Surface the left panel of this output is drawn on.
     left_panel_id:    Option<Id>,
     /// Surface the right panel of this output is drawn on.
@@ -178,6 +192,8 @@ impl Outputs {
                     desk_id,
                     notifications_id,
                     frame_id: None,
+                    frame_enabled: false,
+                    reservations: PanelWidths::default(),
                     left_panel_id: None,
                     right_panel_id: None,
                     bottom_panel_id: None,

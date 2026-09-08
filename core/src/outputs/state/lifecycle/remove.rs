@@ -11,6 +11,7 @@ use log::debug;
 use super::super::{Outputs, ShellInfo};
 use crate::{
     config::{AppearanceStyle, Position},
+    frame::PanelWidths,
     menu::Menu,
     outputs::wayland::{
         LayerSurfaceCreation, create_layer_surfaces, destroy_layer_surfaces,
@@ -108,6 +109,8 @@ impl Outputs {
                             desk_id,
                             notifications_id,
                             frame_id: None,
+                            frame_enabled: false,
+                            reservations: PanelWidths::default(),
                             left_panel_id: None,
                             right_panel_id: None,
                             bottom_panel_id: None,

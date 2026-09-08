@@ -13,7 +13,7 @@ pub use iced::{
 };
 pub use settings::{
     PanelEdge, desk_settings, frame_settings, layer_height, main_settings, menu_settings,
-    notifications_settings, panel_settings, tooltip_settings
+    notifications_settings, panel_anchor, panel_clearance, panel_settings, tooltip_settings
 };
 
 use crate::{
@@ -142,14 +142,14 @@ pub fn create_layer_surfaces<Message: 'static>(
     }
 }
 
-/// Creates the three side panels of the frame for one screen.
+/// Creates the frame's reservation panels for one screen.
 ///
-/// Every panel exists for the whole life of the surface group, whether its
-/// edge is enabled or not: a config flip resizes the panel in place, and a
-/// window that only appears when the user turns a strip on would not be
-/// mapped in time for the desktop to be pushed off it. The widths come from
-/// the frame configuration, scaled like the bar's own height; a zero width
-/// is what a switched-off edge looks like.
+/// A panel is only created for an edge whose reservation width is real: a
+/// switched-off edge and the edge the bar itself occupies reserve nothing —
+/// the bar owns the edge it is docked to — so no surface exists there and
+/// the sync creates, resizes or destroys one when a config flip asks for
+/// it. The widths come from the frame configuration, scaled like the bar's
+/// own height.
 #[must_use]
 pub fn create_panel_surfaces<Message: 'static>(
     output: Option<OutputId>,
@@ -158,54 +158,44 @@ pub fn create_panel_surfaces<Message: 'static>(
     bar_height: f32,
     widths: PanelWidths
 ) -> PanelSurfaces<Message> {
-    let (top_id, top_task) = new_layer_surface(panel_settings(
-        PanelEdge::Top,
-        output,
-        layer,
-        dock,
-        bar_height,
-        widths.top
-    ));
-    let (left_id, left_task) = new_layer_surface(panel_settings(
-        PanelEdge::Left,
-        output,
-        layer,
-        dock,
-        bar_height,
-        widths.left
-    ));
-    let (right_id, right_task) = new_layer_surface(panel_settings(
-        PanelEdge::Right,
-        output,
-        layer,
-        dock,
-        bar_height,
-        widths.right
-    ));
-    let (bottom_id, bottom_task) = new_layer_surface(panel_settings(
-        PanelEdge::Bottom,
-        output,
-        layer,
-        dock,
-        bar_height,
-        widths.bottom
-    ));
+    let one = |edge: PanelEdge, width: u32| -> (Option<Id>, Option<Task<Message>>) {
+        if width == 0 {
+            return (None, None);
+        }
+
+        let (id, task) =
+            new_layer_surface(panel_settings(edge, output, layer, dock, bar_height, width));
+
+        (Some(id), Some(task))
+    };
+
+    let (top_id, top_task) = one(PanelEdge::Top, widths.top);
+    let (left_id, left_task) = one(PanelEdge::Left, widths.left);
+    let (right_id, right_task) = one(PanelEdge::Right, widths.right);
+    let (bottom_id, bottom_task) = one(PanelEdge::Bottom, widths.bottom);
+
+    let task = Task::batch(
+        [top_task, left_task, right_task, bottom_task]
+            .into_iter()
+            .flatten()
+    );
 
     PanelSurfaces {
         top_id,
         left_id,
         right_id,
         bottom_id,
-        task: Task::batch(vec![top_task, left_task, right_task, bottom_task])
+        task
     }
 }
 
-/// The four panels of one screen, and the task that creates them.
+/// The four frame panels of one screen — only the ones that exist, each
+/// other edge a `None` — and the task that creates the present ones.
 pub struct PanelSurfaces<Message> {
-    pub(crate) top_id:    Id,
-    pub(crate) left_id:   Id,
-    pub(crate) right_id:  Id,
-    pub(crate) bottom_id: Id,
+    pub(crate) top_id:    Option<Id>,
+    pub(crate) left_id:   Option<Id>,
+    pub(crate) right_id:  Option<Id>,
+    pub(crate) bottom_id: Option<Id>,
     pub(crate) task:      Task<Message>
 }
 

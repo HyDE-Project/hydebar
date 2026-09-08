@@ -171,14 +171,56 @@ pub fn frame_settings(output: Option<OutputId>, layer: BarLayer) -> LayerShellSe
     }
 }
 
+/// Anchor band and pixel size a panel of `edge` asks for at `width`.
+///
+/// A zero width is anchored to all four edges instead of its own: the layer
+/// shell protocol forbids a zero size along a dimension the surface is not
+/// anchored to both ends of, and a compositor answers the violation by
+/// killing the whole connection — every surface, not the offending one.
+#[must_use]
+pub fn panel_anchor(edge: PanelEdge, width: u32) -> (Anchor, (u32, u32)) {
+    match (edge, width == 0) {
+        (_, true) => (Anchor::all(), (0, 0)),
+        (PanelEdge::Left, false) => (Anchor::LEFT | Anchor::TOP | Anchor::BOTTOM, (width, 0)),
+        (PanelEdge::Right, false) => (Anchor::RIGHT | Anchor::TOP | Anchor::BOTTOM, (width, 0)),
+        (PanelEdge::Top, false) => (Anchor::TOP | Anchor::LEFT | Anchor::RIGHT, (0, width)),
+        (PanelEdge::Bottom, false) => (Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT, (0, width))
+    }
+}
+
+/// The margin keeping a panel clear of the band the docked bar fills.
+///
+/// A side panel next to a docked bar starts below the band, so the bar is
+/// never pushed a second time by a transparent sliver of the same paint.
+#[expect(
+    clippy::cast_possible_truncation,
+    reason = "the bar height rounds within one pixel of its real band"
+)]
+pub const fn panel_clearance(
+    dock: Position,
+    edge: PanelEdge,
+    bar_height: f32
+) -> (i32, i32, i32, i32) {
+    match (dock, edge) {
+        (Position::Top, PanelEdge::Left | PanelEdge::Right) => {
+            (bar_height.round() as i32, 0, 0, 0)
+        }
+        (Position::Bottom, PanelEdge::Left | PanelEdge::Right) => {
+            (0, 0, bar_height.round() as i32, 0)
+        }
+        _ => (0, 0, 0, 0)
+    }
+}
+
 /// Settings of the surface one panel of the frame is drawn on.
 ///
 /// A panel is the bar's own sibling strip, not an overlay: it is anchored to
 /// its edge, and while the user enabled that edge it reserves its width as
 /// its exclusive zone — the desktop is pushed off the strip exactly the way
-/// the bar pushes it off the top. A panel the user switched off reserves
-/// nothing: the surface exists, sized to nothing, so a config flip only has
-/// to resize it rather than create a window mid-run.
+/// the bar pushes it off the top. A panel of an edge that reserves nothing
+/// is not created at all: no surface, no zone, nothing the desktop has to
+/// stand clear of until a config flip asks for the strip and the sync
+/// builds it.
 ///
 /// The surface carries the bar's own namespace on purpose: it is part of the
 /// bar, painted in the bar palette, and the blur rule the bar asks for keys
@@ -190,6 +232,7 @@ pub fn frame_settings(output: Option<OutputId>, layer: BarLayer) -> LayerShellSe
 /// shell protocol forbids a zero size along a dimension the surface is not
 /// anchored to both ends of, and a compositor answers the violation by
 /// killing the whole connection — every surface, not the offending one.
+#[must_use]
 pub fn panel_settings(
     edge: PanelEdge,
     output: Option<OutputId>,
@@ -198,32 +241,8 @@ pub fn panel_settings(
     bar_height: f32,
     width: u32
 ) -> LayerShellSettings {
-    let clearance = match (dock, edge) {
-        (Position::Top, PanelEdge::Left | PanelEdge::Right) =>
-        {
-            #[expect(
-                clippy::cast_possible_truncation,
-                reason = "the bar height rounds to a small positive pixel count"
-            )]
-            (bar_height.round() as i32, 0, 0, 0)
-        }
-        (Position::Bottom, PanelEdge::Left | PanelEdge::Right) =>
-        {
-            #[expect(
-                clippy::cast_possible_truncation,
-                reason = "the bar height rounds to a small positive pixel count"
-            )]
-            (0, 0, bar_height.round() as i32, 0)
-        }
-        _ => (0, 0, 0, 0)
-    };
-    let (anchor, size) = match (edge, width == 0) {
-        (_, true) => (Anchor::all(), (0, 0)),
-        (PanelEdge::Left, false) => (Anchor::LEFT | Anchor::TOP | Anchor::BOTTOM, (width, 0)),
-        (PanelEdge::Right, false) => (Anchor::RIGHT | Anchor::TOP | Anchor::BOTTOM, (width, 0)),
-        (PanelEdge::Top, false) => (Anchor::TOP | Anchor::LEFT | Anchor::RIGHT, (0, width)),
-        (PanelEdge::Bottom, false) => (Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT, (0, width))
-    };
+    let (anchor, size) = panel_anchor(edge, width);
+    let clearance = panel_clearance(dock, edge, bar_height);
 
     LayerShellSettings {
         namespace: MAIN_NAMESPACE.to_string(),

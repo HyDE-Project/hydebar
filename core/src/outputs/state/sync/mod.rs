@@ -9,6 +9,8 @@ use crate::{
     outputs::{config::is_output_requested, wayland::layer_height}
 };
 
+mod frame;
+
 impl Outputs {
     /// Synchronise the tracked outputs with the desired configuration.
     ///
@@ -98,6 +100,8 @@ impl Outputs {
         for wl_output in to_remove {
             tasks.push(self.remove(style, position, wl_output, config));
         }
+
+        tasks.push(self.reconcile_frame(position, config));
 
         for shell_info in self.0.iter_mut().filter_map(|(_, shell_info, _)| {
             if let Some(shell_info) = shell_info

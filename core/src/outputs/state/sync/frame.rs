@@ -1,0 +1,172 @@
+//! Reconciliation of the frame with the configuration.
+//!
+//! The ring and its reservation panels outlive a config flip. The sync
+//! reads what the configuration calls for now, compares it with what each
+//! output's surface group carries, and states the difference to the
+//! compositor: a switched-on frame gets its fullscreen surface, a
+//! switched-off one loses it, and a resized edge is a `set_size` plus a
+//! fresh exclusive zone away from real.
+
+use iced::{OutputId, Task, set_anchor, set_exclusive_zone, set_margin, set_size};
+use log::debug;
+
+use super::Outputs;
+use crate::{
+    HEIGHT,
+    config::{self, Position},
+    frame::{PanelWidths, panel_widths},
+    outputs::{
+        state::ShellInfo,
+        wayland::{
+            PanelEdge, destroy_layer_surface, draw_only, frame_settings, new_layer_surface,
+            panel_anchor, panel_clearance, panel_settings
+        }
+    }
+};
+
+impl Outputs {
+    /// Lines the frame of every real output up with the configuration.
+    ///
+    /// The fallback group — a bar's surfaces before the compositor reports
+    /// a monitor — owns no frame and no panels, and rings itself in no
+    /// numbers, so the pass reads real outputs and their assigned
+    /// monitors only.
+    pub(crate) fn reconcile_frame<Message: 'static>(
+        &mut self,
+        position: Position,
+        config: &config::Config
+    ) -> Task<Message> {
+        let frame = &config.appearance.frame;
+        let desired = panel_widths(frame, position, config.appearance.scale_factor);
+
+        let mut tasks = Vec::new();
+
+        for (_name, shell_info, output) in &mut self.0 {
+            let (Some(shell_info), Some(output)) = (shell_info, output) else {
+                continue;
+            };
+
+            tasks.push(Self::reconcile_ring(
+                *output,
+                shell_info,
+                frame.enabled,
+                config.layer
+            ));
+            tasks.push(Self::reconcile_reservations(
+                shell_info,
+                *output,
+                desired,
+                position,
+                config,
+                bar_height(config)
+            ));
+        }
+
+        debug!("Frame reconciliation: {:?}", tasks.len());
+
+        Task::batch(tasks)
+    }
+
+    /// Brings a ring surface into being or takes it away, per switch.
+    fn reconcile_ring<Message: 'static>(
+        output: OutputId,
+        shell_info: &mut ShellInfo,
+        desired: bool,
+        layer: config::BarLayer
+    ) -> Task<Message> {
+        if shell_info.frame_enabled == desired {
+            return Task::none();
+        }
+
+        shell_info.frame_enabled = desired;
+
+        if desired {
+            let (id, task) = new_layer_surface(frame_settings(Some(output), layer));
+            shell_info.frame_id = Some(id);
+
+            Task::batch(vec![task, draw_only(id)])
+        } else if let Some(id) = shell_info.frame_id.take() {
+            destroy_layer_surface(id)
+        } else {
+            Task::none()
+        }
+    }
+
+    /// Resizes, creates and destroys the reservation panels until their
+    /// widths state the configuration again.
+    fn reconcile_reservations<Message: 'static>(
+        shell_info: &mut ShellInfo,
+        output: OutputId,
+        desired: PanelWidths,
+        position: Position,
+        config: &config::Config,
+        bar_height: f32
+    ) -> Task<Message> {
+        let fallback_bar_height = bar_height;
+
+        let edges = [
+            (PanelEdge::Top, desired.top, &mut shell_info.top_panel_id),
+            (
+                PanelEdge::Bottom,
+                desired.bottom,
+                &mut shell_info.bottom_panel_id
+            ),
+            (PanelEdge::Left, desired.left, &mut shell_info.left_panel_id),
+            (
+                PanelEdge::Right,
+                desired.right,
+                &mut shell_info.right_panel_id
+            )
+        ];
+
+        debug!("Reservations change: {desired:?}");
+
+        let mut tasks = Vec::new();
+
+        for (edge, width, id) in edges {
+            match (&mut *id, width) {
+                (Some(surface), 0) => {
+                    tasks.push(destroy_layer_surface(*surface));
+                    *id = None;
+                }
+                (None, width) if width > 0 => {
+                    let (surface, task) = new_layer_surface(panel_settings(
+                        edge,
+                        Some(output),
+                        config.layer,
+                        position,
+                        fallback_bar_height,
+                        width
+                    ));
+                    tasks.push(task);
+                    *id = Some(surface);
+                }
+                (Some(surface), width) => {
+                    let (anchor, size) = panel_anchor(edge, width);
+                    let clearance = panel_clearance(position, edge, fallback_bar_height);
+
+                    tasks.push(Task::batch(vec![
+                        set_anchor(*surface, anchor),
+                        set_size(*surface, size),
+                        set_exclusive_zone(*surface, i32::try_from(width).unwrap_or(i32::MAX)),
+                        set_margin(*surface, clearance),
+                    ]));
+                }
+                (None, _) => {}
+            }
+        }
+
+        shell_info.reservations = desired;
+
+        Task::batch(tasks)
+    }
+}
+
+/// The bar's height as the configuration names it, in pixels.
+#[expect(
+    clippy::cast_possible_truncation,
+    reason = "the bar height constant is exactly representable in f32"
+)]
+fn bar_height(config: &config::Config) -> f32 {
+    config.appearance.height_px().unwrap_or(HEIGHT as f32)
+}
