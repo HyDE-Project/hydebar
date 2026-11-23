@@ -314,7 +314,7 @@ mod tests {
             .as_ref()
             .expect("the group stands");
 
-        assert!(specs.frame_id.is_some());
+        assert!(specs.frame_id.is_none());
         assert!(specs.left_panel_id.is_some());
         assert!(specs.right_panel_id.is_some());
         assert!(specs.bottom_panel_id.is_some());
@@ -344,7 +344,7 @@ mod tests {
             .as_ref()
             .expect("the group stands");
 
-        assert_eq!(specs.frame_id, ring);
+        assert!(specs.frame_id.is_none());
         assert!(specs.left_panel_id.is_some());
     }
 

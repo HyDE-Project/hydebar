@@ -82,10 +82,24 @@ impl App {
         let (outputs, task) = Outputs::new(config.appearance.style, config.position, &config);
 
         if config.appearance.frame.enabled {
+            let theme = hydebar_core::style::hydebar_theme(&config.appearance);
+            let opacity = if config.appearance.style == hydebar_proto::config::AppearanceStyle::Islands {
+                config.appearance.bar_opacity
+            } else {
+                config.appearance.opacity
+            };
+            let c = theme.palette().background.scale_alpha(opacity);
+            let color = (
+                (c.r * 255.0).round() as u8,
+                (c.g * 255.0).round() as u8,
+                (c.b * 255.0).round() as u8,
+                (c.a * 255.0).round() as u8,
+            );
             let _ = hydebar_core::frame::shm::start(
                 config.appearance.frame.clone(),
                 config.position,
                 config.appearance.height_px().unwrap_or(38.0),
+                color,
             );
         }
 

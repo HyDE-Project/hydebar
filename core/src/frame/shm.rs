@@ -59,12 +59,12 @@ impl ShmFrameHandle {
 /// The thread enumerates outputs itself and creates one thin strip per
 /// drawn edge plus one corner overlay per outer corner.  It blocks until
 /// [`ShmFrameHandle::stop`] is called.
-pub fn start(config: FrameConfig, dock: Position, bar_height: f32) -> ShmFrameHandle {
+pub fn start(config: FrameConfig, dock: Position, bar_height: f32, color: (u8, u8, u8, u8)) -> ShmFrameHandle {
     let stop = Arc::new(AtomicBool::new(false));
     let stop_clone = Arc::clone(&stop);
 
     let thread = thread::spawn(move || {
-        run(config, dock, bar_height, stop_clone);
+        run(config, dock, bar_height, color, stop_clone);
     });
 
     ShmFrameHandle {
@@ -104,6 +104,7 @@ struct App {
     config: FrameConfig,
     dock: Position,
     bar_height: f32,
+    color: (u8, u8, u8, u8),
     stop: Arc<AtomicBool>,
     exit: bool,
     surfaces: Vec<SurfaceState>,
@@ -224,7 +225,7 @@ impl LayerShellHandler for App {
                     state.configured = true;
                     let size = (state.width * state.height * 4) as usize;
                     state.pool = Some(SlotPool::new(size.max(4), &self.shm).unwrap());
-                    draw_surface(state, &self.config);
+                    draw_surface(state, &self.config, self.color);
                 }
             }
         }
@@ -318,8 +319,8 @@ impl App {
             // Size along the strip's own axis is set by the compositor; the
             // perpendicular axis is 1px.
             match *kind {
-                SurfaceKind::StripLeft | SurfaceKind::StripRight => ls.set_size(1, 0),
-                SurfaceKind::StripTop | SurfaceKind::StripBottom => ls.set_size(0, 1),
+                SurfaceKind::StripLeft | SurfaceKind::StripRight => ls.set_size(thickness, 0),
+                SurfaceKind::StripTop | SurfaceKind::StripBottom => ls.set_size(0, thickness),
                 _ => {}
             }
             ls.set_exclusive_zone(thickness as i32);
@@ -337,7 +338,8 @@ impl App {
             });
         }
 
-        // Corner overlays: 25x25, exclusive_zone -1.
+        // Corner overlays: thickness + rounding, exclusive_zone -1.
+        let corner_size = (thickness as f32 + radius).ceil().max(1.0) as u32;
         let corners = [
             (SurfaceKind::CornerTopLeft, Anchor::LEFT | Anchor::TOP),
             (SurfaceKind::CornerTopRight, Anchor::RIGHT | Anchor::TOP),
@@ -351,7 +353,7 @@ impl App {
                 .layer_shell
                 .create_layer_surface(qh, surface, Layer::Top, Some("hydebar-frame-corner"), Some(&output));
             ls.set_anchor(anchor);
-            ls.set_size(25, 25);
+            ls.set_size(corner_size, corner_size);
             ls.set_keyboard_interactivity(KeyboardInteractivity::None);
             ls.set_exclusive_zone(-1);
             ls.commit();
@@ -359,27 +361,25 @@ impl App {
             self.surfaces.push(SurfaceState {
                 kind: kind,
                 layer: ls,
-                width: 25,
-                height: 25,
+                width: corner_size,
+                height: corner_size,
                 pool: None,
                 configured: false,
                 output: output.clone(),
             });
         }
-
-        let _ = radius;
     }
 
     fn draw_all(&mut self) {
         for state in &mut self.surfaces {
             if state.configured {
-                draw_surface(state, &self.config);
+                draw_surface(state, &self.config, self.color);
             }
         }
     }
 }
 
-fn draw_surface(state: &mut SurfaceState, _config: &FrameConfig) {
+fn draw_surface(state: &mut SurfaceState, config: &FrameConfig, color: (u8, u8, u8, u8)) {
     let pool = match state.pool.as_mut() {
         Some(p) => p,
         None => return,
@@ -400,7 +400,7 @@ fn draw_surface(state: &mut SurfaceState, _config: &FrameConfig) {
     };
 
     let mut paint = Paint::default();
-    paint.set_color(Color::from_rgba8(120, 120, 120, 255));
+    paint.set_color(Color::from_rgba8(color.0, color.1, color.2, color.3));
     paint.anti_alias = true;
 
     // Strips are solid 1px lines; corners get a quarter-circle cut so
@@ -423,7 +423,7 @@ fn draw_surface(state: &mut SurfaceState, _config: &FrameConfig) {
         clear.blend_mode = tiny_skia::BlendMode::Clear;
         clear.anti_alias = true;
 
-        let r = (state.width.min(state.height) as f32 / 2.0).max(1.0);
+        let r = config.rounding.max(1.0);
         let (cx, cy) = match state.kind {
             SurfaceKind::CornerTopLeft => (state.width as f32, state.height as f32),
             SurfaceKind::CornerTopRight => (0.0, state.height as f32),
@@ -445,7 +445,7 @@ fn draw_surface(state: &mut SurfaceState, _config: &FrameConfig) {
     state.layer.commit();
 }
 
-fn run(config: FrameConfig, dock: Position, bar_height: f32, stop: Arc<AtomicBool>) {
+fn run(config: FrameConfig, dock: Position, bar_height: f32, color: (u8, u8, u8, u8), stop: Arc<AtomicBool>) {
     let conn = match Connection::connect_to_env() {
         Ok(c) => c,
         Err(_) => return,
@@ -478,6 +478,7 @@ fn run(config: FrameConfig, dock: Position, bar_height: f32, stop: Arc<AtomicBoo
         config,
         dock,
         bar_height,
+        color,
         stop: Arc::clone(&stop),
         exit: false,
         surfaces: Vec::new(),
@@ -492,3 +493,4 @@ fn run(config: FrameConfig, dock: Position, bar_height: f32, stop: Arc<AtomicBoo
         }
     }
 }
+

@@ -27,6 +27,10 @@ impl App {
         let frame = &self.config.appearance.frame;
         let empty = iced::widget::Row::new().into();
 
+        // The frame is painted by the shared-memory module; the iced ring
+        // is no longer drawn, so this surface stays empty.
+        return empty;
+
         if !frame.enabled {
             return empty;
         }
@@ -56,10 +60,6 @@ impl App {
         let bar_height = appearance.height_px().unwrap_or(HEIGHT as f32);
 
         let shape = frame_pieces(screen_w, screen_h, frame, self.config.position, bar_height);
-
-        log::trace!(
-            "frame: drawing the ring of {name} over {screen_w}x{screen_h}, wash {wash}, shape {shape:?}"
-        );
 
         canvas(FrameCanvas {
             shape,
