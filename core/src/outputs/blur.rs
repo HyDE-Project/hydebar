@@ -94,6 +94,25 @@ fn rules(namespace: &str) -> [Rule; 2] {
     ]
 }
 
+
+/// Keeps the compositor from blurring the frame's own surfaces.
+///
+/// HyDE's own configuration blurs every namespace beginning with
+/// `hydebar`, which would drag the frame into the blur behind it. The
+/// frame is a solid paint and must stay sharp, so it opts out under a
+/// namespace of its own.
+fn frame_no_blur() -> Rule {
+    let matched = "^hydebar-frame-";
+
+    Rule {
+        lua:        format!(
+            "hl.layer_rule({{ name = \"hydebar_frame_no_blur\", match = {{ namespace = \"{matched}\"              }}, no_blur = true }})"
+        ),
+        keyword:    format!("no_blur true, match:namespace {matched}"),
+        positional: format!("no_blur, {matched}")
+    }
+}
+
 /// Where the canvas is drawn in the pile of surfaces on the strip's level.
 ///
 /// The compositor sorts one level by this and draws the highest first, so the
@@ -202,6 +221,7 @@ pub fn request() {
     }
 
     state(&stacking(DESK_NAMESPACE));
+    state(&frame_no_blur());
 
     if hydebar_proto::compositor_look::CompositorLook::read().blur == Some(false) {
         return;
