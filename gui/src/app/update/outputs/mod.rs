@@ -45,19 +45,7 @@ impl App {
                     };
 
                     let rows = Task::perform(
-                        async {
-                            for _ in 0..10 {
-                                let rows = hydebar_core::outputs::perch::strip_rows().await;
-
-                                if !rows.is_empty() {
-                                    return rows;
-                                }
-
-                                tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-                            }
-
-                            std::collections::HashMap::new()
-                        },
+                        hydebar_core::outputs::perch::strip_rows_settled(),
                         Message::StripRowsMeasured,
                     );
 

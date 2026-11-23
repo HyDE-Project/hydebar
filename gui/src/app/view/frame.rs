@@ -74,6 +74,13 @@ impl App {
             bar_offset,
         );
 
+        log::debug!(
+            "frame: rounding {:?} offset {bar_offset} hole y {:.1} tl {:.1}",
+            frame.rounding,
+            shape.inner.y,
+            shape.inner.top_left
+        );
+
         canvas(FrameCanvas { shape, color })
             .width(Length::Fill)
             .height(Length::Fill)

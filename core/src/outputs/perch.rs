@@ -38,6 +38,16 @@ const FRESH_FOR: Duration = Duration::from_secs(2);
 /// A busy compositor must cost the bar a stale row, not a stalled unfolding.
 const TIMEOUT: Duration = Duration::from_millis(400);
 
+/// How long one wait for the strip's own mapping lasts between questions.
+const SETTLE_POLL: Duration = Duration::from_millis(500);
+
+/// How many waits the settle pass makes before it gives the bar up.
+///
+/// The strip maps within the first frames of the bar's life; a strip still
+/// missing after this many waits is not coming, and a stale row beats an
+/// endless question.
+const SETTLE_TRIES: usize = 10;
+
 /// The last reading, and the moment it was read.
 static LAST_READ: Mutex<Option<(Instant, HashMap<String, f32>)>> = Mutex::new(None);
 
@@ -77,6 +87,28 @@ pub async fn strip_rows() -> HashMap<String, f32> {
     *LAST_READ.lock().unwrap_or_else(PoisonError::into_inner) = Some((now, rows.clone()));
 
     rows
+}
+
+/// The row the strip stands on, waited for until the strip has mapped.
+///
+/// A bar asked at its own startup answers for a strip the compositor has not
+/// placed yet: the layer is mapped a moment after the surfaces are built.
+/// The frame asks this way once, and the answer carries the row of a strip
+/// that is really on the screen — or the last row known, if the strip never
+/// arrives.
+#[must_use]
+pub async fn strip_rows_settled() -> HashMap<String, f32> {
+    for _ in 0..SETTLE_TRIES {
+        let rows = strip_rows().await;
+
+        if !rows.is_empty() {
+            return rows;
+        }
+
+        tokio::time::sleep(SETTLE_POLL).await;
+    }
+
+    remembered()
 }
 
 /// Whatever was read last, however long ago.
