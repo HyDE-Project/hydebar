@@ -4,7 +4,7 @@ use std::f32::consts::PI;
 
 use hydebar_core::style::{backdrop_color, darken_color};
 use hydebar_proto::config::{AppearanceStyle, Position};
-use iced::{Color, Gradient, Radians, gradient::Linear};
+use iced::{gradient::Linear, Color, Gradient, Radians};
 
 use super::super::super::state::App;
 
@@ -45,7 +45,7 @@ fn parting(ground: Color, wash: f32) -> iced::Background {
             .add_stop(near, Color::TRANSPARENT)
             .add_stop(far, Color::TRANSPARENT)
             .add_stop(far + feather, left)
-            .add_stop(1.0, left)
+            .add_stop(1.0, left),
     )
     .into()
 }
@@ -88,7 +88,7 @@ impl App {
         match self.appearance().style {
             AppearanceStyle::Gradient => Some(self.gradient_backdrop(t, wash)),
             AppearanceStyle::Solid => Some(self.solid_backdrop(t, wash)),
-            AppearanceStyle::Islands => self.island_backdrop(t, wash)
+            AppearanceStyle::Islands => self.island_backdrop(t, wash),
         }
     }
 
@@ -114,13 +114,13 @@ impl App {
 
         let (from, to) = match self.config.position {
             Position::Top => (start_color, end_color),
-            Position::Bottom => (end_color, start_color)
+            Position::Bottom => (end_color, start_color),
         };
 
         Gradient::Linear(
             Linear::new(Radians(PI))
                 .add_stop(0.0, from)
-                .add_stop(1.0, to)
+                .add_stop(1.0, to),
         )
         .into()
     }
@@ -154,7 +154,7 @@ impl App {
             }
             (Some(painted), false) => Some(painted.into()),
             (None, true) => Some(backdrop_color(self.appearance().menu.backdrop).into()),
-            (None, false) => None
+            (None, false) => None,
         }
     }
 }
@@ -178,7 +178,7 @@ mod tests {
         for style in [
             AppearanceStyle::Islands,
             AppearanceStyle::Solid,
-            AppearanceStyle::Gradient
+            AppearanceStyle::Gradient,
         ] {
             let app = test_app_with(|config| config.appearance.style = style);
             let mut ui = simulator(app.bar_surface(surface()));
@@ -305,7 +305,7 @@ mod tests {
 
         let stops = |wash: f32| match parting(ground, wash) {
             iced::Background::Gradient(Gradient::Linear(linear)) => linear,
-            iced::Background::Color(_) => panic!("the parting is painted as a gradient")
+            iced::Background::Color(_) => panic!("the parting is painted as a gradient"),
         };
 
         let clear = |wash: f32| {
@@ -361,7 +361,7 @@ mod tests {
                 .flatten()
                 .map(|stop| (stop.offset, stop.color.a))
                 .collect::<Vec<(f32, f32)>>(),
-            iced::Background::Color(_) => panic!("the parting is painted as a gradient")
+            iced::Background::Color(_) => panic!("the parting is painted as a gradient"),
         };
 
         let painted = |wash: f32| {
@@ -470,11 +470,11 @@ mod tests {
     fn the_three_sections_are_drawn_side_by_side() {
         let app = test_app_with(|config| {
             config.modules.left = vec![hydebar_proto::config::ModuleDef::Single(
-                hydebar_core::config::ModuleName::Clock
+                hydebar_core::config::ModuleName::Clock,
             )];
             config.modules.center = Vec::new();
             config.modules.right = vec![hydebar_proto::config::ModuleDef::Single(
-                hydebar_core::config::ModuleName::Settings
+                hydebar_core::config::ModuleName::Settings,
             )];
         });
 

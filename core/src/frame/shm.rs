@@ -21,18 +21,20 @@ use smithay_client_toolkit::{
     delegate_compositor, delegate_layer, delegate_output, delegate_registry, delegate_shm,
     output::{OutputHandler, OutputState},
     registry::{ProvidesRegistryState, RegistryState},
-    shell::{WaylandSurface, wlr_layer::{
-        Anchor, KeyboardInteractivity, Layer, LayerShell, LayerShellHandler, LayerSurface,
-        LayerSurfaceConfigure,
-    }},
-
+    shell::{
+        wlr_layer::{
+            Anchor, KeyboardInteractivity, Layer, LayerShell, LayerShellHandler, LayerSurface,
+            LayerSurfaceConfigure,
+        },
+        WaylandSurface,
+    },
     shm::{slot::SlotPool, Shm, ShmHandler},
 };
 use tiny_skia::{Color, Paint, Pixmap, Transform};
 use wayland_client::{
-    Connection, Proxy, QueueHandle,
     globals::registry_queue_init,
     protocol::{wl_output, wl_shm, wl_surface},
+    Connection, Proxy, QueueHandle,
 };
 
 use crate::config::Position;
@@ -59,7 +61,12 @@ impl ShmFrameHandle {
 /// The thread enumerates outputs itself and creates one thin strip per
 /// drawn edge plus one corner overlay per outer corner.  It blocks until
 /// [`ShmFrameHandle::stop`] is called.
-pub fn start(config: FrameConfig, dock: Position, bar_height: f32, color: (u8, u8, u8, u8)) -> ShmFrameHandle {
+pub fn start(
+    config: FrameConfig,
+    dock: Position,
+    bar_height: f32,
+    color: (u8, u8, u8, u8),
+) -> ShmFrameHandle {
     let stop = Arc::new(AtomicBool::new(false));
     let stop_clone = Arc::clone(&stop);
 
@@ -190,13 +197,7 @@ impl OutputHandler for App {
 }
 
 impl LayerShellHandler for App {
-    fn closed(
-        &mut self,
-        _conn: &Connection,
-        _qh: &QueueHandle<Self>,
-        _layer: &LayerSurface,
-    ) {
-    }
+    fn closed(&mut self, _conn: &Connection, _qh: &QueueHandle<Self>, _layer: &LayerSurface) {}
 
     fn configure(
         &mut self,
@@ -255,7 +256,11 @@ smithay_client_toolkit::delegate_registry!(App);
 impl App {
     fn create_surfaces_for_output(&mut self, qh: &QueueHandle<Self>, output: wl_output::WlOutput) {
         let thickness = self.config.thickness.max(1.0) as u32;
-        let radius = self.config.rounding.max(0.0);
+        let radius = self
+            .config
+            .rounding
+            .unwrap_or(FrameConfig::DEFAULT_ROUNDING)
+            .max(0.0);
 
         // Thin strips: 1px wide, reserving the full thickness.
         let edges: &[(SurfaceKind, Layer, Anchor, i32, i32, i32, i32)] = &[
@@ -263,18 +268,34 @@ impl App {
                 SurfaceKind::StripLeft,
                 Layer::Top,
                 Anchor::LEFT | Anchor::TOP | Anchor::BOTTOM,
-                if self.dock == Position::Top { self.bar_height.round() as i32 } else { 0 },
+                if self.dock == Position::Top {
+                    self.bar_height.round() as i32
+                } else {
+                    0
+                },
                 0,
-                if self.dock == Position::Bottom { self.bar_height.round() as i32 } else { 0 },
+                if self.dock == Position::Bottom {
+                    self.bar_height.round() as i32
+                } else {
+                    0
+                },
                 0,
             ),
             (
                 SurfaceKind::StripRight,
                 Layer::Top,
                 Anchor::RIGHT | Anchor::TOP | Anchor::BOTTOM,
-                if self.dock == Position::Top { self.bar_height.round() as i32 } else { 0 },
+                if self.dock == Position::Top {
+                    self.bar_height.round() as i32
+                } else {
+                    0
+                },
                 0,
-                if self.dock == Position::Bottom { self.bar_height.round() as i32 } else { 0 },
+                if self.dock == Position::Bottom {
+                    self.bar_height.round() as i32
+                } else {
+                    0
+                },
                 0,
             ),
             (
@@ -311,9 +332,13 @@ impl App {
                 continue;
             }
             let surface = self.compositor.create_surface(qh);
-            let ls = self
-                .layer_shell
-                .create_layer_surface(qh, surface, *layer, Some("hydebar-frame-strip"), Some(&output));
+            let ls = self.layer_shell.create_layer_surface(
+                qh,
+                surface,
+                *layer,
+                Some("hydebar-frame-strip"),
+                Some(&output),
+            );
             ls.set_anchor(*anchor);
             ls.set_keyboard_interactivity(KeyboardInteractivity::None);
             // Size along the strip's own axis is set by the compositor; the
@@ -344,14 +369,21 @@ impl App {
             (SurfaceKind::CornerTopLeft, Anchor::LEFT | Anchor::TOP),
             (SurfaceKind::CornerTopRight, Anchor::RIGHT | Anchor::TOP),
             (SurfaceKind::CornerBottomLeft, Anchor::LEFT | Anchor::BOTTOM),
-            (SurfaceKind::CornerBottomRight, Anchor::RIGHT | Anchor::BOTTOM),
+            (
+                SurfaceKind::CornerBottomRight,
+                Anchor::RIGHT | Anchor::BOTTOM,
+            ),
         ];
 
         for (kind, anchor) in corners {
             let surface = self.compositor.create_surface(qh);
-            let ls = self
-                .layer_shell
-                .create_layer_surface(qh, surface, Layer::Top, Some("hydebar-frame-corner"), Some(&output));
+            let ls = self.layer_shell.create_layer_surface(
+                qh,
+                surface,
+                Layer::Top,
+                Some("hydebar-frame-corner"),
+                Some(&output),
+            );
             ls.set_anchor(anchor);
             ls.set_size(corner_size, corner_size);
             ls.set_keyboard_interactivity(KeyboardInteractivity::None);
@@ -405,7 +437,8 @@ fn draw_surface(state: &mut SurfaceState, config: &FrameConfig, color: (u8, u8, 
 
     // Strips are solid 1px lines; corners get a quarter-circle cut so
     // the aperture reads rounded instead of square.
-    let rect = match tiny_skia::Rect::from_xywh(0.0, 0.0, state.width as f32, state.height as f32) {
+    let rect = match tiny_skia::Rect::from_xywh(0.0, 0.0, state.width as f32, state.height as f32)
+    {
         Some(r) => r,
         None => return,
     };
@@ -423,7 +456,10 @@ fn draw_surface(state: &mut SurfaceState, config: &FrameConfig, color: (u8, u8, 
         clear.blend_mode = tiny_skia::BlendMode::Clear;
         clear.anti_alias = true;
 
-        let r = config.rounding.max(1.0);
+        let r = config
+        .rounding
+        .unwrap_or(FrameConfig::DEFAULT_ROUNDING)
+        .max(1.0);
         let (cx, cy) = match state.kind {
             SurfaceKind::CornerTopLeft => (state.width as f32, state.height as f32),
             SurfaceKind::CornerTopRight => (0.0, state.height as f32),
@@ -433,19 +469,37 @@ fn draw_surface(state: &mut SurfaceState, config: &FrameConfig, color: (u8, u8, 
         };
 
         if let Some(path) = tiny_skia::PathBuilder::from_circle(cx, cy, r) {
-            pixmap.fill_path(&path, &clear, tiny_skia::FillRule::Winding, Transform::identity(), None);
+            pixmap.fill_path(
+                &path,
+                &clear,
+                tiny_skia::FillRule::Winding,
+                Transform::identity(),
+                None,
+            );
         }
     }
 
     let n = canvas.len().min(pixmap.data().len());
     canvas[..n].copy_from_slice(&pixmap.data()[..n]);
 
-    state.layer.wl_surface().attach(Some(buffer.wl_buffer()), 0, 0);
-    state.layer.wl_surface().damage_buffer(0, 0, state.width as i32, state.height as i32);
+    state
+        .layer
+        .wl_surface()
+        .attach(Some(buffer.wl_buffer()), 0, 0);
+    state
+        .layer
+        .wl_surface()
+        .damage_buffer(0, 0, state.width as i32, state.height as i32);
     state.layer.commit();
 }
 
-fn run(config: FrameConfig, dock: Position, bar_height: f32, color: (u8, u8, u8, u8), stop: Arc<AtomicBool>) {
+fn run(
+    config: FrameConfig,
+    dock: Position,
+    bar_height: f32,
+    color: (u8, u8, u8, u8),
+    stop: Arc<AtomicBool>,
+) {
     let conn = match Connection::connect_to_env() {
         Ok(c) => c,
         Err(_) => return,
@@ -493,4 +547,3 @@ fn run(config: FrameConfig, dock: Position, bar_height: f32, color: (u8, u8, u8,
         }
     }
 }
-

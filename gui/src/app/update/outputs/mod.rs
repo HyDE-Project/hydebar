@@ -38,11 +38,30 @@ impl App {
                 if self.outputs.has_name(&name) {
                     log::debug!("frame: screen {name} measured");
 
-                    if self.adopt_measured(name, geometry) {
+                    let looked = if self.adopt_measured(name, geometry) {
                         self.refresh_appearance()
                     } else {
                         Task::none()
-                    }
+                    };
+
+                    let rows = Task::perform(
+                        async {
+                            for _ in 0..10 {
+                                let rows = hydebar_core::outputs::perch::strip_rows().await;
+
+                                if !rows.is_empty() {
+                                    return rows;
+                                }
+
+                                tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                            }
+
+                            std::collections::HashMap::new()
+                        },
+                        Message::StripRowsMeasured,
+                    );
+
+                    Task::batch([looked, rows])
                 } else {
                     Task::none()
                 }
@@ -58,7 +77,7 @@ impl App {
                 Task::none()
             }
             Message::StripRowsMeasured(rows) => {
-                if !rows.is_empty() {
+                if !rows.is_empty() && self.strip_rows != rows {
                     self.strip_rows = rows;
                 }
 

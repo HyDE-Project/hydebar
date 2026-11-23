@@ -4,9 +4,9 @@
 //! fill, computed by [`super::geometry`], and the colour rides the bar
 //! palette the way every other surface does. The ring is one even-odd path:
 //! the square outer screen rect, the rounded inner hole cut out of it, and
-//! the straight cut under the docked bar — the hole and the cut are disjoint
-//! by construction, so each clears exactly once, whatever the colour's
-//! transparency.
+//! the straight cuts for the docked bar's band and the row before it — the
+//! hole and the cuts are disjoint by construction, so each clears exactly
+//! once, whatever the colour's transparency.
 //!
 //! ```rust
 //! use hydebar_core::{
@@ -20,7 +20,7 @@
 //!     enabled: true,
 //!     ..FrameConfig::default()
 //! };
-//! let shape = frame_pieces(1920.0, 1080.0, &frame, Position::Top, 38.0);
+//! let shape = frame_pieces(1920.0, 1080.0, &frame, Position::Top, 38.0, 0.0);
 //! let canvas = FrameCanvas {
 //!     shape,
 //!     color: Color::BLACK
@@ -30,8 +30,8 @@
 //! ```
 
 use iced::{
+    widget::canvas::{fill, path, Frame, Geometry, Program},
     Color, Point,
-    widget::canvas::{Frame, Geometry, Program, fill, path}
 };
 
 use super::geometry::{FramePiece, FrameShape};
@@ -43,7 +43,7 @@ pub struct FrameCanvas {
     /// The outline to fill, computed by [`super::geometry::frame_pieces`].
     pub shape: FrameShape,
     /// Colour of the frame, from the bar palette.
-    pub color: Color
+    pub color: Color,
 }
 
 impl<Message> Program<Message> for FrameCanvas {
@@ -55,11 +55,11 @@ impl<Message> Program<Message> for FrameCanvas {
         renderer: &iced::Renderer,
         _theme: &iced::Theme,
         bounds: iced::Rectangle,
-        _cursor: iced::mouse::Cursor
+        _cursor: iced::mouse::Cursor,
     ) -> Vec<Geometry> {
         use iced::widget::canvas::Cache;
 
-        let shape = self.shape;
+        let shape = &self.shape;
         let color = self.color;
 
         vec![
@@ -69,8 +69,8 @@ impl<Message> Program<Message> for FrameCanvas {
                 piece_subpath(&mut builder, shape.outer);
                 piece_subpath(&mut builder, shape.inner);
 
-                if let Some(band) = shape.band {
-                    piece_subpath(&mut builder, band);
+                for cut in &shape.cuts {
+                    piece_subpath(&mut builder, *cut);
                 }
 
                 let path = builder.build();
@@ -79,8 +79,8 @@ impl<Message> Program<Message> for FrameCanvas {
                     &path,
                     fill::Fill {
                         style: color.into(),
-                        rule:  fill::Rule::EvenOdd
-                    }
+                        rule: fill::Rule::EvenOdd,
+                    },
                 );
             }),
         ]
@@ -102,7 +102,7 @@ fn piece_subpath(builder: &mut path::Builder, piece: FramePiece) {
         top_left,
         top_right,
         bottom_right,
-        bottom_left
+        bottom_left,
     } = piece;
 
     let pair = |a: f32, b: f32, length: f32| {

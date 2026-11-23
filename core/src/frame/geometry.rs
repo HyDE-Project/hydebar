@@ -1,14 +1,19 @@
-//! The ring around the screen: a square screen minus a rounded aperture,
-//! minus the docked bar's own band.
+//! The ring around the screen: a square screen minus a rounded aperture.
 //!
 //! Like the `Caelestia` border, the frame is not four glued strips but one
 //! shape: the untouched screen rectangle, less an inner rectangle inset by
 //! each drawn edge. The screen boundary stays square — the physical corners
 //! of the output are fully painted — and every rounding lives on the inner
-//! aperture, where the content faces it. The band the docked bar paints
-//! itself is carved out with a straight cut of its own, so the ring never
-//! paints a second coat under the bar: the cut ends where the aperture
-//! begins, and the two never overlap by construction.
+//! aperture, where the content faces it.
+//!
+//! The docked bar never sits at the screen edge by right: another panel may
+//! have reserved that row first, and the compositor pushes the bar down by
+//! it. The ring reads that row back from the compositor ([`super::super::
+//! outputs::perch`]) and states it as `bar_offset`: the strip of screen
+//! between the edge and the bar is cut out of the ring — the other panel
+//! owns it — the bar's own band is cut out too, and the aperture opens at
+//! the bar's far edge, where its rounding draws the smooth junction the
+//! ring and the panel share.
 //!
 //! ```rust
 //! use hydebar_core::{config::Position, frame::geometry::frame_pieces};
@@ -18,7 +23,7 @@
 //!     enabled: true,
 //!     ..FrameConfig::default()
 //! };
-//! let shape = frame_pieces(1920.0, 1080.0, &frame, Position::Top, 38.0);
+//! let shape = frame_pieces(1920.0, 1080.0, &frame, Position::Top, 38.0, 0.0);
 //!
 //! assert_eq!(shape.inner.x, 10.0);
 //! assert_eq!(shape.inner.bottom_left, 25.0);
@@ -31,39 +36,44 @@ use hydebar_proto::config::{FrameConfig, FrameEdge, Position};
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct FramePiece {
     /// Left edge of the rectangle, in screen pixels.
-    pub x:            f32,
+    pub x: f32,
     /// Top edge of the rectangle, in screen pixels.
-    pub y:            f32,
+    pub y: f32,
     /// Width of the rectangle, in screen pixels.
-    pub w:            f32,
+    pub w: f32,
     /// Height of the rectangle, in screen pixels.
-    pub h:            f32,
+    pub h: f32,
     /// Radius of the top left corner, in pixels.
-    pub top_left:     f32,
+    pub top_left: f32,
     /// Radius of the top right corner, in pixels.
-    pub top_right:    f32,
+    pub top_right: f32,
     /// Radius of the bottom right corner, in pixels.
     pub bottom_right: f32,
     /// Radius of the bottom left corner, in pixels.
-    pub bottom_left:  f32
+    pub bottom_left: f32,
 }
 
-/// The outline of the frame: the outer and inner rectangles, and the bar
-/// band cut.
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
+/// The outline of the frame: the outer and inner rectangles, and the cuts
+/// the ring leaves clear.
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct FrameShape {
     /// The far bound of the ring: the full screen, square at the corners.
     pub outer: FramePiece,
     /// The hole carved out of it: the content area, rounded inward.
     pub inner: FramePiece,
-    /// The straight band the docked bar paints itself, cut out of the ring.
-    pub band:  Option<FramePiece>
+    /// The straight bands cut out of the ring: the row of whatever panel
+    /// stands before the bar, and the bar's own band it paints itself.
+    pub cuts: Vec<FramePiece>,
 }
 
 /// The frame's outline for a screen.
 ///
-/// `bar_height` is the band the docked bar reserves: the content hole sits
-/// below the band even when no strip is drawn there. Each drawn edge insets
+/// `bar_height` is the band the docked bar reserves and `bar_offset` the
+/// row of screen the compositor put between the docked edge and that band
+/// — the space some other panel reserved first. The content hole sits
+/// beyond the bar at `bar_offset + bar_height` even when no strip is drawn
+/// there, and everything from the edge to the bar is cut out of the ring:
+/// that row belongs to the panel standing on it. Each drawn edge insets
 /// the hole at its own width, the shared thickness or its own override; a
 /// disabled edge insets nothing and a corner it gives way on stays square.
 /// Every inner corner carries the configured rounding whole — the rounding
@@ -75,9 +85,13 @@ pub fn frame_pieces(
     screen_h: f32,
     frame: &FrameConfig,
     dock: Position,
-    bar_height: f32
+    bar_height: f32,
+    bar_offset: f32,
 ) -> FrameShape {
-    let radius = frame.rounding.max(0.0);
+    let radius = frame
+        .rounding
+        .unwrap_or(FrameConfig::DEFAULT_ROUNDING)
+        .max(0.0);
     let inset = |edge: &FrameEdge| {
         edge.enabled
             .then_some(edge.width.unwrap_or(frame.thickness))
@@ -85,16 +99,18 @@ pub fn frame_pieces(
     };
     let band = matches!(dock, Position::Top | Position::Bottom);
     let band_height = if band { bar_height.max(0.0) } else { 0.0 };
+    let band_offset = if band { bar_offset.max(0.0) } else { 0.0 };
+    let band_reach = (band_offset + band_height).min(if band { screen_h } else { 0.0 });
 
     let mut top = inset(&frame.edges.top).unwrap_or(0.0);
     let mut bottom = inset(&frame.edges.bottom).unwrap_or(0.0);
 
     if matches!(dock, Position::Top) {
-        top = top.max(band_height);
+        top = top.max(band_reach);
     }
 
     if matches!(dock, Position::Bottom) {
-        bottom = bottom.max(band_height);
+        bottom = bottom.max(band_reach);
     }
 
     let left = inset(&frame.edges.left).unwrap_or(0.0);
@@ -113,24 +129,22 @@ pub fn frame_pieces(
     let hole_clamp = (hole_w / 2.0).min(hole_h / 2.0).max(0.0);
 
     let inner = FramePiece {
-        x:            left,
-        y:            top,
-        w:            hole_w,
-        h:            hole_h,
-        top_left:     radius_in(radius, left, top, hole_clamp),
-        top_right:    radius_in(radius, right, top, hole_clamp),
+        x: left,
+        y: top,
+        w: hole_w,
+        h: hole_h,
+        top_left: radius_in(radius, left, top, hole_clamp),
+        top_right: radius_in(radius, right, top, hole_clamp),
         bottom_right: radius_in(radius, right, bottom, hole_clamp),
-        bottom_left:  radius_in(radius, left, bottom, hole_clamp)
+        bottom_left: radius_in(radius, left, bottom, hole_clamp),
     };
 
-    // the bar paints its own band: the ring owns no pixel of it. The cut
-    // ends where the hole begins — the hole's docked inset already reaches
-    // at least the bar height — so the two stay disjoint by construction and
-    // the even-odd fill clears each exactly once.
-    let band_cut = (band_height > 0.0).then(|| {
-        let clamped = band_height.min(screen_h);
+    let mut cuts = Vec::new();
 
-        if matches!(dock, Position::Top) {
+    if band_offset > 0.0 {
+        let clamped = band_offset.min(screen_h);
+
+        cuts.push(if matches!(dock, Position::Top) {
             FramePiece {
                 x: 0.0,
                 y: 0.0,
@@ -146,14 +160,25 @@ pub fn frame_pieces(
                 h: clamped,
                 ..FramePiece::default()
             }
-        }
-    });
-
-    FrameShape {
-        outer,
-        inner,
-        band: band_cut
+        });
     }
+
+    if band_height > 0.0 {
+        let bar_y = match dock {
+            Position::Top => band_offset,
+            _ => (screen_h - band_offset - band_height).max(0.0),
+        };
+
+        cuts.push(FramePiece {
+            x: left,
+            y: bar_y,
+            w: hole_w,
+            h: band_height.min(screen_h),
+            ..FramePiece::default()
+        });
+    }
+
+    FrameShape { outer, inner, cuts }
 }
 
 /// Radius of an inner corner: the configured rounding, where the content
@@ -170,11 +195,11 @@ fn radius_in(radius: f32, one: f32, other: f32, clamp: f32) -> f32 {
 /// Whether the frame paints the point `(x, y)`.
 ///
 /// The painted set is the outer screen rect, less the rounded inner hole,
-/// less the docked bar's band — the very set the canvas program fills with
-/// its even-odd path, so the geometry tests can state, pixel by pixel, what
-/// a scene looks like without opening a window: a physical corner is
-/// painted, the middle of the aperture is not, the bar's band is never
-/// painted twice, and the ring carries no second coat anywhere.
+/// less every cut — the very set the canvas program fills with its even-odd
+/// path, so the geometry tests can state, pixel by pixel, what a scene
+/// looks like without opening a window: a physical corner is painted, the
+/// middle of the aperture is not, the bar's band and the row before it are
+/// never painted, and the ring carries no second coat anywhere.
 ///
 /// ```rust
 /// use hydebar_core::{
@@ -187,7 +212,7 @@ fn radius_in(radius: f32, one: f32, other: f32, clamp: f32) -> f32 {
 ///     enabled: true,
 ///     ..FrameConfig::default()
 /// };
-/// let shape = frame_pieces(64.0, 64.0, &frame, Position::Top, 0.0);
+/// let shape = frame_pieces(64.0, 64.0, &frame, Position::Top, 0.0, 0.0);
 ///
 /// assert!(covers(&shape, 0.0, 0.0));
 /// assert!(!covers(&shape, 32.0, 32.0));
@@ -196,7 +221,7 @@ fn radius_in(radius: f32, one: f32, other: f32, clamp: f32) -> f32 {
 pub fn covers(shape: &FrameShape, x: f32, y: f32) -> bool {
     inside(shape.outer, x, y)
         && !inside(shape.inner, x, y)
-        && shape.band.is_none_or(|band| !inside(band, x, y))
+        && shape.cuts.iter().all(|cut| !inside(*cut, x, y))
 }
 
 /// Whether the point `(x, y)` falls inside one rounded rectangle.
@@ -209,7 +234,7 @@ fn inside(piece: FramePiece, x: f32, y: f32) -> bool {
         top_left,
         top_right,
         bottom_right,
-        bottom_left
+        bottom_left,
     } = piece;
 
     if x < left || x > left + w || y < top || y > top + h {
@@ -218,11 +243,11 @@ fn inside(piece: FramePiece, x: f32, y: f32) -> bool {
 
     let horizontal = (
         left + top_left.max(bottom_left),
-        left + w - top_right.max(bottom_right)
+        left + w - top_right.max(bottom_right),
     );
     let vertical = (
         top + top_left.max(top_right),
-        top + h - bottom_left.max(bottom_right)
+        top + h - bottom_left.max(bottom_right),
     );
 
     if x >= horizontal.0 && x <= horizontal.1 {
@@ -240,7 +265,7 @@ fn inside(piece: FramePiece, x: f32, y: f32) -> bool {
     } else if x > horizontal.1 && y > vertical.1 {
         Some((
             (left + w - bottom_right, top + h - bottom_right),
-            bottom_right
+            bottom_right,
         ))
     } else if x < horizontal.0 && y > vertical.1 {
         Some(((left + bottom_left, top + h - bottom_left), bottom_left))
@@ -268,19 +293,19 @@ mod tests {
         let edge = |enabled: bool| FrameEdge {
             enabled,
             width: None,
-            entries: Vec::new()
+            entries: Vec::new(),
         };
 
         FrameConfig {
             enabled: true,
             thickness,
-            rounding,
+            rounding: Some(rounding),
             edges: FrameEdges {
-                top:    edge(top),
+                top: edge(top),
                 bottom: edge(bottom),
-                left:   edge(left),
-                right:  edge(right)
-            }
+                left: edge(left),
+                right: edge(right),
+            },
         }
     }
 
@@ -291,7 +316,8 @@ mod tests {
             1080.0,
             &frame(10.0, 25.0, [true, true, true, true]),
             Position::Top,
-            38.0
+            38.0,
+            0.0,
         );
 
         assert_eq!(
@@ -315,7 +341,8 @@ mod tests {
             1080.0,
             &frame(10.0, 25.0, [true, true, true, true]),
             Position::Top,
-            38.0
+            38.0,
+            0.0,
         );
 
         assert_eq!(shape.inner.x, 10.0);
@@ -333,7 +360,8 @@ mod tests {
             1080.0,
             &frame(10.0, 25.0, [false, false, false, false]),
             Position::Top,
-            38.0
+            38.0,
+            0.0,
         );
 
         assert_eq!(shape.inner.y, 38.0);
@@ -347,7 +375,8 @@ mod tests {
             1080.0,
             &frame(10.0, 25.0, [true, true, true, true]),
             Position::Bottom,
-            38.0
+            38.0,
+            0.0,
         );
 
         assert_eq!(shape.inner.y, 10.0);
@@ -363,7 +392,8 @@ mod tests {
             1080.0,
             &frame(10.0, 25.0, [true, false, false, false]),
             Position::Top,
-            0.0
+            0.0,
+            0.0,
         );
 
         assert_eq!(shape.inner.top_left, 0.0);
@@ -379,7 +409,8 @@ mod tests {
             1080.0,
             &frame(10.0, 25.0, [false, true, true, false]),
             Position::Top,
-            0.0
+            0.0,
+            0.0,
         );
 
         assert_eq!(shape.inner.top_left, 0.0);
@@ -397,7 +428,8 @@ mod tests {
             1080.0,
             &frame(10.0, 25.0, [false, false, true, false]),
             Position::Top,
-            38.0
+            38.0,
+            0.0,
         );
 
         assert_eq!(shape.inner.top_left, 25.0);
@@ -413,7 +445,8 @@ mod tests {
             100.0,
             &frame(10.0, 80.0, [true, true, true, true]),
             Position::Top,
-            0.0
+            0.0,
+            0.0,
         );
 
         assert_eq!(shape.inner.top_left, 40.0);
@@ -423,34 +456,34 @@ mod tests {
     #[test]
     fn widths_consuming_the_screen_leave_no_hole() {
         let consuming = FrameConfig {
-            enabled:   true,
+            enabled: true,
             thickness: 0.0,
-            rounding:  25.0,
-            edges:     FrameEdges {
-                top:    FrameEdge {
+            rounding: Some(25.0),
+            edges: FrameEdges {
+                top: FrameEdge {
                     enabled: true,
-                    width:   Some(400.0),
-                    entries: Vec::new()
+                    width: Some(400.0),
+                    entries: Vec::new(),
                 },
                 bottom: FrameEdge {
                     enabled: true,
-                    width:   Some(400.0),
-                    entries: Vec::new()
+                    width: Some(400.0),
+                    entries: Vec::new(),
                 },
-                left:   FrameEdge {
+                left: FrameEdge {
                     enabled: true,
-                    width:   Some(400.0),
-                    entries: Vec::new()
+                    width: Some(400.0),
+                    entries: Vec::new(),
                 },
-                right:  FrameEdge {
+                right: FrameEdge {
                     enabled: true,
-                    width:   Some(400.0),
-                    entries: Vec::new()
-                }
-            }
+                    width: Some(400.0),
+                    entries: Vec::new(),
+                },
+            },
         };
 
-        let shape = frame_pieces(700.0, 700.0, &consuming, Position::Top, 0.0);
+        let shape = frame_pieces(700.0, 700.0, &consuming, Position::Top, 0.0, 0.0);
 
         assert_eq!(shape.inner.w, 0.0);
         assert_eq!(shape.inner.h, 0.0);
@@ -464,7 +497,8 @@ mod tests {
             0.0,
             &frame(10.0, 25.0, [true, true, true, true]),
             Position::Top,
-            38.0
+            38.0,
+            0.0,
         );
 
         assert_eq!(shape.outer.w, 0.0);
@@ -480,7 +514,7 @@ mod tests {
             enabled: false,
             ..FrameConfig::default()
         };
-        let shape = frame_pieces(1920.0, 1080.0, &off, Position::Top, 38.0);
+        let shape = frame_pieces(1920.0, 1080.0, &off, Position::Top, 38.0, 0.0);
 
         // drawing gates on enabled elsewhere; the geometry stays a pure
         // function of the numbers it was handed
@@ -495,19 +529,19 @@ mod tests {
         let edge = |width: Option<f32>| FrameEdge {
             enabled: true,
             width,
-            entries: Vec::new()
+            entries: Vec::new(),
         };
 
         FrameConfig {
             enabled: true,
             thickness,
-            rounding,
+            rounding: Some(rounding),
             edges: FrameEdges {
-                top:    edge(top),
+                top: edge(top),
                 bottom: edge(bottom),
-                left:   edge(left),
-                right:  edge(right)
-            }
+                left: edge(left),
+                right: edge(right),
+            },
         }
     }
 
@@ -518,7 +552,8 @@ mod tests {
             64.0,
             &frame(8.0, 16.0, [true, true, true, true]),
             Position::Top,
-            0.0
+            0.0,
+            0.0,
         );
 
         // every physical corner is painted: the screen boundary is square
@@ -558,7 +593,8 @@ mod tests {
             64.0,
             &frame_widths(10.0, 12.0, [Some(5.0), Some(13.0), Some(17.0), Some(9.0)]),
             Position::Top,
-            0.0
+            0.0,
+            0.0,
         );
 
         assert_eq!((shape.inner.x, shape.inner.y), (17.0, 5.0));
@@ -579,7 +615,8 @@ mod tests {
             96.0,
             &frame(8.0, 16.0, [true, true, true, true]),
             Position::Top,
-            0.0
+            0.0,
+            0.0,
         );
 
         assert!(covers(&shape, 0.0, 0.0));
@@ -596,14 +633,15 @@ mod tests {
             1080.0,
             &frame(10.0, 25.0, [true, true, true, true]),
             Position::Top,
-            38.0
+            38.0,
+            0.0,
         );
 
-        // the bar paints its band itself: the ring owns no pixel of it, not
-        // even the physical corners the band covers
+        // the bar paints its band itself: the ring owns no pixel of it,
+        // while the physical corners beside the band belong to the ring
         assert!(!covers(&shape, 960.0, 19.0));
-        assert!(!covers(&shape, 0.0, 0.0));
-        assert!(!covers(&shape, 1919.0, 0.0));
+        assert!(covers(&shape, 0.0, 0.0));
+        assert!(covers(&shape, 1919.0, 0.0));
 
         // the side strips run from the band down, paint below it
         assert!(covers(&shape, 5.0, 100.0));
@@ -617,28 +655,71 @@ mod tests {
     }
 
     #[test]
-    fn the_band_and_the_hole_never_share_a_pixel() {
-        // the even-odd fill clears each exactly once only while the two stay
-        // disjoint: the hole's docked inset always reaches the bar height
+    fn a_panel_before_the_bar_keeps_its_row_clear() {
+        // waybar stands on the top row, hydebar's bar sits below it: the ring
+        // paints neither row, and its rounding opens at the bar's far edge
+        let shape = frame_pieces(
+            1920.0,
+            1080.0,
+            &frame(10.0, 25.0, [false, true, true, true]),
+            Position::Top,
+            38.0,
+            38.0,
+        );
+
+        // the row of the panel before the bar and the bar's own band stay clear
+        assert!(!covers(&shape, 960.0, 19.0));
+        assert!(!covers(&shape, 960.0, 57.0));
+        assert!(!covers(&shape, 5.0, 19.0));
+
+        // the side strips run alongside the bar and below it
+        assert!(covers(&shape, 5.0, 57.0));
+        assert!(covers(&shape, 1915.0, 57.0));
+        assert!(covers(&shape, 5.0, 100.0));
+
+        // the aperture opens at the bar's far edge, rounding the junction
+        assert_eq!(shape.inner.y, 76.0);
+        assert_eq!(shape.inner.top_left, 25.0);
+        assert!(!covers(&shape, 20.0, 90.0));
+        assert!(covers(&shape, 9.0, 95.0));
+        assert!(!covers(&shape, 960.0, 559.0));
+    }
+
+    #[test]
+    fn the_cuts_and_the_hole_never_share_a_pixel() {
+        // the even-odd fill clears each exactly once only while the cuts and
+        // the hole stay disjoint: the hole's docked inset always reaches the
+        // bar's far edge, wherever the bar stands
         for dock in [Position::Top, Position::Bottom] {
-            let shape = frame_pieces(
-                1920.0,
-                1080.0,
-                &frame(10.0, 25.0, [true, true, true, true]),
-                dock,
-                38.0
-            );
-            let band = shape.band.expect("a docked bar cuts its band");
+            for offset in [0.0, 38.0] {
+                let shape = frame_pieces(
+                    1920.0,
+                    1080.0,
+                    &frame(10.0, 25.0, [true, true, true, true]),
+                    dock,
+                    38.0,
+                    offset,
+                );
 
-            if dock == Position::Top {
-                assert_eq!((band.y, band.h), (0.0, 38.0));
-                assert!(shape.inner.y >= band.y + band.h);
-            } else {
-                assert_eq!((band.y, band.h), (1080.0 - 38.0, 38.0));
-                assert!(shape.inner.y + shape.inner.h <= band.y);
+                assert_eq!(shape.cuts.len(), usize::from(offset > 0.0) + 1);
+
+                for cut in &shape.cuts {
+                    assert_eq!((cut.top_left, cut.bottom_right), (0.0, 0.0));
+
+                    let clear = (cut.x + cut.w <= shape.inner.x)
+                        || (cut.y + cut.h <= shape.inner.y)
+                        || (cut.x >= shape.inner.x + shape.inner.w)
+                        || (cut.y >= shape.inner.y + shape.inner.h);
+
+                    assert!(clear, "the cut {cut:?} overlaps the hole");
+                }
+
+                if dock == Position::Top {
+                    assert!(shape.inner.y >= 38.0 + offset);
+                } else {
+                    assert!(shape.inner.y + shape.inner.h <= 1080.0 - 38.0 - offset);
+                }
             }
-
-            assert_eq!((band.top_left, band.bottom_right), (0.0, 0.0));
         }
 
         let bare = frame_pieces(
@@ -646,10 +727,11 @@ mod tests {
             1080.0,
             &frame(10.0, 25.0, [true, true, true, true]),
             Position::Top,
-            0.0
+            0.0,
+            0.0,
         );
 
-        assert!(bare.band.is_none());
+        assert!(bare.cuts.is_empty());
     }
 
     #[test]
@@ -659,7 +741,8 @@ mod tests {
             1080.0,
             &frame(10.0, 25.0, [true, true, false, true]),
             Position::Top,
-            0.0
+            0.0,
+            0.0,
         );
 
         assert!(!covers(&shape, 2.0, 540.0));
@@ -674,7 +757,8 @@ mod tests {
             64.0,
             &frame(8.0, 16.0, [true, true, true, true]),
             Position::Top,
-            0.0
+            0.0,
+            0.0,
         );
 
         // a NaN coordinate answers no corner, no band and no straight run:
@@ -687,33 +771,33 @@ mod tests {
     #[test]
     fn a_consumed_screen_paints_its_ring_and_nothing_else() {
         let consuming = FrameConfig {
-            enabled:   true,
+            enabled: true,
             thickness: 0.0,
-            rounding:  25.0,
-            edges:     FrameEdges {
-                top:    FrameEdge {
+            rounding: Some(25.0),
+            edges: FrameEdges {
+                top: FrameEdge {
                     enabled: true,
-                    width:   Some(400.0),
-                    entries: Vec::new()
+                    width: Some(400.0),
+                    entries: Vec::new(),
                 },
                 bottom: FrameEdge {
                     enabled: true,
-                    width:   Some(400.0),
-                    entries: Vec::new()
+                    width: Some(400.0),
+                    entries: Vec::new(),
                 },
-                left:   FrameEdge {
+                left: FrameEdge {
                     enabled: true,
-                    width:   Some(400.0),
-                    entries: Vec::new()
+                    width: Some(400.0),
+                    entries: Vec::new(),
                 },
-                right:  FrameEdge {
+                right: FrameEdge {
                     enabled: true,
-                    width:   Some(400.0),
-                    entries: Vec::new()
-                }
-            }
+                    width: Some(400.0),
+                    entries: Vec::new(),
+                },
+            },
         };
-        let shape = frame_pieces(700.0, 700.0, &consuming, Position::Top, 0.0);
+        let shape = frame_pieces(700.0, 700.0, &consuming, Position::Top, 0.0, 0.0);
 
         assert!(covers(&shape, 0.0, 0.0));
         assert!(covers(&shape, 699.0, 699.0));

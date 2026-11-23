@@ -14,10 +14,11 @@
 //! in their own numbers.
 
 use hydebar_core::{
+    frame::{geometry::frame_pieces, program::FrameCanvas},
     HEIGHT,
-    frame::{geometry::frame_pieces, program::FrameCanvas}
 };
-use iced::{Element, Length, SurfaceId as Id, widget::canvas};
+use hydebar_proto::config::Position;
+use iced::{widget::canvas, Element, Length, SurfaceId as Id};
 
 use super::super::state::{App, Message};
 
@@ -47,7 +48,7 @@ impl App {
 
         let appearance = self.appearance();
         let theme = &self.theme_cache;
-        let color = theme.palette().background.scale_alpha(appearance.opacity);
+        let color = self.strip_ground(theme).scale_alpha(wash);
 
         #[expect(
             clippy::cast_possible_truncation,
@@ -55,19 +56,28 @@ impl App {
         )]
         let bar_height = appearance.height_px().unwrap_or(HEIGHT as f32);
 
-        let shape = frame_pieces(screen_w, screen_h, frame, self.config.position, bar_height);
+        let bar_offset = match self.config.position {
+            Position::Top => self.strip_rows.get(name).copied().unwrap_or(0.0),
+            Position::Bottom => self
+                .strip_rows
+                .get(name)
+                .zip(self.screen_height)
+                .map_or(0.0, |(row, height)| (height - row - bar_height).max(0.0)),
+        };
 
-        log::debug!(
-            "frame: drawing the ring of {name} over {screen_w}x{screen_h}, wash {wash}, shape {shape:?}"
+        let shape = frame_pieces(
+            screen_w,
+            screen_h,
+            frame,
+            self.config.position,
+            bar_height,
+            bar_offset,
         );
 
-        canvas(FrameCanvas {
-            shape,
-            color
-        })
-        .width(Length::Fill)
-        .height(Length::Fill)
-        .into()
+        canvas(FrameCanvas { shape, color })
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .into()
     }
 }
 
@@ -80,8 +90,8 @@ mod tests {
     use iced_test::simulator;
 
     use super::{
-        super::super::state::{Message, test_support::test_app_with},
-        *
+        super::super::state::{test_support::test_app_with, Message},
+        *,
     };
 
     fn tracked(app: &mut App, name: &str) {
@@ -95,7 +105,7 @@ mod tests {
             iced::OutputId::for_tests(),
             &app.config,
             1.0,
-            None
+            None,
         );
         let _ = task;
     }
