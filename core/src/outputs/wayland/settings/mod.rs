@@ -148,7 +148,7 @@ pub fn desk_settings(output: Option<OutputId>, layer: BarLayer) -> LayerShellSet
 /// same paint continued around the screen and is blurred by the same rule.
 pub fn frame_settings(output: Option<OutputId>, layer: BarLayer) -> LayerShellSettings {
     LayerShellSettings {
-        namespace: MAIN_NAMESPACE.to_string(),
+        namespace: "hydebar-frame".to_string(),
         size: Some((0, 0)),
         layer: surface_layer(layer),
         keyboard_interactivity: KeyboardInteractivity::None,
@@ -334,6 +334,6 @@ mod tests {
         assert_eq!(settings.anchor, Anchor::all());
         assert_eq!(settings.exclusive_zone, -1);
         assert_eq!(settings.input_region, Some(Vec::new()));
-        assert_eq!(settings.namespace, MAIN_NAMESPACE);
+        assert_eq!(settings.namespace, "hydebar-frame");
     }
 }

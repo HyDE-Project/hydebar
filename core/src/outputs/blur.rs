@@ -102,7 +102,7 @@ fn rules(namespace: &str) -> [Rule; 2] {
 /// frame is a solid paint and must stay sharp, so it opts out under a
 /// namespace of its own.
 fn frame_no_blur() -> Rule {
-    let matched = "^hydebar-frame-";
+    let matched = "^hydebar-frame";
 
     Rule {
         lua:        format!(

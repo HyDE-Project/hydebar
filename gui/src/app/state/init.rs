@@ -81,23 +81,6 @@ impl App {
     ) -> (Self, Task<Message>) {
         let (outputs, task) = Outputs::new(config.appearance.style, config.position, &config);
 
-        if config.appearance.frame.enabled {
-            let theme = hydebar_core::style::hydebar_theme(&config.appearance);
-            let c = theme.palette().background;
-            let color = (
-                (c.r * 255.0).round() as u8,
-                (c.g * 255.0).round() as u8,
-                (c.b * 255.0).round() as u8,
-                255,
-            );
-            let _ = hydebar_core::frame::shm::start(
-                config.appearance.frame.clone(),
-                config.position,
-                config.appearance.height_px().unwrap_or(38.0),
-                color,
-            );
-        }
-
         let custom = custom_modules(&config);
         let module_context = ModuleContext::new(event_sender, runtime_handle);
         let hyprland_clone = Arc::clone(&hyprland);

@@ -46,10 +46,12 @@ impl Outputs {
                 continue;
             };
 
-            // The ring is now painted by the shared-memory frame module
-            // (core/src/frame/shm.rs); the iced fullscreen surface is no
-            // longer created, which removes its ~122 MiB GPU buffer.
-            tasks.push(Self::reconcile_ring(*output, shell_info, false, config.layer));
+            tasks.push(Self::reconcile_ring(
+                *output,
+                shell_info,
+                frame.enabled,
+                config.layer
+            ));
             tasks.push(Self::reconcile_reservations(
                 shell_info,
                 *output,
@@ -314,7 +316,7 @@ mod tests {
             .as_ref()
             .expect("the group stands");
 
-        assert!(specs.frame_id.is_none());
+        assert!(specs.frame_id.is_some());
         assert!(specs.left_panel_id.is_some());
         assert!(specs.right_panel_id.is_some());
         assert!(specs.bottom_panel_id.is_some());
@@ -344,7 +346,7 @@ mod tests {
             .as_ref()
             .expect("the group stands");
 
-        assert!(specs.frame_id.is_none());
+        assert_eq!(specs.frame_id, ring);
         assert!(specs.left_panel_id.is_some());
     }
 

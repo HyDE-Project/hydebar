@@ -27,10 +27,6 @@ impl App {
         let frame = &self.config.appearance.frame;
         let empty = iced::widget::Row::new().into();
 
-        // The frame is painted by the shared-memory module; the iced ring
-        // is no longer drawn, so this surface stays empty.
-        return empty;
-
         if !frame.enabled {
             return empty;
         }
@@ -51,7 +47,7 @@ impl App {
 
         let appearance = self.appearance();
         let theme = &self.theme_cache;
-        let color = self.strip_ground(theme);
+        let color = theme.palette().background.scale_alpha(appearance.opacity);
 
         #[expect(
             clippy::cast_possible_truncation,
@@ -60,6 +56,10 @@ impl App {
         let bar_height = appearance.height_px().unwrap_or(HEIGHT as f32);
 
         let shape = frame_pieces(screen_w, screen_h, frame, self.config.position, bar_height);
+
+        log::debug!(
+            "frame: drawing the ring of {name} over {screen_w}x{screen_h}, wash {wash}, shape {shape:?}"
+        );
 
         canvas(FrameCanvas {
             shape,
