@@ -37,6 +37,8 @@ flexi_logger = "0.31"
 pipewire = "0.10"
 wayland-client = "0.31"
 wayland-protocols = { version = "0.32", features = ["client", "unstable"] }
+smithay-client-toolkit = "0.20.0"
+tiny-skia = "0.11.4"
 itertools = "0.15"
 hex_color = { version = "3", features = ["serde"] }
 udev = { version = "0.9", features = ["send", "sync"] }

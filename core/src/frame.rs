@@ -33,6 +33,7 @@ use hydebar_proto::config::{FrameConfig, FrameEdge, Position};
 
 pub mod geometry;
 pub mod program;
+pub mod shm;
 
 /// Widths of the four panel reservations of one screen, scaled the way the
 /// bar's own height scales.

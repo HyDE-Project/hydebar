@@ -18,6 +18,8 @@ image.workspace = true
 resvg.workspace = true
 futures.workspace = true
 hex_color.workspace = true
+smithay-client-toolkit.workspace = true
+tiny-skia.workspace = true
 hydebar-proto = { path = "../proto" }
 iced.workspace = true
 iced_core.workspace = true
