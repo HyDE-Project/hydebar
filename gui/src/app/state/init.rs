@@ -83,17 +83,12 @@ impl App {
 
         if config.appearance.frame.enabled {
             let theme = hydebar_core::style::hydebar_theme(&config.appearance);
-            let opacity = if config.appearance.style == hydebar_proto::config::AppearanceStyle::Islands {
-                config.appearance.bar_opacity
-            } else {
-                config.appearance.opacity
-            };
-            let c = theme.palette().background.scale_alpha(opacity);
+            let c = theme.palette().background;
             let color = (
                 (c.r * 255.0).round() as u8,
                 (c.g * 255.0).round() as u8,
                 (c.b * 255.0).round() as u8,
-                (c.a * 255.0).round() as u8,
+                255,
             );
             let _ = hydebar_core::frame::shm::start(
                 config.appearance.frame.clone(),
