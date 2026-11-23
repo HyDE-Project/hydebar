@@ -2,7 +2,7 @@
 
 use iced::{Anchor, KeyboardInteractivity, LayerShellSettings, OutputId};
 
-use super::{super::MAIN_NAMESPACE, surface_layer};
+use super::surface_layer;
 use crate::config::{BarLayer, Position};
 
 /// One of the four panels of the frame: the strips ringing the screen, one
@@ -97,7 +97,7 @@ pub fn panel_settings(
     let clearance = panel_clearance(dock, edge, bar_height);
 
     LayerShellSettings {
-        namespace: MAIN_NAMESPACE.to_string(),
+        namespace: "hydebar-frame-panel".to_string(),
         size: Some(size),
         layer: surface_layer(layer),
         keyboard_interactivity: KeyboardInteractivity::None,
