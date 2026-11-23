@@ -46,12 +46,10 @@ impl Outputs {
                 continue;
             };
 
-            tasks.push(Self::reconcile_ring(
-                *output,
-                shell_info,
-                frame.enabled,
-                config.layer
-            ));
+            // The ring is now painted by the shared-memory frame module
+            // (core/src/frame/shm.rs); the iced fullscreen surface is no
+            // longer created, which removes its ~122 MiB GPU buffer.
+            tasks.push(Self::reconcile_ring(*output, shell_info, false, config.layer));
             tasks.push(Self::reconcile_reservations(
                 shell_info,
                 *output,

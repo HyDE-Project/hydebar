@@ -57,7 +57,7 @@ impl App {
 
         let shape = frame_pieces(screen_w, screen_h, frame, self.config.position, bar_height);
 
-        log::debug!(
+        log::trace!(
             "frame: drawing the ring of {name} over {screen_w}x{screen_h}, wash {wash}, shape {shape:?}"
         );
 

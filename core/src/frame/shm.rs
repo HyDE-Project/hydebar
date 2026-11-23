@@ -401,12 +401,41 @@ fn draw_surface(state: &mut SurfaceState, _config: &FrameConfig) {
 
     let mut paint = Paint::default();
     paint.set_color(Color::from_rgba8(120, 120, 120, 200));
+    paint.anti_alias = true;
 
+    // Strips are solid 1px lines; corners get a quarter-circle cut so
+    // the aperture reads rounded instead of square.
     let rect = match tiny_skia::Rect::from_xywh(0.0, 0.0, state.width as f32, state.height as f32) {
         Some(r) => r,
         None => return,
     };
     pixmap.fill_rect(rect, &paint, Transform::identity(), None);
+
+    if matches!(
+        state.kind,
+        SurfaceKind::CornerTopLeft
+            | SurfaceKind::CornerTopRight
+            | SurfaceKind::CornerBottomLeft
+            | SurfaceKind::CornerBottomRight
+    ) {
+        let mut clear = Paint::default();
+        clear.set_color(Color::from_rgba8(0, 0, 0, 0));
+        clear.blend_mode = tiny_skia::BlendMode::Clear;
+        clear.anti_alias = true;
+
+        let r = (state.width.min(state.height) as f32 / 2.0).max(1.0);
+        let (cx, cy) = match state.kind {
+            SurfaceKind::CornerTopLeft => (state.width as f32, state.height as f32),
+            SurfaceKind::CornerTopRight => (0.0, state.height as f32),
+            SurfaceKind::CornerBottomLeft => (state.width as f32, 0.0),
+            SurfaceKind::CornerBottomRight => (0.0, 0.0),
+            _ => (0.0, 0.0),
+        };
+
+        if let Some(path) = tiny_skia::PathBuilder::from_circle(cx, cy, r) {
+            pixmap.fill_path(&path, &clear, tiny_skia::FillRule::Winding, Transform::identity(), None);
+        }
+    }
 
     let n = canvas.len().min(pixmap.data().len());
     canvas[..n].copy_from_slice(&pixmap.data()[..n]);
