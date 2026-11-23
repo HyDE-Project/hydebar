@@ -45,7 +45,7 @@ static ACCEPTED_SPELLING: AtomicU8 = AtomicU8::new(SPELLING_UNKNOWN);
 /// pills floating over a sharp wallpaper, which is not what a blurred bar looks
 /// like anywhere else on the desktop. Anything fully clear is still skipped, so
 /// a bar configured with no background at all costs the compositor nothing.
-const IGNORED_ALPHA: f32 = 0.0;
+const IGNORED_ALPHA: f32 = 0.05;
 
 /// One rule, stated in every syntax the compositor has had.
 ///
@@ -86,10 +86,10 @@ fn rules(namespace: &str) -> [Rule; 2] {
         Rule {
             lua:        format!(
                 "hl.layer_rule({{ name = \"hydebar_ignore_alpha\", match = {{ namespace = \
-                 \"{matched}\" }}, ignore_alpha = {IGNORED_ALPHA:.1} }})"
+                 \"{matched}\" }}, ignore_alpha = {IGNORED_ALPHA:.2} }})"
             ),
-            keyword:    format!("ignore_alpha {IGNORED_ALPHA:.1}, match:namespace {matched}"),
-            positional: format!("ignore_alpha {IGNORED_ALPHA:.1}, {matched}")
+            keyword:    format!("ignore_alpha {IGNORED_ALPHA:.2}, match:namespace {matched}"),
+            positional: format!("ignore_alpha {IGNORED_ALPHA:.2}, {matched}")
         }
     ]
 }
@@ -240,7 +240,7 @@ mod tests {
         );
         assert_eq!(
             ignore_alpha.keyword,
-            "ignore_alpha 0.0, match:namespace ^(hydebar-main-layer)$"
+            "ignore_alpha 0.05, match:namespace ^(hydebar-main-layer)$"
         );
     }
 
@@ -256,7 +256,7 @@ mod tests {
         assert_eq!(
             ignore_alpha.lua,
             "hl.layer_rule({ name = \"hydebar_ignore_alpha\", match = { namespace = \
-             \"^(hydebar-main-layer)$\" }, ignore_alpha = 0.0 })"
+             \"^(hydebar-main-layer)$\" }, ignore_alpha = 0.05 })"
         );
     }
 
@@ -267,7 +267,7 @@ mod tests {
         assert_eq!(blur.positional, "blur, ^(hydebar-main-layer)$");
         assert_eq!(
             ignore_alpha.positional,
-            "ignore_alpha 0.0, ^(hydebar-main-layer)$"
+            "ignore_alpha 0.05, ^(hydebar-main-layer)$"
         );
     }
 
@@ -293,7 +293,7 @@ mod tests {
     fn the_whole_strip_is_blurred_not_only_the_islands() {
         // the HyDE theme states the bar background at 0.01: a threshold above
         // it would leave the space between the islands sharp
-        assert!(IGNORED_ALPHA < 0.01);
+        assert!(IGNORED_ALPHA > 0.01 && IGNORED_ALPHA < 0.1);
     }
 
     #[test]

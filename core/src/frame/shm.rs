@@ -400,7 +400,7 @@ fn draw_surface(state: &mut SurfaceState, _config: &FrameConfig) {
     };
 
     let mut paint = Paint::default();
-    paint.set_color(Color::from_rgba8(120, 120, 120, 200));
+    paint.set_color(Color::from_rgba8(120, 120, 120, 255));
     paint.anti_alias = true;
 
     // Strips are solid 1px lines; corners get a quarter-circle cut so
