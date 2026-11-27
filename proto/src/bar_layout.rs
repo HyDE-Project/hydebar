@@ -15,11 +15,11 @@
 //! and outranks whatever `HyDE` has on file, exactly as every other setting
 //! does.
 //!
-//! The restatement itself lives in [`parse`], the entry-to-module tables in
-//! [`mapping`], the invented text entries in [`synth`], the human spelling of
-//! configured names in [`labels`] and the relaxed-JSON stripping in [`jsonc`].
-//! This file keeps the restated layout type and the walk from `staterc` to
-//! the layout file it records.
+//! The restatement itself, with the restated layout type it hands back, lives
+//! in [`parse`]; the entry-to-module tables in [`mapping`], the invented text
+//! entries in [`synth`], the human spelling of configured names in [`labels`]
+//! and the relaxed-JSON stripping in [`jsonc`]. This file keeps the walk from
+//! `staterc` to the layout file it records.
 
 mod jsonc;
 mod labels;
@@ -33,27 +33,9 @@ pub use jsonc::plain_json;
 pub use labels::display_label;
 use log::{debug, warn};
 pub use mapping::module_for;
-pub use parse::parse;
+pub use parse::{parse, RestatedLayout};
 
-use crate::{
-    config::{CustomModuleDef, Modules},
-    hyde_dirs::HydeDirs,
-    shell_vars
-};
-
-/// A layout restated in the bar's modules, with the entries it had to invent.
-///
-/// The decorative layouts carry static text entries defined inline in the
-/// layout file — a label and possibly a click command, nothing else. They map
-/// to no built-in, so the restatement synthesises a custom module for each:
-/// the label becomes the glyph, the click command stays the click command.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RestatedLayout {
-    /// The three position arrays in the bar's own modules.
-    pub modules:     Modules,
-    /// Custom modules invented for inline text entries, ready to adopt.
-    pub synthesized: Vec<CustomModuleDef>
-}
+use crate::{hyde_dirs::HydeDirs, shell_vars};
 
 /// Key under which `staterc` records the layout file in force.
 const LAYOUT_PATH_KEY: &str = "WAYBAR_LAYOUT_PATH";
@@ -171,7 +153,7 @@ mod tests {
             root.path().join("config"),
             root.path().join("state"),
             root.path().join("cache"),
-            root.path().join("data")
+            root.path().join("data"),
         );
 
         fs::create_dir_all(dirs.hyde_state_dir()).expect("state dir");
@@ -193,7 +175,7 @@ mod tests {
         fs::write(&path, r#"{ "modules-left": ["clock"] }"#).expect("layout");
         fs::write(
             dirs.staterc(),
-            format!("WAYBAR_LAYOUT_PATH=\"{}\"\n", path.display())
+            format!("WAYBAR_LAYOUT_PATH=\"{}\"\n", path.display()),
         )
         .expect("staterc");
 
@@ -206,7 +188,7 @@ mod tests {
     fn a_gone_path_falls_back_to_the_recorded_name() {
         let (_root, dirs) = install(
             "WAYBAR_LAYOUT_PATH=\"/nonexistent/gone.jsonc\"\nWAYBAR_LAYOUT_NAME=\"hyprdots/01\"\n",
-            Some(("hyprdots/01.jsonc", r#"{ "modules-left": ["clock"] }"#))
+            Some(("hyprdots/01.jsonc", r#"{ "modules-left": ["clock"] }"#)),
         );
 
         let modules = load_from(&dirs, &[]).expect("layout").modules;

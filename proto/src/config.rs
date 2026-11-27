@@ -54,7 +54,7 @@ pub use system_info::{
 };
 pub use themes::{preset_appearance, preset_names, preset_source};
 pub use updates::{HydeBranch, UpdatesModuleConfig};
-pub use validation::ConfigValidationError;
+pub use validation::error::ConfigValidationError;
 pub use weather::WeatherModuleConfig;
 pub use window_title::{WindowTitleConfig, WindowTitleMode};
 pub use workspaces::{WorkspaceVisibilityMode, WorkspacesModuleConfig};
