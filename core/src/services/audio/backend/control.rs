@@ -12,7 +12,7 @@ use log::{debug, error, trace};
 use masterror::{AppError, AppResult};
 use tokio::sync::mpsc::Sender;
 
-use super::{BackendEvent, PulseAudioServer};
+use super::{message::BackendEvent, server::PulseAudioServer};
 use crate::services::audio::model::{AudioEvent, Device};
 
 impl PulseAudioServer {

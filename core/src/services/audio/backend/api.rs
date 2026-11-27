@@ -1,31 +1,10 @@
-//! Commands, events and the handle used to drive an audio backend.
+//! The backend abstraction the audio service spawns and drives.
 
-use std::{future::Future, pin::Pin, thread::JoinHandle};
+use std::{future::Future, pin::Pin};
 
-use libpulse_binding::volume::ChannelVolumes;
 use masterror::AppResult;
-use tokio::sync::mpsc::{Receiver, Sender};
 
-use super::PulseAudioServer;
-use crate::services::audio::model::AudioEvent;
-
-/// Commands accepted by backend implementations.
-#[derive(Debug, Clone)]
-pub enum BackendCommand {
-    SinkMute(String, bool),
-    SourceMute(String, bool),
-    SinkVolume(String, ChannelVolumes),
-    SourceVolume(String, ChannelVolumes),
-    DefaultSink(String, String),
-    DefaultSource(String, String)
-}
-
-/// Events emitted by backend implementations.
-#[derive(Debug, Clone)]
-pub enum BackendEvent {
-    Error(String),
-    Update(AudioEvent)
-}
+use super::{handle::BackendHandle, server::PulseAudioServer};
 
 /// Future returned by backend spawners.
 pub type BackendFuture = Pin<Box<dyn Future<Output = AppResult<BackendHandle>> + Send>>;
@@ -33,6 +12,7 @@ pub type BackendFuture = Pin<Box<dyn Future<Output = AppResult<BackendHandle>> +
 /// Abstraction over backend implementations to allow testing without
 /// `PulseAudio`.
 pub trait AudioBackend: Send + Sync + Clone + 'static {
+    /// Starts the backend and hands back the handle to its bridge.
     fn spawn(&self) -> BackendFuture;
 }
 
@@ -43,43 +23,5 @@ pub struct PulseAudioBackend;
 impl AudioBackend for PulseAudioBackend {
     fn spawn(&self) -> BackendFuture {
         Box::pin(async { PulseAudioServer::start().await })
-    }
-}
-
-/// Handle returned by [`AudioBackend::spawn`].
-///
-/// Keeps the listener and commander thread handles alive for the lifetime
-/// of the backend. Dropping the handle closes both channels; the commander
-/// exits on the closed command queue and the listener notices the closed
-/// event queue on its next heartbeat and disconnects from the server.
-#[derive(Debug)]
-pub struct BackendHandle {
-    pub(crate) receiver: Receiver<BackendEvent>,
-    pub(crate) sender:   Sender<BackendCommand>,
-    _listener:           Option<JoinHandle<()>>,
-    _commander:          Option<JoinHandle<()>>
-}
-
-impl BackendHandle {
-    pub(super) const fn new(
-        receiver: Receiver<BackendEvent>,
-        sender: Sender<BackendCommand>,
-        listener: JoinHandle<()>,
-        commander: JoinHandle<()>
-    ) -> Self {
-        Self {
-            receiver,
-            sender,
-            _listener: Some(listener),
-            _commander: Some(commander)
-        }
-    }
-
-    pub(crate) fn commander(&self) -> Sender<BackendCommand> {
-        self.sender.clone()
-    }
-
-    pub(crate) async fn recv(&mut self) -> Option<BackendEvent> {
-        self.receiver.recv().await
     }
 }

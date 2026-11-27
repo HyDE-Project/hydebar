@@ -9,19 +9,11 @@ use zbus::{
     fdo::{RequestNameFlags, RequestNameReply}
 };
 
-use super::NotificationsService;
+use super::{end::SessionEnd, handle::NotificationsService};
 use crate::services::{
     ServiceEvent,
     notifications::{NotificationStorage, NotificationsError, NotificationsServer, takeover}
 };
-
-/// Why one attempt at serving the notification bus came to an end.
-pub(super) enum SessionEnd {
-    /// The bar dropped its receiver; there is nobody left to serve.
-    UiClosed,
-    /// The bus or the takeover refused; worth another knock later.
-    Failed
-}
 
 /// Serves org.freedesktop.Notifications until the bus or the UI lets go.
 ///

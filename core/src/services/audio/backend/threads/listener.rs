@@ -15,7 +15,7 @@ use log::error;
 use masterror::{AppError, AppResult};
 use tokio::sync::mpsc::Sender;
 
-use super::super::{BackendEvent, PulseAudioServer};
+use super::super::{message::BackendEvent, server::PulseAudioServer};
 
 /// How often the parked mainloop wakes to notice an abandoned bridge.
 ///
