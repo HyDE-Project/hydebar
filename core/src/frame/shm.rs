@@ -77,7 +77,7 @@ pub fn start(
     let stop_clone = Arc::clone(&stop);
 
     let thread = thread::spawn(move || {
-        run(config, dock, bar_height, color, stop_clone);
+        run(config, dock, bar_height, color, &stop_clone);
     });
 
     ShmFrameHandle {
@@ -403,7 +403,7 @@ impl App {
         }
     }
 
-    fn strip_enabled(&self, kind: SurfaceKind) -> bool {
+    const fn strip_enabled(&self, kind: SurfaceKind) -> bool {
         match kind {
             SurfaceKind::StripLeft => self.config.edges.left.enabled,
             SurfaceKind::StripRight => self.config.edges.right.enabled,
@@ -489,29 +489,24 @@ fn run(
     dock: Position,
     bar_height: f32,
     color: (u8, u8, u8, u8),
-    stop: Arc<AtomicBool>
+    stop: &AtomicBool
 ) {
-    let conn = match Connection::connect_to_env() {
-        Ok(c) => c,
-        Err(_) => return
+    let Ok(conn) = Connection::connect_to_env() else {
+        return;
     };
-    let (globals, mut event_queue) = match registry_queue_init(&conn) {
-        Ok(v) => v,
-        Err(_) => return
+    let Ok((globals, mut event_queue)) = registry_queue_init(&conn) else {
+        return;
     };
     let qh = event_queue.handle();
 
-    let compositor = match CompositorState::bind(&globals, &qh) {
-        Ok(c) => c,
-        Err(_) => return
+    let Ok(compositor) = CompositorState::bind(&globals, &qh) else {
+        return;
     };
-    let layer_shell = match LayerShell::bind(&globals, &qh) {
-        Ok(l) => l,
-        Err(_) => return
+    let Ok(layer_shell) = LayerShell::bind(&globals, &qh) else {
+        return;
     };
-    let shm = match Shm::bind(&globals, &qh) {
-        Ok(s) => s,
-        Err(_) => return
+    let Ok(shm) = Shm::bind(&globals, &qh) else {
+        return;
     };
 
     let mut app = App {
