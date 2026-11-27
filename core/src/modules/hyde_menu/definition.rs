@@ -91,10 +91,10 @@ fn expand_path(raw: &str) -> String {
         let fallback = fallback.map(expand_plain);
 
         return format!(
-            "{}{}{}",
-            &raw[..start],
-            expand_var(name, fallback.as_deref()),
-            &raw[start + end + 1..]
+            "{before}{value}{after}",
+            before = &raw[..start],
+            value = expand_var(name, fallback.as_deref()),
+            after = &raw[start + end + 1..]
         );
     }
 

@@ -61,11 +61,11 @@ pub(super) fn detail<'a>(
         entry.module.as_str().to_owned(),
         note(
             format!(
-                "{} section · island {} · position {} of {}",
-                section_name(slot.section),
-                island_of(entries, slot.index),
-                slot.index + 1,
-                entries.len()
+                "{section} section · island {island} · position {position} of {total}",
+                section = section_name(slot.section),
+                island = island_of(entries, slot.index),
+                position = slot.index + 1,
+                total = entries.len()
             ),
             font_size
         ),

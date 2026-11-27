@@ -61,8 +61,11 @@ pub fn compositor_color(color: AppearanceColor) -> String {
     let alpha = (base.a.clamp(0.0, 1.0) * 255.0).round() as u8;
 
     format!(
-        "rgba({:02x}{:02x}{:02x}{:02x})",
-        base.r, base.g, base.b, alpha
+        "rgba({red:02x}{green:02x}{blue:02x}{alpha:02x})",
+        red = base.r,
+        green = base.g,
+        blue = base.b,
+        alpha = alpha
     )
 }
 
