@@ -5,7 +5,6 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-homepage.workspace = true
 description = "Developer tooling for hydebar: module scaffolding and routine tasks"
 
 [[bin]]

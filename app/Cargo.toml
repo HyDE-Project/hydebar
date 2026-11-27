@@ -9,7 +9,6 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-homepage.workspace = true
 description = "Status bar for Hyprland, themed by the HyDE desktop"
 
 [dependencies]
