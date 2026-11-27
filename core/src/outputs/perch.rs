@@ -120,8 +120,7 @@ fn remembered() -> HashMap<String, f32> {
         .lock()
         .unwrap_or_else(PoisonError::into_inner)
         .as_ref()
-        .map(|(_, rows)| rows.clone())
-        .unwrap_or_default()
+        .map_or_default(|(_, rows)| rows.clone())
 }
 
 /// Picks the bar's own surface out of the compositor's answer, screen by

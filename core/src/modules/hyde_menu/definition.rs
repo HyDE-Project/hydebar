@@ -43,13 +43,12 @@ pub(super) fn read_definition(module: &str) -> Option<Definition> {
     let actions = module
         .get("menu-actions")
         .and_then(|value| value.as_object())
-        .map(|table| {
+        .map_or_default(|table| {
             table
                 .iter()
                 .filter_map(|(id, command)| Some((id.clone(), command.as_str()?.to_owned())))
                 .collect()
-        })
-        .unwrap_or_default();
+        });
 
     Some(Definition {
         glyph: module

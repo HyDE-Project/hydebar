@@ -64,6 +64,7 @@ impl ShmFrameHandle {
 /// The thread enumerates outputs itself and creates one thin strip per
 /// drawn edge plus one corner overlay per outer corner.  It blocks until
 /// [`ShmFrameHandle::stop`] is called.
+#[must_use]
 pub fn start(
     config: FrameConfig,
     dock: Position,
@@ -391,13 +392,13 @@ impl App {
             ls.commit();
 
             self.surfaces.push(SurfaceState {
-                kind:       kind,
-                layer:      ls,
-                width:      corner_size,
-                height:     corner_size,
-                pool:       None,
+                kind,
+                layer: ls,
+                width: corner_size,
+                height: corner_size,
+                pool: None,
                 configured: false,
-                output:     output.clone()
+                output: output.clone()
             });
         }
     }

@@ -62,7 +62,7 @@ where
                 error!(
                     "Custom module '{module_name}' failed to parse JSON output: {parse_error:?}"
                 );
-                send_event(sender, ServiceEvent::Error(parse_error.clone()));
+                send_event(sender, ServiceEvent::Error(parse_error));
             }
         }
     }

@@ -96,7 +96,7 @@ fn rules(namespace: &str) -> [Rule; 2] {
 
 /// Keeps the compositor from blurring the frame's own surfaces.
 ///
-/// HyDE's own configuration blurs every namespace beginning with
+/// `HyDE`'s own configuration blurs every namespace beginning with
 /// `hydebar`, which would drag the frame into the blur behind it. The
 /// frame is a solid paint and must stay sharp, so it opts out under a
 /// namespace of its own.

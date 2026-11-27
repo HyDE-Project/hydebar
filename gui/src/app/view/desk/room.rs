@@ -57,7 +57,7 @@ impl App {
 
         self.screen_height
             .map_or(f32::INFINITY, |height| {
-                height - self.strip_band(id) - margin * 2.0
+                margin.mul_add(-2.0, height - self.strip_band(id))
             })
             .max(0.0)
     }

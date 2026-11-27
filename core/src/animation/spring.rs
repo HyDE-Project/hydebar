@@ -197,7 +197,7 @@ impl Spring {
             let acceleration =
                 (-stiffness).mul_add(self.value - self.target, -(damping * self.velocity));
 
-            self.velocity += acceleration * step;
+            self.velocity = acceleration.mul_add(step, self.velocity);
             self.value = self.velocity.mul_add(step, self.value);
             remaining -= step;
         }

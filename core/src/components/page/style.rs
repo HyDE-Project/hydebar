@@ -139,7 +139,8 @@ pub const ICON_WIDTH_EM: f32 = 1.0;
 /// Derived from the tallest thing a row can hold — a button — rather than
 /// guessed, so the measured height of a page tracks any change to the button
 /// padding instead of drifting away from it.
-pub const ROW_HEIGHT_EM: f32 = CONTROL_SCALE * (LINE_HEIGHT_EM + 2.0 * BUTTON_PADDING_EM[0]);
+pub const ROW_HEIGHT_EM: f32 =
+    CONTROL_SCALE * 2.0f32.mul_add(BUTTON_PADDING_EM[0], LINE_HEIGHT_EM);
 
 /// Text size a control is drawn at on a page whose text is `font_size`.
 #[must_use]

@@ -53,28 +53,24 @@ impl SystemInfoSampler {
             gpu
         } = self.sensors.read();
 
-        let disks = self
-            .disks
-            .as_ref()
-            .map(|disks| {
-                disks
-                    .iter()
-                    .filter(|disk| !disk.is_removable() && disk.total_space() != 0)
-                    .map(|disk| {
-                        let total = disk.total_space();
-                        let used = total.saturating_sub(disk.available_space());
+        let disks = self.disks.as_ref().map_or_default(|disks| {
+            disks
+                .iter()
+                .filter(|disk| !disk.is_removable() && disk.total_space() != 0)
+                .map(|disk| {
+                    let total = disk.total_space();
+                    let used = total.saturating_sub(disk.available_space());
 
-                        DiskData {
-                            mount: disk.mount_point().to_string_lossy().to_string(),
-                            used,
-                            total,
-                            usage_percent: percentage(used, total)
-                        }
-                    })
-                    .sorted_by(|a, b| a.mount.cmp(&b.mount))
-                    .collect()
-            })
-            .unwrap_or_default();
+                    DiskData {
+                        mount: disk.mount_point().to_string_lossy().to_string(),
+                        used,
+                        total,
+                        usage_percent: percentage(used, total)
+                    }
+                })
+                .sorted_by(|a, b| a.mount.cmp(&b.mount))
+                .collect()
+        });
 
         let mut data = SystemInfoData {
             cpu_usage,

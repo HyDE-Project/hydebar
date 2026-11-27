@@ -75,9 +75,8 @@ fn fans_of(chip: &std::path::Path) -> Vec<(String, u32)> {
         return Vec::new();
     };
 
-    let chip_name = fs::read_to_string(chip.join("name"))
-        .map(|name| name.trim().to_owned())
-        .unwrap_or_default();
+    let chip_name =
+        fs::read_to_string(chip.join("name")).map_or_default(|name| name.trim().to_owned());
 
     entries
         .flatten()

@@ -150,7 +150,5 @@ pub fn watch_targets(follow_hyde: bool) -> Vec<ThemeWatchTarget> {
         return Vec::new();
     }
 
-    ThemeRoots::from_env()
-        .map(|roots| roots.targets())
-        .unwrap_or_default()
+    ThemeRoots::from_env().map_or_default(|roots| roots.targets())
 }

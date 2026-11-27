@@ -76,8 +76,7 @@ impl UPowerService {
                     UPowerEvent::UpdatePowerProfile(
                         powerprofiles
                             .cached_active_profile()
-                            .map(|d| d.map(PowerProfile::from).unwrap_or_default())
-                            .unwrap_or_default()
+                            .map_or_default(|d| d.map_or_default(PowerProfile::from))
                     )
                 });
 

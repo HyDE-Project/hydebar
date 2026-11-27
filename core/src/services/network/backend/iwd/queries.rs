@@ -156,8 +156,7 @@ impl IwdDbus<'_> {
                 let device_path = net
                     .device()
                     .await
-                    .map_err(|e| bus_failure("Failed to get network device", &e))?
-                    .clone();
+                    .map_err(|e| bus_failure("Failed to get network device", &e))?;
                 let state = states
                     .get(&device_path)
                     .copied()

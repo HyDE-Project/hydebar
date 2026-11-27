@@ -92,7 +92,7 @@ pub fn panel_settings(
     // The reservation keeps its full exclusive zone, but the surface itself
     // stays one pixel wide: a full-width strip only ever held an empty
     // buffer, and the compositor reserves the zone regardless of the size.
-    let surface_width = if width > 0 { 1 } else { 0 };
+    let surface_width = u32::from(width > 0);
     let (anchor, size) = panel_anchor(edge, surface_width);
     let clearance = panel_clearance(dock, edge, bar_height);
 

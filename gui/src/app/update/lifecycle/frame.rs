@@ -65,8 +65,7 @@ impl App {
 
         let elapsed = self
             .last_frame
-            .map(|last| now.saturating_duration_since(last))
-            .unwrap_or_default();
+            .map_or_default(|last| now.saturating_duration_since(last));
         self.last_frame = Some(now);
 
         if self.greeting.target() > 0.0 {

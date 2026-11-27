@@ -117,11 +117,7 @@ pub async fn build_event_stream(conn: &Connection) -> AppResult<EventStream> {
                     let service = service.clone();
 
                     async move {
-                        let new_state = signal
-                            .get()
-                            .await
-                            .map(PlaybackStatus::from)
-                            .unwrap_or_default();
+                        let new_state = signal.get().await.map_or_default(PlaybackStatus::from);
 
                         if new_state == state {
                             None

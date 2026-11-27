@@ -20,16 +20,13 @@ pub(super) fn list_layouts() -> Vec<LayoutEntry> {
 
     let active = active_layout_name();
 
-    let names: Vec<String> = listed["layouts"]
-        .as_array()
-        .map(|layouts| {
-            layouts
-                .iter()
-                .filter_map(|entry| entry["name"].as_str())
-                .map(str::to_owned)
-                .collect()
-        })
-        .unwrap_or_default();
+    let names: Vec<String> = listed["layouts"].as_array().map_or_default(|layouts| {
+        layouts
+            .iter()
+            .filter_map(|entry| entry["name"].as_str())
+            .map(str::to_owned)
+            .collect()
+    });
 
     let chosen = active
         .as_deref()

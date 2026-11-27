@@ -37,8 +37,7 @@ pub(super) fn read_tree(path: &str) -> Option<Vec<Entry>> {
         tag.try_get_attribute(name)
             .ok()
             .flatten()
-            .map(|attribute| attribute.value.into_owned())
-            .unwrap_or_default()
+            .map_or_default(|attribute| attribute.value.into_owned())
     };
 
     let mut menus: Vec<Vec<Entry>> = Vec::new();
