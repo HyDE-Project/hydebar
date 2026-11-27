@@ -154,7 +154,7 @@ mod tests {
         for menu_type in every_menu() {
             let mut app = test_app();
 
-            let _ = app.on_toggle_menu(menu_type.clone(), surface(), press());
+            let _ = app.on_toggle_menu(menu_type, surface(), press());
         }
     }
 

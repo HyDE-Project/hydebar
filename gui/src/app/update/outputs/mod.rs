@@ -16,44 +16,7 @@ impl App {
             Message::ScreenMeasured {
                 name,
                 geometry
-            } => {
-                let Some(geometry) = geometry else {
-                    log::debug!("frame: screen {name} measured as gone");
-
-                    if self.outputs.has_name(&name) {
-                        return Task::perform(
-                            async move {
-                                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
-                                name
-                            },
-                            |name| Message::RemeasureScreen {
-                                name
-                            }
-                        );
-                    }
-
-                    return Task::none();
-                };
-
-                if self.outputs.has_name(&name) {
-                    log::debug!("frame: screen {name} measured");
-
-                    let looked = if self.adopt_measured(name, geometry) {
-                        self.refresh_appearance()
-                    } else {
-                        Task::none()
-                    };
-
-                    let rows = Task::perform(
-                        hydebar_core::outputs::perch::strip_rows_settled(),
-                        Message::StripRowsMeasured
-                    );
-
-                    Task::batch([looked, rows])
-                } else {
-                    Task::none()
-                }
-            }
+            } => self.screen_measured(name, geometry),
             Message::WallpaperRead(read) => {
                 self.wallpaper_preview = read;
 
@@ -80,56 +43,105 @@ impl App {
                     Task::none()
                 }
             }
-            Message::OutputEvent(event) => match event {
-                OutputEvent::Added(info) => {
-                    info!("Output created: {info:?}");
-
-                    let measure = measure_screen(info.name.clone());
-
-                    let appearance = self.scaled_appearance();
-
-                    let add = self.outputs.add(
-                        appearance.style,
-                        &self.config.outputs,
-                        self.config.position,
-                        &info.name,
-                        info.id,
-                        &self.config,
-                        appearance.scale_factor,
-                        appearance.height_px()
-                    );
-
-                    let unfold = self.unfold_desk();
-
-                    Task::batch([measure, add, unfold])
-                }
-                OutputEvent::Removed(id) => {
-                    info!("Output destroyed");
-
-                    let name = self.outputs.output_name(id).map(str::to_owned);
-
-                    let removed = self.outputs.remove(
-                        self.config.appearance.style,
-                        self.config.position,
-                        id,
-                        &self.config
-                    );
-
-                    if let Some(name) = name {
-                        self.screen_sizes.remove(&name);
-                    }
-
-                    Task::batch([removed, self.unfold_desk()])
-                }
-                OutputEvent::InfoChanged(info) => measure_screen(info.name),
-                OutputEvent::SurfaceEnteredOutput {
-                    ..
-                }
-                | OutputEvent::SurfaceLeftOutput {
-                    ..
-                } => Task::none()
-            },
+            Message::OutputEvent(event) => self.output_event(event),
             _ => Task::none()
+        }
+    }
+
+    /// Applies one fresh measurement of one screen.
+    fn screen_measured(
+        &mut self,
+        name: String,
+        geometry: Option<ScreenGeometry>
+    ) -> Task<Message> {
+        let Some(geometry) = geometry else {
+            log::debug!("frame: screen {name} measured as gone");
+
+            if self.outputs.has_name(&name) {
+                return Task::perform(
+                    async move {
+                        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+                        name
+                    },
+                    |name| Message::RemeasureScreen {
+                        name
+                    }
+                );
+            }
+
+            return Task::none();
+        };
+
+        if self.outputs.has_name(&name) {
+            log::debug!("frame: screen {name} measured");
+
+            let looked = if self.adopt_measured(name, geometry) {
+                self.refresh_appearance()
+            } else {
+                Task::none()
+            };
+
+            let rows = Task::perform(
+                hydebar_core::outputs::perch::strip_rows_settled(),
+                Message::StripRowsMeasured
+            );
+
+            Task::batch([looked, rows])
+        } else {
+            Task::none()
+        }
+    }
+
+    /// Applies one compositor output hotplug event.
+    fn output_event(&mut self, event: OutputEvent) -> Task<Message> {
+        match event {
+            OutputEvent::Added(info) => {
+                info!("Output created: {info:?}");
+
+                let measure = measure_screen(info.name.clone());
+
+                let appearance = self.scaled_appearance();
+
+                let add = self.outputs.add(
+                    appearance.style,
+                    &self.config.outputs,
+                    self.config.position,
+                    &info.name,
+                    info.id,
+                    &self.config,
+                    appearance.scale_factor,
+                    appearance.height_px()
+                );
+
+                let unfold = self.unfold_desk();
+
+                Task::batch([measure, add, unfold])
+            }
+            OutputEvent::Removed(id) => {
+                info!("Output destroyed");
+
+                let name = self.outputs.output_name(id).map(str::to_owned);
+
+                let removed = self.outputs.remove(
+                    self.config.appearance.style,
+                    self.config.position,
+                    id,
+                    &self.config
+                );
+
+                if let Some(name) = name {
+                    self.screen_sizes.remove(&name);
+                }
+
+                Task::batch([removed, self.unfold_desk()])
+            }
+            OutputEvent::InfoChanged(info) => measure_screen(info.name),
+            OutputEvent::SurfaceEnteredOutput {
+                ..
+            }
+            | OutputEvent::SurfaceLeftOutput {
+                ..
+            } => Task::none()
         }
     }
 
