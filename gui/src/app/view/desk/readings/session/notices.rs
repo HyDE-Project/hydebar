@@ -45,7 +45,7 @@ pub fn notifications(app: &App) -> Option<Panel> {
         ("unread".to_owned(), service.unread_count().to_string()),
         (
             "stored".to_owned(),
-            service.get_notifications().len().to_string()
+            service.notifications().len().to_string()
         ),
         (
             "do not disturb".to_owned(),
@@ -57,7 +57,7 @@ pub fn notifications(app: &App) -> Option<Panel> {
         &mut rows,
         "latest",
         service
-            .get_notifications()
+            .notifications()
             .first()
             .map(|latest| latest.summary.clone())
     );

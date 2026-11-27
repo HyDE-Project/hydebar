@@ -20,7 +20,7 @@ impl ControlCenter {
         icons: &IconTheme
     ) -> Element<'_, Message> {
         let wifi_setting_button = self.network.as_ref().and_then(|n| {
-            n.get_wifi_quick_setting_button(
+            n.wifi_quick_setting_button(
                 id,
                 self.sub_menu,
                 config.wifi_more_cmd.is_some(),
@@ -36,7 +36,7 @@ impl ControlCenter {
                     .as_ref()
                     .filter(|b| b.state != BluetoothState::Unavailable)
                     .and_then(|b| {
-                        b.get_quick_setting_button(
+                        b.quick_setting_button(
                             id,
                             self.sub_menu,
                             config.bluetooth_more_cmd.is_some(),
@@ -45,7 +45,7 @@ impl ControlCenter {
                         )
                     }),
                 self.network.as_ref().and_then(|n| {
-                    n.get_vpn_quick_setting_button(
+                    n.vpn_quick_setting_button(
                         id,
                         self.sub_menu,
                         config.vpn_more_cmd.is_some(),
@@ -57,7 +57,7 @@ impl ControlCenter {
                     if config.remove_airplane_btn {
                         None
                     } else {
-                        Some(n.get_airplane_mode_quick_setting_button(opacity, icons))
+                        Some(n.airplane_mode_quick_setting_button(opacity, icons))
                     }
                 }),
                 self.idle_inhibitor.as_ref().and_then(|i| {
@@ -85,7 +85,7 @@ impl ControlCenter {
                 }),
                 self.upower
                     .as_ref()
-                    .and_then(|u| u.power_profile.get_quick_setting_button(opacity, icons)),
+                    .and_then(|u| u.power_profile.quick_setting_button(opacity, icons)),
             ]
             .into_iter()
             .flatten()

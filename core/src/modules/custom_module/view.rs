@@ -69,7 +69,7 @@ pub(super) fn state_color(module: &Custom, config: &CustomModuleDef) -> Option<C
     colors.iter().find_map(|(pattern, color)| {
         pattern
             .is_match(&module.data.alt)
-            .then(|| painted(color.get_base()))
+            .then(|| painted(color.base()))
     })
 }
 

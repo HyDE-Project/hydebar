@@ -18,7 +18,7 @@ impl App {
         clippy::too_many_lines,
         reason = "one view arm per module name, read as a single dispatch table"
     )]
-    pub(crate) fn get_module_view(
+    pub(crate) fn module_view(
         &self,
         module_name: &ModuleName,
         id: Id,
@@ -169,7 +169,7 @@ mod tests {
         let app = test_app();
 
         for module_name in ModuleName::BUILT_IN {
-            let _ = app.get_module_view(module_name, surface(), 1.0);
+            let _ = app.module_view(module_name, surface(), 1.0);
         }
     }
 
@@ -178,7 +178,7 @@ mod tests {
         let app = test_app();
 
         for module_name in ModuleName::BUILT_IN {
-            if let Some((content, _)) = app.get_module_view(module_name, surface(), 1.0) {
+            if let Some((content, _)) = app.module_view(module_name, surface(), 1.0) {
                 let mut ui = simulator(content);
 
                 assert!(
@@ -195,7 +195,7 @@ mod tests {
 
         for module_name in [ModuleName::AppLauncher, ModuleName::Clipboard] {
             let (_, press) = app
-                .get_module_view(&module_name, surface(), 1.0)
+                .module_view(&module_name, surface(), 1.0)
                 .unwrap_or_else(|| panic!("{module_name:?} is drawn"));
 
             assert!(
@@ -210,7 +210,7 @@ mod tests {
         let app = test_app();
 
         assert!(
-            app.get_module_view(&ModuleName::Custom("gone".to_owned()), surface(), 1.0)
+            app.module_view(&ModuleName::Custom("gone".to_owned()), surface(), 1.0)
                 .is_none()
         );
     }
@@ -225,7 +225,7 @@ mod tests {
         });
 
         let (content, _) = app
-            .get_module_view(&ModuleName::Custom("mine".to_owned()), surface(), 1.0)
+            .module_view(&ModuleName::Custom("mine".to_owned()), surface(), 1.0)
             .expect("a declared module is built with the bar");
 
         let mut ui = simulator(content);
@@ -242,7 +242,7 @@ mod tests {
         });
 
         assert!(
-            app.get_module_view(&ModuleName::Custom("other".to_owned()), surface(), 1.0)
+            app.module_view(&ModuleName::Custom("other".to_owned()), surface(), 1.0)
                 .is_none()
         );
     }
@@ -257,7 +257,7 @@ mod tests {
             ModuleName::GameMode
         ] {
             let (_, press) = app
-                .get_module_view(&module_name, surface(), 1.0)
+                .module_view(&module_name, surface(), 1.0)
                 .unwrap_or_else(|| panic!("{module_name:?} is drawn"));
 
             assert!(press.is_some(), "{module_name:?} answers a press");
@@ -269,7 +269,7 @@ mod tests {
         let app = test_app();
 
         assert!(
-            app.get_module_view(&ModuleName::IdleInhibitor, surface(), 1.0)
+            app.module_view(&ModuleName::IdleInhibitor, surface(), 1.0)
                 .is_some()
         );
     }

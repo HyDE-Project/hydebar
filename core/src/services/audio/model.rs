@@ -51,7 +51,7 @@ pub enum DeviceType {
 impl DeviceType {
     /// Returns the icon that should be displayed for the device category.
     #[must_use]
-    pub const fn get_icon(&self) -> Icons {
+    pub const fn icon(&self) -> Icons {
         match self {
             Self::Speaker => Icons::Speaker3,
             Self::Headphones => Icons::Headphones1,
@@ -74,7 +74,7 @@ pub struct ServerInfo {
 /// volumes.
 pub trait Volume {
     /// Returns the normalized volume value in range `[0.0, 1.0]`.
-    fn get_volume(&self) -> f64;
+    fn volume(&self) -> f64;
 
     /// Scales the volume to `max` and returns the modified value when
     /// successful.
@@ -82,7 +82,7 @@ pub trait Volume {
 }
 
 impl Volume for ChannelVolumes {
-    fn get_volume(&self) -> f64 {
+    fn volume(&self) -> f64 {
         f64::from(self.avg().0) / f64::from(libpulse_binding::volume::Volume::NORMAL.0)
     }
 
@@ -102,14 +102,14 @@ impl Volume for ChannelVolumes {
 /// Convenience helpers for sink collections.
 pub trait Sinks {
     /// Computes the icon for the default sink.
-    fn get_icon(&self, default_sink: &str) -> Icons;
+    fn icon(&self, default_sink: &str) -> Icons;
 }
 
 impl Sinks for Vec<Device> {
-    fn get_icon(&self, default_sink: &str) -> Icons {
+    fn icon(&self, default_sink: &str) -> Icons {
         match self.iter().find_map(|sink| {
             if sink.ports.iter().any(|port| port.active) && sink.name == default_sink {
-                Some((sink.is_mute, sink.volume.get_volume()))
+                Some((sink.is_mute, sink.volume.volume()))
             } else {
                 None
             }
@@ -163,10 +163,10 @@ mod tests {
 
     #[test]
     fn device_type_icons_match_expectations() {
-        assert_eq!(DeviceType::Headphones.get_icon(), Icons::Headphones1);
-        assert_eq!(DeviceType::Speaker.get_icon(), Icons::Speaker3);
-        assert_eq!(DeviceType::Headset.get_icon(), Icons::Headset);
-        assert_eq!(DeviceType::Hdmi.get_icon(), Icons::MonitorSpeaker);
+        assert_eq!(DeviceType::Headphones.icon(), Icons::Headphones1);
+        assert_eq!(DeviceType::Speaker.icon(), Icons::Speaker3);
+        assert_eq!(DeviceType::Headset.icon(), Icons::Headset);
+        assert_eq!(DeviceType::Hdmi.icon(), Icons::MonitorSpeaker);
     }
 
     #[test]
@@ -185,7 +185,7 @@ mod tests {
             }]
         }];
 
-        assert_eq!(sinks.get_icon("default"), Icons::Speaker0);
+        assert_eq!(sinks.icon("default"), Icons::Speaker0);
     }
 
     #[test]
@@ -204,7 +204,7 @@ mod tests {
             }]
         }];
 
-        assert_eq!(sinks.get_icon("default"), Icons::Speaker0);
+        assert_eq!(sinks.icon("default"), Icons::Speaker0);
     }
 
     #[test]

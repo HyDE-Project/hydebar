@@ -40,7 +40,7 @@ impl MediaPlayer {
         }
     }
 
-    pub(super) fn get_title(d: &MprisPlayerData, config: &MediaPlayerModuleConfig) -> String {
+    pub(super) fn title(d: &MprisPlayerData, config: &MediaPlayerModuleConfig) -> String {
         d.metadata.as_ref().map_or_else(
             || "No Title".to_string(),
             |m| truncate_text(&m.to_string(), config.max_title_length)

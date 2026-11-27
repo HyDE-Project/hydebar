@@ -28,7 +28,7 @@ pub mod manager;
 pub mod theme_watch;
 pub mod watch;
 
-pub use load::{ConfigLoadError, get_config};
+pub use load::{ConfigLoadError, config};
 pub use manager::{
     ConfigApplied, ConfigDegradation, ConfigImpact, ConfigManager, ConfigUpdateError
 };

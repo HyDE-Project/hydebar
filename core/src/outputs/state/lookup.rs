@@ -63,10 +63,10 @@ impl Outputs {
     /// # use iced::SurfaceId as Id;
     /// let config = Config::default();
     /// let (outputs, _task) = Outputs::new::<()>(config.appearance.style, config.position, &config);
-    /// assert!(outputs.get_monitor_name(Id::unique()).is_none());
+    /// assert!(outputs.monitor_name(Id::unique()).is_none());
     /// ```
     #[must_use]
-    pub fn get_monitor_name(&self, id: Id) -> Option<&str> {
+    pub fn monitor_name(&self, id: Id) -> Option<&str> {
         self.0.iter().find_map(|(name, info, _)| {
             info.as_ref()
                 .and_then(|info| if info.id == id { name.as_deref() } else { None })
@@ -99,7 +99,7 @@ impl Outputs {
 
     /// Retrieve the monitor name behind any surface of a tracked output.
     ///
-    /// Unlike [`Outputs::get_monitor_name`], which answers for the bar surface
+    /// Unlike [`Outputs::monitor_name`], which answers for the bar surface
     /// alone, this one answers for every surface of the group — the desk asks
     /// what screen it is standing on, and it is not the bar surface asking.
     ///
@@ -300,8 +300,8 @@ mod tests {
         let outputs = tracked();
         let specs = group(&outputs);
 
-        assert_eq!(outputs.get_monitor_name(specs.id), Some("DP-1"));
-        assert!(outputs.get_monitor_name(Id::unique()).is_none());
+        assert_eq!(outputs.monitor_name(specs.id), Some("DP-1"));
+        assert!(outputs.monitor_name(Id::unique()).is_none());
 
         for id in [
             specs.id,

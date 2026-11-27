@@ -66,7 +66,7 @@ impl WindowTitle {
 
     /// An entry that has not read the session yet.
     pub fn new(hyprland: Arc<dyn HyprlandPort>, config: &WindowTitleConfig) -> Self {
-        let init = state::get_window(hyprland.as_ref(), config);
+        let init = state::window(hyprland.as_ref(), config);
         let shortened = init
             .as_deref()
             .map(|value| truncate_text(value, config.truncate_title_after_length));

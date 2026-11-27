@@ -15,7 +15,7 @@ impl App {
             Some(HasOutput::Main) => self.bar_surface(id),
             Some(HasOutput::Menu(menu_info)) => {
                 let menu_opacity = self.config.appearance.menu.opacity;
-                let menu_progress = self.outputs.get_menu_progress(id);
+                let menu_progress = self.outputs.menu_progress(id);
 
                 let menu = menu_info.and_then(|(menu_type, button_ui_ref)| {
                     self.menu_page(menu_type, id, menu_opacity).map(

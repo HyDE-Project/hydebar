@@ -24,7 +24,7 @@ fn storage_max_capacity() {
         storage.add(notif);
     }
 
-    assert_eq!(storage.get_all().len(), MAX_NOTIFICATIONS);
+    assert_eq!(storage.all().len(), MAX_NOTIFICATIONS);
 }
 
 #[test]

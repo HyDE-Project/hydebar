@@ -51,7 +51,7 @@ impl ControlCenter {
             .as_ref()
             .filter(|b| b.state != BluetoothState::Unavailable)
             .and_then(|b| {
-                b.get_quick_setting_button(
+                b.quick_setting_button(
                     id,
                     self.sub_menu,
                     config.bluetooth_more_cmd.is_some(),

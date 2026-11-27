@@ -10,7 +10,7 @@ use crate::{
 };
 
 /// Asks the port for the focused window, `None` on failure.
-pub(super) fn get_window(port: &dyn HyprlandPort, config: &WindowTitleConfig) -> Option<String> {
+pub(super) fn window(port: &dyn HyprlandPort, config: &WindowTitleConfig) -> Option<String> {
     match port.active_window() {
         Ok(window) => window.map(|window| shown_field(window, config)),
         Err(err) => {

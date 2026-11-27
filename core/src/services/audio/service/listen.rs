@@ -130,7 +130,7 @@ impl AudioService {
                     Some(if device.is_mute {
                         0.0
                     } else {
-                        device.volume.get_volume()
+                        device.volume.volume()
                     })
                 } else {
                     None

@@ -57,7 +57,7 @@ impl Notice {
     reason = "each channel is clamped to [0.0, 1.0] before scaling, so the rounded value is non-negative and fits in u8"
 )]
 pub fn compositor_color(color: AppearanceColor) -> String {
-    let base = color.get_base();
+    let base = color.base();
     let alpha = (base.a.clamp(0.0, 1.0) * 255.0).round() as u8;
 
     format!(

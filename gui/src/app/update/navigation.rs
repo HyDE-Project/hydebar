@@ -56,7 +56,7 @@ impl App {
                 }
 
                 if let Some(current) = self.focused_module_index {
-                    let all_modules = self.get_all_modules_count();
+                    let all_modules = self.all_modules_count();
                     if current + 1 < all_modules {
                         self.focused_module_index = Some(current + 1);
                         debug!("Navigate right: focus moved to module {}", current + 1);
@@ -77,7 +77,7 @@ impl App {
                     return Task::none();
                 };
 
-                if let Some(action) = self.get_module_at_index(index, main_window_id) {
+                if let Some(action) = self.module_at_index(index, main_window_id) {
                     match action {
                         OnModulePress::Action(msg) => {
                             info!("Activating module at index {index} with action");

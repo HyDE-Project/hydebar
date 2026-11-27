@@ -64,7 +64,7 @@ impl Menu {
 
     /// Get the current animated opacity for rendering
     #[must_use]
-    pub const fn get_opacity(&self) -> f32 {
+    pub const fn opacity(&self) -> f32 {
         self.opacity.value()
     }
 }

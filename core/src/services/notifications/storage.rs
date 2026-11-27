@@ -89,7 +89,7 @@ impl NotificationStorage {
 
     /// Every notice being held, newest first.
     #[must_use]
-    pub const fn get_all(&self) -> &VecDeque<Notification> {
+    pub const fn all(&self) -> &VecDeque<Notification> {
         &self.notifications
     }
 
@@ -175,7 +175,7 @@ mod tests {
         let id = storage.add(notification);
 
         assert_ne!(id, 999);
-        assert_eq!(storage.get_all()[0].id, id);
+        assert_eq!(storage.all()[0].id, id);
     }
 
     #[test]
@@ -186,9 +186,9 @@ mod tests {
             storage.add(a_notification(&format!("n{i}")));
         }
 
-        assert_eq!(storage.get_all().len(), MAX_NOTIFICATIONS);
-        assert_eq!(storage.get_all().front().unwrap().summary, "n52");
-        assert_eq!(storage.get_all().back().unwrap().summary, "n3");
+        assert_eq!(storage.all().len(), MAX_NOTIFICATIONS);
+        assert_eq!(storage.all().front().unwrap().summary, "n52");
+        assert_eq!(storage.all().back().unwrap().summary, "n3");
     }
 
     #[test]
@@ -200,7 +200,7 @@ mod tests {
         replacement.id = id + 100;
         storage.replace(id, replacement);
 
-        assert_eq!(storage.get_all()[0].id, id);
+        assert_eq!(storage.all()[0].id, id);
     }
 
     #[test]
@@ -212,7 +212,7 @@ mod tests {
         storage.replace(id, a_notification("progress 90%"));
 
         assert_eq!(storage.unread_count(), 2);
-        let updated = storage.get_all().iter().find(|n| n.id == id).unwrap();
+        let updated = storage.all().iter().find(|n| n.id == id).unwrap();
         assert_eq!(updated.summary, "progress 90%");
     }
 
@@ -223,8 +223,8 @@ mod tests {
         storage.replace(42, a_notification("fresh"));
 
         assert_eq!(storage.unread_count(), 1);
-        assert_eq!(storage.get_all()[0].id, 42);
-        assert_eq!(storage.get_all()[0].summary, "fresh");
+        assert_eq!(storage.all()[0].id, 42);
+        assert_eq!(storage.all()[0].summary, "fresh");
     }
 
     #[test]
@@ -236,9 +236,9 @@ mod tests {
         }
         storage.replace(u32::MAX, a_notification("over the cap"));
 
-        assert_eq!(storage.get_all().len(), MAX_NOTIFICATIONS);
-        assert_eq!(storage.get_all().front().unwrap().id, u32::MAX);
-        assert_eq!(storage.get_all().back().unwrap().summary, "n1");
+        assert_eq!(storage.all().len(), MAX_NOTIFICATIONS);
+        assert_eq!(storage.all().front().unwrap().id, u32::MAX);
+        assert_eq!(storage.all().back().unwrap().summary, "n1");
     }
 
     #[test]

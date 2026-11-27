@@ -252,7 +252,7 @@ mod tests {
         let appearance = Appearance::default();
         assert_eq!(appearance.opacity, 1.0);
         assert_eq!(appearance.workspace_colors.len(), 3);
-        assert!(appearance.text_color.get_text().is_none());
+        assert!(appearance.text_color.text().is_none());
     }
 
     #[test]

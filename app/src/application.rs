@@ -5,10 +5,10 @@ use std::{borrow::Cow, num::NonZeroUsize, path::PathBuf, sync::Arc};
 use clap::Parser;
 use hydebar_core::{
     adapters::hyprland_client::HyprlandClient,
-    config::{ConfigManager, get_config},
+    config::{ConfigManager, config},
     event_bus::EventBus
 };
-use hydebar_gui::{App, get_log_spec};
+use hydebar_gui::{App, log_spec};
 use hydebar_proto::ports::hyprland::HyprlandPort;
 use iced::{Anchor, Font, KeyboardInteractivity, Layer, LayerShellSettings, SurfaceId};
 use log::debug;
@@ -56,7 +56,7 @@ pub fn run(runtime_handle: Handle) -> Result<(), MainError> {
 
     let logger = logging::init()?;
 
-    let (raw_config, config_path) = get_config(args.config_path)?;
+    let (raw_config, config_path) = config(args.config_path)?;
 
     let instance_lock = instance::acquire()?;
     debug!("instance lock held at {}", instance_lock.path().display());
@@ -93,7 +93,7 @@ pub fn run(runtime_handle: Handle) -> Result<(), MainError> {
     let config = Arc::new(raw_config);
     let config_manager = Arc::new(ConfigManager::new((*config).clone()));
 
-    logger.set_new_spec(get_log_spec(&config.log_level));
+    logger.set_new_spec(log_spec(&config.log_level));
 
     let font = config
         .appearance

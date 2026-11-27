@@ -66,9 +66,9 @@ impl NetworkData {
                             container(
                                 row!(
                                     icon(icons, if ac.public {
-                                        ActiveConnectionInfo::get_wifi_icon(ac.strength)
+                                        ActiveConnectionInfo::wifi_icon(ac.strength)
                                     } else {
-                                        ActiveConnectionInfo::get_wifi_lock_icon(ac.strength)
+                                        ActiveConnectionInfo::wifi_lock_icon(ac.strength)
                                     })
                                     .width(Length::Shrink),
                                     text(ac.ssid.clone()).width(Length::Fill),

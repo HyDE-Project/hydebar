@@ -92,7 +92,7 @@ impl App {
                     continue;
                 }
 
-                if let Some((content, action)) = self.get_module_view(module_name, id, opacity) {
+                if let Some((content, action)) = self.module_view(module_name, id, opacity) {
                     let actions = self.module_actions(module_name, action);
                     let element = self.module_element(content, actions, module_name, id, true);
                     let element = self.with_tooltip(module_name, element, id);

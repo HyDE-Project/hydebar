@@ -60,7 +60,7 @@ impl Appearance {
             }
         }
 
-        let island = self.background_color.get_base();
+        let island = self.background_color.base();
 
         #[expect(
             clippy::float_cmp,

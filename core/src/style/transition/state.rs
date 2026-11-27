@@ -220,7 +220,7 @@ mod tests {
         transition.set_target(appearance_with_background(200), true);
         let _ = transition.advance(Duration::from_millis(60));
 
-        let midway = transition.current().background_color.get_base();
+        let midway = transition.current().background_color.base();
         assert!(midway.r > 0);
         assert!(midway.r < 200);
 

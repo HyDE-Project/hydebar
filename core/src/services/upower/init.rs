@@ -33,15 +33,14 @@ impl UPowerService {
         let power_profile = Self::initialize_power_profile_data(conn).await;
 
         match (battery, power_profile) {
-            (Some(battery), Ok(power_profile)) => Ok((
-                Some((battery.0, battery.1.get_devices_path())),
-                power_profile
-            )),
+            (Some(battery), Ok(power_profile)) => {
+                Ok((Some((battery.0, battery.1.devices_path())), power_profile))
+            }
             (Some(battery), Err(err)) => {
                 warn!("Failed to get power profile: {err}");
 
                 Ok((
-                    Some((battery.0, battery.1.get_devices_path())),
+                    Some((battery.0, battery.1.devices_path())),
                     PowerProfile::Unknown
                 ))
             }
@@ -79,7 +78,7 @@ impl UPowerService {
         conn: &zbus::Connection
     ) -> AppResult<Option<(BatteryData, Battery)>> {
         let upower = UPowerDbus::new(conn).await?;
-        let battery = upower.get_battery_devices().await?;
+        let battery = upower.battery_devices().await?;
 
         match battery {
             Some(battery) => {

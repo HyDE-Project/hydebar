@@ -35,12 +35,12 @@ fn opening_a_menu_fades_in_over_frames() {
     let _task: Task<()> = menu.open(MenuType::Calendar, button_ref(), &config);
 
     assert!(menu.is_animating());
-    assert_eq!(menu.get_opacity(), 0.0);
+    assert_eq!(menu.opacity(), 0.0);
 
     drain_animation(&mut menu, &config);
 
     assert!(!menu.is_animating());
-    assert_eq!(menu.get_opacity(), config.appearance.menu.opacity);
+    assert_eq!(menu.opacity(), config.appearance.menu.opacity);
 }
 
 #[test]
@@ -53,7 +53,7 @@ fn closing_a_menu_snaps_dark_and_leaves_the_fade_to_the_compositor() {
     let _close: Task<()> = menu.close(&config);
 
     assert_eq!(
-        menu.get_opacity(),
+        menu.opacity(),
         0.0,
         "the app-side fade ends at once; the destroyed surface fades as one layer"
     );
@@ -69,7 +69,7 @@ fn disabled_animations_snap_to_the_target() {
     let _task: Task<()> = menu.open(MenuType::Calendar, button_ref(), &config);
 
     assert!(!menu.is_animating());
-    assert_eq!(menu.get_opacity(), config.appearance.menu.opacity);
+    assert_eq!(menu.opacity(), config.appearance.menu.opacity);
 }
 
 #[test]
@@ -87,13 +87,13 @@ fn a_soft_menu_spring_overshoots_before_settling() {
         .tick_animation::<()>(&config.appearance.animations, Duration::from_millis(8))
         .0
     {
-        peak = peak.max(menu.get_opacity());
+        peak = peak.max(menu.opacity());
         frames += 1;
         assert!(frames < 1000, "menu fade failed to settle");
     }
 
     assert!(peak > target, "a soft spring overshoots its target");
-    assert_eq!(menu.get_opacity(), target);
+    assert_eq!(menu.opacity(), target);
 }
 
 #[test]
@@ -111,7 +111,7 @@ fn a_critically_damped_menu_never_overshoots() {
         .tick_animation::<()>(&config.appearance.animations, Duration::from_millis(8))
         .0
     {
-        peak = peak.max(menu.get_opacity());
+        peak = peak.max(menu.opacity());
         frames += 1;
         assert!(frames < 1000, "menu fade failed to settle");
     }
@@ -275,7 +275,7 @@ fn disabled_animations_close_at_once() {
     let _close: Task<()> = menu.close(&config);
 
     assert!(open_type(&menu).is_none());
-    assert_eq!(menu.get_opacity(), 0.0);
+    assert_eq!(menu.opacity(), 0.0);
 }
 
 #[test]
@@ -289,7 +289,7 @@ fn closing_mid_open_starts_the_successor_from_dark() {
     let _close: Task<()> = menu.close(&config);
 
     assert_eq!(
-        menu.get_opacity(),
+        menu.opacity(),
         0.0,
         "the successor surface must not inherit a half-travelled fade"
     );

@@ -39,8 +39,8 @@ impl NotificationsService {
 
     /// Every notice being held, newest first.
     #[must_use]
-    pub fn get_notifications(&self) -> Vec<Notification> {
-        self.storage().get_all().iter().cloned().collect()
+    pub fn notifications(&self) -> Vec<Notification> {
+        self.storage().all().iter().cloned().collect()
     }
 
     /// How many notices have not been looked at.

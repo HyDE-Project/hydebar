@@ -61,7 +61,7 @@ impl BrightnessService {
                     Err(err) => ServiceEvent::Error(err)
                 }
             }
-            BrightnessCommand::Refresh => match Self::get_actual_brightness(&self.device_path) {
+            BrightnessCommand::Refresh => match Self::actual_brightness(&self.device_path) {
                 Ok(value) => ServiceEvent::Update(BrightnessEvent(value)),
                 Err(err) => ServiceEvent::Error(err)
             }

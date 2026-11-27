@@ -4,7 +4,7 @@ use iced::Task;
 use log::{debug, info, warn};
 
 use super::super::super::state::{App, Message};
-use crate::get_log_spec;
+use crate::log_spec;
 
 /// Builds the notice announcing `source`, for the bar to paint itself.
 fn announcement(
@@ -153,8 +153,7 @@ impl App {
         }
 
         if impact.log_level_changed {
-            self.logger
-                .set_new_spec(get_log_spec(&self.config.log_level));
+            self.logger.set_new_spec(log_spec(&self.config.log_level));
         }
 
         tasks.push(resize);

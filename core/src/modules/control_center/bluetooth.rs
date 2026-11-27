@@ -36,7 +36,7 @@ pub enum BluetoothMessage {
 impl BluetoothData {
     /// The bluetooth toggle of the quick settings, where an adapter exists.
     #[must_use]
-    pub fn get_quick_setting_button(
+    pub fn quick_setting_button(
         &self,
         id: Id,
         sub_menu: Option<SubMenu>,
@@ -197,7 +197,7 @@ mod tests {
         let data = data(BluetoothState::Inactive, vec![]);
 
         let (button, submenu) = data
-            .get_quick_setting_button(surface(), None, false, 1.0, &icons())
+            .quick_setting_button(surface(), None, false, 1.0, &icons())
             .expect("the toggle is always there");
 
         assert!(submenu.is_none());
@@ -211,7 +211,7 @@ mod tests {
         let data = data(BluetoothState::Inactive, vec![]);
 
         let (button, _) = data
-            .get_quick_setting_button(surface(), None, false, 1.0, &icons())
+            .quick_setting_button(surface(), None, false, 1.0, &icons())
             .expect("the toggle is always there");
 
         let mut ui = simulator(button);
@@ -229,13 +229,7 @@ mod tests {
             let data = data(state, vec![device("buds", false, None)]);
 
             let (_, submenu) = data
-                .get_quick_setting_button(
-                    surface(),
-                    Some(SubMenu::Bluetooth),
-                    false,
-                    1.0,
-                    &icons()
-                )
+                .quick_setting_button(surface(), Some(SubMenu::Bluetooth), false, 1.0, &icons())
                 .expect("the toggle is always there");
 
             let mut ui = simulator(submenu.expect("the open submenu is drawn"));
@@ -248,7 +242,7 @@ mod tests {
         let data = data(BluetoothState::Active, vec![]);
 
         let (_, submenu) = data
-            .get_quick_setting_button(surface(), Some(SubMenu::Wifi), false, 1.0, &icons())
+            .quick_setting_button(surface(), Some(SubMenu::Wifi), false, 1.0, &icons())
             .expect("the toggle is always there");
 
         assert!(submenu.is_none());

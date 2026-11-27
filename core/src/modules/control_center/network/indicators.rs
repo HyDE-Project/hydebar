@@ -11,7 +11,7 @@ use crate::{
 impl NetworkData {
     /// The bar reading for one live connection.
     #[must_use]
-    pub fn get_connection_indicator<Message: 'static>(
+    pub fn connection_indicator<Message: 'static>(
         &self,
         icons: &IconTheme
     ) -> Option<Element<'static, Message>> {
@@ -28,8 +28,8 @@ impl NetworkData {
                     .map_or_else(
                         || icon(icons, Icons::Wifi0).into(),
                         |a| {
-                            let icon_type = a.get_icon();
-                            let state = (self.connectivity, a.get_indicator_state());
+                            let icon_type = a.icon();
+                            let state = (self.connectivity, a.indicator_state());
 
                             container(icon(icons, icon_type))
                                 .style(move |theme: &Theme| container::Style {
@@ -51,7 +51,7 @@ impl NetworkData {
 
     /// The bar reading for one tunnel that is up.
     #[must_use]
-    pub fn get_vpn_indicator<Message: 'static>(
+    pub fn vpn_indicator<Message: 'static>(
         &self,
         icons: &IconTheme
     ) -> Option<Element<'static, Message>> {
@@ -59,7 +59,7 @@ impl NetworkData {
             .iter()
             .find(|c| matches!(c, ActiveConnectionInfo::Vpn { .. }))
             .map(|a| {
-                let icon_type = a.get_icon();
+                let icon_type = a.icon();
 
                 container(icon(icons, icon_type))
                     .style(|theme: &Theme| container::Style {

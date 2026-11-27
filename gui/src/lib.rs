@@ -29,7 +29,7 @@ pub use app::{App, Message};
 /// same string arrives from a live configuration reload, where a panic would
 /// take the whole bar down over a typo in one key.
 #[must_use]
-pub fn get_log_spec(log_level: &str) -> LogSpecification {
+pub fn log_spec(log_level: &str) -> LogSpecification {
     let level = log_level.parse().unwrap_or(log::LevelFilter::Info);
 
     if cfg!(debug_assertions) {
@@ -49,14 +49,14 @@ mod tests {
 
     #[test]
     fn a_valid_level_parses_into_a_spec() {
-        let spec = get_log_spec("debug");
+        let spec = log_spec("debug");
 
         assert_eq!(spec.level_for_module(None), Some(log::LevelFilter::Debug));
     }
 
     #[test]
     fn the_bar_keeps_its_own_tracing_in_a_debug_build() {
-        let spec = get_log_spec("warn");
+        let spec = log_spec("warn");
 
         assert_eq!(
             spec.level_for_module(Some("hydebar")),
@@ -67,7 +67,7 @@ mod tests {
 
     #[test]
     fn an_unreadable_level_falls_back_to_info_instead_of_panicking() {
-        let spec = get_log_spec("hydebar=very-loud");
+        let spec = log_spec("hydebar=very-loud");
 
         assert_eq!(spec.level_for_module(None), Some(log::LevelFilter::Info));
     }

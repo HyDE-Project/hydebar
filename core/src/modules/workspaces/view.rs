@@ -78,7 +78,7 @@ impl Workspaces {
     where
         M: 'static + Clone + From<Message>
     {
-        let monitor_name = outputs.get_monitor_name(id);
+        let monitor_name = outputs.monitor_name(id);
 
         let radius = appearance.pill_radius();
         let font_size = appearance.font_size_px();

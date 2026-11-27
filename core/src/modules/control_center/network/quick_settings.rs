@@ -15,7 +15,7 @@ use crate::{
 impl NetworkData {
     /// The wireless toggle of the quick settings, where a radio exists.
     #[must_use]
-    pub fn get_wifi_quick_setting_button(
+    pub fn wifi_quick_setting_button(
         &self,
         id: Id,
         sub_menu: Option<SubMenu>,
@@ -29,7 +29,7 @@ impl NetworkData {
                     name,
                     strength,
                     ..
-                } => Some((name, strength, c.get_icon())),
+                } => Some((name, strength, c.icon())),
                 _ => None
             });
 
@@ -70,7 +70,7 @@ impl NetworkData {
 
     /// The VPN toggle of the quick settings, where a tunnel is configured.
     #[must_use]
-    pub fn get_vpn_quick_setting_button(
+    pub fn vpn_quick_setting_button(
         &self,
         id: Id,
         sub_menu: Option<SubMenu>,
@@ -107,7 +107,7 @@ impl NetworkData {
 
     /// The airplane toggle of the quick settings.
     #[must_use]
-    pub fn get_airplane_mode_quick_setting_button(
+    pub fn airplane_mode_quick_setting_button(
         &self,
         opacity: f32,
         icons: &IconTheme
@@ -186,7 +186,7 @@ mod tests {
         let data = data();
 
         assert!(
-            data.get_wifi_quick_setting_button(surface(), None, false, 1.0, &icons())
+            data.wifi_quick_setting_button(surface(), None, false, 1.0, &icons())
                 .is_none()
         );
     }
@@ -197,7 +197,7 @@ mod tests {
         data.wifi_present = true;
 
         let (button, submenu) = data
-            .get_wifi_quick_setting_button(surface(), None, false, 1.0, &icons())
+            .wifi_quick_setting_button(surface(), None, false, 1.0, &icons())
             .expect("an adapter is present");
 
         assert!(submenu.is_none());
@@ -214,7 +214,7 @@ mod tests {
         data.active_connections = vec![wifi("home", 72)];
 
         let (button, _) = data
-            .get_wifi_quick_setting_button(surface(), None, false, 1.0, &icons())
+            .wifi_quick_setting_button(surface(), None, false, 1.0, &icons())
             .expect("an adapter is present");
 
         let mut ui = simulator(button);
@@ -227,7 +227,7 @@ mod tests {
         data.wifi_present = true;
 
         let (button, _) = data
-            .get_wifi_quick_setting_button(surface(), None, false, 1.0, &icons())
+            .wifi_quick_setting_button(surface(), None, false, 1.0, &icons())
             .expect("an adapter is present");
 
         let mut ui = simulator(button);
@@ -246,7 +246,7 @@ mod tests {
         data.wifi_enabled = false;
 
         let (button, _) = data
-            .get_wifi_quick_setting_button(surface(), Some(SubMenu::Wifi), false, 1.0, &icons())
+            .wifi_quick_setting_button(surface(), Some(SubMenu::Wifi), false, 1.0, &icons())
             .expect("an adapter is present");
 
         let mut ui = simulator(button);
@@ -261,7 +261,7 @@ mod tests {
         data.wireless_access_points = vec![access_point("cafe", 40)];
 
         let (_, submenu) = data
-            .get_wifi_quick_setting_button(surface(), Some(SubMenu::Wifi), false, 1.0, &icons())
+            .wifi_quick_setting_button(surface(), Some(SubMenu::Wifi), false, 1.0, &icons())
             .expect("an adapter is present");
 
         let mut ui = simulator(submenu.expect("the open submenu is drawn"));
@@ -275,7 +275,7 @@ mod tests {
         data.wifi_enabled = true;
 
         let (_, submenu) = data
-            .get_wifi_quick_setting_button(surface(), Some(SubMenu::Vpn), false, 1.0, &icons())
+            .wifi_quick_setting_button(surface(), Some(SubMenu::Vpn), false, 1.0, &icons())
             .expect("an adapter is present");
 
         assert!(submenu.is_none());
@@ -286,7 +286,7 @@ mod tests {
         let data = data();
 
         assert!(
-            data.get_vpn_quick_setting_button(surface(), None, false, 1.0, &icons())
+            data.vpn_quick_setting_button(surface(), None, false, 1.0, &icons())
                 .is_none()
         );
     }
@@ -300,7 +300,7 @@ mod tests {
         })];
 
         let (button, submenu) = data
-            .get_vpn_quick_setting_button(surface(), None, false, 1.0, &icons())
+            .vpn_quick_setting_button(surface(), None, false, 1.0, &icons())
             .expect("a remembered vpn is offered");
 
         assert!(submenu.is_none());
@@ -315,7 +315,7 @@ mod tests {
         data.known_connections = vec![KnownConnection::AccessPoint(access_point("home", 60))];
 
         assert!(
-            data.get_vpn_quick_setting_button(surface(), None, false, 1.0, &icons())
+            data.vpn_quick_setting_button(surface(), None, false, 1.0, &icons())
                 .is_none()
         );
     }
@@ -329,7 +329,7 @@ mod tests {
         })];
 
         let (button, _) = data
-            .get_vpn_quick_setting_button(surface(), None, false, 1.0, &icons())
+            .vpn_quick_setting_button(surface(), None, false, 1.0, &icons())
             .expect("a remembered vpn is offered");
 
         let mut ui = simulator(button);
@@ -351,7 +351,7 @@ mod tests {
         data.active_connections = vec![vpn("work")];
 
         let (_, submenu) = data
-            .get_vpn_quick_setting_button(surface(), Some(SubMenu::Vpn), false, 1.0, &icons())
+            .vpn_quick_setting_button(surface(), Some(SubMenu::Vpn), false, 1.0, &icons())
             .expect("a remembered vpn is offered");
 
         let mut ui = simulator(submenu.expect("the open submenu is drawn"));
@@ -361,7 +361,7 @@ mod tests {
     #[test]
     fn airplane_mode_is_always_offered_and_never_opens_a_submenu() {
         let data = data();
-        let (button, submenu) = data.get_airplane_mode_quick_setting_button(1.0, &icons());
+        let (button, submenu) = data.airplane_mode_quick_setting_button(1.0, &icons());
 
         assert!(submenu.is_none());
 
@@ -372,7 +372,7 @@ mod tests {
     #[test]
     fn pressing_airplane_mode_asks_to_switch_the_radios() {
         let data = data();
-        let (button, _) = data.get_airplane_mode_quick_setting_button(1.0, &icons());
+        let (button, _) = data.airplane_mode_quick_setting_button(1.0, &icons());
 
         let mut ui = simulator(button);
         let _ = ui.click("Airplane Mode").expect("the toggle is pressable");

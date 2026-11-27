@@ -325,7 +325,7 @@ impl App {
         bloom: f32
     ) -> Option<Element<'a, Message>> {
         let opacity = self.appearance().opacity;
-        let (content, action) = self.get_module_view(unit, id, opacity)?;
+        let (content, action) = self.module_view(unit, id, opacity)?;
         let actions = self.module_actions(unit, action);
 
         Some(self.desk_pill(

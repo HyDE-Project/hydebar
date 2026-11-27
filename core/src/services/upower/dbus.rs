@@ -32,7 +32,7 @@ impl UPowerDbus<'_> {
         Ok(Self(nm))
     }
 
-    pub async fn get_battery_devices(&self) -> AppResult<Option<Battery>> {
+    pub async fn battery_devices(&self) -> AppResult<Option<Battery>> {
         let devices = self
             .enumerate_devices()
             .await
@@ -68,7 +68,7 @@ impl UPowerDbus<'_> {
         }
     }
 
-    pub async fn get_device(&self, path: &ObjectPath<'static>) -> AppResult<DeviceProxy<'static>> {
+    pub async fn device(&self, path: &ObjectPath<'static>) -> AppResult<DeviceProxy<'static>> {
         let device = DeviceProxy::builder(self.inner().connection())
             .path(path)
             .build()

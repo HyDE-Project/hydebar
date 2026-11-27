@@ -55,7 +55,7 @@ impl BrightnessService {
             }
             State::Active(device_path) => {
                 info!("Listening for brightness events");
-                let mut current_value = Self::get_actual_brightness(&device_path)?;
+                let mut current_value = Self::actual_brightness(&device_path)?;
                 let mut socket = Self::backlight_monitor_listener()?;
 
                 loop {
@@ -71,7 +71,7 @@ impl BrightnessService {
                         match evt.event_type() {
                             udev::EventType::Change => {
                                 debug!("Changed backlight device: {}", evt.syspath().display());
-                                let new_value = Self::get_actual_brightness(&device_path)?;
+                                let new_value = Self::actual_brightness(&device_path)?;
 
                                 if new_value != current_value {
                                     current_value = new_value;

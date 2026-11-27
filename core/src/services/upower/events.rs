@@ -30,7 +30,7 @@ impl UPowerService {
             let mut events = Vec::new();
 
             for device_path in battery_devices {
-                let device = upower.get_device(device_path).await?;
+                let device = upower.device(device_path).await?;
 
                 events.push(
                     stream_select!(

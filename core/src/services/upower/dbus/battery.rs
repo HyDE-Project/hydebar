@@ -148,7 +148,7 @@ impl Battery {
         time
     }
 
-    pub fn get_devices_path(self) -> Vec<ObjectPath<'static>> {
+    pub fn devices_path(self) -> Vec<ObjectPath<'static>> {
         self.0
             .into_iter()
             .map(|device| device.inner().path().to_owned())
