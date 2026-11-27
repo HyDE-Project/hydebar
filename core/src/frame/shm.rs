@@ -179,7 +179,7 @@ impl OutputHandler for App {
         qh: &QueueHandle<Self>,
         output: wl_output::WlOutput
     ) {
-        self.create_surfaces_for_output(qh, output);
+        self.create_surfaces_for_output(qh, &output);
     }
 
     fn update_output(
@@ -257,7 +257,11 @@ smithay_client_toolkit::delegate_registry!(App);
 smithay_client_toolkit::delegate_dispatch2!(App);
 
 impl App {
-    fn create_surfaces_for_output(&mut self, qh: &QueueHandle<Self>, output: wl_output::WlOutput) {
+    fn create_surfaces_for_output(
+        &mut self,
+        qh: &QueueHandle<Self>,
+        output: &wl_output::WlOutput
+    ) {
         let thickness = self.config.thickness.max(1.0) as u32;
         let radius = self
             .config
@@ -265,45 +269,53 @@ impl App {
             .unwrap_or(FrameConfig::DEFAULT_ROUNDING)
             .max(0.0);
 
-        // Thin strips: 1px wide, reserving the full thickness.
-        let edges: &[(SurfaceKind, Layer, Anchor, i32, i32, i32, i32)] = &[
+        self.create_strips(qh, output, thickness);
+
+        let corner_size = (thickness as f32 + radius).ceil().max(1.0) as u32;
+        self.create_corners(qh, output, corner_size);
+    }
+
+    /// Creates the four thin reservation strips, skipping disabled edges.
+    ///
+    /// Size along a strip's own axis is set by the compositor; the
+    /// perpendicular axis is one pixel wide, reserving the full thickness.
+    fn create_strips(
+        &mut self,
+        qh: &QueueHandle<Self>,
+        output: &wl_output::WlOutput,
+        thickness: u32
+    ) {
+        let bar_margin = self.bar_height.round() as i32;
+        let top_margin = if self.dock == Position::Top {
+            bar_margin
+        } else {
+            0
+        };
+        let bottom_margin = if self.dock == Position::Bottom {
+            bar_margin
+        } else {
+            0
+        };
+
+        let edges: &[(SurfaceKind, Anchor, i32, i32, i32, i32)] = &[
             (
                 SurfaceKind::StripLeft,
-                Layer::Top,
                 Anchor::LEFT | Anchor::TOP | Anchor::BOTTOM,
-                if self.dock == Position::Top {
-                    self.bar_height.round() as i32
-                } else {
-                    0
-                },
+                top_margin,
                 0,
-                if self.dock == Position::Bottom {
-                    self.bar_height.round() as i32
-                } else {
-                    0
-                },
+                bottom_margin,
                 0
             ),
             (
                 SurfaceKind::StripRight,
-                Layer::Top,
                 Anchor::RIGHT | Anchor::TOP | Anchor::BOTTOM,
-                if self.dock == Position::Top {
-                    self.bar_height.round() as i32
-                } else {
-                    0
-                },
+                top_margin,
                 0,
-                if self.dock == Position::Bottom {
-                    self.bar_height.round() as i32
-                } else {
-                    0
-                },
+                bottom_margin,
                 0
             ),
             (
                 SurfaceKind::StripTop,
-                Layer::Top,
                 Anchor::TOP | Anchor::LEFT | Anchor::RIGHT,
                 0,
                 0,
@@ -312,7 +324,6 @@ impl App {
             ),
             (
                 SurfaceKind::StripBottom,
-                Layer::Top,
                 Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT,
                 0,
                 0,
@@ -321,31 +332,20 @@ impl App {
             )
         ];
 
-        // Only create strips for enabled edges.
-        let make_strip = |kind: &SurfaceKind| match kind {
-            SurfaceKind::StripLeft => self.config.edges.left.enabled,
-            SurfaceKind::StripRight => self.config.edges.right.enabled,
-            SurfaceKind::StripTop => self.config.edges.top.enabled,
-            SurfaceKind::StripBottom => self.config.edges.bottom.enabled,
-            _ => false
-        };
-
-        for (kind, layer, anchor, mt, mr, mb, ml) in edges {
-            if !make_strip(kind) {
+        for (kind, anchor, mt, mr, mb, ml) in edges {
+            if !self.strip_enabled(*kind) {
                 continue;
             }
             let surface = self.compositor.create_surface(qh);
             let ls = self.layer_shell.create_layer_surface(
                 qh,
                 surface,
-                *layer,
+                Layer::Top,
                 Some("hydebar-frame-strip"),
-                Some(&output)
+                Some(output)
             );
             ls.set_anchor(*anchor);
             ls.set_keyboard_interactivity(KeyboardInteractivity::None);
-            // Size along the strip's own axis is set by the compositor; the
-            // perpendicular axis is 1px.
             match *kind {
                 SurfaceKind::StripLeft | SurfaceKind::StripRight => ls.set_size(thickness, 0),
                 SurfaceKind::StripTop | SurfaceKind::StripBottom => ls.set_size(0, thickness),
@@ -365,9 +365,15 @@ impl App {
                 output:     output.clone()
             });
         }
+    }
 
-        // Corner overlays: thickness + rounding, exclusive_zone -1.
-        let corner_size = (thickness as f32 + radius).ceil().max(1.0) as u32;
+    /// Creates the four corner overlays, sized to cover the rounded aperture.
+    fn create_corners(
+        &mut self,
+        qh: &QueueHandle<Self>,
+        output: &wl_output::WlOutput,
+        corner_size: u32
+    ) {
         let corners = [
             (SurfaceKind::CornerTopLeft, Anchor::LEFT | Anchor::TOP),
             (SurfaceKind::CornerTopRight, Anchor::RIGHT | Anchor::TOP),
@@ -385,7 +391,7 @@ impl App {
                 surface,
                 Layer::Top,
                 Some("hydebar-frame-corner"),
-                Some(&output)
+                Some(output)
             );
             ls.set_anchor(anchor);
             ls.set_size(corner_size, corner_size);
@@ -402,6 +408,19 @@ impl App {
                 configured: false,
                 output: output.clone()
             });
+        }
+    }
+
+    fn strip_enabled(&self, kind: SurfaceKind) -> bool {
+        match kind {
+            SurfaceKind::StripLeft => self.config.edges.left.enabled,
+            SurfaceKind::StripRight => self.config.edges.right.enabled,
+            SurfaceKind::StripTop => self.config.edges.top.enabled,
+            SurfaceKind::StripBottom => self.config.edges.bottom.enabled,
+            SurfaceKind::CornerTopLeft
+            | SurfaceKind::CornerTopRight
+            | SurfaceKind::CornerBottomLeft
+            | SurfaceKind::CornerBottomRight => false
         }
     }
 }
