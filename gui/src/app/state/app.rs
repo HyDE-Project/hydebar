@@ -1,15 +1,13 @@
 //! The application state every surface renders from.
 
-use std::{collections::HashMap, path::PathBuf, sync::Arc, time::Instant};
+use std::{collections::HashMap, sync::Arc, time::Instant};
 
-use flexi_logger::LoggerHandle;
 use hydebar_core::{
     ModuleContext,
     animation::HoverFades,
     attention::Attention,
     components::icons::IconTheme,
-    config::{ConfigManager, ModuleName},
-    event_bus::EventReceiver,
+    config::ModuleName,
     modules::{
         battery::Battery, calendar::Calendar, clock::Clock, command_button::CommandButton,
         control_center::ControlCenter, custom_module::Custom, desk::Desk, hyde_menu::HydeMenu,
@@ -24,11 +22,10 @@ use hydebar_core::{
     position_button::ButtonUIRef,
     style::AppearanceTransition
 };
-use hydebar_proto::{
-    config::{AppearanceStyle, Config},
-    ports::hyprland::HyprlandPort
-};
+use hydebar_proto::config::{AppearanceStyle, Config};
 use iced::SurfaceId as Id;
+
+use super::runtime::Runtime;
 
 /// How long the greeting stays before it fades on its own.
 pub(in crate::app) const GREETING_LIFETIME: std::time::Duration =
@@ -36,20 +33,8 @@ pub(in crate::app) const GREETING_LIFETIME: std::time::Duration =
 
 /// Everything the bar is, at this moment, on every screen it stands on.
 pub struct App {
-    pub(crate) config_path: PathBuf,
-    pub(crate) logger: LoggerHandle,
-    /// Keeps the injected compositor adapter alive for the app's lifetime;
-    /// the outputs facade is meant to adopt it in place of its own client.
-    #[cfg_attr(
-        not(test),
-        expect(
-            dead_code,
-            reason = "held until the outputs facade adopts the injected port"
-        )
-    )]
-    pub(crate) hyprland: Arc<dyn HyprlandPort>,
-    pub(crate) config_manager: Arc<ConfigManager>,
-    pub(crate) bus_receiver: EventReceiver,
+    /// The machinery the binary booted the bar with.
+    pub(crate) runtime: Runtime,
     pub(crate) last_frame: Option<Instant>,
     pub(crate) appearance_transition: AppearanceTransition,
     /// Theme built from the appearance in force, rebuilt only when it moves.
@@ -235,7 +220,7 @@ pub struct App {
 impl std::fmt::Debug for App {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("App")
-            .field("config_path", &self.config_path)
+            .field("config_path", &self.runtime.config_path)
             .field("navigation_mode", &self.navigation_mode)
             .field("focused_module_index", &self.focused_module_index)
             .field("magnification", &self.magnification)

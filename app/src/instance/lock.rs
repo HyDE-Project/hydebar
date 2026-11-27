@@ -11,7 +11,7 @@ use std::{
     fs::{self, File, OpenOptions},
     io::{self, Seek, SeekFrom, Write},
     os::{fd::AsRawFd, unix::fs::OpenOptionsExt},
-    path::{Path, PathBuf},
+    path::{Path, PathBuf}
 };
 
 use super::error::InstanceError;
@@ -26,7 +26,7 @@ pub(super) const LOCK_FILE_NAME: &str = "instance.lock";
 #[derive(Debug)]
 pub struct InstanceLock {
     file: File,
-    path: PathBuf,
+    path: PathBuf
 }
 
 impl InstanceLock {
@@ -48,7 +48,7 @@ impl InstanceLock {
 fn lock_dir() -> PathBuf {
     match var_os("XDG_RUNTIME_DIR") {
         Some(dir) if !dir.is_empty() => PathBuf::from(dir).join("hydebar"),
-        _ => PathBuf::from(format!("/tmp/hydebar-{}", current_uid())),
+        _ => PathBuf::from(format!("/tmp/hydebar-{}", current_uid()))
     }
 }
 
@@ -101,7 +101,7 @@ fn try_flock(file: &File) -> io::Result<bool> {
 
     match err.raw_os_error() {
         Some(code) if code == libc::EWOULDBLOCK || code == libc::EINTR => Ok(false),
-        _ => Err(err),
+        _ => Err(err)
     }
 }
 
@@ -119,7 +119,7 @@ pub(super) fn try_acquire(path: &Path) -> Result<Option<InstanceLock>, InstanceE
 
     let mut lock = InstanceLock {
         file,
-        path: path.to_path_buf(),
+        path: path.to_path_buf()
     };
     lock.record_owner()
         .map_err(|err| InstanceError::Open(path.to_path_buf(), err))?;

@@ -34,8 +34,8 @@ impl App {
     /// own colours must not be disturbed by a theme switch at all.
     fn theme_subscription(&self) -> Subscription<Message> {
         config::theme_subscription(
-            &self.config_path,
-            Arc::clone(&self.config_manager),
+            &self.runtime.config_path,
+            Arc::clone(&self.runtime.config_manager),
             self.config.appearance.follow_hyde
         )
         .map(Self::config_event)
@@ -44,7 +44,7 @@ impl App {
     /// Every stream the bar listens to while it runs.
     pub fn subscription(&self) -> Subscription<Message> {
         let mut subscriptions = vec![
-            bus::subscription(self.bus_receiver.clone()).map(Message::BusFlushed),
+            bus::subscription(self.runtime.bus_receiver.clone()).map(Message::BusFlushed),
             shutdown::subscription().map(Message::Shutdown),
             self.frame_subscription(),
             self.wallpaper_loading_subscription(),
@@ -52,8 +52,11 @@ impl App {
             self.rest_clock(),
             self.attended_clock(),
             self.switch_subscription(),
-            config::subscription(&self.config_path, Arc::clone(&self.config_manager))
-                .map(Self::config_event),
+            config::subscription(
+                &self.runtime.config_path,
+                Arc::clone(&self.runtime.config_manager)
+            )
+            .map(Self::config_event),
             self.theme_subscription(),
             iced::output_events().map(Message::OutputEvent),
             listen_with(|evt, _, _| match evt {

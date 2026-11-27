@@ -26,7 +26,7 @@ use hydebar_proto::{config::Config, ports::hyprland::HyprlandPort};
 use iced::Task;
 use tokio::runtime::Handle;
 
-use super::{App, Message};
+use super::{App, Message, runtime::Runtime};
 
 type AppDependencies = (
     LoggerHandle,
@@ -85,11 +85,13 @@ impl App {
         let module_context = ModuleContext::new(event_sender, runtime_handle);
         let hyprland_clone = Arc::clone(&hyprland);
         let mut app = Self {
-            config_path: config_path.clone(),
-            logger,
-            hyprland,
-            config_manager,
-            bus_receiver,
+            runtime: Runtime {
+                config_path: config_path.clone(),
+                logger,
+                hyprland,
+                config_manager,
+                bus_receiver
+            },
             last_frame: None,
             appearance_transition: AppearanceTransition::new(config.appearance.clone()),
             theme_cache: hydebar_core::style::hydebar_theme(&config.appearance),
@@ -218,7 +220,7 @@ mod tests {
             bus_receiver
         ));
 
-        assert!(Arc::ptr_eq(&app.hyprland, &mock_port));
+        assert!(Arc::ptr_eq(&app.runtime.hyprland, &mock_port));
     }
 
     #[test]

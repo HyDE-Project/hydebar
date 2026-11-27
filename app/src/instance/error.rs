@@ -19,7 +19,7 @@ pub enum InstanceError {
     /// The owner process could not be signalled to quit.
     Signal(i32, io::Error),
     /// The previous instance still held the lock when the wait ran out.
-    Timeout(Option<i32>, Duration),
+    Timeout(Option<i32>, Duration)
 }
 
 impl std::fmt::Display for InstanceError {
@@ -49,7 +49,7 @@ impl std::fmt::Display for InstanceError {
                 f,
                 "another instance kept the lock for {} ms, refusing to draw a second bar",
                 waited.as_millis()
-            ),
+            )
         }
     }
 }
@@ -61,7 +61,7 @@ impl std::error::Error for InstanceError {
             | Self::Open(_, err)
             | Self::Lock(_, err)
             | Self::Signal(_, err) => Some(err),
-            Self::Timeout(..) => None,
+            Self::Timeout(..) => None
         }
     }
 }

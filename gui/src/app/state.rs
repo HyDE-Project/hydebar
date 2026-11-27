@@ -5,6 +5,7 @@ mod appearance;
 pub mod history;
 mod init;
 mod message;
+mod runtime;
 #[cfg(test)]
 pub(in crate::app) mod test_support;
 
