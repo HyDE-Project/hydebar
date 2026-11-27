@@ -8,13 +8,10 @@
 
 use std::sync::{Arc, Mutex, OnceLock, PoisonError};
 
-use hydebar_proto::ports::hyprland::{
-    HyprlandKeyboardEvent, HyprlandWindowEvent, HyprlandWorkspaceEvent
-};
 use log::warn;
 use tokio::{sync::broadcast, time::sleep};
 
-use super::wiring::dispatch;
+use super::{channels::Multiplexer, wiring::dispatch};
 use crate::adapters::{
     compositor::events::EventStream,
     hyprland_client::{
@@ -32,19 +29,6 @@ static MULTIPLEXER: OnceLock<Arc<Multiplexer>> = OnceLock::new();
 
 /// Serializes the fallible start so racing first callers start exactly once.
 static START_GATE: Mutex<()> = Mutex::new(());
-
-/// Broadcast taps of the one compositor connection.
-pub struct Multiplexer {
-    pub(super) window:    broadcast::Sender<HyprlandWindowEvent>,
-    pub(super) workspace: broadcast::Sender<HyprlandWorkspaceEvent>,
-    pub(super) keyboard:  broadcast::Sender<HyprlandKeyboardEvent>,
-    pub(super) reload:    broadcast::Sender<()>,
-    /// The configuration the supervisor was started with.
-    ///
-    /// The first caller decides the reconnect policy for everyone; a later
-    /// caller with different ideas deserves to know its own were discarded.
-    config:               Arc<HyprlandClientConfig>
-}
 
 /// The running multiplexer, started on first use.
 ///

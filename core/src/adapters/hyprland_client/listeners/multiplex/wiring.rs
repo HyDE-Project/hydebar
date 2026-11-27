@@ -18,7 +18,7 @@ use hydebar_proto::ports::hyprland::{
 };
 use tokio::sync::broadcast;
 
-use super::singleton::Multiplexer;
+use super::channels::Multiplexer;
 use crate::adapters::{
     compositor::{events::CompositorEvent, query},
     hyprland_client::HyprlandClient
