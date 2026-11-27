@@ -44,8 +44,8 @@ impl App {
         let mut strip = Archipelago::new(
             appearance.island_gap(),
             appearance.island_padding()[1],
-            self.relayout.value().clamp(0.0, 1.0),
-            &self.flip,
+            self.motion.relayout.value().clamp(0.0, 1.0),
+            &self.motion.flip,
             move |theme: &iced::Theme| match style {
                 AppearanceStyle::Islands => Some(PillPaint {
                     background: theme.palette().background.scale_alpha(island_alpha),
@@ -72,7 +72,7 @@ impl App {
             };
 
             let ordinal = ((island_offset + index) as f32 + 0.5) / total;
-            let position = if self.sweep.from_left {
+            let position = if self.motion.sweep.from_left {
                 ordinal
             } else {
                 1.0 - ordinal
@@ -106,14 +106,13 @@ impl App {
                     strip = strip.push(
                         self.flip_key(module_name, id).wrapping_add(occurrence),
                         island_index,
-                        self.entrance
-                            .value()
-                            .clamp(0.0, 1.0)
-                            .min(hydebar_core::animation::sweep(
-                                self.entrance.value().clamp(0.0, 1.0),
+                        self.motion.entrance.value().clamp(0.0, 1.0).min(
+                            hydebar_core::animation::sweep(
+                                self.motion.entrance.value().clamp(0.0, 1.0),
                                 position,
-                                self.sweep.spread
-                            )),
+                                self.motion.sweep.spread
+                            )
+                        ),
                         element
                     );
                     seated = true;

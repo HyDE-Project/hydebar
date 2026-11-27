@@ -19,7 +19,7 @@ impl App {
     /// transition settles.
     #[must_use]
     pub const fn appearance(&self) -> &Appearance {
-        self.appearance_transition.current()
+        self.motion.appearance_transition.current()
     }
 
     /// Rebuilds the cached theme from the appearance in force.
@@ -99,11 +99,13 @@ impl App {
             .themes
             .switching()
             .or_else(|| self.themes.hyde().theme.as_deref());
-        self.sweep = hydebar_core::style::SweepStyle::of(incoming, &appearance);
-        self.appearance_transition
-            .restyle(self.sweep.response, self.sweep.damping);
+        self.motion.sweep = hydebar_core::style::SweepStyle::of(incoming, &appearance);
+        self.motion
+            .appearance_transition
+            .restyle(self.motion.sweep.response, self.motion.sweep.damping);
 
-        self.appearance_transition
+        self.motion
+            .appearance_transition
             .set_target(appearance, blend_palette);
 
         resize
@@ -115,16 +117,16 @@ impl App {
     /// off the entrance snaps straight to its resting end and no greeting is
     /// armed at all.
     pub(super) fn arm_birth_animations(&mut self) {
-        self.sweep = hydebar_core::style::SweepStyle::of(
+        self.motion.sweep = hydebar_core::style::SweepStyle::of(
             self.themes.hyde().theme.as_deref(),
             &self.config.appearance
         );
-        self.entrance = hydebar_core::animation::Spring::new(0.0)
-            .with_response(self.sweep.response)
-            .with_damping_ratio(self.sweep.damping);
+        self.motion.entrance = hydebar_core::animation::Spring::new(0.0)
+            .with_response(self.motion.sweep.response)
+            .with_damping_ratio(self.motion.sweep.damping);
 
         if self.config.appearance.animations.enabled {
-            self.entrance.set_target(1.0);
+            self.motion.entrance.set_target(1.0);
 
             if self.config.appearance.greeting
                 && hydebar_core::components::greeting::claim_first_entry()
@@ -135,7 +137,7 @@ impl App {
                 self.greeting.set_target(1.0);
             }
         } else {
-            self.entrance.snap_to(1.0);
+            self.motion.entrance.snap_to(1.0);
         }
     }
 

@@ -210,7 +210,8 @@ mod tests {
 
         // the canvas holds the screen: the strip, and the ring with it, is
         // gone until the blocks travel home
-        app.desk_clocks
+        app.motion
+            .desk_clocks
             .entry(Some("DP-1".to_owned()))
             .or_default()
             .open();

@@ -28,18 +28,18 @@ impl App {
         island: Element<'a, Message>,
         position: f32
     ) -> Element<'a, Message> {
-        let palette_local = self.appearance_transition.is_animating().then(|| {
+        let palette_local = self.motion.appearance_transition.is_animating().then(|| {
             quantized(hydebar_core::animation::sweep(
-                self.appearance_transition.progress(),
+                self.motion.appearance_transition.progress(),
                 position,
-                self.sweep.spread
+                self.motion.sweep.spread
             ))
         });
 
         let arrival = quantized(hydebar_core::animation::sweep(
-            self.entrance.value().clamp(0.0, 1.0),
+            self.motion.entrance.value().clamp(0.0, 1.0),
             position,
-            self.sweep.spread
+            self.motion.sweep.spread
         ));
 
         if palette_local.is_none() && arrival >= 1.0 {
@@ -59,7 +59,7 @@ impl App {
                     || self.theme_cache.clone(),
                     |local| {
                         hydebar_core::style::hydebar_theme(
-                            &self.appearance_transition.sample(local)
+                            &self.motion.appearance_transition.sample(local)
                         )
                     }
                 );

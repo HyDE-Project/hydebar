@@ -214,7 +214,7 @@ mod tests {
         );
 
         let total = std::time::Duration::from_millis(900);
-        let clock = app.desk_clocks.entry(None).or_default();
+        let clock = app.motion.desk_clocks.entry(None).or_default();
         *clock = hydebar_core::animation::Unfold::default();
         clock.advance(std::time::Duration::from_millis(16), total);
 
@@ -244,9 +244,13 @@ mod tests {
 
             wash = now;
 
-            let running = app.desk_clocks.values_mut().fold(false, |running, clock| {
-                clock.advance(std::time::Duration::from_millis(16), total) | running
-            });
+            let running = app
+                .motion
+                .desk_clocks
+                .values_mut()
+                .fold(false, |running, clock| {
+                    clock.advance(std::time::Duration::from_millis(16), total) | running
+                });
 
             if !running {
                 break;
@@ -260,13 +264,13 @@ mod tests {
     fn the_background_comes_back_from_the_ends_inwards_ahead_of_the_islands() {
         let mut app = test_app_with(|config| config.desk.enabled = true);
 
-        app.desk_clocks.entry(None).or_default().open();
+        app.motion.desk_clocks.entry(None).or_default().open();
         app.screen.width = Some(1920.0);
-        app.desk_clocks.entry(None).or_default().fold();
+        app.motion.desk_clocks.entry(None).or_default().fold();
         app.send_the_islands_home(surface());
 
         assert!(
-            app.desk_returning.is_running(),
+            app.motion.desk_returning.is_running(),
             "the strip knows it is on its way back"
         );
         assert!(
@@ -283,7 +287,10 @@ mod tests {
             assert!(now >= wash, "the background only ever comes back");
             wash = now;
 
-            let sliding = app.relayout.advance(std::time::Duration::from_millis(16));
+            let sliding = app
+                .motion
+                .relayout
+                .advance(std::time::Duration::from_millis(16));
             let _ = app.advance_desk(std::time::Duration::from_millis(16));
 
             whole_before_they_land |= wash >= 1.0 && sliding;

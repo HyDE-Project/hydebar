@@ -111,7 +111,7 @@ impl App {
             return Vec::new();
         }
 
-        let memo = self.flip.borrow();
+        let memo = self.motion.flip.borrow();
         let (left, centre, right) = Self::desk_columns(&self.config.modules);
 
         [&left, &centre, &right]
@@ -180,7 +180,7 @@ mod tests {
 
     /// Sends a bar's canvas all the way out: travelled and written out.
     fn open(app: &mut App) {
-        app.desk_clocks.entry(None).or_default().open();
+        app.motion.desk_clocks.entry(None).or_default().open();
     }
 
     /// The journey the clock of a test layout is on.
@@ -205,7 +205,7 @@ mod tests {
     /// Starts a bar's canvas travelling, one frame in.
     fn set_off(app: &mut App) {
         let total = std::time::Duration::from_millis(900);
-        let clock = app.desk_clocks.entry(None).or_default();
+        let clock = app.motion.desk_clocks.entry(None).or_default();
 
         *clock = hydebar_core::animation::Unfold::default();
         clock.advance(std::time::Duration::from_millis(16), total);
@@ -216,9 +216,12 @@ mod tests {
     fn tick(app: &mut App) -> bool {
         let total = std::time::Duration::from_millis(900);
 
-        app.desk_clocks.values_mut().fold(false, |running, clock| {
-            clock.advance(std::time::Duration::from_millis(16), total) | running
-        })
+        app.motion
+            .desk_clocks
+            .values_mut()
+            .fold(false, |running, clock| {
+                clock.advance(std::time::Duration::from_millis(16), total) | running
+            })
     }
 
     fn surface() -> Id {
@@ -259,6 +262,7 @@ mod tests {
         );
 
         let beyond: Vec<f32> = app
+            .motion
             .flip
             .borrow()
             .from_map()
@@ -309,7 +313,7 @@ mod tests {
         let mut app = test_app_with(|config| config.desk.enabled = true);
         let hour = app.clock.data().format(&app.config.clock.format);
 
-        app.desk_clocks.entry(None).or_default();
+        app.motion.desk_clocks.entry(None).or_default();
 
         for frame in 0..240 {
             let _ = app.advance_desk(std::time::Duration::from_millis(16));
@@ -471,7 +475,7 @@ mod tests {
         let (strip, canvas) = shapes_on_screen(&app);
         assert!(!strip && canvas, "the canvas holds the bare screen");
 
-        app.desk_clocks.entry(None).or_default().fold();
+        app.motion.desk_clocks.entry(None).or_default().fold();
 
         let (strip, canvas) = shapes_on_screen(&app);
         assert!(
@@ -806,10 +810,10 @@ mod tests {
         app.screen.width = Some(1920.0);
         open(&mut app);
 
-        app.desk_clocks.entry(None).or_default().fold();
+        app.motion.desk_clocks.entry(None).or_default().fold();
         app.send_the_islands_home(surface());
 
-        let seated = app.flip.borrow().from_map().len();
+        let seated = app.motion.flip.borrow().from_map().len();
 
         assert!(
             seated >= 2,
@@ -971,10 +975,10 @@ mod tests {
         let mut ui = simulator(app.bar_surface(surface()));
         let _ = ui.snapshot(&iced::Theme::Dark).expect("the strip draws");
 
-        app.flip.borrow_mut().depart();
+        app.motion.flip.borrow_mut().depart();
 
         assert!(
-            !app.flip.borrow().from_map().is_empty(),
+            !app.motion.flip.borrow().from_map().is_empty(),
             "the seats the strip held are what the canvas travels from"
         );
     }
@@ -986,10 +990,11 @@ mod tests {
         app.screen.width = Some(1920.0);
         open(&mut app);
 
-        app.desk_clocks.entry(None).or_default().fold();
+        app.motion.desk_clocks.entry(None).or_default().fold();
         app.send_the_islands_home(surface());
 
         let seats: Vec<f32> = app
+            .motion
             .flip
             .borrow()
             .from_map()
@@ -1010,7 +1015,7 @@ mod tests {
             "the right hand section flies in from past the right edge"
         );
         assert!(
-            app.relayout.target() > 0.0,
+            app.motion.relayout.target() > 0.0,
             "the strip's own travel carries them in"
         );
     }

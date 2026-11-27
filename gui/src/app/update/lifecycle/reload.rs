@@ -146,10 +146,10 @@ impl App {
         if (impact.layout_changed || impact.custom_modules_changed)
             && self.config.appearance.animations.enabled
         {
-            self.flip.borrow_mut().depart();
-            self.relayout = hydebar_core::animation::Spring::new(0.0)
+            self.motion.flip.borrow_mut().depart();
+            self.motion.relayout = hydebar_core::animation::Spring::new(0.0)
                 .with_response(hydebar_core::animation::STANDARD);
-            self.relayout.set_target(1.0);
+            self.motion.relayout.set_target(1.0);
         }
 
         if impact.log_level_changed {

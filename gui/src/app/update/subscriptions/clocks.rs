@@ -110,11 +110,11 @@ impl App {
     /// something is moving.
     pub(super) fn frame_subscription(&self) -> Subscription<Message> {
         if self.outputs.menu_is_animating()
-            || self.appearance_transition.is_animating()
+            || self.motion.appearance_transition.is_animating()
             || self.hover.is_animating()
             || self.desk_is_unfolding()
-            || self.entrance.is_animating()
-            || self.relayout.is_animating()
+            || self.motion.entrance.is_animating()
+            || self.motion.relayout.is_animating()
             || self.greeting.is_animating()
             || self.greeting.target() > 0.0
             || self.hints.needs_frames()

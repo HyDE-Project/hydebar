@@ -19,13 +19,12 @@ use hydebar_core::{
     },
     notifications_popup,
     outputs::Outputs,
-    position_button::ButtonUIRef,
-    style::AppearanceTransition
+    position_button::ButtonUIRef
 };
 use hydebar_proto::config::Config;
 use iced::SurfaceId as Id;
 
-use super::{runtime::Runtime, screen::Screen};
+use super::{motion::Motion, runtime::Runtime, screen::Screen};
 
 /// How long the greeting stays before it fades on its own.
 pub(in crate::app) const GREETING_LIFETIME: std::time::Duration =
@@ -35,8 +34,8 @@ pub(in crate::app) const GREETING_LIFETIME: std::time::Duration =
 pub struct App {
     /// The machinery the binary booted the bar with.
     pub(crate) runtime: Runtime,
-    pub(crate) last_frame: Option<Instant>,
-    pub(crate) appearance_transition: AppearanceTransition,
+    /// The clocks the bar is currently riding.
+    pub(crate) motion: Motion,
     /// Theme built from the appearance in force, rebuilt only when it moves.
     ///
     /// Building a theme runs the whole palette derivation; the renderer asks
@@ -133,39 +132,12 @@ pub struct App {
     pub attention: Attention,
     /// Fade of the hover highlight of every module the pointer touched.
     pub hover: HoverFades<ModuleName>,
-    /// Signature the current or incoming theme crosses the bar with.
-    pub sweep: hydebar_core::style::SweepStyle,
-    /// Birth of the bar: the islands ride in on the theme's own wave once.
-    pub entrance: hydebar_core::animation::Spring,
-    /// Travel of the blocks gliding to a rearranged layout's places.
-    pub relayout: hydebar_core::animation::Spring,
-    /// The book of seats every module records its place in, per frame.
-    pub flip: std::cell::RefCell<hydebar_core::components::flip::FlipMemo>,
     /// Presence of the greeting shown mid-screen while the bar comes up.
     pub greeting: hydebar_core::animation::Spring,
     /// The menu surfaces the greeting has raised, each exactly once.
     pub(crate) greeting_raised: Vec<Id>,
     /// The frame instant past which the greeting lets itself out.
     pub(crate) greeting_deadline: Option<Instant>,
-    /// Unfolding of the desk, one clock per screen it may unfold on.
-    ///
-    /// A clock apiece because the screens answer for themselves: one monitor
-    /// may be folding back under a window that just mapped while the other is
-    /// still unfolding over a workspace that was cleared.
-    ///
-    /// Even, not sprung: the blocks leave one after another and every one of
-    /// them deserves the same slice of the travel. A spring driving the whole
-    /// sequence spends its tail on the last blocks, where it barely moves, and
-    /// they read as stalling. The easing belongs to each block's own slice.
-    pub desk_clocks: std::collections::HashMap<Option<String>, hydebar_core::animation::Unfold>,
-    /// How far the strip's own background has come back from a folded canvas.
-    ///
-    /// A clock of its own rather than a reading off the islands' spring: the
-    /// spring is all but home in its first tenth of a second, and a
-    /// background painted on that schedule is back before the eye has it. The
-    /// islands ride the spring and the background runs ahead of them on this,
-    /// which is the order the two are wanted in.
-    pub desk_returning: hydebar_core::animation::Unfold,
     /// The one tooltip lifecycle: dwell, warmth and the fade either way.
     pub hints: hydebar_core::tooltip::Hints,
     /// The greeting line, composed once when the greeting is armed.

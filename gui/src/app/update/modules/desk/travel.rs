@@ -23,8 +23,12 @@ impl App {
     /// Reports whether any screen is in the middle of unfolding.
     #[must_use]
     pub(crate) fn desk_is_unfolding(&self) -> bool {
-        self.desk_returning.is_running()
-            || self.desk_clocks.values().any(|clock| clock.is_running())
+        self.motion.desk_returning.is_running()
+            || self
+                .motion
+                .desk_clocks
+                .values()
+                .any(|clock| clock.is_running())
     }
 
     /// Reports whether the block of `journey` has left the strip of `screen`.
@@ -78,7 +82,7 @@ impl App {
     #[must_use]
     pub(crate) fn strip_wash(&self, screen: Option<&str>) -> f32 {
         if !self.desk_holds(screen) {
-            return self.desk_returning.progress();
+            return self.motion.desk_returning.progress();
         }
 
         let nearest = hydebar_core::animation::landed(Self::journey(0, self.deepest_column()));

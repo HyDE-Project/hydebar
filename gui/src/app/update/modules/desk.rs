@@ -66,7 +66,7 @@ impl App {
 
         for (surface, screen) in screens {
             let unfolded = enabled && self.desk.covers(screen.as_deref());
-            let clock = self.desk_clocks.entry(screen).or_default();
+            let clock = self.motion.desk_clocks.entry(screen).or_default();
             let was_out = clock.is_out();
 
             if unfolded {
@@ -84,7 +84,7 @@ impl App {
 
             if unfolded != was_out {
                 if unfolded {
-                    self.flip.borrow_mut().depart();
+                    self.motion.flip.borrow_mut().depart();
                 } else {
                     self.send_the_islands_home(surface);
                 }
@@ -133,7 +133,7 @@ impl App {
         let layout = std::sync::Arc::clone(&self.config);
 
         {
-            let mut memo = self.flip.borrow_mut();
+            let mut memo = self.motion.flip.borrow_mut();
 
             for (section, from) in [
                 (&layout.modules.left, -beyond),
@@ -152,20 +152,22 @@ impl App {
             }
         }
 
-        self.flip.borrow_mut().depart();
+        self.motion.flip.borrow_mut().depart();
 
-        self.desk_returning = hydebar_core::animation::Unfold::default();
-        self.desk_returning
+        self.motion.desk_returning = hydebar_core::animation::Unfold::default();
+        self.motion
+            .desk_returning
             .advance(Duration::from_millis(1), RETURN_WASH);
-        self.relayout = hydebar_core::animation::Spring::new(0.0)
+        self.motion.relayout = hydebar_core::animation::Spring::new(0.0)
             .with_response(hydebar_core::animation::STANDARD);
-        self.relayout.set_target(1.0);
+        self.motion.relayout.set_target(1.0);
     }
 
     /// How far the canvas of `screen` has unfolded, zero folded and one out.
     #[must_use]
     pub(crate) fn desk_presence(&self, screen: Option<&str>) -> f32 {
-        self.desk_clocks
+        self.motion
+            .desk_clocks
             .get(&screen.map(ToOwned::to_owned))
             .map_or(0.0, |clock| clock.progress())
     }
@@ -174,9 +176,10 @@ impl App {
     ///
     /// Reports whether any of them is still travelling.
     pub(crate) fn advance_desk(&mut self, elapsed: std::time::Duration) -> bool {
-        let returning = self.desk_returning.advance(elapsed, RETURN_WASH);
+        let returning = self.motion.desk_returning.advance(elapsed, RETURN_WASH);
         let total = self.unfolding_response();
         let bare: Vec<Option<String>> = self
+            .motion
             .desk_clocks
             .keys()
             .filter(|screen| self.desk_covers(screen.as_deref()))
@@ -184,7 +187,8 @@ impl App {
             .collect();
 
         bare.into_iter().fold(returning, |running, screen| {
-            self.desk_clocks
+            self.motion
+                .desk_clocks
                 .get_mut(&screen)
                 .is_some_and(|clock| clock.advance(elapsed, total))
                 | running

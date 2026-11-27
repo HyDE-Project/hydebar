@@ -64,9 +64,10 @@ impl App {
         self.derived_themes.borrow_mut().clear();
 
         let elapsed = self
+            .motion
             .last_frame
             .map_or_default(|last| now.saturating_duration_since(last));
-        self.last_frame = Some(now);
+        self.motion.last_frame = Some(now);
 
         if self.greeting.target() > 0.0 {
             let deadline = *self
@@ -94,11 +95,11 @@ impl App {
             .outputs
             .tick_menu_animations(&self.config.appearance.animations, elapsed);
         let (theme_animating, palette_moved) =
-            self.appearance_transition.advance_reporting(elapsed);
+            self.motion.appearance_transition.advance_reporting(elapsed);
         let hover_animating = self.hover.advance(elapsed);
         let desk_unfolding = self.advance_desk(elapsed);
-        let entering = self.entrance.advance(elapsed);
-        let sliding = self.relayout.advance(elapsed);
+        let entering = self.motion.entrance.advance(elapsed);
+        let sliding = self.motion.relayout.advance(elapsed);
         let greeting_animating = self.greeting.advance(elapsed);
         let values_fading = self.clock.tick_fade(elapsed)
             | self.updates.tick_fade(elapsed)
@@ -121,7 +122,7 @@ impl App {
             && !hints_fading
             && !values_fading
         {
-            self.last_frame = None;
+            self.motion.last_frame = None;
         }
 
         if popups_changed {

@@ -5,6 +5,7 @@ mod appearance;
 pub mod history;
 mod init;
 mod message;
+mod motion;
 mod runtime;
 mod screen;
 #[cfg(test)]

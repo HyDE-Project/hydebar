@@ -22,11 +22,14 @@ use hydebar_core::{
     outputs::Outputs,
     style::AppearanceTransition
 };
-use hydebar_proto::{config::Config, ports::hyprland::HyprlandPort};
+use hydebar_proto::{
+    config::{Appearance, Config},
+    ports::hyprland::HyprlandPort
+};
 use iced::Task;
 use tokio::runtime::Handle;
 
-use super::{App, Message, runtime::Runtime, screen::Screen};
+use super::{App, Message, motion::Motion, runtime::Runtime, screen::Screen};
 
 type AppDependencies = (
     LoggerHandle,
@@ -61,6 +64,39 @@ fn custom_modules(config: &Config) -> HashMap<String, Custom> {
         .collect()
 }
 
+fn initial_screen() -> Screen {
+    Screen {
+        auto_metrics:         None,
+        height:               None,
+        width:                None,
+        sizes:                HashMap::new(),
+        strip_rows:           HashMap::new(),
+        magnification:        hydebar_core::components::scale::screen_factor(),
+        stated_layer_metrics: None
+    }
+}
+
+/// The clocks as the bar is born: still, except the strip's background,
+/// which starts open because the first canvas has nothing to come back from.
+fn initial_motion(appearance: Appearance) -> Motion {
+    Motion {
+        last_frame:            None,
+        appearance_transition: AppearanceTransition::new(appearance),
+        sweep:                 hydebar_core::style::SweepStyle::default(),
+        entrance:              hydebar_core::animation::Spring::new(0.0),
+        relayout:              hydebar_core::animation::Spring::new(1.0),
+        flip:                  std::cell::RefCell::new(
+            hydebar_core::components::flip::FlipMemo::default()
+        ),
+        desk_clocks:           HashMap::new(),
+        desk_returning:        {
+            let mut painted = hydebar_core::animation::Unfold::default();
+            painted.open();
+            painted
+        }
+    }
+}
+
 impl App {
     /// Builds the bar from what the binary has already opened for it.
     ///
@@ -92,21 +128,12 @@ impl App {
                 config_manager,
                 bus_receiver
             },
-            last_frame: None,
-            appearance_transition: AppearanceTransition::new(config.appearance.clone()),
+            motion: initial_motion(config.appearance.clone()),
             theme_cache: hydebar_core::style::hydebar_theme(&config.appearance),
             module_context,
             icons: IconTheme::from_config(&config.icons)
                 .with_size(config.appearance.font_size_px()),
-            screen: Screen {
-                auto_metrics:         None,
-                height:               None,
-                width:                None,
-                sizes:                HashMap::new(),
-                strip_rows:           HashMap::new(),
-                magnification:        hydebar_core::components::scale::screen_factor(),
-                stated_layer_metrics: None
-            },
+            screen: initial_screen(),
             wallpaper_preview: None,
             looks: hydebar_core::modules::desk::looks::Looks::default(),
             history: super::history::History::default(),
@@ -141,16 +168,6 @@ impl App {
             notification_popups: Vec::new(),
             attention: Attention::default(),
             hover: HoverFades::default(),
-            desk_clocks: std::collections::HashMap::new(),
-            desk_returning: {
-                let mut painted = hydebar_core::animation::Unfold::default();
-                painted.open();
-                painted
-            },
-            sweep: hydebar_core::style::SweepStyle::default(),
-            entrance: hydebar_core::animation::Spring::new(0.0),
-            relayout: hydebar_core::animation::Spring::new(1.0),
-            flip: std::cell::RefCell::new(hydebar_core::components::flip::FlipMemo::default()),
             greeting: hydebar_core::animation::Spring::new(0.0),
             greeting_raised: Vec::new(),
             greeting_deadline: None,
