@@ -22,8 +22,8 @@
 //! [`None`] so the next source down can answer instead.
 //!
 //! The colour type lives in [`color`], the wallbash palette in [`dcol`], the
-//! font chain in [`font`], the fallback stylesheet reader in [`waybar`] and the
-//! snapshot with its entry points in [`theme`].
+//! font chain in [`font`], the fallback stylesheet reader in [`waybar`], the
+//! snapshot in [`theme`] and the assembly of the desktop reading in [`load`].
 
 mod color;
 mod css;
@@ -31,6 +31,7 @@ pub mod dcol;
 mod extract;
 mod font;
 mod length;
+mod load;
 mod preview;
 mod swatch;
 mod theme;
@@ -41,6 +42,7 @@ mod fixtures;
 
 pub use color::Rgba;
 pub use dcol::{DcolMode, DcolPalette};
+pub use load::{load, load_from};
 pub use preview::{picture_preview, theme_preview};
 pub use swatch::{ThemeSwatch, theme_swatch};
-pub use theme::{HydeTheme, load, load_from};
+pub use theme::HydeTheme;
