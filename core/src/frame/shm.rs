@@ -116,7 +116,6 @@ struct App {
     dock:           Position,
     bar_height:     f32,
     color:          (u8, u8, u8, u8),
-    stop:           Arc<AtomicBool>,
     exit:           bool,
     surfaces:       Vec<SurfaceState>
 }
@@ -402,14 +401,6 @@ impl App {
             });
         }
     }
-
-    fn draw_all(&mut self) {
-        for state in &mut self.surfaces {
-            if state.configured {
-                draw_surface(state, &self.config, self.color);
-            }
-        }
-    }
 }
 
 fn draw_surface(state: &mut SurfaceState, config: &FrameConfig, color: (u8, u8, u8, u8)) {
@@ -534,7 +525,6 @@ fn run(
         dock,
         bar_height,
         color,
-        stop: Arc::clone(&stop),
         exit: false,
         surfaces: Vec::new()
     };
