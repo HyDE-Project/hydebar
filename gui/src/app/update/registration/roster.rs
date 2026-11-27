@@ -52,7 +52,7 @@ impl App {
         for definition in &self.config.custom_modules {
             let placed = layout.hosts(&ModuleName::Custom(definition.name.clone()));
 
-            match self.custom.get_mut(&definition.name) {
+            match self.modules.custom.get_mut(&definition.name) {
                 Some(module) => gate(&definition.name, placed, module, ctx, definition),
                 None => error!(
                     "custom module '{}' missing runtime state entry during registration",
@@ -61,7 +61,7 @@ impl App {
             }
         }
 
-        for (name, module) in &mut self.custom {
+        for (name, module) in &mut self.modules.custom {
             if !self
                 .config
                 .custom_modules

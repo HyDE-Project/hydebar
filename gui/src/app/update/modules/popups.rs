@@ -124,7 +124,7 @@ impl App {
         let popups_before = self.focus.notification_popups.len();
 
         self.raise_popup(&msg);
-        self.notifications.update(msg);
+        self.modules.notifications.update(msg);
 
         if popups_before == self.focus.notification_popups.len() {
             Task::none()

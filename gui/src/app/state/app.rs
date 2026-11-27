@@ -1,24 +1,11 @@
 //! The application state every surface renders from.
 
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 
-use hydebar_core::{
-    ModuleContext,
-    components::icons::IconTheme,
-    modules::{
-        battery::Battery, calendar::Calendar, clock::Clock, command_button::CommandButton,
-        control_center::ControlCenter, custom_module::Custom, desk::Desk, hyde_menu::HydeMenu,
-        keyboard_layout::KeyboardLayout, keyboard_submap::KeyboardSubmap,
-        media_player::MediaPlayer, notifications::Notifications, privacy::Privacy,
-        screenshot::Screenshot, settings::Settings, system_info::SystemInfo, taskbar::Taskbar,
-        themes::Themes, tray::TrayModule, updates::Updates, wallpaper::Wallpaper,
-        weather::Weather, window_title::WindowTitle, workspaces::Workspaces
-    },
-    outputs::Outputs
-};
+use hydebar_core::{ModuleContext, components::icons::IconTheme, outputs::Outputs};
 use hydebar_proto::config::Config;
 
-use super::{focus::Focus, motion::Motion, runtime::Runtime, screen::Screen};
+use super::{entries::Modules, focus::Focus, motion::Motion, runtime::Runtime, screen::Screen};
 
 /// Everything the bar is, at this moment, on every screen it stands on.
 pub struct App {
@@ -38,6 +25,8 @@ pub struct App {
     pub(crate) icons:             IconTheme,
     /// What the screens have reported about themselves.
     pub(crate) screen:            Screen,
+    /// Every module the bar carries.
+    pub(crate) modules:           Modules,
     /// What the machine has been doing for the last few minutes.
     ///
     /// One reading is a number and a run of them is a shape; the canvas draws
@@ -61,59 +50,6 @@ pub struct App {
     pub config:                   Arc<Config>,
     /// The screens the bar stands on, and the surfaces it holds on them.
     pub outputs:                  Outputs,
-    /// Bar entry running the launcher the desktop is configured with.
-    pub app_launcher:             CommandButton,
-    /// The modules the user wrote, by the key each is named under.
-    pub custom:                   HashMap<String, Custom>,
-    /// Bar entry counting what is waiting to be installed.
-    pub updates:                  Updates,
-    /// Bar entry opening the clipboard history.
-    pub clipboard:                CommandButton,
-    /// Bar entry drawing the compositor’s workspaces.
-    pub workspaces:               Workspaces,
-    /// Bar entry naming the window holding focus.
-    pub window_title:             WindowTitle,
-    /// Bar entry reading the machine, and the sample every readout shares.
-    pub system_info:              SystemInfo,
-    /// Bar entry naming the keyboard layout in force.
-    pub keyboard_layout:          KeyboardLayout,
-    /// Bar entry naming the compositor submap the keyboard is in.
-    pub keyboard_submap:          KeyboardSubmap,
-    /// Bar entry holding the icons applications registered.
-    pub tray:                     TrayModule,
-    /// Bar entry listing the open windows.
-    pub taskbar:                  Taskbar,
-    /// The canvas the bar unfolds into on a screen holding no window.
-    pub desk:                     Desk,
-    /// Bar entry stating the date and the time.
-    pub clock:                    Clock,
-    /// The calendar the clock opens.
-    pub calendar:                 Calendar,
-    /// Bar entry opening the menu the desktop publishes.
-    pub hyde_menu:                HydeMenu,
-    /// Bar entry reading the charge and the power source.
-    pub battery:                  Battery,
-    /// Bar entry warning while the microphone, camera or screen is read.
-    pub privacy:                  Privacy,
-    /// Bar entry gathering the quick settings, and the services behind them.
-    pub control_center:           ControlCenter,
-    /// Bar entry naming what is playing.
-    pub media_player:             MediaPlayer,
-    /// Bar entry holding the notices that arrived.
-    pub notifications:            Notifications,
-    /// Bar entry taking a picture of the screen.
-    pub screenshot:               Screenshot,
-    /// Bar entry opening the window the bar is configured from.
-    pub settings:                 Settings,
-    /// Bar entry choosing the desktop theme, and the one holder of a running
-    /// switch.
-    pub themes:                   Themes,
-    /// Bar entry stepping through the wallpapers of the theme in force.
-    pub wallpaper:                Wallpaper,
-    /// Bar entry stepping through the layouts the desktop ships.
-    pub bar_layout:               hydebar_core::modules::bar_layout::BarLayout,
-    /// Bar entry reading the weather where the machine stands.
-    pub weather:                  Weather,
     /// The last configuration as the file spelled it, before adoption.
     ///
     /// The cheap gate against reload bursts: a reload whose raw text matches

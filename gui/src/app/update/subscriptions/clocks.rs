@@ -34,7 +34,7 @@ impl App {
     /// than on the frame clock, so a wait costs a handful of redraws a
     /// second instead of one per refresh.
     pub(super) fn switch_subscription(&self) -> Subscription<Message> {
-        if self.themes.is_waiting() {
+        if self.modules.themes.is_waiting() {
             iced::time::every(themes::FRAME_INTERVAL)
                 .map(|_| Message::Themes(themes::Message::Tick))
         } else {
@@ -48,7 +48,7 @@ impl App {
     /// cadence, and under its own clock identity so it never collapses
     /// into the theme switch tick that shares the period.
     pub(super) fn wallpaper_loading_subscription(&self) -> Subscription<Message> {
-        if self.wallpaper.is_loading() {
+        if self.modules.wallpaper.is_loading() {
             Self::clock(Clock::WallpaperSpinner, themes::FRAME_INTERVAL)
                 .map(|_| Message::Wallpaper(hydebar_core::modules::wallpaper::Message::Tick))
         } else {
@@ -58,7 +58,7 @@ impl App {
 
     /// Tick of the layout entry's loading indicator.
     pub(super) fn bar_layout_loading_subscription(&self) -> Subscription<Message> {
-        if self.bar_layout.is_loading() {
+        if self.modules.bar_layout.is_loading() {
             Self::clock(Clock::BarLayoutSpinner, themes::FRAME_INTERVAL)
                 .map(|_| Message::BarLayout(hydebar_core::modules::bar_layout::Message::Tick))
         } else {
@@ -120,11 +120,11 @@ impl App {
             || self.focus.greeting.is_animating()
             || self.focus.greeting.target() > 0.0
             || self.focus.hints.needs_frames()
-            || self.clock.is_fading()
-            || self.updates.is_fading()
-            || self.keyboard_layout.is_fading()
-            || self.keyboard_submap.is_fading()
-            || self.battery.is_fading()
+            || self.modules.clock.is_fading()
+            || self.modules.updates.is_fading()
+            || self.modules.keyboard_layout.is_fading()
+            || self.modules.keyboard_submap.is_fading()
+            || self.modules.battery.is_fading()
         {
             iced::time::every(FRAME).map(|_| Message::Frame(std::time::Instant::now()))
         } else {

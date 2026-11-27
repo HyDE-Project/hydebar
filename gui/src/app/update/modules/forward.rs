@@ -25,8 +25,12 @@ impl App {
         match message {
             Message::Updates(message) => {
                 if let Some(updates_config) = self.config.updates.as_ref() {
-                    self.updates
-                        .update(message, updates_config, &mut self.outputs, &self.config);
+                    self.modules.updates.update(
+                        message,
+                        updates_config,
+                        &mut self.outputs,
+                        &self.config
+                    );
                 }
                 Task::none()
             }
@@ -36,22 +40,26 @@ impl App {
             | Message::CustomMenuAction(..)
             | Message::CustomUpdate(..) => self.update_commands(message),
             Message::Workspaces(msg) => {
-                self.workspaces.update(msg, &self.config.workspaces);
+                self.modules.workspaces.update(msg, &self.config.workspaces);
 
                 Task::none()
             }
             Message::WindowTitle(message) => {
-                self.window_title.update(message, &self.config.window_title);
+                self.modules
+                    .window_title
+                    .update(message, &self.config.window_title);
                 Task::none()
             }
             Message::SystemInfo(message) => {
-                self.system_info.update(message, &self.config.system);
-                self.history.saw(self.system_info.data());
+                self.modules
+                    .system_info
+                    .update(message, &self.config.system);
+                self.history.saw(self.modules.system_info.data());
 
                 Task::none()
             }
             Message::KeyboardLayout(message) => {
-                self.keyboard_layout.update(
+                self.modules.keyboard_layout.update(
                     message,
                     &self.config.keyboard_layout,
                     self.config.appearance.animations.enabled
@@ -59,16 +67,17 @@ impl App {
                 Task::none()
             }
             Message::KeyboardSubmap(message) => {
-                self.keyboard_submap
+                self.modules
+                    .keyboard_submap
                     .update(message, self.config.appearance.animations.enabled);
                 Task::none()
             }
             Message::Taskbar(msg) => {
-                self.taskbar.update(msg);
+                self.modules.taskbar.update(msg);
                 Task::none()
             }
             Message::Desk(msg) => {
-                self.desk.update(msg);
+                self.modules.desk.update(msg);
 
                 // answered on this very frame rather than after the row
                 // measurement below: a window that took the screen is on it
@@ -101,11 +110,11 @@ impl App {
                     _ => Task::none()
                 };
 
-                self.tray.update(msg);
+                self.modules.tray.update(msg);
                 close_tray
             }
             Message::Clock(message) => {
-                self.clock.update(
+                self.modules.clock.update(
                     message,
                     &self.config.clock,
                     self.config.appearance.animations.enabled
@@ -113,10 +122,10 @@ impl App {
                 Task::none()
             }
             Message::Calendar(message) => {
-                self.calendar.update(message);
+                self.modules.calendar.update(message);
                 Task::none()
             }
-            Message::HydeMenu(message) => match self.hyde_menu.update(message) {
+            Message::HydeMenu(message) => match self.modules.hyde_menu.update(message) {
                 Some((surface, command)) => {
                     hydebar_core::utils::launcher::execute_command(command);
 
@@ -125,19 +134,21 @@ impl App {
                 None => Task::none()
             },
             Message::Weather(message) => {
-                self.weather.update(message);
+                self.modules.weather.update(message);
                 Task::none()
             }
             Message::Battery(message) => {
-                self.battery
+                self.modules
+                    .battery
                     .update(message, self.config.appearance.animations.enabled);
                 Task::none()
             }
             Message::Privacy(msg) => {
-                self.privacy.update(msg);
+                self.modules.privacy.update(msg);
                 Task::none()
             }
             Message::ControlCenter(message) => self
+                .modules
                 .control_center
                 .update(
                     message,

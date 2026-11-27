@@ -19,7 +19,7 @@ impl App {
     ) -> Option<(Element<'_, Message>, MenuSize, Option<f32>)> {
         match menu_type {
             MenuType::Settings => {
-                let (window, metrics) = self.settings.window(
+                let (window, metrics) = self.modules.settings.window(
                     &self.config,
                     opacity,
                     self.icons(),
@@ -33,10 +33,11 @@ impl App {
                 ))
             }
             MenuType::Themes => {
-                let metrics = self.themes.window_metrics(&self.config);
+                let metrics = self.modules.themes.window_metrics(&self.config);
 
                 Some((
-                    self.themes
+                    self.modules
+                        .themes
                         .menu_view(&self.config, opacity, metrics.page_width)
                         .map(Message::Themes),
                     MenuSize::Content(metrics.width),
@@ -45,6 +46,7 @@ impl App {
             }
             MenuType::SystemInfo => {
                 let (window, height) = self
+                    .modules
                     .system_info
                     .monitor_window(&self.config.system, self.icons());
 
@@ -59,7 +61,7 @@ impl App {
                 ))
             }
             MenuType::Cpu => {
-                let (window, height) = self.system_info.cpu_window(self.icons());
+                let (window, height) = self.modules.system_info.cpu_window(self.icons());
 
                 Some((
                     window.map(Message::SystemInfo),
@@ -72,7 +74,7 @@ impl App {
                 ))
             }
             MenuType::Memory => {
-                let (window, height) = self.system_info.memory_window(self.icons());
+                let (window, height) = self.modules.system_info.memory_window(self.icons());
 
                 Some((
                     window.map(Message::SystemInfo),
@@ -85,7 +87,7 @@ impl App {
                 ))
             }
             MenuType::CpuTemp => {
-                let (window, height) = self.system_info.cpu_temp_window(self.icons());
+                let (window, height) = self.modules.system_info.cpu_temp_window(self.icons());
 
                 Some((
                     window.map(Message::SystemInfo),
@@ -98,7 +100,7 @@ impl App {
                 ))
             }
             MenuType::Gpu => {
-                let (window, height) = self.system_info.gpu_window(self.icons());
+                let (window, height) = self.modules.system_info.gpu_window(self.icons());
 
                 Some((
                     window.map(Message::SystemInfo),
@@ -111,7 +113,10 @@ impl App {
                 ))
             }
             MenuType::Calendar => Some((
-                self.calendar.menu_view(self.icons()).map(Message::Calendar),
+                self.modules
+                    .calendar
+                    .menu_view(self.icons())
+                    .map(Message::Calendar),
                 MenuSize::Content(hydebar_core::modules::calendar::Calendar::content_width(
                     self.appearance().font_size_px()
                 )),

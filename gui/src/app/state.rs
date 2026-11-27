@@ -2,6 +2,7 @@
 
 mod app;
 mod appearance;
+mod entries;
 mod focus;
 pub mod history;
 mod init;

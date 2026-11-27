@@ -5,7 +5,7 @@ use crate::app::state::App;
 
 /// The workspaces of this screen, and what stands on each of them.
 pub fn workspaces(app: &App) -> Option<Panel> {
-    let items = app.workspaces.items();
+    let items = app.modules.workspaces.items();
 
     if items.is_empty() {
         return None;
@@ -50,7 +50,8 @@ fn miniatures(app: &App) -> Vec<Miniature> {
     let width = app.screen.width.unwrap_or_default();
     let height = app.screen.height.unwrap_or_default();
 
-    app.workspaces
+    app.modules
+        .workspaces
         .items()
         .iter()
         .map(|space| Miniature {
@@ -58,7 +59,8 @@ fn miniatures(app: &App) -> Vec<Miniature> {
             active:  space.active,
             urgent:  space.urgent,
             windows: if width > 0.0 && height > 0.0 {
-                app.taskbar
+                app.modules
+                    .taskbar
                     .clients()
                     .iter()
                     .filter(|client| client.workspace_id == space.id)

@@ -15,7 +15,7 @@ use crate::app::state::App;
 /// to one of the desktop's own scripts has a menu behind it, and the choices
 /// that menu offers are drawn in a row where the readings would stand.
 pub fn own(app: &App, name: &str) -> Option<Panel> {
-    let module = app.custom.get(name)?;
+    let module = app.modules.custom.get(name)?;
     let data = module.readings();
     let mut rows = Vec::new();
 

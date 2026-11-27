@@ -131,7 +131,7 @@ impl App {
         }
 
         self.config = config;
-        self.themes.refresh();
+        self.modules.themes.refresh();
         hydebar_core::outputs::restate_blur();
         let resize = self.refresh_appearance();
 

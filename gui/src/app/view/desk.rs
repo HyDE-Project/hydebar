@@ -248,7 +248,8 @@ mod tests {
         app.screen.width = Some(1920.0);
         open(&mut app);
 
-        app.desk
+        app.modules
+            .desk
             .update(hydebar_core::modules::desk::Message::ScreensChanged(
                 hydebar_core::modules::desk::Bareness::default()
             ));
@@ -311,7 +312,7 @@ mod tests {
     #[test]
     fn a_screen_holding_a_window_keeps_its_strip_however_long_it_stands() {
         let mut app = test_app_with(|config| config.desk.enabled = true);
-        let hour = app.clock.data().format(&app.config.clock.format);
+        let hour = app.modules.clock.data().format(&app.config.clock.format);
 
         app.motion.desk_clocks.entry(None).or_default();
 
@@ -380,7 +381,7 @@ mod tests {
         let mut app = unfolded(0.0);
         set_off(&mut app);
 
-        let month = app.clock.data().format("%B %Y");
+        let month = app.modules.clock.data().format("%B %Y");
         let mut seen_partly = false;
 
         for _ in 0..256 {
@@ -411,7 +412,7 @@ mod tests {
     #[test]
     fn the_clock_stands_over_the_month_it_opens() {
         let app = unfolded(1.0);
-        let month = app.clock.data().format("%B %Y");
+        let month = app.modules.clock.data().format("%B %Y");
         let mut ui = simulator(app.desk_surface(surface()));
 
         assert!(
@@ -429,7 +430,7 @@ mod tests {
     /// already on the canvas, and that is the whole point of the run. What
     /// must never happen is either of them being drawn twice or not at all.
     fn shapes_on_screen(app: &App) -> (bool, bool) {
-        let hour = app.clock.data().format(&app.config.clock.format);
+        let hour = app.modules.clock.data().format(&app.config.clock.format);
 
         let strip = simulator(app.bar_surface(surface()))
             .find(hour.as_str())
@@ -866,7 +867,7 @@ mod tests {
         for _ in 0..256 {
             for module in &watched {
                 let left = app.has_left_the_strip(None, clock_journey(&app));
-                let hour = app.clock.data().format(&app.config.clock.format);
+                let hour = app.modules.clock.data().format(&app.config.clock.format);
                 let probe = if matches!(module, ModuleName::Clock) {
                     hour.as_str()
                 } else {

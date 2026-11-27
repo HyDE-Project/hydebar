@@ -7,7 +7,7 @@ use crate::app::state::App;
 
 /// The battery: its charge, its direction and what is steering it.
 pub fn battery(app: &App) -> Option<Panel> {
-    let data = app.battery.data()?;
+    let data = app.modules.battery.data()?;
     let mut rows = vec![
         ("charge".to_owned(), format!("{}%", data.capacity)),
         (
@@ -87,7 +87,7 @@ pub fn session_idle(app: &App) -> Option<Panel> {
         "session",
         vec![(
             "idle".to_owned(),
-            if app.control_center.is_idle_inhibited() {
+            if app.modules.control_center.is_idle_inhibited() {
                 "held awake"
             } else {
                 "free to sleep"

@@ -96,9 +96,10 @@ impl App {
         };
 
         let incoming = self
+            .modules
             .themes
             .switching()
-            .or_else(|| self.themes.hyde().theme.as_deref());
+            .or_else(|| self.modules.themes.hyde().theme.as_deref());
         self.motion.sweep = hydebar_core::style::SweepStyle::of(incoming, &appearance);
         self.motion
             .appearance_transition
@@ -118,7 +119,7 @@ impl App {
     /// armed at all.
     pub(super) fn arm_birth_animations(&mut self) {
         self.motion.sweep = hydebar_core::style::SweepStyle::of(
-            self.themes.hyde().theme.as_deref(),
+            self.modules.themes.hyde().theme.as_deref(),
             &self.config.appearance
         );
         self.motion.entrance = hydebar_core::animation::Spring::new(0.0)

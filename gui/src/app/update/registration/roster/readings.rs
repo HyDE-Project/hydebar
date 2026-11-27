@@ -18,7 +18,7 @@ impl App {
         gate(
             "clock",
             hosts(ModuleName::Clock),
-            &mut self.clock,
+            &mut self.modules.clock,
             ctx,
             &self.config.clock
         );
@@ -26,35 +26,35 @@ impl App {
             "weather",
             hosts(ModuleName::Weather)
                 || (hosts(ModuleName::Clock) && self.config.clock.show_weather),
-            &mut self.weather,
+            &mut self.modules.weather,
             ctx,
             &self.config.weather
         );
         gate(
             "updates",
             hosts(ModuleName::Updates),
-            &mut self.updates,
+            &mut self.modules.updates,
             ctx,
             self.config.updates.as_ref()
         );
         gate(
             "system-info",
             layout.hosts_any(&SYSTEM_INFO_CONSUMERS),
-            &mut self.system_info,
+            &mut self.modules.system_info,
             ctx,
             (&self.config.system, layout.hosts(&ModuleName::SystemInfo))
         );
         gate(
             "keyboard-layout",
             hosts(ModuleName::KeyboardLayout),
-            &mut self.keyboard_layout,
+            &mut self.modules.keyboard_layout,
             ctx,
             ()
         );
         gate(
             "keyboard-submap",
             hosts(ModuleName::KeyboardSubmap),
-            &mut self.keyboard_submap,
+            &mut self.modules.keyboard_submap,
             ctx,
             ()
         );

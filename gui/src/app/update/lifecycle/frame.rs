@@ -104,11 +104,11 @@ impl App {
         let entering = self.motion.entrance.advance(elapsed);
         let sliding = self.motion.relayout.advance(elapsed);
         let greeting_animating = self.focus.greeting.advance(elapsed);
-        let values_fading = self.clock.tick_fade(elapsed)
-            | self.updates.tick_fade(elapsed)
-            | self.keyboard_layout.tick_fade(elapsed)
-            | self.keyboard_submap.tick_fade(elapsed)
-            | self.battery.tick_fade(elapsed);
+        let values_fading = self.modules.clock.tick_fade(elapsed)
+            | self.modules.updates.tick_fade(elapsed)
+            | self.modules.keyboard_layout.tick_fade(elapsed)
+            | self.modules.keyboard_submap.tick_fade(elapsed)
+            | self.modules.battery.tick_fade(elapsed);
         let greeting_tasks = self.greeting_surface_tasks();
 
         if palette_moved {

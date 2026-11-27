@@ -31,30 +31,30 @@ impl App {
     pub(crate) fn module_owner(&self, module_name: &ModuleName) -> Option<Owner<'_>> {
         Some(match module_name {
             ModuleName::Custom(name) => self.declared_custom(name)?,
-            ModuleName::Updates => &self.updates,
-            ModuleName::Workspaces => &self.workspaces,
-            ModuleName::WindowTitle => &self.window_title,
+            ModuleName::Updates => &self.modules.updates,
+            ModuleName::Workspaces => &self.modules.workspaces,
+            ModuleName::WindowTitle => &self.modules.window_title,
             ModuleName::SystemInfo
             | ModuleName::Cpu
             | ModuleName::Memory
             | ModuleName::CpuTemp
-            | ModuleName::GpuTemp => &self.system_info,
-            ModuleName::KeyboardLayout => &self.keyboard_layout,
-            ModuleName::KeyboardSubmap => &self.keyboard_submap,
-            ModuleName::Tray => &self.tray,
-            ModuleName::Taskbar => &self.taskbar,
-            ModuleName::Clock => &self.clock,
-            ModuleName::HydeMenu => &self.hyde_menu,
-            ModuleName::Weather => &self.weather,
-            ModuleName::Privacy => &self.privacy,
+            | ModuleName::GpuTemp => &self.modules.system_info,
+            ModuleName::KeyboardLayout => &self.modules.keyboard_layout,
+            ModuleName::KeyboardSubmap => &self.modules.keyboard_submap,
+            ModuleName::Tray => &self.modules.tray,
+            ModuleName::Taskbar => &self.modules.taskbar,
+            ModuleName::Clock => &self.modules.clock,
+            ModuleName::HydeMenu => &self.modules.hyde_menu,
+            ModuleName::Weather => &self.modules.weather,
+            ModuleName::Privacy => &self.modules.privacy,
             ModuleName::ControlCenter
             | ModuleName::Audio
             | ModuleName::Network
             | ModuleName::Bluetooth
             | ModuleName::PowerProfile
-            | ModuleName::Brightness => &self.control_center,
-            ModuleName::MediaPlayer => &self.media_player,
-            ModuleName::Notifications => &self.notifications,
+            | ModuleName::Brightness => &self.modules.control_center,
+            ModuleName::MediaPlayer => &self.modules.media_player,
+            ModuleName::Notifications => &self.modules.notifications,
             ModuleName::Battery
             | ModuleName::BarLayout
             | ModuleName::Wallpaper
@@ -84,32 +84,32 @@ impl App {
                     return None;
                 }
 
-                self.custom.get_mut(name)?
+                self.modules.custom.get_mut(name)?
             }
-            ModuleName::Updates => &mut self.updates,
-            ModuleName::Workspaces => &mut self.workspaces,
-            ModuleName::WindowTitle => &mut self.window_title,
+            ModuleName::Updates => &mut self.modules.updates,
+            ModuleName::Workspaces => &mut self.modules.workspaces,
+            ModuleName::WindowTitle => &mut self.modules.window_title,
             ModuleName::SystemInfo
             | ModuleName::Cpu
             | ModuleName::Memory
             | ModuleName::CpuTemp
-            | ModuleName::GpuTemp => &mut self.system_info,
-            ModuleName::KeyboardLayout => &mut self.keyboard_layout,
-            ModuleName::KeyboardSubmap => &mut self.keyboard_submap,
-            ModuleName::Tray => &mut self.tray,
-            ModuleName::Taskbar => &mut self.taskbar,
-            ModuleName::Clock => &mut self.clock,
-            ModuleName::HydeMenu => &mut self.hyde_menu,
-            ModuleName::Weather => &mut self.weather,
-            ModuleName::Privacy => &mut self.privacy,
+            | ModuleName::GpuTemp => &mut self.modules.system_info,
+            ModuleName::KeyboardLayout => &mut self.modules.keyboard_layout,
+            ModuleName::KeyboardSubmap => &mut self.modules.keyboard_submap,
+            ModuleName::Tray => &mut self.modules.tray,
+            ModuleName::Taskbar => &mut self.modules.taskbar,
+            ModuleName::Clock => &mut self.modules.clock,
+            ModuleName::HydeMenu => &mut self.modules.hyde_menu,
+            ModuleName::Weather => &mut self.modules.weather,
+            ModuleName::Privacy => &mut self.modules.privacy,
             ModuleName::ControlCenter
             | ModuleName::Audio
             | ModuleName::Network
             | ModuleName::Bluetooth
             | ModuleName::PowerProfile
-            | ModuleName::Brightness => &mut self.control_center,
-            ModuleName::MediaPlayer => &mut self.media_player,
-            ModuleName::Notifications => &mut self.notifications,
+            | ModuleName::Brightness => &mut self.modules.control_center,
+            ModuleName::MediaPlayer => &mut self.modules.media_player,
+            ModuleName::Notifications => &mut self.modules.notifications,
             ModuleName::Battery
             | ModuleName::BarLayout
             | ModuleName::Wallpaper
@@ -131,7 +131,7 @@ impl App {
     /// name the configuration declares and the bar never built, are both a
     /// mistake worth naming rather than a silent nothing.
     fn declared_custom(&self, name: &str) -> Option<Owner<'_>> {
-        let Some(module) = self.custom.get(name) else {
+        let Some(module) = self.modules.custom.get(name) else {
             error!("Custom module `{name}` not found");
 
             return None;

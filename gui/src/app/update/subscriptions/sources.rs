@@ -113,7 +113,9 @@ impl App {
         if self.config.notifications.source.owns_the_bus() {
             use hydebar_core::modules::Module;
 
-            if let Some(notifications) = Module::<Message>::subscription(&self.notifications) {
+            if let Some(notifications) =
+                Module::<Message>::subscription(&self.modules.notifications)
+            {
                 subscriptions.push(notifications);
             }
         }

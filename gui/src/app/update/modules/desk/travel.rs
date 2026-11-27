@@ -17,7 +17,7 @@ impl App {
     /// is not a reason to move it.
     #[must_use]
     pub(super) fn desk_covers(&self, screen: Option<&str>) -> bool {
-        self.config.desk.enabled && self.desk.covers(screen)
+        self.config.desk.enabled && self.modules.desk.covers(screen)
     }
 
     /// Reports whether any screen is in the middle of unfolding.

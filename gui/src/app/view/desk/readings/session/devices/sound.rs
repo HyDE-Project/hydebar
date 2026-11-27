@@ -7,7 +7,7 @@ use crate::app::state::App;
 
 /// The sound server: what is playing out, what is listening in.
 pub fn sound(app: &App) -> Option<Panel> {
-    let audio = app.control_center.audio_readings()?;
+    let audio = app.modules.control_center.audio_readings()?;
     let mut rows = vec![
         ("output".to_owned(), named(audio, true)),
         (

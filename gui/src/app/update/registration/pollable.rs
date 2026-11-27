@@ -77,12 +77,15 @@ impl App {
             let entry = if impact.affects_module(&module_key) {
                 Custom::default()
             } else {
-                self.custom.remove(module_name.as_str()).unwrap_or_default()
+                self.modules
+                    .custom
+                    .remove(module_name.as_str())
+                    .unwrap_or_default()
             };
 
             state.insert(module_name, entry);
         }
 
-        self.custom = state;
+        self.modules.custom = state;
     }
 }

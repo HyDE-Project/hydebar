@@ -21,31 +21,37 @@ impl App {
         gate(
             "hyde-menu",
             hosts(ModuleName::HydeMenu),
-            &mut self.hyde_menu,
+            &mut self.modules.hyde_menu,
             ctx,
             ()
         );
         gate(
             "workspaces",
             hosts(ModuleName::Workspaces),
-            &mut self.workspaces,
+            &mut self.modules.workspaces,
             ctx,
             &self.config.workspaces
         );
         gate(
             "window-title",
             hosts(ModuleName::WindowTitle),
-            &mut self.window_title,
+            &mut self.modules.window_title,
             ctx,
             ()
         );
         gate(
             "taskbar",
             hosts(ModuleName::Taskbar) || self.config.desk.enabled,
-            &mut self.taskbar,
+            &mut self.modules.taskbar,
             ctx,
             ()
         );
-        gate("desk", self.config.desk.enabled, &mut self.desk, ctx, ());
+        gate(
+            "desk",
+            self.config.desk.enabled,
+            &mut self.modules.desk,
+            ctx,
+            ()
+        );
     }
 }

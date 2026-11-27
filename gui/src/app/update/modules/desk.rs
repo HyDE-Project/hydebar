@@ -65,7 +65,7 @@ impl App {
         let mut tasks = Vec::with_capacity(screens.len());
 
         for (surface, screen) in screens {
-            let unfolded = enabled && self.desk.covers(screen.as_deref());
+            let unfolded = enabled && self.modules.desk.covers(screen.as_deref());
             let clock = self.motion.desk_clocks.entry(screen).or_default();
             let was_out = clock.is_out();
 

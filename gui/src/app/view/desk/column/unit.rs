@@ -415,6 +415,9 @@ impl App {
     /// whole from the first frame was the one thing on the canvas that did
     /// not open.
     fn desk_month(&self) -> Element<'_, Message> {
-        self.calendar.menu_view(self.icons()).map(Message::Calendar)
+        self.modules
+            .calendar
+            .menu_view(self.icons())
+            .map(Message::Calendar)
     }
 }
