@@ -44,6 +44,7 @@ use wayland_client::{
 use crate::config::Position;
 
 /// Handle to a running shared-memory frame.
+#[derive(Debug)]
 pub struct ShmFrameHandle {
     stop:   Arc<AtomicBool>,
     thread: Option<JoinHandle<()>>
@@ -226,10 +227,12 @@ impl LayerShellHandler for App {
                     .unwrap_or(state.height);
 
                 if !state.configured {
-                    state.configured = true;
                     let size = (state.width * state.height * 4) as usize;
-                    state.pool = Some(SlotPool::new(size.max(4), &self.shm).unwrap());
-                    draw_surface(state, &self.config, self.color);
+                    if let Ok(pool) = SlotPool::new(size.max(4), &self.shm) {
+                        state.pool = Some(pool);
+                        state.configured = true;
+                        draw_surface(state, &self.config, self.color);
+                    }
                 }
             }
         }
