@@ -5,7 +5,7 @@ use std::{borrow::Cow, num::NonZeroUsize, path::PathBuf, sync::Arc};
 use clap::Parser;
 use hydebar_core::{
     adapters::hyprland_client::HyprlandClient,
-    config::{ConfigManager, config},
+    config::{Config, ConfigManager, config},
     event_bus::EventBus
 };
 use hydebar_gui::{App, log_spec};
@@ -45,26 +45,9 @@ fn boot_once<D, A>(deps: D, build: fn(D) -> A) -> impl Fn() -> A {
     move || deps.take().map(build).expect("boot called more than once")
 }
 
-/// Reads the configuration, becomes the single instance and runs the bar.
-///
-/// The bridge's own first surface is not one of the bar's: it is parked as an
-/// off-screen pixel in the background, and the bar's real surfaces are created
-/// by the output handling.
-pub fn run(runtime_handle: Handle) -> Result<(), MainError> {
-    let args = Args::parse();
-    debug!("args: {args:?}");
-
-    let logger = logging::init()?;
-
-    let (raw_config, config_path) = config(args.config_path)?;
-
-    let instance_lock = instance::acquire()?;
-    debug!("instance lock held at {}", instance_lock.path().display());
-
-    housekeeping::reap_and_guard_children();
-
-    let mut raw_config = raw_config;
-
+/// Sizes the bar to the screen it boots on: percentages, magnification and
+/// the compositor's own look, all settled before the first frame.
+fn apply_screen_look(raw_config: &mut Config) {
     let screen = startup_scale::focused_screen();
 
     if let Some(geo) = screen {
@@ -89,6 +72,28 @@ pub fn run(runtime_handle: Handle) -> Result<(), MainError> {
     );
 
     hydebar_core::components::scale::set_base(raw_config.appearance.font_size_px());
+}
+
+/// Reads the configuration, becomes the single instance and runs the bar.
+///
+/// The bridge's own first surface is not one of the bar's: it is parked as an
+/// off-screen pixel in the background, and the bar's real surfaces are created
+/// by the output handling.
+pub fn run(runtime_handle: Handle) -> Result<(), MainError> {
+    let args = Args::parse();
+    debug!("args: {args:?}");
+
+    let logger = logging::init()?;
+
+    let (raw_config, config_path) = config(args.config_path)?;
+
+    let instance_lock = instance::acquire()?;
+    debug!("instance lock held at {}", instance_lock.path().display());
+
+    housekeeping::reap_and_guard_children();
+
+    let mut raw_config = raw_config;
+    apply_screen_look(&mut raw_config);
 
     let config = Arc::new(raw_config);
     let config_manager = Arc::new(ConfigManager::new((*config).clone()));
