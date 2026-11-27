@@ -13,20 +13,35 @@ use super::appearance::Appearance;
 
 /// The preset theme files shipped with the bar, keyed by kebab-case name.
 const THEME_SOURCES: &[(&str, &str)] = &[
-    ("catppuccin-frappe", include_str!("catppuccin-frappe.toml")),
-    ("catppuccin-latte", include_str!("catppuccin-latte.toml")),
+    (
+        "catppuccin-frappe",
+        include_str!("themes/catppuccin-frappe.toml")
+    ),
+    (
+        "catppuccin-latte",
+        include_str!("themes/catppuccin-latte.toml")
+    ),
     (
         "catppuccin-macchiato",
-        include_str!("catppuccin-macchiato.toml")
+        include_str!("themes/catppuccin-macchiato.toml")
     ),
-    ("catppuccin-mocha", include_str!("catppuccin-mocha.toml")),
-    ("dracula", include_str!("dracula.toml")),
-    ("gruvbox-dark", include_str!("gruvbox-dark.toml")),
-    ("gruvbox-light", include_str!("gruvbox-light.toml")),
-    ("nord", include_str!("nord.toml")),
-    ("tokyo-night", include_str!("tokyo-night.toml")),
-    ("tokyo-night-light", include_str!("tokyo-night-light.toml")),
-    ("tokyo-night-storm", include_str!("tokyo-night-storm.toml"))
+    (
+        "catppuccin-mocha",
+        include_str!("themes/catppuccin-mocha.toml")
+    ),
+    ("dracula", include_str!("themes/dracula.toml")),
+    ("gruvbox-dark", include_str!("themes/gruvbox-dark.toml")),
+    ("gruvbox-light", include_str!("themes/gruvbox-light.toml")),
+    ("nord", include_str!("themes/nord.toml")),
+    ("tokyo-night", include_str!("themes/tokyo-night.toml")),
+    (
+        "tokyo-night-light",
+        include_str!("themes/tokyo-night-light.toml")
+    ),
+    (
+        "tokyo-night-storm",
+        include_str!("themes/tokyo-night-storm.toml")
+    )
 ];
 
 /// Names every preset theme the bar ships with, in kebab-case.
