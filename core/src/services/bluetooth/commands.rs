@@ -3,7 +3,7 @@
 use masterror::AppResult;
 use zbus::OwnedObjectPath;
 
-use super::{BluetoothService, BluetoothState, dbus::BluetoothDbus};
+use super::{data::BluetoothState, dbus::BluetoothDbus, handle::BluetoothService};
 use crate::services::ServiceEvent;
 
 /// What the bluetooth service can be told.

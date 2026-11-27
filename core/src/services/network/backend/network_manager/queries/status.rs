@@ -2,8 +2,11 @@
 
 use masterror::AppResult;
 
-use super::super::{DeviceType, NetworkDbus, proxies::DeviceProxy};
-use crate::services::{bus::bus_failure, network::ConnectivityState};
+use super::super::{NetworkDbus, proxies::DeviceProxy};
+use crate::services::{
+    bus::bus_failure,
+    network::{backend::common::DeviceType, data::model::ConnectivityState}
+};
 
 impl NetworkDbus<'_> {
     /// Reads the daemon's overall connectivity state.

@@ -3,7 +3,7 @@
 use masterror::AppResult;
 
 use super::super::super::proxies::{ActiveConnectionProxy, DeviceProxy, WiredDeviceProxy};
-use crate::services::{bus::bus_failure, network::ActiveConnectionInfo};
+use crate::services::{bus::bus_failure, network::data::model::ActiveConnectionInfo};
 
 /// Reads the name and link speed of a wired connection.
 pub(super) async fn describe(

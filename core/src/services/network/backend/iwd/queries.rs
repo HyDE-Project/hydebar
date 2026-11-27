@@ -12,7 +12,7 @@ use super::{
 mod joined;
 use crate::services::{
     bus::bus_failure,
-    network::{AccessPoint, ActiveConnectionInfo, DeviceState}
+    network::data::model::{AccessPoint, ActiveConnectionInfo, DeviceState}
 };
 
 /// Turns the raw RSSI iwd reports into the percentage the bar renders.

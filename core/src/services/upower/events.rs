@@ -10,8 +10,10 @@ use masterror::{AppError, AppResult};
 use zbus::ObjectPath;
 
 use super::{
-    PowerProfile, State, UPowerEvent, UPowerService,
-    dbus::{PowerProfilesProxy, UPowerDbus}
+    State,
+    dbus::{PowerProfilesProxy, UPowerDbus},
+    handle::UPowerService,
+    model::{PowerProfile, UPowerEvent}
 };
 use crate::services::{ServiceEvent, ServiceEventPublisher, bus::bus_failure, reconnect_delay};
 

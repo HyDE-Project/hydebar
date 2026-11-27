@@ -32,7 +32,10 @@ use bands::strength_of_level;
 
 use crate::services::{
     bus::bus_failure,
-    network::{ConnectivityState, NetworkBackend, NetworkEvent}
+    network::{
+        backend::NetworkBackend,
+        data::{event::NetworkEvent, model::ConnectivityState}
+    }
 };
 
 /// One iwd signal source, already shaped into network events.

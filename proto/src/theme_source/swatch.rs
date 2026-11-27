@@ -16,8 +16,11 @@ use std::{
     time::SystemTime
 };
 
-use super::{color::parse_color, dcol::DcolPalette};
-use crate::{hyde_dirs::HydeDirs, hyde_files, theme_source::Rgba};
+use super::{
+    color::{Rgba, parse_color},
+    dcol::DcolPalette
+};
+use crate::{hyde_dirs::HydeDirs, hyde_files};
 
 /// Digest of a wallpaper file, remembered by the file's identity on disk.
 #[derive(Debug, Clone)]

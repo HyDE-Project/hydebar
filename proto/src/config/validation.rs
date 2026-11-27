@@ -4,12 +4,11 @@
 //! themselves: consistent custom module definitions and appearance numbers
 //! the bar can actually draw.
 
-mod error;
+pub mod error;
 
 use std::collections::HashSet;
 
-pub use error::ConfigValidationError;
-use error::in_range;
+use error::{ConfigValidationError, in_range};
 
 use super::{Config, ModuleDef, ModuleName};
 

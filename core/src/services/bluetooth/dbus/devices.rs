@@ -7,7 +7,7 @@ use super::{
     BluetoothDbus,
     proxies::{BatteryProxy, DeviceProxy}
 };
-use crate::services::{bluetooth::BluetoothDevice, bus::bus_failure};
+use crate::services::{bluetooth::data::BluetoothDevice, bus::bus_failure};
 
 impl BluetoothDbus<'_> {
     pub async fn devices(&self) -> AppResult<Vec<BluetoothDevice>> {

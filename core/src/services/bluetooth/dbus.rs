@@ -2,7 +2,7 @@
 
 use masterror::AppResult;
 
-use super::BluetoothState;
+use super::data::BluetoothState;
 
 mod devices;
 mod proxies;

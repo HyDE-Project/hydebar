@@ -9,7 +9,7 @@
 use serde::Deserialize;
 use tokio::process::Command;
 
-use super::LinkDetails;
+use super::data::model::LinkDetails;
 
 /// One default route as `ip -j route show default` spells it.
 #[derive(Debug, Deserialize)]

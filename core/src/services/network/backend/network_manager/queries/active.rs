@@ -7,10 +7,13 @@ use masterror::{AppError, AppResult};
 use zbus::OwnedObjectPath;
 
 use super::super::{
-    DeviceType, NetworkDbus,
+    NetworkDbus,
     proxies::{ActiveConnectionProxy, DeviceProxy}
 };
-use crate::services::{bus::bus_failure, network::ActiveConnectionInfo};
+use crate::services::{
+    bus::bus_failure,
+    network::{backend::common::DeviceType, data::model::ActiveConnectionInfo}
+};
 
 impl NetworkDbus<'_> {
     /// Lists the object paths of the currently active connections.

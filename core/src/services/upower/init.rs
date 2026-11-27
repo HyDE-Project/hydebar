@@ -8,8 +8,9 @@ use masterror::AppResult;
 use zbus::ObjectPath;
 
 use super::{
-    BatteryData, BatteryStatus, PowerProfile, UPowerService,
-    dbus::{Battery, PowerProfilesProxy, UPowerDbus}
+    dbus::{Battery, PowerProfilesProxy, UPowerDbus},
+    handle::UPowerService,
+    model::{BatteryData, BatteryStatus, PowerProfile}
 };
 use crate::services::{ServiceEvent, bus::bus_failure};
 

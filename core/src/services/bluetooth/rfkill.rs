@@ -5,7 +5,7 @@ use inotify::{Inotify, WatchMask};
 use masterror::{AppError, AppResult};
 use tokio::process::Command;
 
-use super::BluetoothService;
+use super::handle::BluetoothService;
 
 impl BluetoothService {
     /// Reports whether the bluetooth radio is soft blocked according to

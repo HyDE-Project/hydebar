@@ -1,6 +1,6 @@
 //! Events emitted by the network service and commands it accepts.
 
-use super::{
+use super::model::{
     AccessPoint, ActiveConnectionInfo, ConnectivityState, KnownConnection, LinkDetails, Vpn
 };
 

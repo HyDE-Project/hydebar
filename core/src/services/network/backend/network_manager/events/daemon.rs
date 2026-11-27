@@ -10,7 +10,7 @@ use super::{
 };
 use crate::services::{
     bus::bus_failure,
-    network::{ConnectivityState, NetworkEvent}
+    network::data::{event::NetworkEvent, model::ConnectivityState}
 };
 
 impl<'a> NetworkDbus<'a> {

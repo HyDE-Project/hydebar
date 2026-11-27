@@ -6,7 +6,7 @@ use masterror::AppResult;
 use super::NetworkDbus;
 use crate::services::{
     bluetooth::BluetoothService,
-    network::{LinkDetails, NetworkData}
+    network::data::model::{LinkDetails, NetworkData}
 };
 
 /// Reads everything the network module draws on its first frame.

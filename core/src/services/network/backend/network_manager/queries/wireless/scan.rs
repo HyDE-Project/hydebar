@@ -10,7 +10,7 @@ use zbus::OwnedObjectPath;
 use super::super::super::proxies::{AccessPointProxy, DeviceProxy, WirelessDeviceProxy};
 use crate::services::{
     bus::bus_failure,
-    network::{AccessPoint, DeviceState}
+    network::data::model::{AccessPoint, DeviceState}
 };
 
 /// Scans one wireless device and returns the access points it can see,

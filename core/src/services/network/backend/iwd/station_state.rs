@@ -6,7 +6,7 @@
 //! that iwd calls "connecting" is drawn by the same rule that draws a
 //! `NetworkManager` device halfway through association.
 
-use crate::services::network::DeviceState;
+use crate::services::network::data::model::DeviceState;
 
 /// Translates the word iwd uses for a station into the shared device state.
 ///

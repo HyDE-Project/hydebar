@@ -1,7 +1,6 @@
 //! Unit tests for the `NetworkManager` backend helpers.
 
-use super::*;
-use crate::services::network::ConnectivityState;
+use crate::services::network::{ConnectivityState, backend::common::DeviceType};
 
 #[test]
 fn device_type_from_u32_maps_known_values() {

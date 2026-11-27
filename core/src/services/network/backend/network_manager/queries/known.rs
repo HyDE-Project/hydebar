@@ -7,7 +7,7 @@ use zbus::Variant;
 use super::super::{NetworkDbus, NetworkSettingsDbus, proxies::ConnectionSettingsProxy};
 use crate::services::{
     bus::bus_failure,
-    network::{AccessPoint, KnownConnection, Vpn}
+    network::data::model::{AccessPoint, KnownConnection, Vpn}
 };
 
 impl NetworkDbus<'_> {

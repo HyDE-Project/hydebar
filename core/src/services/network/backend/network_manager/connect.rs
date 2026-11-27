@@ -7,7 +7,7 @@ use masterror::{AppError, AppResult};
 use zbus::{OwnedObjectPath, Variant};
 
 use super::{NetworkDbus, NetworkSettingsDbus, proxies::ConnectionSettingsProxy};
-use crate::services::{bus::bus_failure, network::AccessPoint};
+use crate::services::{bus::bus_failure, network::data::model::AccessPoint};
 
 /// Joins `access_point`, reusing a stored connection when one exists.
 ///

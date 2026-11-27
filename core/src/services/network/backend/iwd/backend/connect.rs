@@ -5,7 +5,7 @@ use masterror::{AppError, AppResult};
 use zbus::{ObjectPath, OwnedObjectPath};
 
 use super::super::{IwdDbus, agents::PWAgent, network::NetworkProxy};
-use crate::services::{bus::bus_failure, network::AccessPoint};
+use crate::services::{bus::bus_failure, network::data::model::AccessPoint};
 
 /// Connects to `ap`, provisioning the given password first when one is given.
 ///

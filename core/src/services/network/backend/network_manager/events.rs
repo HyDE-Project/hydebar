@@ -15,7 +15,7 @@ use iced::futures::{
 use masterror::AppResult;
 
 use super::{NetworkDbus, NetworkSettingsDbus};
-use crate::services::network::NetworkEvent;
+use crate::services::network::data::event::NetworkEvent;
 
 mod access_point;
 mod daemon;

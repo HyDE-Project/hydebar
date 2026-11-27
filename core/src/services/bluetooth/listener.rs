@@ -11,7 +11,11 @@ use iced::futures::StreamExt;
 use log::{error, info};
 use masterror::AppResult;
 
-use super::{BluetoothData, BluetoothService, BluetoothState, dbus::BluetoothDbus};
+use super::{
+    data::{BluetoothData, BluetoothState},
+    dbus::BluetoothDbus,
+    handle::BluetoothService
+};
 use crate::services::{ServiceEvent, ServiceEventPublisher};
 
 pub(super) enum State {

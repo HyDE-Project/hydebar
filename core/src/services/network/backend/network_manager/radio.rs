@@ -8,7 +8,7 @@ use tokio::process::Command;
 use zbus::{ObjectPath, OwnedObjectPath};
 
 use super::{NetworkDbus, proxies::WirelessDeviceProxy};
-use crate::services::{bus::bus_failure, network::KnownConnection};
+use crate::services::{bus::bus_failure, network::data::model::KnownConnection};
 
 /// Blocks or unblocks every radio the bar can reach.
 ///

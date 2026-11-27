@@ -33,7 +33,7 @@ pub use jsonc::plain_json;
 pub use labels::display_label;
 use log::{debug, warn};
 pub use mapping::module_for;
-pub use parse::{parse, RestatedLayout};
+pub use parse::{RestatedLayout, parse};
 
 use crate::{hyde_dirs::HydeDirs, shell_vars};
 
@@ -153,7 +153,7 @@ mod tests {
             root.path().join("config"),
             root.path().join("state"),
             root.path().join("cache"),
-            root.path().join("data"),
+            root.path().join("data")
         );
 
         fs::create_dir_all(dirs.hyde_state_dir()).expect("state dir");
@@ -175,7 +175,7 @@ mod tests {
         fs::write(&path, r#"{ "modules-left": ["clock"] }"#).expect("layout");
         fs::write(
             dirs.staterc(),
-            format!("WAYBAR_LAYOUT_PATH=\"{}\"\n", path.display()),
+            format!("WAYBAR_LAYOUT_PATH=\"{}\"\n", path.display())
         )
         .expect("staterc");
 
@@ -188,7 +188,7 @@ mod tests {
     fn a_gone_path_falls_back_to_the_recorded_name() {
         let (_root, dirs) = install(
             "WAYBAR_LAYOUT_PATH=\"/nonexistent/gone.jsonc\"\nWAYBAR_LAYOUT_NAME=\"hyprdots/01\"\n",
-            Some(("hyprdots/01.jsonc", r#"{ "modules-left": ["clock"] }"#)),
+            Some(("hyprdots/01.jsonc", r#"{ "modules-left": ["clock"] }"#))
         );
 
         let modules = load_from(&dirs, &[]).expect("layout").modules;

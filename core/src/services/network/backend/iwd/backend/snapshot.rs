@@ -8,7 +8,7 @@ use super::super::{IwdDbus, queries, station::StationProxy};
 use crate::services::{
     bluetooth::BluetoothService,
     bus::bus_failure,
-    network::{
+    network::data::model::{
         AccessPoint, ConnectivityState, DeviceState, KnownConnection, LinkDetails, NetworkData
     }
 };

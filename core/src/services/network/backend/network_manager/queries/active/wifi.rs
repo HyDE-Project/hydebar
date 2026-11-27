@@ -5,7 +5,7 @@ use masterror::AppResult;
 use super::super::super::proxies::{
     AccessPointProxy, ActiveConnectionProxy, DeviceProxy, WirelessDeviceProxy
 };
-use crate::services::{bus::bus_failure, network::ActiveConnectionInfo};
+use crate::services::{bus::bus_failure, network::data::model::ActiveConnectionInfo};
 
 /// Reads the network name and signal strength of a wireless connection.
 ///

@@ -13,7 +13,10 @@ use super::{
 };
 use crate::services::{
     bus::bus_failure,
-    network::{AccessPoint, DeviceState, NetworkEvent}
+    network::data::{
+        event::NetworkEvent,
+        model::{AccessPoint, DeviceState}
+    }
 };
 
 impl<'a> NetworkDbus<'a> {

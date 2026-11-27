@@ -5,8 +5,11 @@ mod scan;
 use masterror::AppResult;
 use zbus::OwnedObjectPath;
 
-use super::super::{DeviceType, NetworkDbus, proxies::DeviceProxy};
-use crate::services::{bus::bus_failure, network::AccessPoint};
+use super::super::{NetworkDbus, proxies::DeviceProxy};
+use crate::services::{
+    bus::bus_failure,
+    network::{backend::common::DeviceType, data::model::AccessPoint}
+};
 
 impl NetworkDbus<'_> {
     /// Lists the object paths of every wifi device.

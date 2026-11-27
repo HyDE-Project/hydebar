@@ -2,7 +2,7 @@
 
 use zbus::OwnedObjectPath;
 
-use super::NetworkServiceError;
+use super::error::NetworkServiceError;
 
 /// Facts about the live link, read beside the backend rather than from it.
 ///

@@ -4,8 +4,8 @@ use iced::futures::{Stream, StreamExt, stream::select_all, stream_select};
 use masterror::{AppError, AppResult};
 
 use super::super::{
-    BluetoothService,
-    dbus::{BatteryProxy, BluetoothDbus}
+    dbus::{BatteryProxy, BluetoothDbus},
+    handle::BluetoothService
 };
 use crate::services::bus::bus_failure;
 
