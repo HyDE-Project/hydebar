@@ -162,8 +162,7 @@ mod tests {
 
     use super::*;
 
-    #[derive(Debug, Clone, PartialEq, Eq)]
-    enum Probe {}
+    type Probe = std::convert::Infallible;
 
     fn icons() -> IconTheme {
         IconTheme::default()

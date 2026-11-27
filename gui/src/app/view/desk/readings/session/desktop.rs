@@ -1,6 +1,6 @@
 //! The state of the desk itself: its keyboard, its sky, its tray, its look.
 
-use super::super::{push, Figure, Panel};
+use super::super::{Figure, Panel, push};
 use crate::app::state::App;
 
 /// What the desktop's own menu offers, as a row of its glyphs.
@@ -50,7 +50,7 @@ pub fn weather(app: &App) -> Option<Panel> {
             ("sky".to_owned(), sky.description.clone()),
             ("humidity".to_owned(), sky.humidity.clone()),
             ("wind".to_owned(), sky.wind_speed.clone()),
-        ],
+        ]
     )
 }
 
@@ -93,7 +93,7 @@ pub fn theme(app: &App) -> Option<Panel> {
     push(
         &mut rows,
         "switching to",
-        app.themes.switching().map(ToOwned::to_owned),
+        app.themes.switching().map(ToOwned::to_owned)
     );
     rows.push((
         "colours".to_owned(),
@@ -102,7 +102,7 @@ pub fn theme(app: &App) -> Option<Panel> {
         } else {
             "from the theme"
         }
-        .to_owned(),
+        .to_owned()
     ));
     push(&mut rows, "shader", hyde.shader.clone());
     push(&mut rows, "place", place(reel));
@@ -114,7 +114,7 @@ pub fn theme(app: &App) -> Option<Panel> {
     Some(Panel::drawn(
         "theme",
         rows,
-        super::super::Figure::Accordion(reel.clone()),
+        super::super::Figure::Accordion(reel.clone())
     ))
 }
 
@@ -131,7 +131,7 @@ pub fn wallpaper(app: &App) -> Option<Panel> {
                 path.file_stem()
                     .map(|name| name.to_string_lossy().into_owned())
             })
-        }),
+        })
     );
     push(&mut rows, "place", place(reel));
 
@@ -140,16 +140,16 @@ pub fn wallpaper(app: &App) -> Option<Panel> {
             Some((_, picture)) => Some(Panel::drawn(
                 "wallpaper",
                 rows,
-                super::super::Figure::Picture(picture.clone()),
+                super::super::Figure::Picture(picture.clone())
             )),
-            None => Panel::of("wallpaper", rows),
+            None => Panel::of("wallpaper", rows)
         };
     }
 
     Some(Panel::drawn(
         "wallpaper",
         rows,
-        super::super::Figure::Accordion(reel.clone()),
+        super::super::Figure::Accordion(reel.clone())
     ))
 }
 
@@ -177,7 +177,7 @@ pub fn seat(app: &App) -> Option<Panel> {
             who.host
                 .as_ref()
                 .map_or_else(|| user.clone(), |host| format!("{user}@{host}"))
-        }),
+        })
     );
     push(&mut rows, "desktop", who.desktop.clone());
     push(&mut rows, "display", who.seat.clone());
@@ -187,7 +187,7 @@ pub fn seat(app: &App) -> Option<Panel> {
         "screen",
         app.screen_width
             .zip(app.screen_height)
-            .map(|(width, height)| format!("{width:.0} × {height:.0}")),
+            .map(|(width, height)| format!("{width:.0} × {height:.0}"))
     );
 
     Panel::of("seat", rows)
@@ -207,7 +207,7 @@ mod tests {
         Slide {
             name: name.to_owned(),
             picture: iced::widget::image::Handle::from_rgba(1, 1, vec![0, 0, 0, 255]),
-            active,
+            active
         }
     }
 
@@ -218,8 +218,8 @@ mod tests {
                 slide("Nordic Blue", true),
                 slide("Tokyo Night", false),
             ],
-            at: 5,
-            total: 12,
+            at:    5,
+            total: 12
         }
     }
 
@@ -287,7 +287,7 @@ mod tests {
         assert_eq!(
             place(&Reel {
                 shown: vec![slide("Only One", true)],
-                at: 1,
+                at:    1,
                 total: 1
             }),
             None
