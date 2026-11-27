@@ -11,7 +11,7 @@ use iced::{
     widget::canvas::{self, Canvas, Frame as Sheet, Geometry, Path, Stroke}
 };
 
-use super::Ink;
+use super::ink::Ink;
 use crate::app::Message;
 
 /// How tall a trace stands, as a share of the body ink.

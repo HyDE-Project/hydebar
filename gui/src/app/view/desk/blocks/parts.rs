@@ -12,9 +12,9 @@ use super::{
         super::super::state::Message,
         readings::{Figure, Panel}
     },
-    Ink, Side,
     accordion::accordion,
     choices::choices,
+    ink::{Ink, Side},
     overview::overview,
     trace::trace
 };
