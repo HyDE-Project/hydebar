@@ -3,7 +3,10 @@
 //! The walk shares its tables through one state instead of threading nine
 //! arguments through two functions.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    mem::take
+};
 
 use hydebar_proto::{bar_layout::module_for, config::ModuleName};
 
@@ -70,7 +73,7 @@ impl Scope<'_> {
 
     /// Takes the built section entries, leaving an empty section behind.
     pub fn take_entries(&mut self) -> Vec<SectionEntry> {
-        std::mem::take(&mut self.entries)
+        take(&mut self.entries)
     }
 
     /// Whether a scripted custom was met while walking, placed or displaced.
@@ -80,15 +83,12 @@ impl Scope<'_> {
 
     /// Takes the placed scripted customs, leaving an empty set behind.
     pub fn take_placed(&mut self) -> BTreeSet<String> {
-        std::mem::take(&mut self.placed_customs)
+        take(&mut self.placed_customs)
     }
 
     /// Takes the reporting lists, leaving empty ones behind.
     pub fn take_reports(&mut self) -> (Vec<String>, Vec<String>) {
-        (
-            std::mem::take(&mut self.unmapped),
-            std::mem::take(&mut self.dropped_scripts)
-        )
+        (take(&mut self.unmapped), take(&mut self.dropped_scripts))
     }
 
     /// Notes an entry with no counterpart, once.

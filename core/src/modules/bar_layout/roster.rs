@@ -1,5 +1,7 @@
 //! Reading the desktop's layout roster and the record of the one in force.
 
+use std::fs::read_to_string;
+
 use super::LayoutEntry;
 
 /// Reads the roster and the record of the layout in force.
@@ -73,7 +75,7 @@ fn active_index(names: &[String], recorded: &str) -> Option<usize> {
 /// disagree about what the record says.
 fn active_layout_name() -> Option<String> {
     let staterc = hydebar_proto::hyde_dirs::HydeDirs::from_env()?.staterc();
-    let source = std::fs::read_to_string(staterc).ok()?;
+    let source = read_to_string(staterc).ok()?;
 
     hydebar_proto::shell_vars::value_of(&source, "WAYBAR_LAYOUT_NAME")
 }

@@ -1,5 +1,7 @@
 //! The three position arrays of the bar and the questions asked of them.
 
+use std::slice::from_ref;
+
 use serde::Deserialize;
 
 use super::name::ModuleName;
@@ -40,7 +42,7 @@ impl Modules {
             .chain(self.center.iter())
             .chain(self.right.iter())
             .flat_map(|definition| match definition {
-                ModuleDef::Single(name) => std::slice::from_ref(name),
+                ModuleDef::Single(name) => from_ref(name),
                 ModuleDef::Group(group) => group.as_slice()
             })
     }

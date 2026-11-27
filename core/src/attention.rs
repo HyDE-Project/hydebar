@@ -14,7 +14,10 @@
 //! [`PollSchedule`] and owns no timer of its own, so the cost of an idle bar is
 //! two wakeups rather than one per readout.
 
-use std::time::{Duration, Instant};
+use std::{
+    mem::take,
+    time::{Duration, Instant}
+};
 
 use hydebar_proto::config::ModuleName;
 
@@ -104,7 +107,7 @@ impl Attention {
     where
         I: IntoIterator<Item = (ModuleName, PollSchedule)>
     {
-        let previous = std::mem::take(&mut self.placed);
+        let previous = take(&mut self.placed);
 
         self.placed = modules
             .into_iter()

@@ -6,7 +6,7 @@ use iced::{Subscription, stream::channel};
 use log::{debug, warn};
 
 use super::{PrivacyEvent, PrivacyService, State, error::PrivacyError};
-use crate::services::{ReadOnlyService, ServiceEvent};
+use crate::services::{ReadOnlyService, ServiceEvent, reconnect_delay};
 
 impl ReadOnlyService for PrivacyService {
     type UpdateEvent = PrivacyEvent;
@@ -55,7 +55,7 @@ impl ReadOnlyService for PrivacyService {
                             }
 
                             failures = failures.saturating_add(1);
-                            tokio::time::sleep(crate::services::reconnect_delay(failures)).await;
+                            tokio::time::sleep(reconnect_delay(failures)).await;
                             state = State::Init;
                         }
                     }

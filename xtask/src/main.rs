@@ -4,7 +4,7 @@
 //! polling` writes the configuration, state, view and trait files, then
 //! prints the wiring checklist that turns the skeleton into a module.
 
-use std::{env, path::PathBuf, process::ExitCode};
+use std::{env, fs::read_to_string, path::PathBuf, process::ExitCode};
 
 mod checklist;
 mod generate;
@@ -99,7 +99,7 @@ fn workspace_root() -> Result<PathBuf, String> {
 
 /// Whether the manifest declares a workspace.
 fn fs_contains_workspace(manifest: &std::path::Path) -> bool {
-    std::fs::read_to_string(manifest).is_ok_and(|content| content.contains("[workspace]"))
+    read_to_string(manifest).is_ok_and(|content| content.contains("[workspace]"))
 }
 
 fn run() -> Result<(), String> {

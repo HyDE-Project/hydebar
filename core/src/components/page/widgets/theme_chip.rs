@@ -10,7 +10,10 @@ use super::{
     theme_card::{ChipPaint, DOT_GAP_EM, ThemeChip, card_colors, card_ring},
     theme_faces::{horizontal_face, vertical_face}
 };
-use crate::components::{icons::icon_raw_sized, page::style};
+use crate::{
+    components::{icons::icon_raw_sized, page::style},
+    style::ghost_button_style
+};
 
 /// Renders a chip of the theme grid.
 ///
@@ -139,7 +142,7 @@ fn deeds_row<'a, M: Clone + 'static>(
     for (glyph, deed, enabled) in actions {
         let deed_button = button(icon_raw_sized(glyph.to_owned(), Some(control * 0.9)))
             .padding(control * 0.15)
-            .style(crate::style::ghost_button_style(opacity));
+            .style(ghost_button_style(opacity));
 
         row = row.push(if enabled {
             Element::from(iced::widget::mouse_area(deed_button).on_press(deed))

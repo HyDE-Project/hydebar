@@ -1,6 +1,8 @@
 //! Facts about the gallery this machine already holds: the screenshots the
 //! desktop's own tooling keeps, and the name its git identity signs with.
 
+use std::fs::read_dir;
+
 use crate::modules::themes::view;
 
 /// Screenshots `HyDE`'s local gallery database keeps, by canonical theme name.
@@ -15,7 +17,7 @@ pub(in crate::modules::themes) fn local_screenshots()
         return std::collections::HashMap::new();
     };
 
-    let Ok(entries) = std::fs::read_dir(base) else {
+    let Ok(entries) = read_dir(base) else {
         return std::collections::HashMap::new();
     };
 

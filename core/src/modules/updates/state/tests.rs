@@ -1,6 +1,7 @@
 //! Tests of the updates module state.
 
 use std::{
+    env::temp_dir,
     fs,
     num::NonZeroUsize,
     path::PathBuf,
@@ -308,7 +309,7 @@ fn trace_path() -> PathBuf {
         .duration_since(UNIX_EPOCH)
         .map_or(0, |since| since.as_nanos());
 
-    std::env::temp_dir().join(format!("hydebar-updates-{}-{stamp}", std::process::id()))
+    temp_dir().join(format!("hydebar-updates-{}-{stamp}", std::process::id()))
 }
 
 #[test]

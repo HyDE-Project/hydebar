@@ -5,7 +5,7 @@
 //! is what lets them follow the theme automatically, without anyone editing a
 //! second configuration to keep two things looking alike.
 
-use std::process::Command;
+use std::{process::Command, thread::spawn};
 
 use hydebar_proto::{
     compositor_ipc,
@@ -102,7 +102,7 @@ pub fn notify_args(
 pub fn notify(notice: Notice, duration: u32, color: &str, font_size: f32, message: &str) {
     let request = notify_args(notice, duration, color, font_size, message).join(" ");
 
-    std::thread::spawn(move || match compositor_ipc::request(&request) {
+    spawn(move || match compositor_ipc::request(&request) {
         Some(answer) if answer.trim() == "ok" => {}
         Some(answer) => warn!("the compositor refused a notice: {}", answer.trim()),
         None => warn!("the compositor could not be reached for a notice")
@@ -168,7 +168,7 @@ pub fn post_to_bus(message: &str) {
 
     match sent {
         Ok(mut child) => {
-            std::thread::spawn(move || {
+            spawn(move || {
                 let _ = child.wait();
             });
         }

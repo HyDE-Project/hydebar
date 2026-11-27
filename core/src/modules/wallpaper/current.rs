@@ -9,7 +9,11 @@
 //! moved: decoding even a thumbnail is a hundredth of a second the bar has no
 //! business spending on a frame.
 
-use std::path::{Path, PathBuf};
+use std::{
+    env::var_os,
+    fs::canonicalize,
+    path::{Path, PathBuf}
+};
 
 use iced::widget::image::Handle;
 
@@ -39,16 +43,16 @@ pub fn current() -> Option<(PathBuf, Handle)> {
         .iter()
         .map(|link| cache.join(link))
         .find(|path| path.exists())?;
-    let read = std::fs::canonicalize(&path).unwrap_or_else(|_| path.clone());
+    let read = canonicalize(&path).unwrap_or_else(|_| path.clone());
 
     Some((read.clone(), decode(&read)?))
 }
 
 /// Where the desktop keeps the links, on a session that keeps them.
 fn cache_dir() -> Option<PathBuf> {
-    let home = std::env::var_os("HOME")?;
+    let home = var_os("HOME")?;
 
-    let cache = std::env::var_os("XDG_CACHE_HOME")
+    let cache = var_os("XDG_CACHE_HOME")
         .map_or_else(|| Path::new(&home).join(".cache"), PathBuf::from)
         .join("hyde");
 

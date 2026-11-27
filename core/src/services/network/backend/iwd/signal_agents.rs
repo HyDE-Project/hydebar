@@ -13,6 +13,7 @@
 //! registrations it made, and giving it back gives them back.
 
 use std::{
+    mem::take,
     pin::Pin,
     task::{Context, Poll}
 };
@@ -67,7 +68,7 @@ impl Drop for SignalAgents {
     /// call, which is the outcome wanted anyway.
     fn drop(&mut self) {
         let conn = self.conn.clone();
-        let agents = std::mem::take(&mut self.agents);
+        let agents = take(&mut self.agents);
 
         if agents.is_empty() {
             return;

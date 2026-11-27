@@ -4,7 +4,7 @@
 //! its host or the desktop it was started under. It is read once and answered
 //! from memory ever after.
 
-use std::{fs, sync::LazyLock};
+use std::{env::var, fs, sync::LazyLock};
 
 /// The session, as the machine describes it to the programs in it.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -57,7 +57,7 @@ fn read() -> Who {
 
 /// One environment variable, absent when it is unset or empty.
 fn named(key: &str) -> Option<String> {
-    std::env::var(key).ok().filter(|value| !value.is_empty())
+    var(key).ok().filter(|value| !value.is_empty())
 }
 
 #[cfg(test)]

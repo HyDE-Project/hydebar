@@ -1,5 +1,5 @@
 use std::{
-    future::Future,
+    future::{Future, ready},
     path::{Path, PathBuf},
     pin::Pin
 };
@@ -75,7 +75,7 @@ impl WebcamWatcher {
                     log::warn!("webcam device vanished, the watch resubscribes");
                 }
 
-                std::future::ready(device_present)
+                ready(device_present)
             })
             .filter_map(|event| async move {
                 match event {

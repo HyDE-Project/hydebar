@@ -6,6 +6,7 @@
 //! reports about an output into a text size and a bar height, so a fresh
 //! install is readable before anything is configured.
 
+use std::env::var_os;
 /// Height of the screen the built in sizes were tuned for, in logical pixels.
 ///
 /// A full high definition screen: the sizes of the reference waybar theme are
@@ -196,8 +197,8 @@ async fn query_geometry(name: &str) -> Option<ScreenGeometry> {
 pub(super) async fn compositor_answer(request: &str) -> Option<String> {
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-    let signature = std::env::var_os("HYPRLAND_INSTANCE_SIGNATURE")?;
-    let runtime_dir = std::env::var_os("XDG_RUNTIME_DIR")?;
+    let signature = var_os("HYPRLAND_INSTANCE_SIGNATURE")?;
+    let runtime_dir = var_os("XDG_RUNTIME_DIR")?;
 
     let socket = std::path::Path::new(&runtime_dir)
         .join("hypr")

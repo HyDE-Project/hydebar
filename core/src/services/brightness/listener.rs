@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use log::{debug, error, info, warn};
 
 use super::{BrightnessError, BrightnessEvent, BrightnessService};
-use crate::services::{ServiceEvent, ServiceEventPublisher};
+use crate::services::{ServiceEvent, ServiceEventPublisher, reconnect_delay};
 
 pub(super) enum State {
     Init,
@@ -126,7 +126,7 @@ impl BrightnessService {
             match &state {
                 State::Error => {
                     failures = failures.saturating_add(1);
-                    tokio::time::sleep(crate::services::reconnect_delay(failures)).await;
+                    tokio::time::sleep(reconnect_delay(failures)).await;
                 }
                 State::Active(_) => failures = 0,
                 State::Init => {}

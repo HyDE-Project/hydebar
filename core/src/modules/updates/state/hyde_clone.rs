@@ -1,5 +1,6 @@
 //! Where the `HyDE` clone this machine was installed from stands.
 
+use std::fs::read_to_string;
 /// Finds the `HyDE` clone this machine was installed from, if any.
 ///
 /// The path is what `version.sh --cache` recorded in the state directory,
@@ -8,7 +9,7 @@
 pub(super) fn find_hyde_clone() -> Option<std::path::PathBuf> {
     let recorded = dirs::state_dir()
         .map(|state| state.join("hyde").join("version"))
-        .and_then(|version| std::fs::read_to_string(version).ok())
+        .and_then(|version| read_to_string(version).ok())
         .and_then(|content| clone_path_from(&content));
 
     recorded

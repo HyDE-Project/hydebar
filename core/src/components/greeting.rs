@@ -1,6 +1,10 @@
 //! The line the bar greets its user with while it is born.
 
-use std::path::Path;
+use std::{
+    env::{var, var_os},
+    fs::{create_dir_all, read_to_string, write},
+    path::Path
+};
 
 use chrono::Timelike;
 
@@ -15,11 +19,11 @@ use chrono::Timelike;
 /// surprising way to degrade.
 #[must_use]
 pub fn claim_first_entry() -> bool {
-    let Some(runtime) = std::env::var_os("XDG_RUNTIME_DIR") else {
+    let Some(runtime) = var_os("XDG_RUNTIME_DIR") else {
         return true;
     };
 
-    let instance = std::env::var("HYPRLAND_INSTANCE_SIGNATURE").unwrap_or_default();
+    let instance = var("HYPRLAND_INSTANCE_SIGNATURE").unwrap_or_default();
 
     claim(
         &Path::new(&runtime).join("hydebar").join("greeted"),
@@ -29,15 +33,15 @@ pub fn claim_first_entry() -> bool {
 
 /// Takes the claim at `marker` for `instance`, true when it was still free.
 fn claim(marker: &Path, instance: &str) -> bool {
-    if std::fs::read_to_string(marker).is_ok_and(|claimed| claimed == instance) {
+    if read_to_string(marker).is_ok_and(|claimed| claimed == instance) {
         return false;
     }
 
     if let Some(dir) = marker.parent() {
-        let _ = std::fs::create_dir_all(dir);
+        let _ = create_dir_all(dir);
     }
 
-    let _ = std::fs::write(marker, instance);
+    let _ = write(marker, instance);
 
     true
 }
@@ -48,10 +52,7 @@ fn claim(marker: &Path, instance: &str) -> bool {
 /// shows.
 #[must_use]
 pub fn current() -> String {
-    line(
-        chrono::Local::now().hour(),
-        std::env::var("USER").ok().as_deref()
-    )
+    line(chrono::Local::now().hour(), var("USER").ok().as_deref())
 }
 
 /// The greeting for `hour`, addressed to `user` when one is known.
@@ -83,6 +84,8 @@ fn capitalized(name: &str) -> String {
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
+    use std::{env::temp_dir, fs::remove_dir_all};
+
     use super::*;
 
     #[test]
@@ -106,7 +109,7 @@ mod tests {
     }
 
     fn scratch_marker(tag: &str) -> std::path::PathBuf {
-        std::env::temp_dir()
+        temp_dir()
             .join(format!("hydebar-greeting-{}-{tag}", std::process::id()))
             .join("greeted")
     }
@@ -118,7 +121,7 @@ mod tests {
         assert!(claim(&marker, "session-a"));
         assert!(!claim(&marker, "session-a"), "a bar restart stays silent");
 
-        let _ = std::fs::remove_dir_all(marker.parent().expect("parent"));
+        let _ = remove_dir_all(marker.parent().expect("parent"));
     }
 
     #[test]
@@ -129,17 +132,17 @@ mod tests {
         assert!(claim(&marker, "session-b"), "a new compositor greets again");
         assert!(!claim(&marker, "session-b"));
 
-        let _ = std::fs::remove_dir_all(marker.parent().expect("parent"));
+        let _ = remove_dir_all(marker.parent().expect("parent"));
     }
 
     #[test]
     fn the_claim_creates_its_own_directory() {
         let marker = scratch_marker("mkdir");
-        let _ = std::fs::remove_dir_all(marker.parent().expect("parent"));
+        let _ = remove_dir_all(marker.parent().expect("parent"));
 
         assert!(claim(&marker, "session-a"));
         assert!(marker.exists());
 
-        let _ = std::fs::remove_dir_all(marker.parent().expect("parent"));
+        let _ = remove_dir_all(marker.parent().expect("parent"));
     }
 }

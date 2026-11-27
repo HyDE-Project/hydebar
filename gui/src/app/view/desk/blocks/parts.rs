@@ -1,5 +1,7 @@
 //! The pieces every shape of block is built from.
 
+use std::iter::once;
+
 use iced::{
     Alignment, Element, Length,
     widget::{Column, Row, Space, container, text}
@@ -43,7 +45,7 @@ pub(super) fn written<'a>(
     Column::with_children(
         heading
             .into_iter()
-            .chain(std::iter::once(rule(ink)))
+            .chain(once(rule(ink)))
             .chain(panel.figure.as_ref().map(|figure| drawn(figure, side, ink)))
             .chain(lines)
     )
@@ -101,7 +103,7 @@ pub(super) fn blank<'a>(side: Side, ink: Ink) -> Element<'a, Message> {
         .into()
     });
 
-    Column::with_children(std::iter::once(rule(ink)).chain(lines))
+    Column::with_children(once(rule(ink)).chain(lines))
         .spacing(ink.size * 0.28)
         .width(Length::Fill)
         .align_x(side.alignment_x())

@@ -1,5 +1,9 @@
 //! The password dialog an update without a terminal asks through.
 
+use std::{
+    env::{split_paths, var_os},
+    fs::{create_dir_all, metadata, set_permissions, write}
+};
 /// The dialog sudo raises when it has no terminal to ask on.
 ///
 /// The update runs without a terminal, and sudo in that position turns to
@@ -22,14 +26,14 @@ const ASKPASS: &str = concat!(
 fn write_askpass(dir: &std::path::Path) -> Option<std::path::PathBuf> {
     use std::os::unix::fs::PermissionsExt;
 
-    std::fs::create_dir_all(dir).ok()?;
+    create_dir_all(dir).ok()?;
 
     let helper = dir.join("askpass");
-    std::fs::write(&helper, ASKPASS).ok()?;
+    write(&helper, ASKPASS).ok()?;
 
-    let mut permissions = std::fs::metadata(&helper).ok()?.permissions();
+    let mut permissions = metadata(&helper).ok()?.permissions();
     permissions.set_mode(0o755);
-    std::fs::set_permissions(&helper, permissions).ok()?;
+    set_permissions(&helper, permissions).ok()?;
 
     Some(helper)
 }
@@ -39,17 +43,15 @@ fn write_askpass(dir: &std::path::Path) -> Option<std::path::PathBuf> {
 /// An environment that already names one is respected; otherwise the
 /// zenity dialog is offered, provided zenity is installed at all.
 pub(super) fn askpass_helper() -> Option<std::path::PathBuf> {
-    if let Some(existing) = std::env::var_os("SUDO_ASKPASS")
+    if let Some(existing) = var_os("SUDO_ASKPASS")
         && !existing.is_empty()
     {
         return Some(std::path::PathBuf::from(existing));
     }
 
-    let path = std::env::var_os("PATH")?;
+    let path = var_os("PATH")?;
 
-    if !std::env::split_paths(&path)
-        .any(|dir| dir.join("rofi").exists() || dir.join("zenity").exists())
-    {
+    if !split_paths(&path).any(|dir| dir.join("rofi").exists() || dir.join("zenity").exists()) {
         return None;
     }
 
@@ -64,11 +66,16 @@ pub(super) fn askpass_helper() -> Option<std::path::PathBuf> {
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
+    use std::{
+        env::temp_dir,
+        fs::{metadata, read_to_string, remove_dir_all}
+    };
+
     use super::*;
 
     #[test]
     fn the_password_dialog_lands_executable() {
-        let dir = std::env::temp_dir().join(format!(
+        let dir = temp_dir().join(format!(
             "hydebar-askpass-{}-{:?}",
             std::process::id(),
             std::thread::current().id()
@@ -79,13 +86,13 @@ mod tests {
         let mode = {
             use std::os::unix::fs::PermissionsExt;
 
-            std::fs::metadata(&helper)
+            metadata(&helper)
                 .expect("the helper exists")
                 .permissions()
                 .mode()
         };
-        let content = std::fs::read_to_string(&helper).expect("the helper reads back");
-        let _ = std::fs::remove_dir_all(&dir);
+        let content = read_to_string(&helper).expect("the helper reads back");
+        let _ = remove_dir_all(&dir);
 
         assert_eq!(mode & 0o111, 0o111);
         assert!(content.contains("rofi -dmenu -password"));

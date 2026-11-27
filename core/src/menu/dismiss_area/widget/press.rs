@@ -5,6 +5,8 @@
 //! the completion is reported only once the same press releases over the
 //! area, and a pointer that left takes the press with it.
 
+use std::mem::take;
+
 use iced::core::{Layout, Shell, event::Event, mouse, touch};
 
 use super::super::element::{DismissArea, State};
@@ -46,7 +48,7 @@ where
             | Event::Touch(touch::Event::FingerLifted {
                 ..
             }) => {
-                if std::mem::take(&mut state.pressed) && is_over {
+                if take(&mut state.pressed) && is_over {
                     shell.publish(self.on_release.clone());
                 }
             }

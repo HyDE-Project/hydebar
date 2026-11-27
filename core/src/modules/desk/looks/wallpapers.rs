@@ -1,6 +1,9 @@
 //! The wallpapers of the theme in force, as the crops `HyDE` keeps of them.
 
-use std::path::{Path, PathBuf};
+use std::{
+    fs::canonicalize,
+    path::{Path, PathBuf}
+};
 
 use hydebar_proto::hyde_dirs::HydeDirs;
 
@@ -37,7 +40,7 @@ fn named(basename: &str) -> String {
 
 /// The wallpaper standing on the screen right now, as a path on disk.
 fn on_screen(dirs: &HydeDirs) -> Option<PathBuf> {
-    std::fs::canonicalize(dirs.hyde_cache_dir().join(IN_FORCE)).ok()
+    canonicalize(dirs.hyde_cache_dir().join(IN_FORCE)).ok()
 }
 
 #[cfg(test)]

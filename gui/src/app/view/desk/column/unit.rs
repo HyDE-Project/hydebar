@@ -1,5 +1,7 @@
 //! The shape one module takes once it is down on the canvas.
 
+use std::iter::once;
+
 use hydebar_core::config::ModuleName;
 use iced::{
     Element, Length, SurfaceId as Id,
@@ -106,7 +108,7 @@ impl App {
 
         Some(
             container(
-                Column::with_children(std::iter::once(named).chain(opened))
+                Column::with_children(once(named).chain(opened))
                     .spacing(ink.size * 0.9)
                     .width(Length::Fill)
                     .align_x(side.alignment_x())
@@ -280,7 +282,7 @@ impl App {
         bloom: f32
     ) -> Vec<Element<'a, Message>> {
         if matches!(module, ModuleName::Clock) {
-            return std::iter::once(blocks::month(self.desk_month(), ink, bloom))
+            return once(blocks::month(self.desk_month(), ink, bloom))
                 .chain(
                     super::super::readings::seat(self)
                         .into_iter()

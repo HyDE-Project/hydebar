@@ -81,7 +81,7 @@ mod tests {
     };
 
     use super::*;
-    use crate::position_button::position_button;
+    use crate::{position_button::position_button, style::module_button_style};
 
     const BOUNDS: Rectangle = Rectangle {
         x:      0.0,
@@ -132,7 +132,7 @@ mod tests {
     /// with the bounds it was laid out with.
     fn painted_hover(padding: Padding) -> (Vec<renderer::Quad>, Rectangle) {
         let style = || {
-            crate::style::module_button_style(
+            module_button_style(
                 crate::config::AppearanceStyle::Islands,
                 1.0,
                 PILL_RADIUS,

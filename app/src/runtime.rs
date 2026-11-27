@@ -1,5 +1,7 @@
 //! Sizing and construction of the async runtime backing the bar.
 
+use std::env::{set_var, var, var_os};
+
 use tokio::runtime::Runtime;
 
 use crate::error::MainError;
@@ -45,7 +47,7 @@ const WORKER_COUNT_KEY: &str = "TOKIO_WORKER_THREADS";
 /// thread writes it is what makes the call unsound rather than merely
 /// untidy. An operator who set the variable themselves is left alone.
 pub fn cap_borrowed_pools() {
-    if std::env::var_os(WORKER_COUNT_KEY).is_some() {
+    if var_os(WORKER_COUNT_KEY).is_some() {
         return;
     }
 
@@ -54,13 +56,13 @@ pub fn cap_borrowed_pools() {
         reason = "called from the first line of startup, while the process is still single-threaded"
     )]
     unsafe {
-        std::env::set_var(WORKER_COUNT_KEY, BORROWED_WORKER_THREADS);
+        set_var(WORKER_COUNT_KEY, BORROWED_WORKER_THREADS);
     }
 }
 
 /// Builds the runtime whose handle the bar drives its sources with.
 pub fn build() -> Result<Runtime, MainError> {
-    let workers = std::env::var("HYDEBAR_RUNTIME_THREADS")
+    let workers = var("HYDEBAR_RUNTIME_THREADS")
         .ok()
         .and_then(|value| value.parse::<usize>().ok())
         .filter(|value| *value > 0)

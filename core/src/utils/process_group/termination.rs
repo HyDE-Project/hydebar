@@ -1,7 +1,9 @@
 //! Ending the families, politely first, and the handler for a signalled bar.
 
 use std::{
-    io, ptr,
+    io,
+    process::exit,
+    ptr,
     sync::atomic::{AtomicI32, Ordering},
     thread,
     time::Duration
@@ -194,7 +196,7 @@ fn await_termination(reader: i32) {
     info!("termination signal reaped, ending the process");
     thread::sleep(HARD_EXIT_GRACE);
     terminate_all();
-    std::process::exit(0);
+    exit(0);
 }
 
 /// Blocks until the handler writes, reporting whether a wake arrived.

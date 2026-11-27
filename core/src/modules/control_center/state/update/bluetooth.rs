@@ -10,7 +10,8 @@ use super::super::super::{
 use crate::{
     config::ControlCenterModuleConfig,
     outputs::Outputs,
-    services::{ReadOnlyService, ServiceEvent, bluetooth::BluetoothCommand}
+    services::{ReadOnlyService, ServiceEvent, bluetooth::BluetoothCommand},
+    utils::launcher::execute_command
 };
 
 impl ControlCenter {
@@ -58,7 +59,7 @@ impl ControlCenter {
             }
             BluetoothMessage::More(id) => {
                 if let Some(cmd) = &config.bluetooth_more_cmd {
-                    crate::utils::launcher::execute_command(cmd.clone());
+                    execute_command(cmd.clone());
 
                     return outputs.close_menu::<Message>(id, main_config);
                 }

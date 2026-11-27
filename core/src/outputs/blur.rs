@@ -20,7 +20,10 @@
 //! configuration. A Hyprland reading the older configuration format has no
 //! evaluator at all. Both spellings are therefore offered, the Lua one first.
 
-use std::sync::atomic::{AtomicU8, Ordering};
+use std::{
+    env::var_os,
+    sync::atomic::{AtomicU8, Ordering}
+};
 
 use hydebar_proto::compositor_ipc;
 
@@ -151,7 +154,7 @@ fn accepted(answer: &str) -> bool {
 
 /// Whether the bar is running on the compositor these rules are written for.
 fn on_hyprland() -> bool {
-    std::env::var_os("HYPRLAND_INSTANCE_SIGNATURE").is_some()
+    var_os("HYPRLAND_INSTANCE_SIGNATURE").is_some()
 }
 
 /// States one rule and returns what the compositor answered.

@@ -12,7 +12,7 @@
 //! layer is the whole feature, and the leftover key is reported as unknown
 //! like any other misspelling.
 
-use std::path::Path;
+use std::{mem::take, path::Path};
 
 use super::{
     ConfigReadError,
@@ -55,7 +55,7 @@ pub(super) fn resolve_theme_base(
         .map(|parent| parent.join(THEMES_DIRECTORY));
     let mut merged = base_table(&base, themes_dir.as_deref(), config_path)?;
 
-    let mut overrides = std::mem::take(appearance);
+    let mut overrides = take(appearance);
     overrides.remove(THEME_BASE_KEY);
     merge_tables(&mut merged, overrides);
     *appearance = merged;

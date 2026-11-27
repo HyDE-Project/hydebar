@@ -1,5 +1,7 @@
 //! Turning pixmaps and icon files into renderer-ready images.
 
+use std::fs::read;
+
 use iced::widget::image;
 use log::trace;
 
@@ -50,7 +52,7 @@ const SVG_RASTER_SIDE: f32 = 96.0;
     reason = "the scaled sides are positive and bounded by the raster side constant"
 )]
 pub(super) fn rasterized_svg(path: &std::path::Path) -> Option<TrayIcon> {
-    let data = std::fs::read(path).ok()?;
+    let data = read(path).ok()?;
     let tree = resvg::usvg::Tree::from_data(&data, &resvg::usvg::Options::default()).ok()?;
 
     let size = tree.size();

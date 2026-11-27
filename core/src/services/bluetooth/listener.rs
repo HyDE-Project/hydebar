@@ -4,6 +4,7 @@
 //! on — every source that can change what the adapter or one of its devices
 //! reports, merged into a single nudge.
 
+use crate::services::reconnect_delay;
 mod events;
 
 use iced::futures::StreamExt;
@@ -115,7 +116,7 @@ impl BluetoothService {
             match &state {
                 State::Error => {
                     failures = failures.saturating_add(1);
-                    tokio::time::sleep(crate::services::reconnect_delay(failures)).await;
+                    tokio::time::sleep(reconnect_delay(failures)).await;
                 }
                 State::Active(_) => failures = 0,
                 State::Init => {}

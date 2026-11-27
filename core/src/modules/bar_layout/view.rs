@@ -9,7 +9,8 @@ use super::{BarLayout, Message};
 use crate::{
     components::{
         icons::{IconTheme, Icons, icon, icon_raw},
-        scale
+        scale,
+        text::text
     },
     modules::OnModulePress
 };
@@ -49,10 +50,7 @@ impl BarLayout {
 
             let face = iced::widget::Row::new()
                 .push(icon_raw(marker.to_owned()))
-                .push(
-                    crate::components::text::text(entry.name.clone())
-                        .size(scale::scaled(font_size))
-                )
+                .push(text(entry.name.clone()).size(scale::scaled(font_size)))
                 .spacing(scale::scaled(8.0))
                 .align_y(iced::Alignment::Center);
 

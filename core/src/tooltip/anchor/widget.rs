@@ -4,6 +4,7 @@
 //! module; the anchor's own work is in [`hover`], where the pointer is
 //! compared against what was last published.
 
+use std::slice::from_ref;
 mod hover;
 
 use iced::{
@@ -37,7 +38,7 @@ where
     }
 
     fn diff(&self, tree: &mut Tree) {
-        tree.diff_children(std::slice::from_ref(&self.content));
+        tree.diff_children(from_ref(&self.content));
     }
 
     fn size(&self) -> Size<Length> {

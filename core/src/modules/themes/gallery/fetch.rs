@@ -4,6 +4,7 @@
 use std::time::Duration;
 
 use super::{GalleryTheme, index::parse};
+use crate::utils::http_client;
 
 /// Where the catalogue lives.
 const INDEX_URL: &str =
@@ -65,7 +66,7 @@ pub async fn load() -> Vec<GalleryTheme> {
         }
     }
 
-    let Ok(response) = crate::utils::http_client().get(INDEX_URL).send().await else {
+    let Ok(response) = http_client().get(INDEX_URL).send().await else {
         return stale(cache.as_deref()).await;
     };
     let Ok(raw) = response.text().await else {

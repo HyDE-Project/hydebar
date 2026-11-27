@@ -7,7 +7,7 @@
 //! counterpart the native module wins and the script is reported as
 //! dropped; the rest rides along as custom modules with their commands.
 
-use std::{collections::BTreeSet, fs, path::Path};
+use std::{collections::BTreeSet, fs, fs::write, path::Path};
 
 use hydebar_proto::bar_layout::{module_for, plain_json};
 use serde_json::Value;
@@ -171,8 +171,7 @@ pub fn run_command(arguments: &[String]) -> Result<(), String> {
         if Path::new(path).exists() {
             return Err(format!("refusing to overwrite {path}"));
         }
-        std::fs::write(path, &rendered)
-            .map_err(|error| format!("cannot write {path}: {error}"))?;
+        write(path, &rendered).map_err(|error| format!("cannot write {path}: {error}"))?;
         println!("wrote {path}");
     } else {
         print!("{rendered}");

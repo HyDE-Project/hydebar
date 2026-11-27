@@ -7,7 +7,7 @@ use log::error;
 use session::{SessionEnd, serve};
 
 use super::{Notification, NotificationEvent, NotificationStorage, NotificationsError};
-use crate::services::{ReadOnlyService, ServiceEvent};
+use crate::services::{ReadOnlyService, ServiceEvent, reconnect_delay};
 
 mod session;
 
@@ -112,8 +112,7 @@ impl ReadOnlyService for NotificationsService {
                             SessionEnd::UiClosed => return,
                             SessionEnd::Failed => {
                                 failures = failures.saturating_add(1);
-                                tokio::time::sleep(crate::services::reconnect_delay(failures))
-                                    .await;
+                                tokio::time::sleep(reconnect_delay(failures)).await;
                             }
                         }
                     }

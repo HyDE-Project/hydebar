@@ -6,7 +6,7 @@ use std::{
 use log::error;
 use tokio::process::Command;
 
-use crate::utils::process_group;
+use crate::{services::hyprland_notify::post_to_bus, utils::process_group};
 
 /// Error type emitted when launching shell commands fails.
 ///
@@ -157,9 +157,7 @@ fn spawn_and_log(command: String, context: &'static str) {
 
         if let Err(error) = run_detached(&command_arc).await {
             error!("{context} command failed: {error}");
-            crate::services::hyprland_notify::post_to_bus(&format!(
-                "the {context} command failed: {error}"
-            ));
+            post_to_bus(&format!("the {context} command failed: {error}"));
         }
     });
 }

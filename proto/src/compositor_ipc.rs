@@ -15,7 +15,9 @@
 //! round trip, not the question, is what costs.
 
 use std::{
+    env::var,
     io::{Read, Write},
+    iter::once,
     os::unix::net::UnixStream,
     path::PathBuf,
     time::Duration
@@ -113,19 +115,24 @@ fn locate(signature: &str, runtime: Option<&str>, name: &str) -> Option<PathBuf>
     runtime
         .map(|runtime| PathBuf::from(runtime).join("hypr"))
         .into_iter()
-        .chain(std::iter::once(PathBuf::from("/tmp/hypr")))
+        .chain(once(PathBuf::from("/tmp/hypr")))
         .map(|root| root.join(signature).join(name))
         .find(|path| path.exists())
 }
 
 /// Value of an environment variable, treating an empty one as unset.
 fn non_empty(key: &str) -> Option<String> {
-    std::env::var(key).ok().filter(|value| !value.is_empty())
+    var(key).ok().filter(|value| !value.is_empty())
 }
 
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
+    use std::{
+        env::temp_dir,
+        fs::{create_dir_all, remove_dir_all, write}
+    };
+
     use super::*;
 
     #[test]
@@ -148,18 +155,18 @@ mod tests {
 
     #[test]
     fn the_socket_of_a_live_session_is_the_one_found() {
-        let base = std::env::temp_dir().join("hydebar-ipc-test");
+        let base = temp_dir().join("hydebar-ipc-test");
         let session = base.join("hypr").join("live_session");
-        std::fs::create_dir_all(&session).expect("a directory to hold the socket");
+        create_dir_all(&session).expect("a directory to hold the socket");
         let socket = session.join(REQUEST_SOCKET);
-        std::fs::write(&socket, b"").expect("a file standing in for the socket");
+        write(&socket, b"").expect("a file standing in for the socket");
         let events = session.join(EVENT_SOCKET);
-        std::fs::write(&events, b"").expect("a file standing in for the event socket");
+        write(&events, b"").expect("a file standing in for the event socket");
 
         let found = locate("live_session", base.to_str(), REQUEST_SOCKET);
         let found_events = locate("live_session", base.to_str(), EVENT_SOCKET);
 
-        std::fs::remove_dir_all(&base).ok();
+        remove_dir_all(&base).ok();
         assert_eq!(found, Some(socket));
         assert_eq!(found_events, Some(events));
     }

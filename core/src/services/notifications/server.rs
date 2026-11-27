@@ -1,6 +1,6 @@
 //! D-Bus interface implementing the freedesktop notifications spec.
 
-use std::time::SystemTime;
+use std::{thread::spawn, time::SystemTime};
 
 use iced::futures::channel::mpsc::UnboundedSender;
 use log::debug;
@@ -193,7 +193,7 @@ impl NotificationsServer {
             .spawn()
         {
             Ok(mut child) => {
-                std::thread::spawn(move || {
+                spawn(move || {
                     let _ = child.wait();
                 });
             }

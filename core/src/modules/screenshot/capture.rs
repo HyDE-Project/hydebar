@@ -1,6 +1,6 @@
 //! Taking the screenshots: slurp for the selection, grim for the capture.
 
-use std::process::Command;
+use std::{fs::create_dir_all, process::Command, thread::spawn};
 
 use log::{debug, error};
 
@@ -19,7 +19,7 @@ impl Screenshot {
             .unwrap_or_else(|| std::path::PathBuf::from("/tmp"))
             .join("Screenshots");
 
-        if let Err(err) = std::fs::create_dir_all(&screenshot_dir) {
+        if let Err(err) = create_dir_all(&screenshot_dir) {
             error!("Failed to create screenshots directory: {err}");
             return;
         }
@@ -27,7 +27,7 @@ impl Screenshot {
         let timestamp = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
         let filename = screenshot_dir.join(format!("screenshot_{timestamp}.png"));
 
-        std::thread::spawn(move || {
+        spawn(move || {
             let result = match action {
                 ScreenshotAction::Area => {
                     debug!("Taking area screenshot");

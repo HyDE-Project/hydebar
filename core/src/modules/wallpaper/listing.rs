@@ -1,5 +1,7 @@
 //! Reading the theme's wallpapers from the desktop and decoding thumbnails.
 
+use std::fs::read;
+
 use serde::Deserialize;
 
 use super::WallpaperEntry;
@@ -57,11 +59,11 @@ pub(super) fn list_wallpapers(
                 });
             }
 
-            let decoded = std::fs::read(&entry.sqre)
+            let decoded = read(&entry.sqre)
                 .ok()
                 .and_then(|bytes| ::image::load_from_memory(&bytes).ok())
                 .or_else(|| {
-                    std::fs::read(&entry.path)
+                    read(&entry.path)
                         .ok()
                         .and_then(|bytes| ::image::load_from_memory(&bytes).ok())
                 })?

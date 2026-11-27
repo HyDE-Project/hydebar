@@ -35,6 +35,7 @@ pub use takeover::acquire;
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use std::{
+        env::temp_dir,
         fs, io,
         path::PathBuf,
         process::Command,
@@ -66,8 +67,8 @@ mod tests {
     impl TempDir {
         fn new() -> Self {
             let unique = COUNTER.fetch_add(1, Ordering::Relaxed);
-            let path = std::env::temp_dir()
-                .join(format!("hydebar-instance-{}-{unique}", std::process::id()));
+            let path =
+                temp_dir().join(format!("hydebar-instance-{}-{unique}", std::process::id()));
             fs::create_dir_all(&path).expect("failed to create the test directory");
 
             Self(path)

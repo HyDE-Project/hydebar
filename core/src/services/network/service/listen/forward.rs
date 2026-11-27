@@ -7,7 +7,7 @@ use super::{
     super::{NetworkEvent, NetworkService, gate::EventGate},
     throttle::LinkThrottle
 };
-use crate::services::{ServiceEvent, ServiceEventPublisher};
+use crate::services::{ServiceEvent, ServiceEventPublisher, network::link::read};
 
 impl NetworkService {
     /// Whether `event` moves the link enough to re-read its kernel facts.
@@ -36,7 +36,7 @@ impl NetworkService {
     where
         P: ServiceEventPublisher<Self> + Send
     {
-        let details = crate::services::network::link::read().await;
+        let details = read().await;
         let () = publisher
             .send(ServiceEvent::Update(NetworkEvent::LinkDetails(details)))
             .await;

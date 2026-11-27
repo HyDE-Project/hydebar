@@ -1,4 +1,8 @@
-use std::{sync::Arc, thread, time::Duration};
+use std::{
+    sync::{Arc, mpsc::channel},
+    thread,
+    time::Duration
+};
 
 use hydebar_proto::ports::hyprland::HyprlandError;
 use log::warn;
@@ -16,7 +20,7 @@ where
     R: Send + 'static,
     F: Fn() -> Result<R, HyprlandError> + Send + Sync + 'static
 {
-    let (tx, rx) = std::sync::mpsc::channel();
+    let (tx, rx) = channel();
     thread::spawn(move || {
         let result = func();
         if tx.send(result).is_err() {

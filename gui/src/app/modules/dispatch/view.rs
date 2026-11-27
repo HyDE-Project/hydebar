@@ -8,7 +8,10 @@ use iced::{Element, SurfaceId as Id};
 use log::error;
 
 use super::super::actions::custom_module_action;
-use crate::app::state::{App, Message};
+use crate::{
+    app::state::{App, Message},
+    views::tray::render_tray
+};
 
 impl App {
     #[expect(
@@ -100,8 +103,7 @@ impl App {
             }
             ModuleName::KeyboardSubmap => self.keyboard_submap.bar_view(),
             ModuleName::Tray => {
-                crate::views::tray::render_tray(&self.tray, id, opacity, self.icons())
-                    .map(|content| (content, None))
+                render_tray(&self.tray, id, opacity, self.icons()).map(|content| (content, None))
             }
             ModuleName::Clock => self.clock.bar_view(&self.config.clock),
             ModuleName::HydeMenu => self.hyde_menu.bar_view(self.icons()),

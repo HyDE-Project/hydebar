@@ -8,13 +8,16 @@ use inotify::Inotify;
 use log::{error, info};
 
 use super::{BATCH_SIZE, SETTLE, ThemeWatcher, watches::add_watches};
-use crate::config::{
-    ConfigEvent,
-    theme_watch::{
-        interpret::{handle_theme_event, interpret_theme_event},
-        sources::watched_names
+use crate::{
+    config::{
+        ConfigEvent,
+        theme_watch::{
+            interpret::{handle_theme_event, interpret_theme_event},
+            sources::watched_names
+        },
+        watch::{WatchLoopOutcome, interpret::process_event_batches}
     },
-    watch::{WatchLoopOutcome, interpret::process_event_batches}
+    services::reconnect_delay
 };
 
 impl Recipe for ThemeWatcher {
@@ -110,8 +113,7 @@ impl Recipe for ThemeWatcher {
                                 );
 
                                 restarts = restarts.saturating_add(1);
-                                tokio::time::sleep(crate::services::reconnect_delay(restarts))
-                                    .await;
+                                tokio::time::sleep(reconnect_delay(restarts)).await;
                             }
                             WatchLoopOutcome::HandlerClosed => {
                                 info!("HyDE theme watch handler closed; stopping watcher loop");

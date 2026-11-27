@@ -1,5 +1,7 @@
 //! Parsing of the desktop's GTK menu XML into the tree the window renders.
 
+use std::fs::read_to_string;
+
 use log::warn;
 use quick_xml::{Reader, events::Event};
 
@@ -26,7 +28,7 @@ struct PendingItem {
 /// submenu, and `GtkSeparatorMenuItem` draws a line. Nothing else is
 /// read; the `<child>` wrappers carry no information of their own.
 pub(super) fn read_tree(path: &str) -> Option<Vec<Entry>> {
-    let source = std::fs::read_to_string(path)
+    let source = read_to_string(path)
         .inspect_err(|err| warn!("cannot read menu file {path}: {err}"))
         .ok()?;
 

@@ -13,7 +13,7 @@ use super::{
     PowerProfile, State, UPowerEvent, UPowerService,
     dbus::{PowerProfilesProxy, UPowerDbus}
 };
-use crate::services::{ServiceEvent, ServiceEventPublisher, bus::bus_failure};
+use crate::services::{ServiceEvent, ServiceEventPublisher, bus::bus_failure, reconnect_delay};
 
 impl UPowerService {
     #[expect(
@@ -154,7 +154,7 @@ impl UPowerService {
             match &state {
                 State::Error => {
                     failures = failures.saturating_add(1);
-                    tokio::time::sleep(crate::services::reconnect_delay(failures)).await;
+                    tokio::time::sleep(reconnect_delay(failures)).await;
                 }
                 State::Active(..) => failures = 0,
                 State::Init => {}

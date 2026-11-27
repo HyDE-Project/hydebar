@@ -9,6 +9,7 @@ use super::{
     super::state::Update,
     error::{CheckFailure, CommandError}
 };
+use crate::utils::process_group::guarded_output;
 
 /// Exit status a shell reports when the command it was asked to run is
 /// missing.
@@ -35,7 +36,7 @@ pub async fn check_for_updates(command: &str) -> Result<Vec<Update>, CheckFailur
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
-    let output = crate::utils::process_group::guarded_output(&mut spawner)
+    let output = guarded_output(&mut spawner)
         .await
         .map_err(|err| CheckFailure::Unavailable(CommandError::Io(err)))?;
 
@@ -91,7 +92,7 @@ async fn git(clone: &str, args: &[&str]) -> Result<String, CommandError> {
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
-    let output = crate::utils::process_group::guarded_output(&mut spawner).await?;
+    let output = guarded_output(&mut spawner).await?;
 
     if !output.status.success() {
         return Err(CommandError::Status(output.status));

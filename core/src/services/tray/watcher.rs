@@ -7,7 +7,7 @@ use iced::futures::Stream;
 use log::error;
 
 use super::{TrayEvent, TrayService, dbus::StatusNotifierWatcher};
-use crate::services::ServiceEvent;
+use crate::services::{ServiceEvent, reconnect_delay};
 
 mod error;
 mod items;
@@ -59,7 +59,7 @@ where
                 Err(err) => {
                     error!("{}", TrayWatcherError::Connection(err));
                     failures = failures.saturating_add(1);
-                    tokio::time::sleep(crate::services::reconnect_delay(failures)).await;
+                    tokio::time::sleep(reconnect_delay(failures)).await;
                 }
             }
         };
@@ -75,7 +75,7 @@ where
             }
 
             failures = failures.saturating_add(1);
-            tokio::time::sleep(crate::services::reconnect_delay(failures)).await;
+            tokio::time::sleep(reconnect_delay(failures)).await;
         }
 
         error!("the tray connection keeps failing, rebuilding it");

@@ -2,6 +2,7 @@
 
 use std::{
     ffi::{OsStr, OsString},
+    fs::write,
     sync::Arc
 };
 
@@ -87,7 +88,7 @@ fn interpret_event_detects_changed_events() {
 async fn emits_applied_event_for_valid_update() {
     let temp_dir = TempDir::new().expect("failed to create temp dir");
     let config_path = temp_dir.path().join("config.toml");
-    std::fs::write(&config_path, "").expect("failed to write config");
+    write(&config_path, "").expect("failed to write config");
 
     let manager = Arc::new(ConfigManager::new(Config::default()));
     let (mut sender, mut receiver) = mpsc::channel(10);
@@ -111,7 +112,7 @@ async fn emits_applied_event_for_valid_update() {
 async fn emits_degraded_event_for_invalid_toml() {
     let temp_dir = TempDir::new().expect("failed to create temp dir");
     let config_path = temp_dir.path().join("config.toml");
-    std::fs::write(&config_path, "invalid = [").expect("failed to write invalid config");
+    write(&config_path, "invalid = [").expect("failed to write invalid config");
 
     let manager = Arc::new(ConfigManager::new(Config::default()));
     let (mut sender, mut receiver) = mpsc::channel(10);
@@ -137,7 +138,7 @@ async fn emits_degraded_event_for_invalid_toml() {
 async fn emits_degraded_event_when_file_removed() {
     let temp_dir = TempDir::new().expect("failed to create temp dir");
     let config_path = temp_dir.path().join("config.toml");
-    std::fs::write(&config_path, "").expect("failed to write config");
+    write(&config_path, "").expect("failed to write config");
 
     let manager = Arc::new(ConfigManager::new(Config::default()));
     let (mut sender, mut receiver) = mpsc::channel(10);

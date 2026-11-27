@@ -4,6 +4,7 @@
 //! content; the area's own work is in [`press`], which is given the event
 //! before the children and again after them.
 
+use std::slice::from_ref;
 mod press;
 
 use iced::{
@@ -37,7 +38,7 @@ where
     }
 
     fn diff(&self, tree: &mut Tree) {
-        tree.diff_children(std::slice::from_ref(&self.content));
+        tree.diff_children(from_ref(&self.content));
     }
 
     fn size(&self) -> Size<Length> {

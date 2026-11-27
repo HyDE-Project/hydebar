@@ -1,5 +1,7 @@
 //! Configuration for the clock module.
 
+use std::iter::once;
+
 use serde::Deserialize;
 
 /// Clock module behaviour.
@@ -27,7 +29,7 @@ impl ClockModuleConfig {
 
     /// Every format the module can render, primary format first.
     pub fn formats(&self) -> impl Iterator<Item = &str> {
-        std::iter::once(self.format.as_str()).chain(self.format_alt.iter().map(String::as_str))
+        once(self.format.as_str()).chain(self.format_alt.iter().map(String::as_str))
     }
 }
 

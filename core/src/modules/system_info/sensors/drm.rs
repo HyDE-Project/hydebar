@@ -6,7 +6,10 @@
 //! links both to, which keeps a machine with several cards from
 //! mixing one card's load with another's temperature.
 
-use std::path::{Path, PathBuf};
+use std::{
+    fs::{canonicalize, read_dir, read_to_string},
+    path::{Path, PathBuf}
+};
 
 use super::{catalog::GpuVendor, hwmon::read_number};
 
@@ -47,7 +50,7 @@ impl Card {
     pub fn is_asleep(&self) -> bool {
         self.runtime_status
             .as_deref()
-            .and_then(|path| std::fs::read_to_string(path).ok())
+            .and_then(|path| read_to_string(path).ok())
             .is_some_and(|status| status.trim() == SUSPENDED)
     }
 
@@ -70,7 +73,7 @@ impl Card {
 /// Every rendering device the kernel publishes, in a stable order.
 #[must_use]
 pub fn scan(root: &Path) -> Vec<Card> {
-    let Ok(entries) = std::fs::read_dir(root) else {
+    let Ok(entries) = read_dir(root) else {
         return Vec::new();
     };
 
@@ -100,18 +103,16 @@ fn is_card_name(name: &str) -> bool {
 
 fn read_card(path: &Path) -> Card {
     let device = path.join("device");
-    let resolved = std::fs::canonicalize(&device).ok();
+    let resolved = canonicalize(&device).ok();
 
     Card {
-        driver:         std::fs::canonicalize(device.join("driver"))
-            .ok()
-            .and_then(|driver| {
-                driver
-                    .file_name()
-                    .and_then(|name| name.to_str())
-                    .map(str::to_owned)
-            }),
-        vendor:         std::fs::read_to_string(device.join("vendor"))
+        driver:         canonicalize(device.join("driver")).ok().and_then(|driver| {
+            driver
+                .file_name()
+                .and_then(|name| name.to_str())
+                .map(str::to_owned)
+        }),
+        vendor:         read_to_string(device.join("vendor"))
             .ok()
             .and_then(|id| super::catalog::gpu_vendor_from_pci(&id)),
         busy:           present(device.join("gpu_busy_percent")),

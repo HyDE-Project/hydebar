@@ -15,6 +15,8 @@ pub mod records;
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
+    use std::env::var_os;
+
     use super::query;
 
     /// Reads every answer the bar asks for off the running compositor.
@@ -24,7 +26,7 @@ mod tests {
     /// that proves the records match what the compositor actually writes.
     #[test]
     fn every_answer_the_bar_asks_for_reads_on_a_live_session() {
-        if std::env::var_os("HYPRLAND_INSTANCE_SIGNATURE").is_none() {
+        if var_os("HYPRLAND_INSTANCE_SIGNATURE").is_none() {
             return;
         }
 

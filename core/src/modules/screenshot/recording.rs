@@ -1,6 +1,6 @@
 //! Starting and stopping the screen recorder.
 
-use std::process::Command;
+use std::{fs::create_dir_all, process::Command, thread::spawn};
 
 use log::{debug, error};
 
@@ -20,7 +20,7 @@ impl Screenshot {
             .unwrap_or_else(|| std::path::PathBuf::from("/tmp"))
             .join("Recordings");
 
-        if let Err(err) = std::fs::create_dir_all(&video_dir) {
+        if let Err(err) = create_dir_all(&video_dir) {
             error!("Failed to create recordings directory: {err}");
             return;
         }
@@ -36,7 +36,7 @@ impl Screenshot {
                 self.is_recording = true;
                 debug!("Recording started");
 
-                std::thread::spawn(move || match child.wait() {
+                spawn(move || match child.wait() {
                     Ok(status) if status.success() => {}
                     Ok(status) => error!("the recorder ended with {status}"),
                     Err(err) => error!("waiting on the recorder failed: {err}")
@@ -66,7 +66,7 @@ impl Screenshot {
             .spawn()
         {
             Ok(mut child) => {
-                std::thread::spawn(move || {
+                spawn(move || {
                     let _ = child.wait();
                 });
                 self.is_recording = false;
