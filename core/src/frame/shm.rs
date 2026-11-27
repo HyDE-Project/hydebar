@@ -417,6 +417,9 @@ impl App {
     }
 }
 
+/// Paints one frame surface: the whole rectangle is filled with `color`, then
+/// the aperture is cut out of it. Strips are solid 1px lines; corners get a
+/// quarter-circle cut so the aperture reads rounded instead of square.
 fn draw_surface(state: &mut SurfaceState, config: &FrameConfig, color: (u8, u8, u8, u8)) {
     let (Ok(width), Ok(height), Ok(stride)) = (
         i32::try_from(state.width),
@@ -438,8 +441,6 @@ fn draw_surface(state: &mut SurfaceState, config: &FrameConfig, color: (u8, u8, 
 
     pixmap.fill(Color::from_rgba8(color.0, color.1, color.2, color.3));
 
-    // Strips are solid 1px lines; corners get a quarter-circle cut so
-    // the aperture reads rounded instead of square.
     let corner_center = match (
         state.kind,
         u16::try_from(state.width),
