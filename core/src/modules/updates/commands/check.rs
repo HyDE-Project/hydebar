@@ -6,7 +6,7 @@ use std::process::{ExitStatus, Stdio};
 use tokio::process;
 
 use super::{
-    super::state::Update,
+    super::state::message::Update,
     error::{CheckFailure, CommandError}
 };
 use crate::utils::process_group::guarded_output;
