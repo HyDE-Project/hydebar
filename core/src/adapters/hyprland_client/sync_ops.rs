@@ -1,13 +1,54 @@
+//! Blocking Hyprland requests: the retry policy every synchronous reader
+//! shares, and the state queries built on it.
+
 use std::{
     sync::{Arc, mpsc::channel},
     thread,
     time::Duration
 };
 
-use hydebar_proto::ports::hyprland::HyprlandError;
+use hydebar_proto::ports::hyprland::{HyprlandError, HyprlandKeyboardState};
 use log::warn;
 
 use super::{config::HyprlandClientConfig, util::calculate_retry_delay};
+use crate::adapters::compositor::query;
+
+/// The name a keyboard state query reports under.
+const KEYBOARD_STATE_OP: &str = "keyboard_state";
+
+/// Queries which keyboard layout is active and how many layouts are configured.
+///
+/// Goes through the retry policy of `config` like every other blocking request,
+/// so any reader — the event wiring included — asks the same question the same
+/// careful way.
+pub fn keyboard_state(
+    config: &HyprlandClientConfig
+) -> Result<HyprlandKeyboardState, HyprlandError> {
+    execute_with_retry(config, KEYBOARD_STATE_OP, || {
+        let layouts = query::option_text(KEYBOARD_STATE_OP, "input:kb_layout")?;
+        let has_multiple_layouts = layouts
+            .split(',')
+            .filter(|value| !value.trim().is_empty())
+            .count()
+            > 1;
+
+        let devices = query::devices(KEYBOARD_STATE_OP)?;
+        let active_layout = devices
+            .keyboards
+            .iter()
+            .find(|keyboard| keyboard.main)
+            .map_or_else(
+                || "unknown".to_string(),
+                |keyboard| keyboard.active_keymap.clone()
+            );
+
+        Ok(HyprlandKeyboardState {
+            active_layout,
+            has_multiple_layouts,
+            active_submap: None
+        })
+    })
+}
 
 /// Execute a blocking Hyprland request in a worker thread and wait for it to
 /// complete within the provided timeout.

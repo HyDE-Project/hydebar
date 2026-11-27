@@ -57,6 +57,6 @@ impl HyprlandClient {
     /// A blocking tap of the compositor's configuration reloads.
     #[must_use]
     pub fn config_reloads(&self) -> tokio::sync::broadcast::Receiver<()> {
-        multiplex::config_reloads(self, &self.config)
+        multiplex::config_reloads(&self.config)
     }
 }

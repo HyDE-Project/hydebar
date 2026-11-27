@@ -15,7 +15,6 @@ use super::{channels::Multiplexer, wiring::dispatch};
 use crate::adapters::{
     compositor::events::EventStream,
     hyprland_client::{
-        HyprlandClient,
         config::HyprlandClientConfig,
         listeners::{runtime, supervisor::restart_delay}
     }
@@ -41,7 +40,6 @@ static START_GATE: Mutex<()> = Mutex::new(());
 /// Returns an error when the listener runtime cannot be started; the cell
 /// stays empty, so the next subscriber retries the whole start.
 pub(super) fn multiplexer(
-    client: &HyprlandClient,
     config: &Arc<HyprlandClientConfig>
 ) -> Result<Arc<Multiplexer>, hydebar_proto::ports::hyprland::HyprlandError> {
     if let Some(mux) = MULTIPLEXER.get() {
@@ -67,11 +65,10 @@ pub(super) fn multiplexer(
     });
 
     let supervised = Arc::clone(&mux);
-    let client = client.clone();
     let config = Arc::clone(config);
 
     handle.spawn(async move {
-        supervise(supervised, client, config).await;
+        supervise(supervised, config).await;
     });
 
     Ok(Arc::clone(MULTIPLEXER.get_or_init(|| mux)))
@@ -89,11 +86,7 @@ fn warn_on_discarded_config(mux: &Multiplexer, config: &Arc<HyprlandClientConfig
 }
 
 /// Keeps the one connection alive for the lifetime of the process.
-async fn supervise(
-    mux: Arc<Multiplexer>,
-    client: HyprlandClient,
-    config: Arc<HyprlandClientConfig>
-) {
+async fn supervise(mux: Arc<Multiplexer>, config: Arc<HyprlandClientConfig>) {
     let mut attempt = 0_u32;
 
     loop {
@@ -102,7 +95,7 @@ async fn supervise(
         match EventStream::connect().await {
             Ok(mut events) => {
                 while let Some(event) = events.next().await {
-                    dispatch(event, &mux, &client).await;
+                    dispatch(event, &mux).await;
                 }
 
                 warn!(
