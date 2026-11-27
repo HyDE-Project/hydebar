@@ -23,12 +23,11 @@
 //! owner in [`stale`], the displacement of a running bar in [`takeover`] and
 //! the failure vocabulary in [`error`].
 
-mod error;
+pub mod error;
 mod lock;
 mod stale;
 mod takeover;
 
-pub use error::InstanceError;
 pub use takeover::acquire;
 
 #[cfg(test)]
@@ -40,17 +39,17 @@ mod tests {
         path::PathBuf,
         process::Command,
         sync::{
+            atomic::{AtomicU32, Ordering},
             Mutex,
-            atomic::{AtomicU32, Ordering}
         },
-        time::{Duration, Instant}
+        time::{Duration, Instant},
     };
 
     use super::{
-        InstanceError,
-        lock::{InstanceLock, LOCK_FILE_NAME, current_uid, lock_path, try_acquire},
+        error::InstanceError,
+        lock::{current_uid, lock_path, try_acquire, InstanceLock, LOCK_FILE_NAME},
         stale::{process_is_alive, read_owner},
-        takeover::{TakeoverPolicy, acquire_at}
+        takeover::{acquire_at, TakeoverPolicy},
     };
 
     static COUNTER: AtomicU32 = AtomicU32::new(0);
@@ -87,8 +86,8 @@ mod tests {
 
     fn fast_policy() -> TakeoverPolicy {
         TakeoverPolicy {
-            timeout:       Duration::from_millis(150),
-            poll_interval: Duration::from_millis(5)
+            timeout: Duration::from_millis(150),
+            poll_interval: Duration::from_millis(5),
         }
     }
 
@@ -137,11 +136,9 @@ mod tests {
             .expect("the first attempt must succeed")
             .expect("the slot starts out free");
 
-        assert!(
-            try_acquire(&path)
-                .expect("probing a held lock is not an error")
-                .is_none()
-        );
+        assert!(try_acquire(&path)
+            .expect("probing a held lock is not an error")
+            .is_none());
 
         let owner = read_owner(&path).expect("the holder records its process id");
         assert_eq!(owner, std::process::id().cast_signed());
@@ -178,7 +175,7 @@ mod tests {
         let held = Mutex::new(Some(
             try_acquire(&path)
                 .expect("the first attempt must succeed")
-                .expect("the slot starts out free")
+                .expect("the slot starts out free"),
         ));
         let signalled = Mutex::new(Vec::new());
 
@@ -233,11 +230,9 @@ mod tests {
             .expect("the slot starts out free");
         drop(lock);
 
-        assert!(
-            try_acquire(&path)
-                .expect("the slot is free again")
-                .is_some()
-        );
+        assert!(try_acquire(&path)
+            .expect("the slot is free again")
+            .is_some());
     }
 
     #[test]
@@ -245,10 +240,9 @@ mod tests {
         let path = lock_path();
 
         assert!(path.ends_with(LOCK_FILE_NAME));
-        assert!(
-            path.parent()
-                .is_some_and(|parent| parent.ends_with("hydebar")
-                    || parent.starts_with(format!("/tmp/hydebar-{}", current_uid())))
-        );
+        assert!(path
+            .parent()
+            .is_some_and(|parent| parent.ends_with("hydebar")
+                || parent.starts_with(format!("/tmp/hydebar-{}", current_uid()))));
     }
 }

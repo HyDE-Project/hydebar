@@ -10,15 +10,15 @@ use std::{
     io,
     path::Path,
     thread::sleep,
-    time::{Duration, Instant}
+    time::{Duration, Instant},
 };
 
 use log::{debug, info, warn};
 
 use super::{
     error::InstanceError,
-    lock::{InstanceLock, lock_path, try_acquire},
-    stale::{process_is_alive, read_owner}
+    lock::{lock_path, try_acquire, InstanceLock},
+    stale::{process_is_alive, read_owner},
 };
 
 /// How long a newcomer waits for the incumbent to release the lock.
@@ -31,16 +31,16 @@ const TAKEOVER_POLL_INTERVAL: Duration = Duration::from_millis(25);
 #[derive(Debug, Clone, Copy)]
 pub struct TakeoverPolicy {
     /// Upper bound on the wait for the incumbent to release the lock.
-    pub timeout:       Duration,
+    pub timeout: Duration,
     /// Delay between two attempts at the lock while waiting.
-    pub poll_interval: Duration
+    pub poll_interval: Duration,
 }
 
 impl Default for TakeoverPolicy {
     fn default() -> Self {
         Self {
-            timeout:       TAKEOVER_TIMEOUT,
-            poll_interval: TAKEOVER_POLL_INTERVAL
+            timeout: TAKEOVER_TIMEOUT,
+            poll_interval: TAKEOVER_POLL_INTERVAL,
         }
     }
 }
@@ -80,10 +80,10 @@ pub fn acquire() -> Result<InstanceLock, InstanceError> {
 pub(super) fn acquire_at<S>(
     path: &Path,
     policy: TakeoverPolicy,
-    signal_owner: S
+    signal_owner: S,
 ) -> Result<InstanceLock, InstanceError>
 where
-    S: Fn(i32) -> io::Result<()>
+    S: Fn(i32) -> io::Result<()>,
 {
     if let Some(lock) = try_acquire(path)? {
         debug!("took the instance lock at {}", path.display());
@@ -101,7 +101,7 @@ where
         None => warn!(
             "the instance lock at {} is held by an unidentified process",
             path.display()
-        )
+        ),
     }
 
     wait_for_takeover(path, policy, owner)
@@ -111,7 +111,7 @@ where
 fn wait_for_takeover(
     path: &Path,
     policy: TakeoverPolicy,
-    owner: Option<i32>
+    owner: Option<i32>,
 ) -> Result<InstanceLock, InstanceError> {
     let started = Instant::now();
 

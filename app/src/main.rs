@@ -15,7 +15,7 @@
 mod application;
 mod error;
 mod housekeeping;
-mod instance;
+pub(crate) mod instance;
 mod logging;
 mod runtime;
 mod startup_scale;

@@ -2,7 +2,7 @@
 
 use hydebar_core::config::ConfigLoadError;
 
-use crate::instance::InstanceError;
+use crate::instance::error::InstanceError;
 
 /// Reason the bar could not start.
 #[derive(Debug)]
