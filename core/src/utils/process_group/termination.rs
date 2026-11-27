@@ -72,7 +72,7 @@ pub(super) fn kill_group(pid: u32) {
 /// detachment, because the environment does, so those stragglers are still
 /// recognisable as this run's.
 pub fn terminate_all() {
-    let ended = LIVE_GROUPS.terminate_all();
+    let ended = LIVE_GROUPS.terminate_all(kill_group);
 
     if ended > 0 {
         info!("ended {ended} process groups on the way out");
@@ -167,7 +167,7 @@ fn open_wake_pipe() -> io::Result<i32> {
 
 /// Ends every group and wakes the reaper, using only what a handler may call.
 fn on_termination_signal() {
-    LIVE_GROUPS.terminate_all();
+    LIVE_GROUPS.terminate_all(kill_group);
 
     let writer = WAKE_WRITER.load(Ordering::Acquire);
 

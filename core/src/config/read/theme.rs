@@ -16,7 +16,7 @@ use std::{fs, path::Path};
 use hydebar_proto::config::{preset_names, preset_source};
 use serde::de::Error as _;
 
-use super::ConfigReadError;
+use super::error::ConfigReadError;
 
 /// Subdirectory beside the configuration file holding user theme files.
 pub(super) const THEMES_DIRECTORY: &str = "themes";
@@ -284,7 +284,9 @@ mod tests {
             } => assert_eq!(reported, theme_path),
             ConfigReadError::Read {
                 ..
-            } => panic!("a broken theme file is a parse error, not a read error")
+            } => {
+                panic!("a broken theme file is a parse error, not a read error")
+            }
         }
     }
 

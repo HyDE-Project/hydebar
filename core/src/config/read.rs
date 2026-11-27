@@ -8,11 +8,7 @@
 //! the raw table is still in hand, because that presence — not its content —
 //! is what pins the layout against the desktop's.
 
-use std::{
-    fs::File,
-    io::Read,
-    path::{Path, PathBuf}
-};
+use std::{fs::File, io::Read, path::Path};
 
 use hydebar_proto::{
     bar_layout,
@@ -25,63 +21,12 @@ use self::{
 };
 use super::hyde::follow_hyde;
 
+mod error;
 pub(super) mod theme;
 mod theme_base;
 mod unknown;
 
-#[derive(Debug)]
-pub enum ConfigReadError {
-    Read {
-        path:   PathBuf,
-        source: std::io::Error
-    },
-    Parse {
-        path:   PathBuf,
-        source: toml::de::Error
-    }
-}
-
-impl std::fmt::Display for ConfigReadError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Read {
-                path,
-                source
-            } => {
-                write!(
-                    f,
-                    "failed to read config file '{}': {}",
-                    path.display(),
-                    source
-                )
-            }
-            Self::Parse {
-                path,
-                source
-            } => {
-                write!(
-                    f,
-                    "failed to parse config file '{}': {}",
-                    path.display(),
-                    source
-                )
-            }
-        }
-    }
-}
-
-impl std::error::Error for ConfigReadError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Self::Read {
-                source, ..
-            } => Some(source),
-            Self::Parse {
-                source, ..
-            } => Some(source)
-        }
-    }
-}
+pub use error::ConfigReadError;
 
 pub fn read_config(path: &Path) -> Result<Config, ConfigReadError> {
     read_config_with(path, theme_source::load, bar_layout::load)

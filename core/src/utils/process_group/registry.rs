@@ -2,8 +2,6 @@
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use super::termination::kill_group;
-
 /// Process groups the registry can hold at once.
 ///
 /// One slot per live listener or scheduled command; a configuration with a
@@ -63,19 +61,20 @@ impl GroupRegistry {
             .any(|slot| slot.load(Ordering::Acquire) == pid)
     }
 
-    /// Ends every recorded group, emptying the registry.
+    /// Ends every recorded group, emptying the registry, signalling each
+    /// through `end`.
     ///
-    /// Only an atomic swap and `kill` are used, so this is safe to run from a
-    /// signal handler; it reports how many groups it reached rather than
-    /// logging, because logging from a handler is not.
-    pub(super) fn terminate_all(&self) -> usize {
+    /// Only an atomic swap and `end` are used, so this is safe to run from a
+    /// signal handler as long as `end` is; it reports how many groups it
+    /// reached rather than logging, because logging from a handler is not.
+    pub(super) fn terminate_all(&self, end: impl Fn(u32)) -> usize {
         let mut ended = 0;
 
         for slot in &self.slots {
             let pid = slot.swap(EMPTY_SLOT, Ordering::AcqRel);
 
             if pid != EMPTY_SLOT {
-                kill_group(pid);
+                end(pid);
                 ended += 1;
             }
         }

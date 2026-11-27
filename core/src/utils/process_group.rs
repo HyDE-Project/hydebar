@@ -224,7 +224,7 @@ mod tests {
 
         tokio::time::sleep(Duration::from_millis(200)).await;
 
-        assert_eq!(registry.terminate_all(), 2);
+        assert_eq!(registry.terminate_all(super::termination::kill_group), 2);
 
         for child in [&mut first, &mut second] {
             tokio::time::timeout(Duration::from_secs(5), child.wait())

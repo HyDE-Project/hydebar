@@ -15,7 +15,7 @@
 use std::{mem::take, path::Path};
 
 use super::{
-    ConfigReadError,
+    error::ConfigReadError,
     theme::{base_table, invalid_name_error, is_plain_name}
 };
 use crate::config::read::theme::THEMES_DIRECTORY;
