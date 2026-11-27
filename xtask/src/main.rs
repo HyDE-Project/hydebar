@@ -9,6 +9,7 @@ use std::{env, fs::read_to_string, path::PathBuf, process::ExitCode};
 mod checklist;
 mod generate;
 mod import;
+mod import_data;
 mod import_emit;
 mod import_scope;
 mod import_source;

@@ -10,7 +10,7 @@ use std::{
 
 use hydebar_proto::{bar_layout::module_for, config::ModuleName};
 
-use super::import::SectionEntry;
+use super::import_data::SectionEntry;
 /// Working state of one migration pass.
 ///
 /// Group expansion, deduplication and reporting share these tables; bundling

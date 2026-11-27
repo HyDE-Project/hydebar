@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 use serde_json::Value;
 
-use super::import::CustomEntry;
+use super::import_data::CustomEntry;
 /// Pill groups declared beside the module arrays, keyed by their full tail.
 ///
 /// `pill#1` and `pill#2` are distinct groups that happen to share a family;

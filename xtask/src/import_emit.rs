@@ -6,7 +6,7 @@
 
 use std::fmt::Write as _;
 
-use super::import::{Converted, CustomEntry, SectionEntry};
+use super::import_data::{Converted, CustomEntry, SectionEntry};
 
 /// Renders the migration as a configuration file.
 pub fn render(converted: &Converted, source: &str) -> String {
