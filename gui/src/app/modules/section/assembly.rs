@@ -30,7 +30,7 @@ impl App {
         id: Id,
         opacity: f32,
         island_offset: usize,
-        reads_towards_the_centre: bool,
+        reads_towards_the_centre: bool
     ) -> Element<'a, Message> {
         use hydebar_core::components::archipelago::{Archipelago, PillPaint};
         use hydebar_proto::config::AppearanceStyle;
@@ -49,11 +49,11 @@ impl App {
             move |theme: &iced::Theme| match style {
                 AppearanceStyle::Islands => Some(PillPaint {
                     background: theme.palette().background.scale_alpha(island_alpha),
-                    border: finish.border(radius),
-                    shadow: finish.shadow(),
+                    border:     finish.border(radius),
+                    shadow:     finish.shadow()
                 }),
-                AppearanceStyle::Solid | AppearanceStyle::Gradient => None,
-            },
+                AppearanceStyle::Solid | AppearanceStyle::Gradient => None
+            }
         );
 
         let total = self.island_count().max(1) as f32;
@@ -68,7 +68,7 @@ impl App {
         for (index, module_def) in modules_def.iter().enumerate() {
             let names: Vec<&hydebar_core::config::ModuleName> = match module_def {
                 ModuleDef::Single(module) => vec![module],
-                ModuleDef::Group(group) => group.iter().collect(),
+                ModuleDef::Group(group) => group.iter().collect()
             };
 
             let ordinal = ((island_offset + index) as f32 + 0.5) / total;
@@ -112,9 +112,9 @@ impl App {
                             .min(hydebar_core::animation::sweep(
                                 self.entrance.value().clamp(0.0, 1.0),
                                 position,
-                                self.sweep.spread,
+                                self.sweep.spread
                             )),
-                        element,
+                        element
                     );
                     seated = true;
                 }

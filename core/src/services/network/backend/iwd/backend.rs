@@ -3,7 +3,7 @@
 use log::debug;
 use masterror::{AppError, AppResult};
 use tokio::process::Command;
-use zbus::zvariant::OwnedObjectPath;
+use zbus::OwnedObjectPath;
 
 use super::{IwdDbus, adapter::AdapterProxy};
 use crate::services::{

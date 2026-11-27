@@ -50,7 +50,7 @@ pub enum NetworkEvent {
 /// use std::convert::TryFrom;
 ///
 /// use hydebar_core::services::network::{AccessPoint, DeviceState, NetworkCommand};
-/// use zbus::zvariant::OwnedObjectPath;
+/// use zbus::OwnedObjectPath;
 ///
 /// let command = NetworkCommand::ScanNearByWiFi;
 /// assert!(matches!(command, NetworkCommand::ScanNearByWiFi));

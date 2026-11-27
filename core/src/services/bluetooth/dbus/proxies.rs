@@ -2,12 +2,9 @@
 
 use std::collections::HashMap;
 
-use zbus::{
-    proxy,
-    zvariant::{OwnedObjectPath, OwnedValue}
-};
+use zbus::{OwnedObjectPath, OwnedVariant, proxy};
 
-type ManagedObjects = HashMap<OwnedObjectPath, HashMap<String, HashMap<String, OwnedValue>>>;
+type ManagedObjects = HashMap<OwnedObjectPath, HashMap<String, HashMap<String, OwnedVariant>>>;
 
 #[proxy(
     default_service = "org.bluez",

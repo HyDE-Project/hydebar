@@ -30,7 +30,11 @@ chrono = "0.4"
 serde = { version = "1.0", features = ["derive"] }
 sysinfo = "0.40"
 tokio = { version = "1", features = ["full", "test-util"] }
-zbus = { version = "6", default-features = false, features = ["tokio"] }
+zbus = { version = "6", default-features = false, features = [
+    "tokio",
+    "proxy",
+    "service",
+] }
 libpulse-binding = { version = "2", features = ["pa_v15"] }
 log = { version = "0.4", features = ["serde"] }
 flexi_logger = "0.32"

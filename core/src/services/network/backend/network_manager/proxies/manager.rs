@@ -2,10 +2,7 @@
 
 use std::collections::HashMap;
 
-use zbus::{
-    Result, proxy,
-    zvariant::{ObjectPath, OwnedObjectPath, Value}
-};
+use zbus::{ObjectPath, OwnedObjectPath, Result, Variant, proxy};
 
 #[proxy(
     interface = "org.freedesktop.NetworkManager",
@@ -22,7 +19,7 @@ pub trait NetworkManager {
 
     fn add_and_activate_connection(
         &self,
-        connection: HashMap<&str, HashMap<&str, Value<'_>>>,
+        connection: HashMap<&str, HashMap<&str, Variant<'_>>>,
         device: &ObjectPath<'_>,
         specific_object: &ObjectPath<'_>
     ) -> Result<(OwnedObjectPath, OwnedObjectPath)>;

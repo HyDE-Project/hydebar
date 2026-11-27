@@ -2,7 +2,7 @@
 
 use log::warn;
 use masterror::AppResult;
-use zbus::zvariant::Value;
+use zbus::Variant;
 
 use super::super::{NetworkDbus, NetworkSettingsDbus, proxies::ConnectionSettingsProxy};
 use crate::services::{
@@ -31,7 +31,6 @@ impl NetworkDbus<'_> {
         for c in known_connections {
             let cs = ConnectionSettingsProxy::builder(self.0.inner().connection())
                 .path(c.clone())
-                .map_err(|e| bus_failure("Failed to set ConnectionSettingsProxy path", &e))?
                 .build()
                 .await
                 .map_err(|e| bus_failure("Failed to build ConnectionSettingsProxy", &e))?;
@@ -47,7 +46,7 @@ impl NetworkDbus<'_> {
                     .get("connection")
                     .and_then(|c| c.get("id"))
                     .map(|s| match &**s {
-                        Value::Str(v) => v.to_string(),
+                        Variant::Str(v) => v.to_string(),
                         _ => String::new()
                     });
 
@@ -59,7 +58,7 @@ impl NetworkDbus<'_> {
                     .get("connection")
                     .and_then(|c| c.get("id"))
                     .map(|v| match &**v {
-                        Value::Str(v) => v.to_string(),
+                        Variant::Str(v) => v.to_string(),
                         _ => String::new()
                     });
 

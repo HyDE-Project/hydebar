@@ -2,10 +2,7 @@
 
 use std::collections::HashMap;
 
-use zbus::{
-    Result, proxy,
-    zvariant::{OwnedObjectPath, OwnedValue}
-};
+use zbus::{OwnedObjectPath, OwnedVariant, Result, proxy};
 
 #[proxy(
     default_service = "org.freedesktop.NetworkManager",
@@ -31,7 +28,7 @@ pub trait AccessPoint {
 pub trait Settings {
     fn add_connection(
         &self,
-        connection: HashMap<String, HashMap<String, OwnedValue>>
+        connection: HashMap<String, HashMap<String, OwnedVariant>>
     ) -> Result<OwnedObjectPath>;
 
     #[zbus(property)]
@@ -48,7 +45,7 @@ pub trait Settings {
     interface = "org.freedesktop.NetworkManager.Settings.Connection"
 )]
 pub trait ConnectionSettings {
-    fn update(&self, settings: HashMap<String, HashMap<String, OwnedValue>>) -> Result<()>;
+    fn update(&self, settings: HashMap<String, HashMap<String, OwnedVariant>>) -> Result<()>;
 
-    fn get_settings(&self) -> Result<HashMap<String, HashMap<String, OwnedValue>>>;
+    fn get_settings(&self) -> Result<HashMap<String, HashMap<String, OwnedVariant>>>;
 }

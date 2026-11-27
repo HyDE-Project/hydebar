@@ -5,7 +5,7 @@ use std::{any::TypeId, time::Duration};
 use iced::{Subscription, stream::channel};
 use log::warn;
 use masterror::AppResult;
-use zbus::zvariant::ObjectPath;
+use zbus::ObjectPath;
 
 use super::{
     BatteryData, BatteryStatus, PowerProfile, UPowerService,

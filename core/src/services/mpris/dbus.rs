@@ -1,6 +1,6 @@
 use std::{collections::HashMap, ops::Deref};
 
-use zbus::{Result, proxy, zvariant::OwnedValue};
+use zbus::{OwnedVariant, Result, proxy};
 
 #[allow(dead_code)]
 pub struct MprisPlayerDbus<'a>(MprisPlayerProxy<'a>);
@@ -25,7 +25,7 @@ pub trait MprisPlayer {
     #[zbus(property)]
     fn playback_status(&self) -> Result<String>;
     #[zbus(property)]
-    fn metadata(&self) -> Result<HashMap<String, OwnedValue>>;
+    fn metadata(&self) -> Result<HashMap<String, OwnedVariant>>;
     #[zbus(property)]
     fn set_volume(&self, v: f64) -> Result<()>;
     #[zbus(property)]

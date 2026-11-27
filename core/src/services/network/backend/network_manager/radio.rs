@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use log::debug;
 use masterror::AppResult;
 use tokio::process::Command;
-use zbus::zvariant::{self, OwnedObjectPath};
+use zbus::{ObjectPath, OwnedObjectPath};
 
 use super::{NetworkDbus, proxies::WirelessDeviceProxy};
 use crate::services::{bus::bus_failure, network::KnownConnection};
@@ -51,7 +51,6 @@ pub(super) async fn scan_nearby_wifi(nm: &NetworkDbus<'_>) -> AppResult<()> {
     {
         let device = WirelessDeviceProxy::builder(nm.inner().connection())
             .path(device_path)
-            .map_err(|e| bus_failure("Failed to set WirelessDeviceProxy path", &e))?
             .build()
             .await
             .map_err(|e| bus_failure("Failed to build WirelessDeviceProxy", &e))?;
@@ -79,7 +78,7 @@ pub(super) async fn set_vpn(
     if enable {
         debug!("Activating VPN: {connection:?}");
 
-        let root = || zvariant::ObjectPath::from_static_str_unchecked("/").into();
+        let root = || ObjectPath::from_static_str_unchecked("/").into();
 
         nm.activate_connection(connection, root(), root())
             .await

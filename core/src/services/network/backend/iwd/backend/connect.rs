@@ -2,7 +2,7 @@
 
 use log::info;
 use masterror::{AppError, AppResult};
-use zbus::zvariant::{ObjectPath, OwnedObjectPath};
+use zbus::{ObjectPath, OwnedObjectPath};
 
 use super::super::{IwdDbus, agents::PWAgent, network::NetworkProxy};
 use crate::services::{bus::bus_failure, network::AccessPoint};
@@ -57,9 +57,7 @@ pub(super) async fn select_access_point(
 
     let net = NetworkProxy::builder(iwd.inner().connection())
         .destination("net.connman.iwd")
-        .map_err(|e| bus_failure("Failed to set NetworkProxy destination", &e))?
         .path(ap.path.clone())
-        .map_err(|e| bus_failure("Failed to set NetworkProxy path", &e))?
         .build()
         .await
         .map_err(|e| bus_failure("Failed to build NetworkProxy", &e))?;

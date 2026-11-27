@@ -46,7 +46,7 @@ impl App {
 
                     let rows = Task::perform(
                         hydebar_core::outputs::perch::strip_rows_settled(),
-                        Message::StripRowsMeasured,
+                        Message::StripRowsMeasured
                     );
 
                     Task::batch([looked, rows])

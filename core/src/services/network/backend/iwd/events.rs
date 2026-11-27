@@ -16,7 +16,7 @@ use log::debug;
 use masterror::{AppError, AppResult};
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use uuid::Uuid;
-use zbus::zvariant::OwnedObjectPath;
+use zbus::OwnedObjectPath;
 
 use super::{IwdDbus, agents::SignalAgent, signal_agents::SignalAgents};
 

@@ -1,6 +1,6 @@
 //! Aggregated readout over every battery device `UPower` reports.
 
-use zbus::zvariant::ObjectPath;
+use zbus::ObjectPath;
 
 use super::proxies::DeviceProxy;
 

@@ -2,7 +2,7 @@
 
 use std::convert::TryFrom;
 
-use zbus::zvariant::OwnedObjectPath;
+use zbus::OwnedObjectPath;
 
 use super::agents::{PWAgent, SignalAgent};
 

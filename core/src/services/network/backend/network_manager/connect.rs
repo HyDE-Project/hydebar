@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use log::debug;
 use masterror::{AppError, AppResult};
-use zbus::zvariant::{self, OwnedObjectPath, Value};
+use zbus::{OwnedObjectPath, Variant};
 
 use super::{NetworkDbus, NetworkSettingsDbus, proxies::ConnectionSettingsProxy};
 use crate::services::{bus::bus_failure, network::AccessPoint};
@@ -61,7 +61,6 @@ async fn replace_password(
 ) -> AppResult<()> {
     let stored = ConnectionSettingsProxy::builder(nm.inner().connection())
         .path(connection)
-        .map_err(|e| bus_failure("Failed to set ConnectionSettingsProxy path", &e))?
         .build()
         .await
         .map_err(|e| bus_failure("Failed to build ConnectionSettingsProxy", &e))?;
@@ -72,7 +71,7 @@ async fn replace_password(
         .map_err(|e| bus_failure("Failed to get connection settings", &e))?;
 
     if let Some(security) = settings.get_mut("802-11-wireless-security") {
-        let key = zvariant::Value::from(password)
+        let key = Variant::from(password)
             .try_to_owned()
             .map_err(|e| AppError::internal(format!("Failed to convert password value: {e}")))?;
 
@@ -108,17 +107,17 @@ async fn join_new(
 fn new_connection_settings(
     name: &str,
     password: Option<String>
-) -> HashMap<&'static str, HashMap<&'static str, Value<'static>>> {
+) -> HashMap<&'static str, HashMap<&'static str, Variant<'static>>> {
     let mut settings = HashMap::from([
         (
             "802-11-wireless",
-            HashMap::from([("ssid", Value::Array(name.as_bytes().into()))])
+            HashMap::from([("ssid", Variant::Array(name.as_bytes().into()))])
         ),
         (
             "connection",
             HashMap::from([
-                ("id", Value::Str(name.to_owned().into())),
-                ("type", Value::Str("802-11-wireless".into()))
+                ("id", Variant::Str(name.to_owned().into())),
+                ("type", Variant::Str("802-11-wireless".into()))
             ])
         )
     ]);
@@ -127,8 +126,8 @@ fn new_connection_settings(
         settings.insert(
             "802-11-wireless-security",
             HashMap::from([
-                ("psk", Value::Str(password.into())),
-                ("key-mgmt", Value::Str("wpa-psk".into()))
+                ("psk", Variant::Str(password.into())),
+                ("key-mgmt", Variant::Str("wpa-psk".into()))
             ])
         );
     }

@@ -49,7 +49,6 @@ impl BluetoothService {
                 for device in devices.iter().filter(|d| d.battery.is_some()) {
                     let battery = BatteryProxy::builder(bluetooth.bluez.inner().connection())
                         .path(device.path.clone())
-                        .map_err(|e| bus_failure("Failed to set battery path", &e))?
                         .build()
                         .await
                         .map_err(|e| bus_failure("Failed to build battery proxy", &e))?;

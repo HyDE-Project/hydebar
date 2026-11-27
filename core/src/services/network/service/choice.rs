@@ -1,7 +1,7 @@
 //! Selection between the `NetworkManager` and iwd backends.
 
 use masterror::{AppError, AppErrorKind, AppResult};
-use zbus::zvariant::OwnedObjectPath;
+use zbus::OwnedObjectPath;
 
 use super::super::{
     AccessPoint, KnownConnection, NetworkData,

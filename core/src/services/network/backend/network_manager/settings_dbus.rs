@@ -3,7 +3,7 @@
 use std::ops::Deref;
 
 use masterror::AppResult;
-use zbus::zvariant::{OwnedObjectPath, Value};
+use zbus::{OwnedObjectPath, Variant};
 
 use super::proxies::{ConnectionSettingsProxy, SettingsProxy};
 use crate::services::bus::bus_failure;
@@ -43,7 +43,6 @@ impl NetworkSettingsDbus<'_> {
         for connection in connections {
             let connection = ConnectionSettingsProxy::builder(self.inner().connection())
                 .path(connection)
-                .map_err(|e| bus_failure("Failed to set ConnectionSettingsProxy path", &e))?
                 .build()
                 .await
                 .map_err(|e| bus_failure("Failed to build ConnectionSettingsProxy", &e))?;
@@ -56,7 +55,7 @@ impl NetworkSettingsDbus<'_> {
                 .get("connection")
                 .and_then(|section| section.get("id"))
                 .map(|v| match &**v {
-                    Value::Str(v) => v.to_string(),
+                    Variant::Str(v) => v.to_string(),
                     _ => String::new()
                 })
             else {

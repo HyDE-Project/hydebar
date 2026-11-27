@@ -139,7 +139,7 @@ mod tests {
     use std::convert::TryFrom;
 
     use iced_test::simulator;
-    use zbus::zvariant::OwnedObjectPath;
+    use zbus::OwnedObjectPath;
 
     use super::*;
     use crate::services::network::DeviceState;

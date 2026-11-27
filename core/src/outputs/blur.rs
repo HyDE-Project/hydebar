@@ -94,7 +94,6 @@ fn rules(namespace: &str) -> [Rule; 2] {
     ]
 }
 
-
 /// Keeps the compositor from blurring the frame's own surfaces.
 ///
 /// HyDE's own configuration blurs every namespace beginning with

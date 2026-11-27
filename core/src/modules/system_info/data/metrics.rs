@@ -37,7 +37,7 @@ pub(super) fn per_core(system: &System) -> Vec<u32> {
     system
         .cpus()
         .iter()
-        .map(|cpu| cpu.cpu_usage().clamp(0.0, 100.0) as u32)
+        .map(|cpu| cpu.usage().clamp(0.0, 100.0) as u32)
         .collect()
 }
 

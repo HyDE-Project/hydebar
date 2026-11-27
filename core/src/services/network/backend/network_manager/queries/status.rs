@@ -33,7 +33,6 @@ impl NetworkDbus<'_> {
         for d in devices {
             let device = DeviceProxy::builder(self.0.inner().connection())
                 .path(d)
-                .map_err(|e| bus_failure("Failed to set DeviceProxy path", &e))?
                 .build()
                 .await
                 .map_err(|e| bus_failure("Failed to build DeviceProxy", &e))?;

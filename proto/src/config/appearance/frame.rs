@@ -50,7 +50,7 @@ pub enum EntryAlignment {
     #[default]
     Center,
     /// Pinned to the last end of the strip.
-    End,
+    End
 }
 
 /// One widget the user placed on a strip.
@@ -62,10 +62,10 @@ pub enum EntryAlignment {
 #[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct FrameEntry {
     /// Identifier of the widget module placed here.
-    pub id: String,
+    pub id:        String,
     /// Where along the strip the widget stands.
     #[serde(default)]
-    pub alignment: EntryAlignment,
+    pub alignment: EntryAlignment
 }
 
 /// One edge of the screen as the user configured it.
@@ -80,10 +80,10 @@ pub struct FrameEdge {
     pub enabled: bool,
     /// Width of the strip, when it is not the shared `thickness`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub width: Option<f32>,
+    pub width:   Option<f32>,
     /// Widgets the user placed on this strip, in paint order.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub entries: Vec<FrameEntry>,
+    pub entries: Vec<FrameEntry>
 }
 
 impl Default for FrameEdge {
@@ -92,8 +92,8 @@ impl Default for FrameEdge {
     fn default() -> Self {
         Self {
             enabled: true,
-            width: None,
-            entries: Vec::new(),
+            width:   None,
+            entries: Vec::new()
         }
     }
 }
@@ -107,8 +107,8 @@ impl FrameEdge {
     pub const fn drawn() -> Self {
         Self {
             enabled: true,
-            width: None,
-            entries: Vec::new(),
+            width:   None,
+            entries: Vec::new()
         }
     }
 }
@@ -122,24 +122,24 @@ impl FrameEdge {
 pub struct FrameEdges {
     /// How the top edge of the screen is furnished.
     #[serde(default = "enabled_top")]
-    pub top: FrameEdge,
+    pub top:    FrameEdge,
     /// How the bottom edge of the screen is furnished.
     #[serde(default)]
     pub bottom: FrameEdge,
     /// How the left edge of the screen is furnished.
     #[serde(default)]
-    pub left: FrameEdge,
+    pub left:   FrameEdge,
     /// How the right edge of the screen is furnished.
     #[serde(default)]
-    pub right: FrameEdge,
+    pub right:  FrameEdge
 }
 
 /// The top edge is drawn by default, like every other edge.
 const fn enabled_top() -> FrameEdge {
     FrameEdge {
         enabled: true,
-        width: None,
-        entries: Vec::new(),
+        width:   None,
+        entries: Vec::new()
     }
 }
 
@@ -156,7 +156,7 @@ const fn enabled_top() -> FrameEdge {
 pub struct FrameConfig {
     /// Whether the frame is painted around the screen.
     #[serde(default)]
-    pub enabled: bool,
+    pub enabled:   bool,
     /// Thickness of a frame strip, in pixels.
     #[serde(default = "default_thickness")]
     pub thickness: f32,
@@ -165,10 +165,10 @@ pub struct FrameConfig {
     /// Unset means the frame follows the compositor's window rounding —
     /// one source of truth for every corner on the desktop.
     #[serde(default)]
-    pub rounding: Option<f32>,
+    pub rounding:  Option<f32>,
     /// Which screen edges carry the frame.
     #[serde(default)]
-    pub edges: FrameEdges,
+    pub edges:     FrameEdges
 }
 
 impl FrameConfig {
@@ -180,10 +180,10 @@ impl FrameConfig {
 impl Default for FrameConfig {
     fn default() -> Self {
         Self {
-            enabled: false,
+            enabled:   false,
             thickness: default_thickness(),
-            rounding: None,
-            edges: FrameEdges::default(),
+            rounding:  None,
+            edges:     FrameEdges::default()
         }
     }
 }
@@ -204,7 +204,7 @@ mod tests {
 
             [edges.top]
             enabled = false
-            ",
+            "
         )
         .expect("the frame fixture names a valid configuration")
     }
@@ -246,7 +246,7 @@ mod tests {
             r"
             [edges.left]
             width = 14.0
-            ",
+            "
         )
         .expect("the widths fixture names a valid configuration");
 
@@ -265,7 +265,7 @@ mod tests {
                 { id = 'clock', alignment = 'center' },
                 { id = 'workspaces', alignment = 'start' }
             ]
-            ",
+            "
         )
         .expect("the entries fixture names a valid configuration");
 
@@ -288,7 +288,7 @@ mod tests {
             r"
             [edges.left]
             entries = [{ id = 'clock' }]
-            ",
+            "
         )
         .expect("the plain entry fixture names a valid configuration");
 

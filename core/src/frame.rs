@@ -50,13 +50,13 @@ pub mod shm;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct PanelWidths {
     /// Width of the top strip, in physical pixels.
-    pub top: u32,
+    pub top:    u32,
     /// Width of the right strip, in physical pixels.
-    pub right: u32,
+    pub right:  u32,
     /// Width of the bottom strip, in physical pixels.
     pub bottom: u32,
     /// Width of the left strip, in physical pixels.
-    pub left: u32,
+    pub left:   u32
 }
 
 /// Widths of the four panel reservations, scaled by the output's scale
@@ -94,10 +94,10 @@ pub fn panel_widths(frame: &FrameConfig, dock: Position, scale_factor: f64) -> P
     };
 
     let mut widths = PanelWidths {
-        top: scaled(width(&frame.edges.top), scale_factor),
-        right: scaled(width(&frame.edges.right), scale_factor),
+        top:    scaled(width(&frame.edges.top), scale_factor),
+        right:  scaled(width(&frame.edges.right), scale_factor),
         bottom: scaled(width(&frame.edges.bottom), scale_factor),
-        left: scaled(width(&frame.edges.left), scale_factor),
+        left:   scaled(width(&frame.edges.left), scale_factor)
     };
 
     docked(&mut widths);

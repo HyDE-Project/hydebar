@@ -3,7 +3,7 @@
 use std::ops::Deref;
 
 use masterror::AppResult;
-use zbus::zvariant::OwnedObjectPath;
+use zbus::OwnedObjectPath;
 
 mod connect;
 mod events;

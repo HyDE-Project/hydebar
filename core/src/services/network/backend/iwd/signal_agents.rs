@@ -19,7 +19,7 @@ use std::{
 
 use iced::futures::Stream;
 use log::debug;
-use zbus::{Connection, zvariant::OwnedObjectPath};
+use zbus::{Connection, OwnedObjectPath};
 
 use super::{agents::SignalAgent, station::StationProxy};
 
@@ -75,10 +75,11 @@ impl Drop for SignalAgents {
 
         tokio::spawn(async move {
             for (station, agent) in agents {
-                if let Ok(builder) = StationProxy::builder(&conn)
+                if let Ok(proxy) = StationProxy::builder(&conn)
                     .destination("net.connman.iwd")
-                    .and_then(|builder| builder.path(station))
-                    && let Ok(proxy) = builder.build().await
+                    .path(station)
+                    .build()
+                    .await
                 {
                     let _ = proxy.unregister_signal_level_agent(&agent).await;
                 }

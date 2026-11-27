@@ -6,10 +6,7 @@
               takes no doc comment of ours"
 )]
 
-use zbus::{
-    proxy,
-    zvariant::{self, OwnedValue, Type}
-};
+use zbus::{DeserializeDict, OwnedVariant, Signature, Type, proxy};
 
 /// One menu entry: its identifier, what it says, and what opens under it.
 #[derive(Clone, Debug, Type)]
@@ -21,13 +18,13 @@ impl<'a> serde::Deserialize<'a> for Layout {
         deserializer: D
     ) -> std::result::Result<Self, D::Error> {
         let (id, props, children) =
-            <(i32, LayoutProps, Vec<(zvariant::Signature, Self)>)>::deserialize(deserializer)?;
+            <(i32, LayoutProps, Vec<(Signature, Self)>)>::deserialize(deserializer)?;
         Ok(Self(id, props, children.into_iter().map(|x| x.1).collect()))
     }
 }
 
 /// What one menu entry says about itself.
-#[derive(Clone, Debug, Type, zvariant::DeserializeDict)]
+#[derive(Clone, Debug, Type, DeserializeDict)]
 #[zvariant(signature = "dict")]
 pub struct LayoutProps {
     /// Whether the entry opens a submenu.
@@ -60,7 +57,7 @@ pub trait DBusMenu {
         &self,
         id: i32,
         event_id: &str,
-        data: &OwnedValue,
+        data: &OwnedVariant,
         timestamp: u32
     ) -> zbus::Result<()>;
 

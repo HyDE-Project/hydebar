@@ -2,10 +2,7 @@
 
 use std::collections::HashMap;
 
-use zbus::{
-    Result, proxy,
-    zvariant::{OwnedObjectPath, OwnedValue}
-};
+use zbus::{OwnedObjectPath, OwnedVariant, Result, proxy};
 
 #[proxy(
     default_service = "org.freedesktop.NetworkManager",
@@ -84,7 +81,7 @@ pub trait WiredDevice {
 )]
 pub trait WirelessDevice {
     /// `GetAccessPoints` method
-    fn get_access_points(&self) -> zbus::Result<Vec<zbus::zvariant::OwnedObjectPath>>;
+    fn get_access_points(&self) -> zbus::Result<Vec<zbus::OwnedObjectPath>>;
 
     #[zbus(property)]
     fn active_access_point(&self) -> Result<OwnedObjectPath>;
@@ -95,5 +92,5 @@ pub trait WirelessDevice {
     #[zbus(property)]
     fn last_scan(&self) -> zbus::Result<i64>;
 
-    fn request_scan(&self, options: HashMap<String, OwnedValue>) -> Result<()>;
+    fn request_scan(&self, options: HashMap<String, OwnedVariant>) -> Result<()>;
 }

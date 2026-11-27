@@ -4,7 +4,7 @@ mod wifi;
 mod wired;
 
 use masterror::{AppError, AppResult};
-use zbus::zvariant::OwnedObjectPath;
+use zbus::OwnedObjectPath;
 
 use super::super::{
     DeviceType, NetworkDbus,
@@ -39,7 +39,6 @@ impl NetworkDbus<'_> {
         for path in self.active_connections().await? {
             let connection = ActiveConnectionProxy::builder(conn)
                 .path(&path)
-                .map_err(|e| bus_failure("Failed to set ActiveConnectionProxy path", &e))?
                 .build()
                 .await
                 .map_err(|e| bus_failure("Failed to build ActiveConnectionProxy", &e))?;
@@ -52,7 +51,6 @@ impl NetworkDbus<'_> {
             for device_path in connection.devices().await.unwrap_or_default() {
                 let device = DeviceProxy::builder(conn)
                     .path(device_path)
-                    .map_err(|e| bus_failure("Failed to set DeviceProxy path", &e))?
                     .build()
                     .await
                     .map_err(|e| {

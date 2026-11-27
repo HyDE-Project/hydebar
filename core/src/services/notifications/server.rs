@@ -30,7 +30,7 @@ impl std::fmt::Debug for NotificationsServer {
 /// Notices arrive with the urgency as an untyped hint, and a caller that
 /// states none, or states one the specification does not name, means an
 /// ordinary notice — not the loudest one.
-fn urgency_of(hints: &std::collections::HashMap<String, zbus::zvariant::Value<'_>>) -> Urgency {
+fn urgency_of(hints: &std::collections::HashMap<String, zbus::Variant<'_>>) -> Urgency {
     hints
         .get("urgency")
         .and_then(|value| value.downcast_ref::<u8>().ok())
@@ -110,7 +110,7 @@ impl NotificationsServer {
         summary: String,
         body: String,
         actions: Vec<String>,
-        hints: std::collections::HashMap<String, zbus::zvariant::Value<'_>>,
+        hints: std::collections::HashMap<String, zbus::Variant<'_>>,
         expire_timeout: i32
     ) -> u32 {
         debug!(

@@ -1,7 +1,7 @@
 //! One registered status notifier item and its proxies.
 
 use log::debug;
-use masterror::{AppError, AppResult};
+use masterror::AppResult;
 
 use super::{
     TrayIcon,
@@ -38,13 +38,7 @@ impl StatusNotifierItem {
 
         let item_proxy = StatusNotifierItemProxy::builder(conn)
             .destination(dest.to_owned())
-            .map_err(|e| {
-                AppError::internal(format!(
-                    "Failed to set StatusNotifierItemProxy destination: {e}"
-                ))
-            })?
             .path(path.to_owned())
-            .map_err(|e| bus_failure("Failed to set StatusNotifierItemProxy path", &e))?
             .build()
             .await
             .map_err(|e| bus_failure("Failed to build StatusNotifierItemProxy", &e))?;
@@ -78,9 +72,7 @@ impl StatusNotifierItem {
             .map_err(|e| bus_failure("Failed to get menu path", &e))?;
         let menu_proxy = dbus::DBusMenuProxy::builder(conn)
             .destination(dest.to_owned())
-            .map_err(|e| bus_failure("Failed to set DBusMenuProxy destination", &e))?
             .path(menu_path.clone())
-            .map_err(|e| bus_failure("Failed to set DBusMenuProxy path", &e))?
             .build()
             .await
             .map_err(|e| bus_failure("Failed to build DBusMenuProxy", &e))?;

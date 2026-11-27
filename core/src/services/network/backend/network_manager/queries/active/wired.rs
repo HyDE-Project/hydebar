@@ -13,7 +13,6 @@ pub(super) async fn describe(
 ) -> AppResult<ActiveConnectionInfo> {
     let wired_device = WiredDeviceProxy::builder(conn)
         .path(device.inner().path())
-        .map_err(|e| bus_failure("Failed to set WiredDeviceProxy path", &e))?
         .build()
         .await
         .map_err(|e| bus_failure("Failed to build WiredDeviceProxy", &e))?;

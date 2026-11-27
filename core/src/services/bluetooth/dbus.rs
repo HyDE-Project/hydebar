@@ -38,7 +38,6 @@ impl BluetoothDbus<'_> {
             Some(
                 AdapterProxy::builder(conn)
                     .path(adapter)
-                    .map_err(|e| bus_failure("Failed to set adapter path", &e))?
                     .build()
                     .await
                     .map_err(|e| bus_failure("Failed to build AdapterProxy", &e))?

@@ -1,7 +1,7 @@
 use std::any::TypeId;
 
 use iced::Subscription;
-use zbus::zvariant::ObjectPath;
+use zbus::ObjectPath;
 
 use super::{ReadOnlyService, ServiceEvent};
 

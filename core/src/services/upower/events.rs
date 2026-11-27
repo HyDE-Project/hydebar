@@ -7,7 +7,7 @@ use iced::futures::{
 };
 use log::error;
 use masterror::{AppError, AppResult};
-use zbus::zvariant::ObjectPath;
+use zbus::ObjectPath;
 
 use super::{
     PowerProfile, State, UPowerEvent, UPowerService,

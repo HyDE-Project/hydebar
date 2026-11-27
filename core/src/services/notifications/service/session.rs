@@ -113,7 +113,7 @@ async fn claim_name(
     connection: &Connection,
     output: &mut iced::futures::channel::mpsc::Sender<ServiceEvent<NotificationsService>>
 ) -> Result<(), SessionEnd> {
-    let flags = RequestNameFlags::ReplaceExisting | RequestNameFlags::AllowReplacement;
+    let flags = RequestNameFlags::REPLACE_EXISTING | RequestNameFlags::ALLOW_REPLACEMENT;
 
     match connection
         .request_name_with_flags("org.freedesktop.Notifications", flags)

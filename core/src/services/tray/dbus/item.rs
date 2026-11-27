@@ -6,13 +6,10 @@
               takes no doc comment of ours"
 )]
 
-use zbus::{
-    proxy,
-    zvariant::{self, OwnedObjectPath}
-};
+use zbus::{OwnedObjectPath, proxy};
 
 /// One picture as the tray protocol carries it.
-#[derive(Clone, Debug, zvariant::Value)]
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize, zbus::Type, zbus::Variant)]
 pub struct Icon {
     /// How wide it is, in pixels.
     pub width:  i32,

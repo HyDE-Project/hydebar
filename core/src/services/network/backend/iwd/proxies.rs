@@ -17,14 +17,7 @@ macro_rules! list_proxies {
                     proxies.push(
                         <$proxy_type>::builder($manager.inner().connection())
                             .destination("net.connman.iwd")
-                            .map_err(|e| {
-                                AppError::internal(format!(
-                                    "Failed to set proxy destination: {}",
-                                    e
-                                ))
-                            })?
                             .path(path.clone())
-                            .map_err(|e| bus_failure("Failed to set proxy path", &e))?
                             .build()
                             .await
                             .map_err(|e| bus_failure("Failed to build proxy", &e))?
@@ -53,9 +46,7 @@ impl IwdDbus<'_> {
     pub async fn new(conn: &zbus::Connection) -> AppResult<Self> {
         let manager = ObjectManagerProxy::builder(conn)
             .destination("net.connman.iwd")
-            .map_err(|e| bus_failure("Failed to set ObjectManagerProxy destination", &e))?
             .path("/")
-            .map_err(|e| bus_failure("Failed to set ObjectManagerProxy path", &e))?
             .build()
             .await
             .map_err(|e| bus_failure("Failed to build ObjectManagerProxy for IWD", &e))?;
@@ -174,9 +165,7 @@ impl IwdDbus<'_> {
             for (path, strength) in networks_proxies {
                 let network = NetworkProxy::builder(self.inner().connection())
                     .destination("net.connman.iwd")
-                    .map_err(|e| bus_failure("Failed to set NetworkProxy destination", &e))?
                     .path(path.clone())
-                    .map_err(|e| bus_failure("Failed to set NetworkProxy path", &e))?
                     .build()
                     .await
                     .map_err(|e| bus_failure("Failed to build NetworkProxy", &e))?;

@@ -73,7 +73,7 @@ impl TrayService {
         menu_proxy: &DBusMenuProxy<'_>,
         id: i32
     ) -> AppResult<Layout> {
-        let value = zbus::zvariant::Value::I32(32)
+        let value = zbus::Variant::I32(32)
             .try_to_owned()
             .map_err(|e| AppError::internal(format!("Failed to convert value to owned: {e}")))?;
         menu_proxy

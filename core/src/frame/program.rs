@@ -30,8 +30,8 @@
 //! ```
 
 use iced::{
-    widget::canvas::{fill, path, Frame, Geometry, Program},
     Color, Point,
+    widget::canvas::{Frame, Geometry, Program, fill, path}
 };
 
 use super::geometry::{FramePiece, FrameShape};
@@ -43,7 +43,7 @@ pub struct FrameCanvas {
     /// The outline to fill, computed by [`super::geometry::frame_pieces`].
     pub shape: FrameShape,
     /// Colour of the frame, from the bar palette.
-    pub color: Color,
+    pub color: Color
 }
 
 impl<Message> Program<Message> for FrameCanvas {
@@ -55,7 +55,7 @@ impl<Message> Program<Message> for FrameCanvas {
         renderer: &iced::Renderer,
         _theme: &iced::Theme,
         bounds: iced::Rectangle,
-        _cursor: iced::mouse::Cursor,
+        _cursor: iced::mouse::Cursor
     ) -> Vec<Geometry> {
         use iced::widget::canvas::Cache;
 
@@ -79,8 +79,8 @@ impl<Message> Program<Message> for FrameCanvas {
                     &path,
                     fill::Fill {
                         style: color.into(),
-                        rule: fill::Rule::EvenOdd,
-                    },
+                        rule:  fill::Rule::EvenOdd
+                    }
                 );
             }),
         ]
@@ -102,7 +102,7 @@ fn piece_subpath(builder: &mut path::Builder, piece: FramePiece) {
         top_left,
         top_right,
         bottom_right,
-        bottom_left,
+        bottom_left
     } = piece;
 
     let pair = |a: f32, b: f32, length: f32| {

@@ -6,7 +6,7 @@ pub mod network_manager;
 mod common;
 pub use common::*;
 use masterror::AppResult;
-use zbus::zvariant::OwnedObjectPath;
+use zbus::OwnedObjectPath;
 
 use super::data::{AccessPoint, KnownConnection, NetworkData};
 

@@ -3,7 +3,7 @@ use std::{
     fmt::{Display, Formatter, Result as FmtResult}
 };
 
-use zbus::zvariant::OwnedValue;
+use zbus::OwnedVariant;
 
 use super::dbus::MprisPlayerProxy;
 
@@ -54,12 +54,12 @@ impl From<String> for PlaybackStatus {
 /// use std::collections::HashMap;
 ///
 /// use hydebar_core::services::mpris::MprisPlayerMetadata;
-/// use zbus::zvariant::{OwnedValue, Value};
+/// use zbus::{OwnedVariant, Variant};
 ///
 /// let mut values = HashMap::new();
 /// values.insert(
 ///     "xesam:title".to_string(),
-///     OwnedValue::try_from(Value::from("Example")).unwrap()
+///     OwnedVariant::try_from(Variant::from("Example")).unwrap()
 /// );
 ///
 /// let metadata = MprisPlayerMetadata::from(values);
@@ -88,8 +88,8 @@ impl Display for MprisPlayerMetadata {
     }
 }
 
-impl From<HashMap<String, OwnedValue>> for MprisPlayerMetadata {
-    fn from(value: HashMap<String, OwnedValue>) -> Self {
+impl From<HashMap<String, OwnedVariant>> for MprisPlayerMetadata {
+    fn from(value: HashMap<String, OwnedVariant>) -> Self {
         let artists = value
             .get("xesam:artist")
             .and_then(|entry| entry.clone().try_into().ok());

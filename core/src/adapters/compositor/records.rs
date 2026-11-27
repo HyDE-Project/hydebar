@@ -12,6 +12,10 @@ use serde::Deserialize;
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct WorkspaceRef {
     /// Identifier of the workspace, or zero where there is none.
+    ///
+    /// The compositor leaves the field out of an empty reference altogether,
+    /// writing only an address, a type and a name.
+    #[serde(default)]
     pub id: i32
 }
 

@@ -14,11 +14,11 @@
 //! in their own numbers.
 
 use hydebar_core::{
-    frame::{geometry::frame_pieces, program::FrameCanvas},
     HEIGHT,
+    frame::{geometry::frame_pieces, program::FrameCanvas}
 };
 use hydebar_proto::config::Position;
-use iced::{widget::canvas, Element, Length, SurfaceId as Id};
+use iced::{Element, Length, SurfaceId as Id, widget::canvas};
 
 use super::super::state::{App, Message};
 
@@ -56,14 +56,7 @@ impl App {
         )]
         let bar_height = appearance.height_px().unwrap_or(HEIGHT as f32);
 
-        let bar_offset = match self.config.position {
-            Position::Top => self.strip_rows.get(name).copied().unwrap_or(0.0),
-            Position::Bottom => self
-                .strip_rows
-                .get(name)
-                .zip(self.screen_height)
-                .map_or(0.0, |(row, height)| (height - row - bar_height).max(0.0)),
-        };
+        let bar_offset = self.bar_offset(name, bar_height);
 
         let shape = frame_pieces(
             screen_w,
@@ -71,7 +64,7 @@ impl App {
             frame,
             self.config.position,
             bar_height,
-            bar_offset,
+            bar_offset
         );
 
         log::debug!(
@@ -81,10 +74,30 @@ impl App {
             shape.inner.top_left
         );
 
-        canvas(FrameCanvas { shape, color })
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .into()
+        canvas(FrameCanvas {
+            shape,
+            color
+        })
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .into()
+    }
+
+    /// The row of screen the compositor put between the docked edge and the
+    /// bar's band, read from the measured strip.
+    ///
+    /// A top dock reads the strip's own row as the offset; a bottom dock
+    /// counts what the screen leaves below it. A screen whose strip was never
+    /// measured has nothing before the bar: the band stands on the edge.
+    fn bar_offset(&self, screen: &str, bar_height: f32) -> f32 {
+        match self.config.position {
+            Position::Top => self.strip_rows.get(screen).copied().unwrap_or(0.0),
+            Position::Bottom => self
+                .strip_rows
+                .get(screen)
+                .zip(self.screen_height)
+                .map_or(0.0, |(row, height)| (height - row - bar_height).max(0.0))
+        }
     }
 }
 
@@ -97,8 +110,8 @@ mod tests {
     use iced_test::simulator;
 
     use super::{
-        super::super::state::{test_support::test_app_with, Message},
-        *,
+        super::super::state::{Message, test_support::test_app_with},
+        *
     };
 
     fn tracked(app: &mut App, name: &str) {
@@ -112,7 +125,7 @@ mod tests {
             iced::OutputId::for_tests(),
             &app.config,
             1.0,
-            None,
+            None
         );
         let _ = task;
     }

@@ -116,11 +116,8 @@ mod tests {
             zbus::names::OwnedErrorName::try_from(name).expect("a well formed error name"),
             None,
             zbus::message::Message::method_call("/", "Nothing")
-                .expect("a builder")
                 .destination("org.example")
-                .expect("a destination")
                 .interface("org.example.Interface")
-                .expect("an interface")
                 .build(&())
                 .expect("a message")
         )

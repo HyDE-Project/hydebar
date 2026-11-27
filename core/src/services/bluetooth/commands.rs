@@ -1,7 +1,7 @@
 //! Commands the bar issues against the bluetooth adapter.
 
 use masterror::AppResult;
-use zbus::zvariant::OwnedObjectPath;
+use zbus::OwnedObjectPath;
 
 use super::{BluetoothService, BluetoothState, dbus::BluetoothDbus};
 use crate::services::ServiceEvent;

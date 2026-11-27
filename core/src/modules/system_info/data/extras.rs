@@ -19,7 +19,7 @@ impl SystemInfoSampler {
         self.ensure_networks();
 
         self.system
-            .refresh_cpu_specifics(sysinfo::CpuRefreshKind::nothing().with_cpu_usage());
+            .refresh_cpu_specifics(sysinfo::CpuRefreshKind::nothing().with_usage());
         self.system.refresh_memory();
 
         if let Some(ref mut disks) = self.disks {

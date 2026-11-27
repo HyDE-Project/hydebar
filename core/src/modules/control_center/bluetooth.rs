@@ -26,9 +26,9 @@ pub enum BluetoothMessage {
     /// Turn the adapter on or off.
     Toggle,
     /// Connect to this device.
-    ConnectDevice(zbus::zvariant::OwnedObjectPath),
+    ConnectDevice(zbus::OwnedObjectPath),
     /// Disconnect from this device.
-    DisconnectDevice(zbus::zvariant::OwnedObjectPath),
+    DisconnectDevice(zbus::OwnedObjectPath),
     /// Open the full bluetooth settings.
     More(Id)
 }
@@ -159,7 +159,7 @@ mod tests {
     use std::convert::TryFrom;
 
     use iced_test::simulator;
-    use zbus::zvariant::OwnedObjectPath;
+    use zbus::OwnedObjectPath;
 
     use super::*;
     use crate::services::bluetooth::BluetoothDevice;

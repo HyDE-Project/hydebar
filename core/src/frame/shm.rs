@@ -12,38 +12,41 @@
 //! restarting the thread; the handle returned by [`start`] carries the
 //! join handle and a stop flag for that purpose.
 
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
-use std::thread::{self, JoinHandle};
+use std::{
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering}
+    },
+    thread::{self, JoinHandle}
+};
 
+use hydebar_proto::config::FrameConfig;
 use smithay_client_toolkit::{
     compositor::{CompositorHandler, CompositorState},
-    delegate_compositor, delegate_layer, delegate_output, delegate_registry, delegate_shm,
     output::{OutputHandler, OutputState},
     registry::{ProvidesRegistryState, RegistryState},
     shell::{
+        WaylandSurface,
         wlr_layer::{
             Anchor, KeyboardInteractivity, Layer, LayerShell, LayerShellHandler, LayerSurface,
-            LayerSurfaceConfigure,
-        },
-        WaylandSurface,
+            LayerSurfaceConfigure
+        }
     },
-    shm::{slot::SlotPool, Shm, ShmHandler},
+    shm::{Shm, ShmHandler, slot::SlotPool}
 };
 use tiny_skia::{Color, Paint, Pixmap, Transform};
 use wayland_client::{
-    globals::registry_queue_init,
-    protocol::{wl_output, wl_shm, wl_surface},
     Connection, Proxy, QueueHandle,
+    globals::registry_queue_init,
+    protocol::{wl_output, wl_shm, wl_surface}
 };
 
 use crate::config::Position;
-use hydebar_proto::config::FrameConfig;
 
 /// Handle to a running shared-memory frame.
 pub struct ShmFrameHandle {
-    stop: Arc<AtomicBool>,
-    thread: Option<JoinHandle<()>>,
+    stop:   Arc<AtomicBool>,
+    thread: Option<JoinHandle<()>>
 }
 
 impl ShmFrameHandle {
@@ -65,7 +68,7 @@ pub fn start(
     config: FrameConfig,
     dock: Position,
     bar_height: f32,
-    color: (u8, u8, u8, u8),
+    color: (u8, u8, u8, u8)
 ) -> ShmFrameHandle {
     let stop = Arc::new(AtomicBool::new(false));
     let stop_clone = Arc::clone(&stop);
@@ -76,7 +79,7 @@ pub fn start(
 
     ShmFrameHandle {
         stop,
-        thread: Some(thread),
+        thread: Some(thread)
     }
 }
 
@@ -89,32 +92,32 @@ enum SurfaceKind {
     CornerTopLeft,
     CornerTopRight,
     CornerBottomLeft,
-    CornerBottomRight,
+    CornerBottomRight
 }
 
 struct SurfaceState {
-    kind: SurfaceKind,
-    layer: LayerSurface,
-    width: u32,
-    height: u32,
-    pool: Option<SlotPool>,
+    kind:       SurfaceKind,
+    layer:      LayerSurface,
+    width:      u32,
+    height:     u32,
+    pool:       Option<SlotPool>,
     configured: bool,
-    output: wl_output::WlOutput,
+    output:     wl_output::WlOutput
 }
 
 struct App {
     registry_state: RegistryState,
-    output_state: OutputState,
-    shm: Shm,
-    compositor: CompositorState,
-    layer_shell: LayerShell,
-    config: FrameConfig,
-    dock: Position,
-    bar_height: f32,
-    color: (u8, u8, u8, u8),
-    stop: Arc<AtomicBool>,
-    exit: bool,
-    surfaces: Vec<SurfaceState>,
+    output_state:   OutputState,
+    shm:            Shm,
+    compositor:     CompositorState,
+    layer_shell:    LayerShell,
+    config:         FrameConfig,
+    dock:           Position,
+    bar_height:     f32,
+    color:          (u8, u8, u8, u8),
+    stop:           Arc<AtomicBool>,
+    exit:           bool,
+    surfaces:       Vec<SurfaceState>
 }
 
 impl CompositorHandler for App {
@@ -123,7 +126,7 @@ impl CompositorHandler for App {
         _conn: &Connection,
         _qh: &QueueHandle<Self>,
         _surface: &wl_surface::WlSurface,
-        _new_factor: i32,
+        _new_factor: i32
     ) {
     }
 
@@ -132,7 +135,7 @@ impl CompositorHandler for App {
         _conn: &Connection,
         _qh: &QueueHandle<Self>,
         _surface: &wl_surface::WlSurface,
-        _new_transform: wl_output::Transform,
+        _new_transform: wl_output::Transform
     ) {
     }
 
@@ -141,7 +144,7 @@ impl CompositorHandler for App {
         _conn: &Connection,
         _qh: &QueueHandle<Self>,
         _surface: &wl_surface::WlSurface,
-        _time: u32,
+        _time: u32
     ) {
     }
 
@@ -150,7 +153,7 @@ impl CompositorHandler for App {
         _conn: &Connection,
         _qh: &QueueHandle<Self>,
         _surface: &wl_surface::WlSurface,
-        _output: &wl_output::WlOutput,
+        _output: &wl_output::WlOutput
     ) {
     }
 
@@ -159,7 +162,7 @@ impl CompositorHandler for App {
         _conn: &Connection,
         _qh: &QueueHandle<Self>,
         _surface: &wl_surface::WlSurface,
-        _output: &wl_output::WlOutput,
+        _output: &wl_output::WlOutput
     ) {
     }
 }
@@ -173,7 +176,7 @@ impl OutputHandler for App {
         &mut self,
         _conn: &Connection,
         qh: &QueueHandle<Self>,
-        output: wl_output::WlOutput,
+        output: wl_output::WlOutput
     ) {
         self.create_surfaces_for_output(qh, output);
     }
@@ -182,7 +185,7 @@ impl OutputHandler for App {
         &mut self,
         _conn: &Connection,
         _qh: &QueueHandle<Self>,
-        _output: wl_output::WlOutput,
+        _output: wl_output::WlOutput
     ) {
     }
 
@@ -190,7 +193,7 @@ impl OutputHandler for App {
         &mut self,
         _conn: &Connection,
         _qh: &QueueHandle<Self>,
-        output: wl_output::WlOutput,
+        output: wl_output::WlOutput
     ) {
         self.surfaces.retain(|s| s.output.id() != output.id());
     }
@@ -205,7 +208,7 @@ impl LayerShellHandler for App {
         qh: &QueueHandle<Self>,
         layer: &LayerSurface,
         configure: LayerSurfaceConfigure,
-        _serial: u32,
+        _serial: u32
     ) {
         for state in &mut self.surfaces {
             if state.layer == *layer {
@@ -247,11 +250,8 @@ impl ProvidesRegistryState for App {
     smithay_client_toolkit::registry_handlers![OutputState];
 }
 
-smithay_client_toolkit::delegate_compositor!(App);
-smithay_client_toolkit::delegate_output!(App);
-smithay_client_toolkit::delegate_shm!(App);
-smithay_client_toolkit::delegate_layer!(App);
 smithay_client_toolkit::delegate_registry!(App);
+smithay_client_toolkit::delegate_dispatch2!(App);
 
 impl App {
     fn create_surfaces_for_output(&mut self, qh: &QueueHandle<Self>, output: wl_output::WlOutput) {
@@ -279,7 +279,7 @@ impl App {
                 } else {
                     0
                 },
-                0,
+                0
             ),
             (
                 SurfaceKind::StripRight,
@@ -296,7 +296,7 @@ impl App {
                 } else {
                     0
                 },
-                0,
+                0
             ),
             (
                 SurfaceKind::StripTop,
@@ -305,7 +305,7 @@ impl App {
                 0,
                 0,
                 0,
-                0,
+                0
             ),
             (
                 SurfaceKind::StripBottom,
@@ -314,8 +314,8 @@ impl App {
                 0,
                 0,
                 0,
-                0,
-            ),
+                0
+            )
         ];
 
         // Only create strips for enabled edges.
@@ -324,7 +324,7 @@ impl App {
             SurfaceKind::StripRight => self.config.edges.right.enabled,
             SurfaceKind::StripTop => self.config.edges.top.enabled,
             SurfaceKind::StripBottom => self.config.edges.bottom.enabled,
-            _ => false,
+            _ => false
         };
 
         for (kind, layer, anchor, mt, mr, mb, ml) in edges {
@@ -337,7 +337,7 @@ impl App {
                 surface,
                 *layer,
                 Some("hydebar-frame-strip"),
-                Some(&output),
+                Some(&output)
             );
             ls.set_anchor(*anchor);
             ls.set_keyboard_interactivity(KeyboardInteractivity::None);
@@ -353,13 +353,13 @@ impl App {
             ls.commit();
 
             self.surfaces.push(SurfaceState {
-                kind: *kind,
-                layer: ls,
-                width: 1,
-                height: 1,
-                pool: None,
+                kind:       *kind,
+                layer:      ls,
+                width:      1,
+                height:     1,
+                pool:       None,
                 configured: false,
-                output: output.clone(),
+                output:     output.clone()
             });
         }
 
@@ -371,8 +371,8 @@ impl App {
             (SurfaceKind::CornerBottomLeft, Anchor::LEFT | Anchor::BOTTOM),
             (
                 SurfaceKind::CornerBottomRight,
-                Anchor::RIGHT | Anchor::BOTTOM,
-            ),
+                Anchor::RIGHT | Anchor::BOTTOM
+            )
         ];
 
         for (kind, anchor) in corners {
@@ -382,7 +382,7 @@ impl App {
                 surface,
                 Layer::Top,
                 Some("hydebar-frame-corner"),
-                Some(&output),
+                Some(&output)
             );
             ls.set_anchor(anchor);
             ls.set_size(corner_size, corner_size);
@@ -391,13 +391,13 @@ impl App {
             ls.commit();
 
             self.surfaces.push(SurfaceState {
-                kind: kind,
-                layer: ls,
-                width: corner_size,
-                height: corner_size,
-                pool: None,
+                kind:       kind,
+                layer:      ls,
+                width:      corner_size,
+                height:     corner_size,
+                pool:       None,
                 configured: false,
-                output: output.clone(),
+                output:     output.clone()
             });
         }
     }
@@ -414,21 +414,21 @@ impl App {
 fn draw_surface(state: &mut SurfaceState, config: &FrameConfig, color: (u8, u8, u8, u8)) {
     let pool = match state.pool.as_mut() {
         Some(p) => p,
-        None => return,
+        None => return
     };
     let (buffer, canvas) = match pool.create_buffer(
         state.width as i32,
         state.height as i32,
         (state.width * 4) as i32,
-        wl_shm::Format::Argb8888,
+        wl_shm::Format::Argb8888
     ) {
         Ok(v) => v,
-        Err(_) => return,
+        Err(_) => return
     };
 
     let mut pixmap = match Pixmap::new(state.width, state.height) {
         Some(p) => p,
-        None => return,
+        None => return
     };
 
     let mut paint = Paint::default();
@@ -440,7 +440,7 @@ fn draw_surface(state: &mut SurfaceState, config: &FrameConfig, color: (u8, u8, 
     let rect = match tiny_skia::Rect::from_xywh(0.0, 0.0, state.width as f32, state.height as f32)
     {
         Some(r) => r,
-        None => return,
+        None => return
     };
     pixmap.fill_rect(rect, &paint, Transform::identity(), None);
 
@@ -457,15 +457,15 @@ fn draw_surface(state: &mut SurfaceState, config: &FrameConfig, color: (u8, u8, 
         clear.anti_alias = true;
 
         let r = config
-        .rounding
-        .unwrap_or(FrameConfig::DEFAULT_ROUNDING)
-        .max(1.0);
+            .rounding
+            .unwrap_or(FrameConfig::DEFAULT_ROUNDING)
+            .max(1.0);
         let (cx, cy) = match state.kind {
             SurfaceKind::CornerTopLeft => (state.width as f32, state.height as f32),
             SurfaceKind::CornerTopRight => (0.0, state.height as f32),
             SurfaceKind::CornerBottomLeft => (state.width as f32, 0.0),
             SurfaceKind::CornerBottomRight => (0.0, 0.0),
-            _ => (0.0, 0.0),
+            _ => (0.0, 0.0)
         };
 
         if let Some(path) = tiny_skia::PathBuilder::from_circle(cx, cy, r) {
@@ -474,7 +474,7 @@ fn draw_surface(state: &mut SurfaceState, config: &FrameConfig, color: (u8, u8, 
                 &clear,
                 tiny_skia::FillRule::Winding,
                 Transform::identity(),
-                None,
+                None
             );
         }
     }
@@ -498,29 +498,29 @@ fn run(
     dock: Position,
     bar_height: f32,
     color: (u8, u8, u8, u8),
-    stop: Arc<AtomicBool>,
+    stop: Arc<AtomicBool>
 ) {
     let conn = match Connection::connect_to_env() {
         Ok(c) => c,
-        Err(_) => return,
+        Err(_) => return
     };
     let (globals, mut event_queue) = match registry_queue_init(&conn) {
         Ok(v) => v,
-        Err(_) => return,
+        Err(_) => return
     };
     let qh = event_queue.handle();
 
     let compositor = match CompositorState::bind(&globals, &qh) {
         Ok(c) => c,
-        Err(_) => return,
+        Err(_) => return
     };
     let layer_shell = match LayerShell::bind(&globals, &qh) {
         Ok(l) => l,
-        Err(_) => return,
+        Err(_) => return
     };
     let shm = match Shm::bind(&globals, &qh) {
         Ok(s) => s,
-        Err(_) => return,
+        Err(_) => return
     };
 
     let mut app = App {
@@ -535,7 +535,7 @@ fn run(
         color,
         stop: Arc::clone(&stop),
         exit: false,
-        surfaces: Vec::new(),
+        surfaces: Vec::new()
     };
 
     loop {

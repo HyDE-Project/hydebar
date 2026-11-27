@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use masterror::AppResult;
-use zbus::zvariant::OwnedObjectPath;
+use zbus::OwnedObjectPath;
 
 use super::{
     IwdDbus, device::DeviceProxy, network::NetworkProxy, station_state::state_from_station

@@ -1,7 +1,7 @@
 //! The D-Bus agents iwd calls back into.
 
 use log::warn;
-use zbus::{interface, zvariant::OwnedObjectPath};
+use zbus::{OwnedObjectPath, interface};
 
 pub(super) struct SignalAgent {
     pub(super) tx: tokio::sync::mpsc::UnboundedSender<i16>
