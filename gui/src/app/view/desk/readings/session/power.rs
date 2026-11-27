@@ -2,7 +2,7 @@
 
 use hydebar_core::modules::battery::{BatteryIcon, IndicatorState, PowerProfile};
 
-use super::super::{Panel, push};
+use super::super::panel::{Panel, push};
 use crate::app::state::App;
 
 /// The battery: its charge, its direction and what is steering it.

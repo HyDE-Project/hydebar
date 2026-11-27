@@ -2,7 +2,7 @@
 
 use hydebar_core::services::network::{ActiveConnectionInfo, ConnectivityState};
 
-use super::super::super::{Panel, push};
+use super::super::super::panel::{Panel, push};
 use crate::app::state::App;
 
 /// The link the machine's bytes ride on.

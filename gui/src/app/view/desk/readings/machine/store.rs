@@ -2,7 +2,7 @@
 
 use hydebar_core::modules::system_info::{DiskData, SystemInfoData, gigabytes, used_of_total};
 
-use super::super::{Figure, Panel, push};
+use super::super::panel::{Figure, Panel, push};
 use crate::app::state::history::Trail;
 
 /// The link: where it lands and what is crossing it.

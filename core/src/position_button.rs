@@ -8,7 +8,7 @@ mod press;
 mod state;
 mod widget;
 
-use iced::{Padding, core::Layout};
+use iced::core::Layout;
 
 pub use self::{
     builder::{PositionButton, position_button},
@@ -23,11 +23,3 @@ pub use self::{
 fn content_layout(layout: Layout<'_>) -> Layout<'_> {
     layout.children().next().unwrap_or(layout)
 }
-
-/// The default [`Padding`] of a [`PositionButton`].
-pub(crate) const DEFAULT_PADDING: Padding = Padding {
-    top:    5.0,
-    bottom: 5.0,
-    right:  10.0,
-    left:   10.0
-};

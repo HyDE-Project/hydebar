@@ -9,7 +9,7 @@ mod rooms;
 use hydebar_core::services::mpris::PlaybackStatus;
 pub use rooms::workspaces;
 
-use super::super::{Panel, push};
+use super::super::panel::{Panel, push};
 use crate::app::state::App;
 
 /// Longest a window title is written out before it is cut.

@@ -1,6 +1,6 @@
 //! What the session wants the user to know about.
 
-use super::super::{Panel, push};
+use super::super::panel::{Panel, push};
 use crate::app::state::App;
 
 /// Longest a list of pending packages is written out.

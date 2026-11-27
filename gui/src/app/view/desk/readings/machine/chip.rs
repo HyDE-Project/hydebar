@@ -2,7 +2,7 @@
 
 use hydebar_core::modules::system_info::{SystemInfoData, used_of_total};
 
-use super::super::{Figure, Panel, push};
+use super::super::panel::{Figure, Panel, push};
 use crate::app::state::history::Trail;
 
 /// The processor: what it is, how hard it is working, how hot and how fast.

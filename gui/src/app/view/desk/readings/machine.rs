@@ -12,7 +12,7 @@ pub use chip::{cpu_temperature, graphics, processor};
 use hydebar_core::modules::system_info::SystemInfoData;
 pub use store::{memory, network, storage};
 
-use super::{Panel, push};
+use super::panel::{Panel, push};
 
 /// The processor has a block of its own, so this one names what stands
 /// behind it rather than repeating it: the kernel the session runs and the

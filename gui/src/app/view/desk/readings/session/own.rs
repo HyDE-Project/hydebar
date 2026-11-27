@@ -6,7 +6,7 @@
 //! state the command reported itself in, the tooltip it would have shown on a
 //! hover, and the reading behind a progress figure.
 
-use super::super::{Figure, Panel, push};
+use super::super::panel::{Figure, Panel, push};
 use crate::app::state::App;
 
 /// What the custom module named `name` last answered, if it answered at all.

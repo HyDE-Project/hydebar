@@ -2,7 +2,7 @@
 
 use hydebar_core::services::audio::AudioData;
 
-use super::super::super::Panel;
+use super::super::super::panel::Panel;
 use crate::app::state::App;
 
 /// The sound server: what is playing out, what is listening in.

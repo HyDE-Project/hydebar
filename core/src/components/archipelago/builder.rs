@@ -4,7 +4,7 @@ use std::{cell::RefCell, collections::HashMap};
 
 use iced::{Border, Shadow};
 
-use super::FlipMemo;
+use crate::components::flip::FlipMemo;
 
 /// The paint one pill is drawn with.
 #[derive(Debug, Clone, Copy)]

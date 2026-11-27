@@ -15,7 +15,7 @@ use hydebar_core::services::bluetooth::BluetoothState;
 pub use link::link;
 pub use sound::sound;
 
-use super::super::Panel;
+use super::super::panel::Panel;
 use crate::app::state::App;
 
 /// The radio and whatever is paired to it.

@@ -1,6 +1,6 @@
 //! The state of the desk itself: its keyboard, its sky, its tray, its look.
 
-use super::super::{Figure, Panel, push};
+use super::super::panel::{Figure, Panel, push};
 use crate::app::state::App;
 
 /// What the desktop's own menu offers, as a row of its glyphs.
@@ -114,7 +114,7 @@ pub fn theme(app: &App) -> Option<Panel> {
     Some(Panel::drawn(
         "theme",
         rows,
-        super::super::Figure::Accordion(reel.clone())
+        super::super::panel::Figure::Accordion(reel.clone())
     ))
 }
 
@@ -140,7 +140,7 @@ pub fn wallpaper(app: &App) -> Option<Panel> {
             Some((_, picture)) => Some(Panel::drawn(
                 "wallpaper",
                 rows,
-                super::super::Figure::Picture(picture.clone())
+                super::super::panel::Figure::Picture(picture.clone())
             )),
             None => Panel::of("wallpaper", rows)
         };
@@ -149,7 +149,7 @@ pub fn wallpaper(app: &App) -> Option<Panel> {
     Some(Panel::drawn(
         "wallpaper",
         rows,
-        super::super::Figure::Accordion(reel.clone())
+        super::super::panel::Figure::Accordion(reel.clone())
     ))
 }
 
@@ -198,7 +198,7 @@ pub fn seat(app: &App) -> Option<Panel> {
 mod tests {
     use hydebar_core::modules::desk::looks::{Reel, Slide};
 
-    use super::{super::super::Figure, *};
+    use super::{super::super::panel::Figure, *};
     use crate::app::state::test_support::test_app;
 
     /// A one pixel picture: what is asserted is which pictures are drawn, not

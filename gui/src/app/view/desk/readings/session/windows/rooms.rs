@@ -1,6 +1,6 @@
 //! Every workspace of a screen, and the miniature it is drawn as.
 
-use super::super::super::{Figure, Frame, Miniature, Panel, push};
+use super::super::super::panel::{Figure, Frame, Miniature, Panel, push};
 use crate::app::state::App;
 
 /// The workspaces of this screen, and what stands on each of them.
