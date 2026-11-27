@@ -169,7 +169,7 @@ mod tests {
     fn an_empty_menu_yields_an_empty_tree() {
         let tree = tree_of(&menu("")).expect("the menu is read");
 
-        assert!(tree.is_empty());
+        assert_eq!(tree, []);
     }
 
     #[test]

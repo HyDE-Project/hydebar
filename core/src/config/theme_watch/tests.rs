@@ -208,7 +208,7 @@ fn interpret_theme_event_ignores_files_the_theme_is_not_read_from() {
 
 #[test]
 fn watch_targets_are_empty_when_the_bar_does_not_follow_hyde() {
-    assert!(watch_targets(false).is_empty());
+    assert_eq!(watch_targets(false), []);
 }
 
 #[test]

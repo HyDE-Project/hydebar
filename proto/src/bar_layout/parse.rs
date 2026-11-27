@@ -282,7 +282,7 @@ mod tests {
                 ModuleDef::Single(ModuleName::WindowTitle),
             ]
         );
-        assert!(modules.center.is_empty());
+        assert_eq!(modules.center, []);
         assert_eq!(modules.right, vec![ModuleDef::Single(ModuleName::Clock)]);
     }
 

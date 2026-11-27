@@ -208,7 +208,7 @@ mod tests {
     fn an_absent_subsystem_yields_no_chips() {
         let root = TempDir::new().expect("temporary root");
 
-        assert!(scan(&root.path().join("missing")).is_empty());
+        assert_eq!(scan(&root.path().join("missing")), []);
     }
 
     #[test]
@@ -244,7 +244,7 @@ mod tests {
         let power = chip_directory(root.path(), 0, "BAT0");
         write(&power.join("in0_input"), "12000");
 
-        assert!(scan(root.path()).is_empty());
+        assert_eq!(scan(root.path()), []);
     }
 
     #[test]

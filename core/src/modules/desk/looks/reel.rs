@@ -159,7 +159,7 @@ mod tests {
 
     #[test]
     fn nothing_is_drawn_for_nothing() {
-        assert!(centred(0, 0, REACH).is_empty());
-        assert!(centred(3, 7, REACH).is_empty());
+        assert_eq!(centred(0, 0, REACH), [] as [usize; 0]);
+        assert_eq!(centred(3, 7, REACH), [] as [usize; 0]);
     }
 }

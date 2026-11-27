@@ -302,6 +302,6 @@ mod tests {
             std::time::Instant::now()
         ));
 
-        assert!(feed_event(&mut harness, &redraw, inside).is_empty());
+        assert_eq!(feed_event(&mut harness, &redraw, inside), []);
     }
 }

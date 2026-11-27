@@ -83,7 +83,7 @@ mod tests {
         let dir = tempfile::tempdir().expect("temporary directory");
 
         assert!(text(&dir.path().join("absent")).is_none());
-        assert!(text_or_empty(&dir.path().join("absent")).is_empty());
+        assert_eq!(text_or_empty(&dir.path().join("absent")), "");
     }
 
     #[test]

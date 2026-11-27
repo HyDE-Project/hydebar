@@ -363,7 +363,7 @@ mod tests {
             node
         };
 
-        assert!(press(&mut harness, mouse::Button::Right).is_empty());
+        assert_eq!(press(&mut harness, mouse::Button::Right), []);
         assert_eq!(
             press(&mut harness, mouse::Button::Left),
             vec![Pressed::Left]

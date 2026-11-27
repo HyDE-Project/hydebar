@@ -298,7 +298,7 @@ mod tests {
             .await
             .expect("the command runs again");
 
-        assert!(!first.stdout.is_empty());
+        assert_ne!(first.stdout, [] as [u8; 0]);
         assert_ne!(first.stdout, second.stdout);
     }
 

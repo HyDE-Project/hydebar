@@ -153,7 +153,7 @@ mod tests {
     #[test]
     fn every_built_in_module_carries_a_human_label() {
         for module in ModuleName::BUILT_IN {
-            assert!(!module.label().is_empty());
+            assert_ne!(module.label(), "");
         }
 
         assert_eq!(ModuleName::PowerProfile.label(), "Power profile");

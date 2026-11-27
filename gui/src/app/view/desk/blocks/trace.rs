@@ -6,9 +6,9 @@
 //! is the distance this canvas is meant for.
 
 use iced::{
-    Element, Length, Point, Rectangle, Renderer, Theme,
     mouse::Cursor,
-    widget::canvas::{self, Canvas, Frame as Sheet, Geometry, Path, Stroke}
+    widget::canvas::{self, Canvas, Frame as Sheet, Geometry, Path, Stroke},
+    Element, Length, Point, Rectangle, Renderer, Theme,
 };
 
 use super::Ink;
@@ -27,7 +27,7 @@ pub(super) fn trace<'a>(readings: &[f32], ceiling: f32, ink: Ink) -> Element<'a,
     Canvas::new(Line {
         readings: readings.to_vec(),
         ceiling,
-        ink
+        ink,
     })
     .width(Length::Fill)
     .height(Length::Fixed(room(ink)))
@@ -40,9 +40,9 @@ struct Line {
     /// The readings, oldest first.
     readings: Vec<f32>,
     /// What the top of the drawing stands for.
-    ceiling:  f32,
+    ceiling: f32,
     /// What the column is written in, which is what this is drawn in.
-    ink:      Ink
+    ink: Ink,
 }
 
 impl canvas::Program<Message> for Line {
@@ -54,7 +54,7 @@ impl canvas::Program<Message> for Line {
         renderer: &Renderer,
         _theme: &Theme,
         bounds: Rectangle,
-        _cursor: Cursor
+        _cursor: Cursor,
     ) -> Vec<Geometry> {
         let mut sheet = Sheet::new(renderer, bounds.size());
         let points = self.points(bounds);
@@ -88,7 +88,7 @@ impl canvas::Program<Message> for Line {
             &over,
             Stroke::default()
                 .with_width(1.5)
-                .with_color(self.ink.value.scale_alpha(0.7))
+                .with_color(self.ink.value.scale_alpha(0.7)),
         );
 
         vec![sheet.into_geometry()]
@@ -145,7 +145,7 @@ mod tests {
     fn ink() -> Ink {
         Ink {
             value: Color::WHITE,
-            size:  14.0
+            size: 14.0,
         }
     }
 
@@ -153,7 +153,7 @@ mod tests {
         Line {
             readings: readings.to_vec(),
             ceiling,
-            ink: ink()
+            ink: ink(),
         }
     }
 
@@ -186,6 +186,6 @@ mod tests {
 
     #[test]
     fn a_single_reading_draws_nothing() {
-        assert!(line(&[42.0], 100.0).points(sheet()).is_empty());
+        assert_eq!(line(&[42.0], 100.0).points(sheet()), []);
     }
 }

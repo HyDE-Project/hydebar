@@ -402,7 +402,7 @@ mod tests {
             "#
         );
 
-        assert!(definition.menu.is_empty());
+        assert_eq!(definition.menu, []);
         assert!(!definition.has_menu());
     }
 

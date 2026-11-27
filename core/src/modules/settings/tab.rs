@@ -43,7 +43,7 @@ mod tests {
         assert_eq!(Tab::ALL.len(), 2);
 
         for tab in Tab::ALL {
-            assert!(!tab.label().is_empty());
+            assert_ne!(tab.label(), "");
         }
     }
 

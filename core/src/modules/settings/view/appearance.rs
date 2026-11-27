@@ -128,7 +128,7 @@ mod tests {
     #[test]
     fn every_section_carries_a_title() {
         for (title, _) in SECTIONS {
-            assert!(!title.is_empty());
+            assert_ne!(title, "");
         }
     }
 
@@ -142,7 +142,7 @@ mod tests {
             .find(|(title, _)| *title == DESKTOP)
             .expect("the desktop section is drawn");
 
-        assert!(desktop.1.is_empty());
+        assert_eq!(desktop.1, []);
     }
 
     #[test]

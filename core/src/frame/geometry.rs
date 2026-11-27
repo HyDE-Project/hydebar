@@ -735,7 +735,7 @@ mod tests {
             0.0
         );
 
-        assert!(bare.cuts.is_empty());
+        assert_eq!(bare.cuts, []);
     }
 
     #[test]

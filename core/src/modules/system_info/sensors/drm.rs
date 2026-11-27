@@ -146,7 +146,7 @@ mod tests {
     fn an_absent_subsystem_yields_no_cards() {
         let root = TempDir::new().expect("temporary root");
 
-        assert!(scan(&root.path().join("missing")).is_empty());
+        assert_eq!(scan(&root.path().join("missing")), []);
     }
 
     #[test]

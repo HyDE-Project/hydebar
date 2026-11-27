@@ -418,7 +418,7 @@ mod tests {
         let start = Instant::now();
         attention.look_at(Some(ModuleName::SystemInfo));
 
-        assert!(attention.due_at_rest(start).is_empty());
+        assert_eq!(attention.due_at_rest(start), []);
     }
 
     #[test]
@@ -427,7 +427,7 @@ mod tests {
         let start = Instant::now();
 
         assert_eq!(attention.due_at_rest(start), vec![ModuleName::SystemInfo]);
-        assert!(attention.due_at_rest(start + REST / 2).is_empty());
+        assert_eq!(attention.due_at_rest(start + REST / 2), []);
         assert_eq!(
             attention.due_at_rest(start + REST),
             vec![ModuleName::SystemInfo]
@@ -442,7 +442,7 @@ mod tests {
             PollSchedule::only_when_attended(Duration::from_secs(2))
         )]);
 
-        assert!(attention.due_at_rest(Instant::now()).is_empty());
+        assert_eq!(attention.due_at_rest(Instant::now()), []);
         assert_eq!(attention.rest_period(), None);
     }
 

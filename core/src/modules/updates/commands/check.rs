@@ -202,7 +202,7 @@ mod tests {
     fn parse_updates_handles_empty_input() {
         let updates = parse_updates("");
 
-        assert!(updates.is_empty());
+        assert_eq!(updates, []);
     }
 
     #[test]

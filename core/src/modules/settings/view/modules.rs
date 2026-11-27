@@ -90,7 +90,7 @@ mod tests {
 
     #[test]
     fn an_empty_section_has_no_islands() {
-        assert!(islands(&[]).is_empty());
+        assert_eq!(islands(&[]), [] as [Vec<usize>; 0]);
     }
 
     #[test]

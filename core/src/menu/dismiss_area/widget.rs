@@ -285,15 +285,15 @@ mod tests {
     fn a_press_landing_elsewhere_is_ignored() {
         let mut harness = harness();
 
-        assert!(feed(&mut harness, &pressed(), cursor_at(500.0)).is_empty());
-        assert!(feed(&mut harness, &released(), cursor_at(500.0)).is_empty());
+        assert_eq!(feed(&mut harness, &pressed(), cursor_at(500.0)), []);
+        assert_eq!(feed(&mut harness, &released(), cursor_at(500.0)), []);
     }
 
     #[test]
     fn a_release_without_its_press_reports_nothing() {
         let mut harness = harness();
 
-        assert!(feed(&mut harness, &released(), cursor_at(10.0)).is_empty());
+        assert_eq!(feed(&mut harness, &released(), cursor_at(10.0)), []);
     }
 
     #[test]
@@ -301,7 +301,7 @@ mod tests {
         let mut harness = harness();
         let _ = feed(&mut harness, &pressed(), cursor_at(10.0));
 
-        assert!(feed(&mut harness, &released(), cursor_at(500.0)).is_empty());
+        assert_eq!(feed(&mut harness, &released(), cursor_at(500.0)), []);
     }
 
     #[test]
@@ -315,6 +315,6 @@ mod tests {
             cursor_at(10.0)
         );
 
-        assert!(feed(&mut harness, &released(), cursor_at(10.0)).is_empty());
+        assert_eq!(feed(&mut harness, &released(), cursor_at(10.0)), []);
     }
 }

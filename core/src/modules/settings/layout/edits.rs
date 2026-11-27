@@ -266,7 +266,7 @@ mod tests {
             })
         );
 
-        assert!(moved.left.is_empty());
+        assert_eq!(moved.left, []);
         assert_eq!(names(&moved, Section::Center), vec!["Clock"]);
 
         let back = apply(

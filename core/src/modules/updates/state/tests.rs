@@ -450,6 +450,6 @@ fn an_unavailable_check_clears_what_the_bar_knew() {
 
     updates.observe(Message::UpdatesUnavailable);
 
-    assert!(updates.pending.is_empty());
+    assert_eq!(updates.pending, []);
     assert_eq!(updates.state, CheckState::Unavailable);
 }

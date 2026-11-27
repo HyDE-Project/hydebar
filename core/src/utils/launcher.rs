@@ -257,7 +257,7 @@ mod tests {
         .await??;
 
         assert_eq!(output.stdout, b"foo");
-        assert!(output.stderr.is_empty());
+        assert_eq!(output.stderr, [] as [u8; 0]);
         assert!(output.status.success());
 
         Ok(())
