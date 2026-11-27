@@ -141,8 +141,6 @@ async fn run_once(
             *published = Some(data.clone());
 
             send_event(sender, ServiceEvent::Update(data));
-
-            Ok(())
         }
         Err(err) => {
             let parse_error = CustomCommandError::Parse(truncate_snippet(payload), Arc::new(err));
@@ -150,10 +148,10 @@ async fn run_once(
             *published = None;
 
             send_event(sender, ServiceEvent::Error(parse_error));
-
-            Ok(())
         }
     }
+
+    Ok(())
 }
 
 /// Drives a custom module by re-running its command.

@@ -128,15 +128,13 @@ impl UPowerService {
                         }
 
                         error!("the power event stream ended, reconnecting");
-
-                        State::Error
                     }
                     Err(err) => {
                         error!("Failed to listen for upower events: {err}");
-
-                        State::Error
                     }
                 }
+
+                State::Error
             }
             State::Error => State::Init
         }

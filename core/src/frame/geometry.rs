@@ -166,7 +166,7 @@ pub fn frame_pieces(
     if band_height > 0.0 {
         let bar_y = match dock {
             Position::Top => band_offset,
-            _ => (screen_h - band_offset - band_height).max(0.0)
+            Position::Bottom => (screen_h - band_offset - band_height).max(0.0)
         };
 
         cuts.push(FramePiece {
