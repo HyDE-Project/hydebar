@@ -12,7 +12,10 @@ use zbus::{
 use super::{end::SessionEnd, handle::NotificationsService};
 use crate::services::{
     ServiceEvent,
-    notifications::{NotificationStorage, NotificationsError, NotificationsServer, takeover}
+    notifications::{
+        error::NotificationsError, server::NotificationsServer, storage::NotificationStorage,
+        takeover
+    }
 };
 
 /// Serves org.freedesktop.Notifications until the bus or the UI lets go.

@@ -2,7 +2,7 @@
 
 use std::time::SystemTime;
 
-use super::{MAX_NOTIFICATIONS, Notification, NotificationStorage, Urgency};
+use super::{Notification, NotificationStorage, Urgency, storage::MAX_NOTIFICATIONS};
 
 #[test]
 fn storage_max_capacity() {

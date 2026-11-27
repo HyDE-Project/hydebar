@@ -2,7 +2,10 @@
 
 use std::collections::VecDeque;
 
-use super::{MAX_NOTIFICATIONS, Notification, Urgency};
+use super::model::{Notification, Urgency};
+
+/// How many notices the store keeps before the oldest gives way.
+pub(super) const MAX_NOTIFICATIONS: usize = 50;
 
 /// The notices being held, and what is done with new ones.
 #[derive(Debug, Clone)]

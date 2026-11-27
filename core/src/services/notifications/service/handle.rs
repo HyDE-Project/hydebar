@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use crate::services::notifications::{Notification, NotificationStorage};
+use crate::services::notifications::{model::Notification, storage::NotificationStorage};
 
 /// Main notifications service integrating with org.freedesktop.Notifications
 #[derive(Debug, Clone, Default)]

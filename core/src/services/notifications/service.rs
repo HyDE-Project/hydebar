@@ -5,7 +5,7 @@ use iced::{Subscription, futures::SinkExt, stream};
 use log::error;
 
 use self::{end::SessionEnd, session::serve};
-use super::{NotificationEvent, NotificationsError};
+use super::{error::NotificationsError, model::NotificationEvent};
 use crate::services::{ReadOnlyService, ServiceEvent, reconnect_delay};
 
 mod end;

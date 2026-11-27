@@ -6,7 +6,10 @@ use iced::futures::channel::mpsc::UnboundedSender;
 use log::debug;
 use zbus::interface;
 
-use super::{Notification, NotificationEvent, NotificationStorage, Urgency};
+use super::{
+    model::{Notification, NotificationEvent, Urgency},
+    storage::NotificationStorage
+};
 
 /// D-Bus org.freedesktop.Notifications server implementation
 pub struct NotificationsServer {
