@@ -49,7 +49,7 @@ impl App {
             Some(HasOutput::Frame) => self.frame_surface(id),
             Some(HasOutput::Panel) | None => Row::new().into(),
             Some(HasOutput::Notifications) => notifications_popup::view(
-                &self.notification_popups,
+                &self.focus.notification_popups,
                 self.appearance(),
                 self.config.position
             ),
@@ -58,7 +58,7 @@ impl App {
                 |info| {
                     self.faded_menu(
                         tooltip_wrapper(info, self.config.position, self.appearance()),
-                        self.hints.presence()
+                        self.focus.hints.presence()
                     )
                 }
             )

@@ -66,9 +66,10 @@ impl App {
                 &self.config.workspaces,
                 self.appearance()
             ),
-            ModuleName::WindowTitle => self
-                .window_title
-                .bar_view(&self.config.window_title, self.attention.is_on(module_name)),
+            ModuleName::WindowTitle => self.window_title.bar_view(
+                &self.config.window_title,
+                self.focus.attention.is_on(module_name)
+            ),
             ModuleName::SystemInfo => {
                 self.system_info
                     .bar_view(&self.config.system, self.appearance(), self.icons())

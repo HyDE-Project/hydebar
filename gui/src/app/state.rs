@@ -2,6 +2,7 @@
 
 mod app;
 mod appearance;
+mod focus;
 pub mod history;
 mod init;
 mod message;
@@ -12,5 +13,5 @@ mod screen;
 pub(in crate::app) mod test_support;
 
 pub use app::App;
-pub(super) use app::GREETING_LIFETIME;
+pub(super) use focus::GREETING_LIFETIME;
 pub use message::Message;

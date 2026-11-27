@@ -16,18 +16,18 @@ impl App {
     /// raised costs no further compositor request. The release fires once
     /// and never touches a surface a menu has meanwhile opened on.
     fn greeting_surface_tasks(&mut self) -> Task<Message> {
-        let visible = self.greeting.value() > 0.004 || self.greeting.is_animating();
+        let visible = self.focus.greeting.value() > 0.004 || self.focus.greeting.is_animating();
 
         if visible {
             let newcomers: Vec<_> = self
                 .outputs
                 .menu_surfaces()
                 .into_iter()
-                .filter(|(id, _)| !self.greeting_raised.contains(id))
+                .filter(|(id, _)| !self.focus.greeting_raised.contains(id))
                 .map(|(id, _)| id)
                 .collect();
 
-            self.greeting_raised.extend(newcomers.iter().copied());
+            self.focus.greeting_raised.extend(newcomers.iter().copied());
 
             return Task::batch(
                 newcomers
@@ -36,8 +36,8 @@ impl App {
             );
         }
 
-        if !self.greeting_raised.is_empty() {
-            self.greeting_raised.clear();
+        if !self.focus.greeting_raised.is_empty() {
+            self.focus.greeting_raised.clear();
 
             return Task::batch(
                 self.outputs
@@ -69,38 +69,41 @@ impl App {
             .map_or_default(|last| now.saturating_duration_since(last));
         self.motion.last_frame = Some(now);
 
-        if self.greeting.target() > 0.0 {
+        if self.focus.greeting.target() > 0.0 {
             let deadline = *self
+                .focus
                 .greeting_deadline
                 .get_or_insert(now + GREETING_LIFETIME);
 
             if now >= deadline {
                 debug!("the greeting's three seconds are up, letting it out");
-                self.greeting.set_response(hydebar_core::animation::GENTLE);
-                self.greeting.set_target(0.0);
+                self.focus
+                    .greeting
+                    .set_response(hydebar_core::animation::GENTLE);
+                self.focus.greeting.set_target(0.0);
             }
         }
 
         let animated = self.config.appearance.animations.enabled;
-        let served = self.hints.served(now, animated);
-        let (hints_fading, landed) = self.hints.advance(elapsed);
+        let served = self.focus.hints.served(now, animated);
+        let (hints_fading, landed) = self.focus.hints.advance(elapsed);
         let tooltip_tasks =
             Task::batch([self.run_hint_command(served), self.run_hint_command(landed)]);
 
-        let popups_before = self.notification_popups.len();
-        hydebar_core::notifications_popup::prune(&mut self.notification_popups, now);
-        let popups_changed = popups_before != self.notification_popups.len();
+        let popups_before = self.focus.notification_popups.len();
+        hydebar_core::notifications_popup::prune(&mut self.focus.notification_popups, now);
+        let popups_changed = popups_before != self.focus.notification_popups.len();
 
         let (menus_animating, menu_tasks) = self
             .outputs
             .tick_menu_animations(&self.config.appearance.animations, elapsed);
         let (theme_animating, palette_moved) =
             self.motion.appearance_transition.advance_reporting(elapsed);
-        let hover_animating = self.hover.advance(elapsed);
+        let hover_animating = self.focus.hover.advance(elapsed);
         let desk_unfolding = self.advance_desk(elapsed);
         let entering = self.motion.entrance.advance(elapsed);
         let sliding = self.motion.relayout.advance(elapsed);
-        let greeting_animating = self.greeting.advance(elapsed);
+        let greeting_animating = self.focus.greeting.advance(elapsed);
         let values_fading = self.clock.tick_fade(elapsed)
             | self.updates.tick_fade(elapsed)
             | self.keyboard_layout.tick_fade(elapsed)

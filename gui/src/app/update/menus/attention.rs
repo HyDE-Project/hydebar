@@ -16,7 +16,7 @@ impl App {
     pub(crate) fn attend_the_open_menu(&mut self) {
         let focus = self.outputs.open_menu().map(MenuType::owner);
 
-        self.attention.look_at(focus);
+        self.focus.attention.look_at(focus);
         self.poll_attended_now();
     }
 
@@ -49,7 +49,8 @@ impl App {
         entered: bool,
         tooltip: Option<TooltipInfo>
     ) -> Task<Message> {
-        self.attention
+        self.focus
+            .attention
             .follow_pointer(module.clone(), entered, self.outputs.menu_is_open());
         self.poll_attended_now();
 
@@ -57,14 +58,16 @@ impl App {
         let response = std::time::Duration::from_millis(animations.hover_duration_ms);
 
         if entered {
-            self.hover
+            self.focus
+                .hover
                 .leave_others(&module, animations.enabled, response);
         }
 
-        self.hover
+        self.focus
+            .hover
             .point(module.clone(), entered, animations.enabled, response);
 
-        let command = self.hints.observe(
+        let command = self.focus.hints.observe(
             surface,
             module,
             entered,

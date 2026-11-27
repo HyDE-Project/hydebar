@@ -40,14 +40,15 @@ impl App {
 
         let roster: Vec<ModuleName> = schedules.iter().map(|(name, _)| name.clone()).collect();
 
-        self.attention.place(schedules);
+        self.focus.attention.place(schedules);
 
         if self
+            .focus
             .attention
             .focus()
             .is_some_and(|focus| !placed.contains(focus) && !roster.contains(focus))
         {
-            self.attention.look_at(None);
+            self.focus.attention.look_at(None);
         }
     }
 

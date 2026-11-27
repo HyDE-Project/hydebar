@@ -1,13 +1,10 @@
 //! The application state every surface renders from.
 
-use std::{collections::HashMap, sync::Arc, time::Instant};
+use std::{collections::HashMap, sync::Arc};
 
 use hydebar_core::{
     ModuleContext,
-    animation::HoverFades,
-    attention::Attention,
     components::icons::IconTheme,
-    config::ModuleName,
     modules::{
         battery::Battery, calendar::Calendar, clock::Clock, command_button::CommandButton,
         control_center::ControlCenter, custom_module::Custom, desk::Desk, hyde_menu::HydeMenu,
@@ -17,40 +14,35 @@ use hydebar_core::{
         themes::Themes, tray::TrayModule, updates::Updates, wallpaper::Wallpaper,
         weather::Weather, window_title::WindowTitle, workspaces::Workspaces
     },
-    notifications_popup,
-    outputs::Outputs,
-    position_button::ButtonUIRef
+    outputs::Outputs
 };
 use hydebar_proto::config::Config;
-use iced::SurfaceId as Id;
 
-use super::{motion::Motion, runtime::Runtime, screen::Screen};
-
-/// How long the greeting stays before it fades on its own.
-pub(in crate::app) const GREETING_LIFETIME: std::time::Duration =
-    std::time::Duration::from_secs(3);
+use super::{focus::Focus, motion::Motion, runtime::Runtime, screen::Screen};
 
 /// Everything the bar is, at this moment, on every screen it stands on.
 pub struct App {
     /// The machinery the binary booted the bar with.
-    pub(crate) runtime: Runtime,
+    pub(crate) runtime:           Runtime,
     /// The clocks the bar is currently riding.
-    pub(crate) motion: Motion,
+    pub(crate) motion:            Motion,
+    /// What the bar is paying attention to, and what is unfolded around it.
+    pub(crate) focus:             Focus,
     /// Theme built from the appearance in force, rebuilt only when it moves.
     ///
     /// Building a theme runs the whole palette derivation; the renderer asks
     /// for the theme on every loop turn, and an idle bar must answer with a
     /// reference-count bump, not five colour cascades.
-    pub(crate) theme_cache: iced::Theme,
-    pub(crate) module_context: ModuleContext,
-    pub(crate) icons: IconTheme,
+    pub(crate) theme_cache:       iced::Theme,
+    pub(crate) module_context:    ModuleContext,
+    pub(crate) icons:             IconTheme,
     /// What the screens have reported about themselves.
-    pub(crate) screen: Screen,
+    pub(crate) screen:            Screen,
     /// What the machine has been doing for the last few minutes.
     ///
     /// One reading is a number and a run of them is a shape; the canvas draws
     /// the shape beside the number, and nothing else in the bar keeps one.
-    pub(crate) history: super::history::History,
+    pub(crate) history:           super::history::History,
     /// The wallpaper in force, decoded ready to draw, and where it was read.
     ///
     /// Held rather than read where it is drawn: the canvas is built on every
@@ -64,94 +56,70 @@ pub struct App {
     /// each already centred on the one in force and each already decoded.
     /// Held for the same reason the wallpaper is: the canvas is rebuilt on
     /// every frame of an unfolding and reads no files while it draws.
-    pub(crate) looks: hydebar_core::modules::desk::looks::Looks,
+    pub(crate) looks:             hydebar_core::modules::desk::looks::Looks,
     /// The configuration in force.
-    pub config: Arc<Config>,
+    pub config:                   Arc<Config>,
     /// The screens the bar stands on, and the surfaces it holds on them.
-    pub outputs: Outputs,
-    /// Whether the bar currently holds the keyboard.
-    pub navigation_mode: bool,
-    /// Which entry the keyboard selection rests on, while it holds it.
-    pub focused_module_index: Option<usize>,
+    pub outputs:                  Outputs,
     /// Bar entry running the launcher the desktop is configured with.
-    pub app_launcher: CommandButton,
+    pub app_launcher:             CommandButton,
     /// The modules the user wrote, by the key each is named under.
-    pub custom: HashMap<String, Custom>,
+    pub custom:                   HashMap<String, Custom>,
     /// Bar entry counting what is waiting to be installed.
-    pub updates: Updates,
+    pub updates:                  Updates,
     /// Bar entry opening the clipboard history.
-    pub clipboard: CommandButton,
+    pub clipboard:                CommandButton,
     /// Bar entry drawing the compositor’s workspaces.
-    pub workspaces: Workspaces,
+    pub workspaces:               Workspaces,
     /// Bar entry naming the window holding focus.
-    pub window_title: WindowTitle,
+    pub window_title:             WindowTitle,
     /// Bar entry reading the machine, and the sample every readout shares.
-    pub system_info: SystemInfo,
+    pub system_info:              SystemInfo,
     /// Bar entry naming the keyboard layout in force.
-    pub keyboard_layout: KeyboardLayout,
+    pub keyboard_layout:          KeyboardLayout,
     /// Bar entry naming the compositor submap the keyboard is in.
-    pub keyboard_submap: KeyboardSubmap,
+    pub keyboard_submap:          KeyboardSubmap,
     /// Bar entry holding the icons applications registered.
-    pub tray: TrayModule,
+    pub tray:                     TrayModule,
     /// Bar entry listing the open windows.
-    pub taskbar: Taskbar,
+    pub taskbar:                  Taskbar,
     /// The canvas the bar unfolds into on a screen holding no window.
-    pub desk: Desk,
+    pub desk:                     Desk,
     /// Bar entry stating the date and the time.
-    pub clock: Clock,
+    pub clock:                    Clock,
     /// The calendar the clock opens.
-    pub calendar: Calendar,
+    pub calendar:                 Calendar,
     /// Bar entry opening the menu the desktop publishes.
-    pub hyde_menu: HydeMenu,
+    pub hyde_menu:                HydeMenu,
     /// Bar entry reading the charge and the power source.
-    pub battery: Battery,
+    pub battery:                  Battery,
     /// Bar entry warning while the microphone, camera or screen is read.
-    pub privacy: Privacy,
+    pub privacy:                  Privacy,
     /// Bar entry gathering the quick settings, and the services behind them.
-    pub control_center: ControlCenter,
+    pub control_center:           ControlCenter,
     /// Bar entry naming what is playing.
-    pub media_player: MediaPlayer,
+    pub media_player:             MediaPlayer,
     /// Bar entry holding the notices that arrived.
-    pub notifications: Notifications,
+    pub notifications:            Notifications,
     /// Bar entry taking a picture of the screen.
-    pub screenshot: Screenshot,
+    pub screenshot:               Screenshot,
     /// Bar entry opening the window the bar is configured from.
-    pub settings: Settings,
+    pub settings:                 Settings,
     /// Bar entry choosing the desktop theme, and the one holder of a running
     /// switch.
-    pub themes: Themes,
+    pub themes:                   Themes,
     /// Bar entry stepping through the wallpapers of the theme in force.
-    pub wallpaper: Wallpaper,
+    pub wallpaper:                Wallpaper,
     /// Bar entry stepping through the layouts the desktop ships.
-    pub bar_layout: hydebar_core::modules::bar_layout::BarLayout,
+    pub bar_layout:               hydebar_core::modules::bar_layout::BarLayout,
     /// Bar entry reading the weather where the machine stands.
-    pub weather: Weather,
-    /// Notifications currently shown as popups.
-    pub notification_popups: Vec<notifications_popup::Popup>,
-    /// The one module the user is looking at, and the clocks that follow it.
-    pub attention: Attention,
-    /// Fade of the hover highlight of every module the pointer touched.
-    pub hover: HoverFades<ModuleName>,
-    /// Presence of the greeting shown mid-screen while the bar comes up.
-    pub greeting: hydebar_core::animation::Spring,
-    /// The menu surfaces the greeting has raised, each exactly once.
-    pub(crate) greeting_raised: Vec<Id>,
-    /// The frame instant past which the greeting lets itself out.
-    pub(crate) greeting_deadline: Option<Instant>,
-    /// The one tooltip lifecycle: dwell, warmth and the fade either way.
-    pub hints: hydebar_core::tooltip::Hints,
-    /// The greeting line, composed once when the greeting is armed.
-    pub greeting_line: String,
+    pub weather:                  Weather,
     /// The last configuration as the file spelled it, before adoption.
     ///
     /// The cheap gate against reload bursts: a reload whose raw text matches
     /// is finished before the adoption clone and the compositor questions it
     /// asks.
-    pub(crate) raw_config: Option<Arc<Config>>,
-    /// The wallpaper press waiting for its pictures before its window opens.
-    pub(crate) wallpaper_pending: Option<(Id, ButtonUIRef)>,
-    /// The layout press waiting for its roster before its window opens.
-    pub(crate) bar_layout_pending: Option<(Id, ButtonUIRef)>,
+    pub(crate) raw_config:        Option<Arc<Config>>,
     /// Faded and swept themes derived this frame, by quantised key.
     ///
     /// One palette blend serves every island and menu that lands on the
@@ -165,8 +133,8 @@ impl std::fmt::Debug for App {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("App")
             .field("config_path", &self.runtime.config_path)
-            .field("navigation_mode", &self.navigation_mode)
-            .field("focused_module_index", &self.focused_module_index)
+            .field("navigation_mode", &self.focus.navigation_mode)
+            .field("focused_module_index", &self.focus.focused_module_index)
             .field("magnification", &self.screen.magnification)
             .field("screen_height", &self.screen.height)
             .finish_non_exhaustive()

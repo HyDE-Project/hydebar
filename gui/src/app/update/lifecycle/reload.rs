@@ -85,11 +85,12 @@ impl App {
 
         if source_changed {
             if config.notifications.source.draws_popups() {
-                self.notification_popups
-                    .push(hydebar_core::notifications_popup::Popup::new(
+                self.focus.notification_popups.push(
+                    hydebar_core::notifications_popup::Popup::new(
                         &announcement(config.notifications.source),
                         std::time::Instant::now()
-                    ));
+                    )
+                );
                 tasks.push(self.fit_notification_surface());
             } else {
                 hydebar_core::modules::settings::announce_source(

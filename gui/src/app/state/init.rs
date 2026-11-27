@@ -29,7 +29,7 @@ use hydebar_proto::{
 use iced::Task;
 use tokio::runtime::Handle;
 
-use super::{App, Message, motion::Motion, runtime::Runtime, screen::Screen};
+use super::{App, Message, focus::Focus, motion::Motion, runtime::Runtime, screen::Screen};
 
 type AppDependencies = (
     LoggerHandle,
@@ -97,6 +97,25 @@ fn initial_motion(appearance: Appearance) -> Motion {
     }
 }
 
+/// The attention as the bar is born: nothing held, nothing unfolded, the
+/// greeting armed to zero so its wave can start with the first theme.
+fn initial_focus() -> Focus {
+    Focus {
+        navigation_mode:      false,
+        focused_module_index: None,
+        attention:            Attention::default(),
+        hover:                HoverFades::default(),
+        hints:                hydebar_core::tooltip::Hints::default(),
+        notification_popups:  Vec::new(),
+        greeting:             hydebar_core::animation::Spring::new(0.0),
+        greeting_line:        String::new(),
+        greeting_raised:      Vec::new(),
+        greeting_deadline:    None,
+        wallpaper_pending:    None,
+        bar_layout_pending:   None
+    }
+}
+
 impl App {
     /// Builds the bar from what the binary has already opened for it.
     ///
@@ -138,8 +157,7 @@ impl App {
             looks: hydebar_core::modules::desk::looks::Looks::default(),
             history: super::history::History::default(),
             outputs,
-            navigation_mode: false,
-            focused_module_index: None,
+            focus: initial_focus(),
             app_launcher: CommandButton::new(Icons::AppLauncher),
             custom,
             updates: Updates::default(),
@@ -165,17 +183,7 @@ impl App {
             themes: Themes::new(),
             wallpaper: Wallpaper::new(),
             bar_layout: hydebar_core::modules::bar_layout::BarLayout::new(),
-            notification_popups: Vec::new(),
-            attention: Attention::default(),
-            hover: HoverFades::default(),
-            greeting: hydebar_core::animation::Spring::new(0.0),
-            greeting_raised: Vec::new(),
-            greeting_deadline: None,
-            hints: hydebar_core::tooltip::Hints::default(),
-            greeting_line: String::new(),
             raw_config: None,
-            wallpaper_pending: None,
-            bar_layout_pending: None,
             derived_themes: std::cell::RefCell::new(std::collections::HashMap::new()),
             weather: Weather::new(
                 config.weather.location.clone(),

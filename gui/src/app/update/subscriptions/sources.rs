@@ -118,7 +118,7 @@ impl App {
             }
         }
 
-        if hydebar_core::notifications_popup::needs_expiry_clock(&self.notification_popups) {
+        if hydebar_core::notifications_popup::needs_expiry_clock(&self.focus.notification_popups) {
             subscriptions.push(
                 iced::time::every(std::time::Duration::from_millis(POPUP_TICK_MS))
                     .map(|_| Message::ExpirePopups)

@@ -17,9 +17,9 @@ impl App {
         id: Id,
         button_ui_ref: ButtonUIRef
     ) -> Task<Message> {
-        self.hints.dismiss();
-        self.wallpaper_pending = None;
-        self.bar_layout_pending = None;
+        self.focus.hints.dismiss();
+        self.focus.wallpaper_pending = None;
+        self.focus.bar_layout_pending = None;
 
         let mut cmd = vec![];
         match &menu_type {
@@ -41,7 +41,7 @@ impl App {
                     cmd.push(self.wallpaper.load_entries().map(Message::Wallpaper));
 
                     if self.wallpaper.is_empty() {
-                        self.wallpaper_pending = Some((id, button_ui_ref));
+                        self.focus.wallpaper_pending = Some((id, button_ui_ref));
                         cmd.push(self.outputs.close_all_menus(&self.config));
                         self.attend_the_open_menu();
 
@@ -54,7 +54,7 @@ impl App {
                     cmd.push(self.bar_layout.load_entries().map(Message::BarLayout));
 
                     if self.bar_layout.is_empty() {
-                        self.bar_layout_pending = Some((id, button_ui_ref));
+                        self.focus.bar_layout_pending = Some((id, button_ui_ref));
                         cmd.push(self.outputs.close_all_menus(&self.config));
                         self.attend_the_open_menu();
 
@@ -165,7 +165,7 @@ mod tests {
         let _ = app.on_toggle_menu(MenuType::Wallpaper, surface(), press());
 
         assert!(
-            app.wallpaper_pending.is_some(),
+            app.focus.wallpaper_pending.is_some(),
             "the press is held until the wallpapers are read"
         );
     }
@@ -177,7 +177,7 @@ mod tests {
         let _ = app.on_toggle_menu(MenuType::BarLayout, surface(), press());
 
         assert!(
-            app.bar_layout_pending.is_some(),
+            app.focus.bar_layout_pending.is_some(),
             "the press is held until the layouts are read"
         );
     }
@@ -187,12 +187,12 @@ mod tests {
         let mut app = test_app();
 
         let _ = app.on_toggle_menu(MenuType::Wallpaper, surface(), press());
-        assert!(app.wallpaper_pending.is_some());
+        assert!(app.focus.wallpaper_pending.is_some());
 
         let _ = app.on_toggle_menu(MenuType::Updates, surface(), press());
 
-        assert!(app.wallpaper_pending.is_none());
-        assert!(app.bar_layout_pending.is_none());
+        assert!(app.focus.wallpaper_pending.is_none());
+        assert!(app.focus.bar_layout_pending.is_none());
     }
 
     #[test]

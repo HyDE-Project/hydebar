@@ -16,7 +16,7 @@ impl App {
 
         let task = self.bar_layout.update(msg).map(Message::BarLayout);
 
-        if listed && let Some((id, button_ui_ref)) = self.bar_layout_pending.take() {
+        if listed && let Some((id, button_ui_ref)) = self.focus.bar_layout_pending.take() {
             if self.bar_layout.is_empty() {
                 log::warn!("the desktop lists no bar layouts, the picker stays closed");
 
@@ -49,7 +49,7 @@ impl App {
 
         let task = self.wallpaper.update(msg, &config).map(Message::Wallpaper);
 
-        if listed && let Some((id, button_ui_ref)) = self.wallpaper_pending.take() {
+        if listed && let Some((id, button_ui_ref)) = self.focus.wallpaper_pending.take() {
             if self.wallpaper.is_empty() {
                 log::warn!("the theme offers no wallpapers, the picker stays closed");
 

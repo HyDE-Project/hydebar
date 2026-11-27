@@ -131,10 +131,10 @@ impl App {
             if self.config.appearance.greeting
                 && hydebar_core::components::greeting::claim_first_entry()
             {
-                self.greeting_line = hydebar_core::components::greeting::current();
-                self.greeting = hydebar_core::animation::Spring::new(0.0)
+                self.focus.greeting_line = hydebar_core::components::greeting::current();
+                self.focus.greeting = hydebar_core::animation::Spring::new(0.0)
                     .with_response(hydebar_core::animation::STANDARD);
-                self.greeting.set_target(1.0);
+                self.focus.greeting.set_target(1.0);
             }
         } else {
             self.motion.entrance.snap_to(1.0);

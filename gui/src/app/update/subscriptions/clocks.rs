@@ -71,7 +71,8 @@ impl App {
     /// One clock for the whole bar rather than one per module, and none at all
     /// while the layout draws nothing that can be polled.
     pub(super) fn rest_clock(&self) -> Subscription<Message> {
-        self.attention
+        self.focus
+            .attention
             .rest_period()
             .map_or_else(Subscription::none, |period| {
                 Self::clock(Clock::Rest, period).map(|_| Message::PollAtRest)
@@ -83,7 +84,8 @@ impl App {
     /// It exists only while something is attended, so a bar nobody is touching
     /// carries no fast clock at all rather than one ticking on an empty roster.
     pub(super) fn attended_clock(&self) -> Subscription<Message> {
-        self.attention
+        self.focus
+            .attention
             .attended_period()
             .map_or_else(Subscription::none, |period| {
                 Self::clock(Clock::Attended, period).map(|_| Message::PollAttended)
@@ -111,13 +113,13 @@ impl App {
     pub(super) fn frame_subscription(&self) -> Subscription<Message> {
         if self.outputs.menu_is_animating()
             || self.motion.appearance_transition.is_animating()
-            || self.hover.is_animating()
+            || self.focus.hover.is_animating()
             || self.desk_is_unfolding()
             || self.motion.entrance.is_animating()
             || self.motion.relayout.is_animating()
-            || self.greeting.is_animating()
-            || self.greeting.target() > 0.0
-            || self.hints.needs_frames()
+            || self.focus.greeting.is_animating()
+            || self.focus.greeting.target() > 0.0
+            || self.focus.hints.needs_frames()
             || self.clock.is_fading()
             || self.updates.is_fading()
             || self.keyboard_layout.is_fading()
