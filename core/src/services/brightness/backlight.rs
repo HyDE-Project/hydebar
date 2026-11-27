@@ -1,7 +1,7 @@
 //! Sysfs and udev access to the backlight device.
 
 use std::{
-    fs,
+    fs, io,
     path::{Path, PathBuf}
 };
 
@@ -67,8 +67,16 @@ impl BrightnessService {
             .map_err(BrightnessError::from)?;
         let socket = builder.listen().map_err(BrightnessError::from)?;
 
-        AsyncFd::with_interest(socket, Interest::READABLE | Interest::WRITABLE)
-            .map_err(BrightnessError::from)
+        #[expect(
+            unsafe_code,
+            reason = "the monitor socket owns its netlink file descriptor and keeps it open and \
+                      unchanged for as long as the AsyncFd holds the socket"
+        )]
+        let listener = unsafe {
+            AsyncFd::register_with_interest(socket, Interest::READABLE | Interest::WRITABLE)
+        };
+
+        listener.map_err(|err| BrightnessError::from(io::Error::from(err)))
     }
 
     pub(super) fn backlight_enumerate() -> Result<Vec<udev::Device>, BrightnessError> {
