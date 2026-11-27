@@ -55,7 +55,8 @@ impl App {
     pub(in crate::app::view::desk) fn canvas_room(&self, id: Id) -> f32 {
         let margin = self.appearance().font_size_px() * 2.0;
 
-        self.screen_height
+        self.screen
+            .height
             .map_or(f32::INFINITY, |height| {
                 margin.mul_add(-2.0, height - self.strip_band(id))
             })

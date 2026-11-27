@@ -80,7 +80,7 @@ impl App {
     /// one another — a block on its way to the fourth place crossed the three
     /// already standing.
     pub(super) fn fan_span(&self) -> f32 {
-        self.screen_width.unwrap_or(1920.0) * FAN
+        self.screen.width.unwrap_or(1920.0) * FAN
     }
 
     /// The height the strip's own islands stand at.
@@ -107,7 +107,7 @@ impl App {
         self.outputs
             .screen_of(id)
             .flatten()
-            .and_then(|screen| self.strip_rows.get(screen))
+            .and_then(|screen| self.screen.strip_rows.get(screen))
             .copied()
             .unwrap_or_default()
     }

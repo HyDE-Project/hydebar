@@ -26,7 +26,7 @@ use hydebar_proto::{config::Config, ports::hyprland::HyprlandPort};
 use iced::Task;
 use tokio::runtime::Handle;
 
-use super::{App, Message, runtime::Runtime};
+use super::{App, Message, runtime::Runtime, screen::Screen};
 
 type AppDependencies = (
     LoggerHandle,
@@ -98,15 +98,18 @@ impl App {
             module_context,
             icons: IconTheme::from_config(&config.icons)
                 .with_size(config.appearance.font_size_px()),
-            auto_metrics: None,
-            screen_height: None,
-            screen_width: None,
-            screen_sizes: HashMap::new(),
-            strip_rows: HashMap::new(),
+            screen: Screen {
+                auto_metrics:         None,
+                height:               None,
+                width:                None,
+                sizes:                HashMap::new(),
+                strip_rows:           HashMap::new(),
+                magnification:        hydebar_core::components::scale::screen_factor(),
+                stated_layer_metrics: None
+            },
             wallpaper_preview: None,
             looks: hydebar_core::modules::desk::looks::Looks::default(),
             history: super::history::History::default(),
-            magnification: hydebar_core::components::scale::screen_factor(),
             outputs,
             navigation_mode: false,
             focused_module_index: None,
@@ -157,7 +160,6 @@ impl App {
             wallpaper_pending: None,
             bar_layout_pending: None,
             derived_themes: std::cell::RefCell::new(std::collections::HashMap::new()),
-            stated_layer_metrics: None,
             weather: Weather::new(
                 config.weather.location.clone(),
                 config.weather.api_key.clone(),

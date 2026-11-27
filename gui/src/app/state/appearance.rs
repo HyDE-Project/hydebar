@@ -42,7 +42,9 @@ impl App {
     /// Restates `config` against a compositor look the caller already has.
     fn adopted_with(&self, config: &Config, look: &CompositorLook) -> Arc<Config> {
         let mut adopted = config.clone();
-        adopted.appearance.adopt_screen(self.magnification, look);
+        adopted
+            .appearance
+            .adopt_screen(self.screen.magnification, look);
 
         Arc::new(adopted)
     }
@@ -82,10 +84,10 @@ impl App {
             appearance.scale_factor.to_bits(),
             appearance.height_px().map(f32::to_bits)
         );
-        let resize = if self.stated_layer_metrics == Some(metrics) {
+        let resize = if self.screen.stated_layer_metrics == Some(metrics) {
             Task::none()
         } else {
-            self.stated_layer_metrics = Some(metrics);
+            self.screen.stated_layer_metrics = Some(metrics);
             self.outputs.resize(
                 appearance.style,
                 appearance.scale_factor,
@@ -199,7 +201,7 @@ mod tests {
             runtime_handle,
             bus_receiver
         ));
-        app.magnification = magnification;
+        app.screen.magnification = magnification;
 
         app
     }

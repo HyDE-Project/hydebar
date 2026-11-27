@@ -242,7 +242,7 @@ mod tests {
     fn a_canvas_a_window_took_the_screen_from_is_gone_on_that_very_frame() {
         let mut app = test_app_with(|config| config.desk.enabled = true);
         seed_machine_readings(&mut app);
-        app.screen_width = Some(1920.0);
+        app.screen.width = Some(1920.0);
         open(&mut app);
 
         app.desk
@@ -803,7 +803,7 @@ mod tests {
             config.modules.right = Vec::new();
         });
         seed_machine_readings(&mut app);
-        app.screen_width = Some(1920.0);
+        app.screen.width = Some(1920.0);
         open(&mut app);
 
         app.desk_clocks.entry(None).or_default().fold();
@@ -903,7 +903,7 @@ mod tests {
             config.modules.right = Vec::new();
         });
         seed_machine_readings(&mut app);
-        app.screen_width = Some(1920.0);
+        app.screen.width = Some(1920.0);
         open(&mut app);
 
         let nearest = on_screen(&app)
@@ -983,7 +983,7 @@ mod tests {
     fn a_screen_taken_by_a_window_sends_its_islands_beyond_the_edge() {
         let mut app = test_app_with(|config| config.desk.enabled = true);
         seed_machine_readings(&mut app);
-        app.screen_width = Some(1920.0);
+        app.screen.width = Some(1920.0);
         open(&mut app);
 
         app.desk_clocks.entry(None).or_default().fold();

@@ -185,8 +185,9 @@ pub fn seat(app: &App) -> Option<Panel> {
     push(
         &mut rows,
         "screen",
-        app.screen_width
-            .zip(app.screen_height)
+        app.screen
+            .width
+            .zip(app.screen.height)
             .map(|(width, height)| format!("{width:.0} × {height:.0}"))
     );
 

@@ -36,7 +36,7 @@ impl App {
             return empty;
         };
 
-        let Some(&(screen_w, screen_h)) = self.screen_sizes.get(name) else {
+        let Some(&(screen_w, screen_h)) = self.screen.sizes.get(name) else {
             return empty;
         };
 
@@ -91,11 +91,12 @@ impl App {
     /// measured has nothing before the bar: the band stands on the edge.
     fn bar_offset(&self, screen: &str, bar_height: f32) -> f32 {
         match self.config.position {
-            Position::Top => self.strip_rows.get(screen).copied().unwrap_or(0.0),
+            Position::Top => self.screen.strip_rows.get(screen).copied().unwrap_or(0.0),
             Position::Bottom => self
+                .screen
                 .strip_rows
                 .get(screen)
-                .zip(self.screen_height)
+                .zip(self.screen.height)
                 .map_or(0.0, |(row, height)| (height - row - bar_height).max(0.0))
         }
     }
@@ -146,7 +147,7 @@ mod tests {
         });
 
         tracked(&mut app, "DP-1");
-        app.screen_sizes.insert("DP-1".to_owned(), (1920.0, 1080.0));
+        app.screen.sizes.insert("DP-1".to_owned(), (1920.0, 1080.0));
 
         let mut ui = simulator(app.frame_surface(ring_of(&app)));
 
@@ -205,7 +206,7 @@ mod tests {
         });
 
         tracked(&mut app, "DP-1");
-        app.screen_sizes.insert("DP-1".to_owned(), (1920.0, 1080.0));
+        app.screen.sizes.insert("DP-1".to_owned(), (1920.0, 1080.0));
 
         // the canvas holds the screen: the strip, and the ring with it, is
         // gone until the blocks travel home

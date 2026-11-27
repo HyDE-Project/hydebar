@@ -19,9 +19,12 @@ impl App {
     ) -> Option<(Element<'_, Message>, MenuSize, Option<f32>)> {
         match menu_type {
             MenuType::Settings => {
-                let (window, metrics) =
-                    self.settings
-                        .window(&self.config, opacity, self.icons(), self.magnification);
+                let (window, metrics) = self.settings.window(
+                    &self.config,
+                    opacity,
+                    self.icons(),
+                    self.screen.magnification
+                );
 
                 Some((
                     window.map(Message::Settings),

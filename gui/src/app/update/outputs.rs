@@ -28,8 +28,8 @@ impl App {
                 Task::none()
             }
             Message::StripRowsMeasured(rows) => {
-                if !rows.is_empty() && self.strip_rows != rows {
-                    self.strip_rows = rows;
+                if !rows.is_empty() && self.screen.strip_rows != rows {
+                    self.screen.strip_rows = rows;
                 }
 
                 self.unfold_desk()
@@ -130,7 +130,7 @@ impl App {
                 );
 
                 if let Some(name) = name {
-                    self.screen_sizes.remove(&name);
+                    self.screen.sizes.remove(&name);
                 }
 
                 Task::batch([removed, self.unfold_desk()])
@@ -162,9 +162,9 @@ impl App {
         let height = geometry.pixels.1 / geometry.scale.max(f32::EPSILON);
         let width = geometry.pixels.0 / geometry.scale.max(f32::EPSILON);
 
-        self.screen_height = Some(height);
-        self.screen_width = Some(width);
-        self.screen_sizes.insert(name, (width, height));
+        self.screen.height = Some(height);
+        self.screen.width = Some(width);
+        self.screen.sizes.insert(name, (width, height));
 
         let metrics = auto_metrics(
             geometry.pixels.0,
@@ -173,12 +173,12 @@ impl App {
             geometry.physical
         );
 
-        if self.auto_metrics == Some(metrics) {
+        if self.screen.auto_metrics == Some(metrics) {
             return false;
         }
 
         info!("screen calls for a bar magnified {} times", metrics.scale);
-        self.auto_metrics = Some(metrics);
+        self.screen.auto_metrics = Some(metrics);
 
         true
     }
@@ -247,9 +247,9 @@ mod tests {
 
         // the last report does not overwrite the first: every output rings
         // itself in its own numbers
-        assert_eq!(app.screen_sizes.get("DP-1"), Some(&(1920.0, 1080.0)));
-        assert_eq!(app.screen_sizes.get("HDMI-1"), Some(&(1920.0, 1080.0)));
-        assert_eq!(app.screen_sizes.len(), 2);
+        assert_eq!(app.screen.sizes.get("DP-1"), Some(&(1920.0, 1080.0)));
+        assert_eq!(app.screen.sizes.get("HDMI-1"), Some(&(1920.0, 1080.0)));
+        assert_eq!(app.screen.sizes.len(), 2);
     }
 
     #[test]
@@ -270,11 +270,11 @@ mod tests {
         });
         let _ = task;
 
-        assert!(app.screen_sizes.contains_key("DP-1"));
+        assert!(app.screen.sizes.contains_key("DP-1"));
 
         let _ = app.update_outputs(Message::OutputEvent(iced::OutputEvent::Removed(dp)));
 
-        assert!(!app.screen_sizes.contains_key("DP-1"));
+        assert!(!app.screen.sizes.contains_key("DP-1"));
     }
 
     #[test]
@@ -313,7 +313,7 @@ mod tests {
         });
         let _ = task;
 
-        assert!(!app.screen_sizes.contains_key("DP-1"));
+        assert!(!app.screen.sizes.contains_key("DP-1"));
     }
 
     #[test]
@@ -330,7 +330,7 @@ mod tests {
         });
         let _ = task;
 
-        assert!(app.screen_sizes.is_empty());
+        assert!(app.screen.sizes.is_empty());
     }
 
     #[test]
@@ -371,6 +371,6 @@ mod tests {
             let _ = task;
         }
 
-        assert!(app.screen_sizes.is_empty());
+        assert!(app.screen.sizes.is_empty());
     }
 }

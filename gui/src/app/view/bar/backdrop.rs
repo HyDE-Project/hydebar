@@ -261,7 +261,7 @@ mod tests {
         let mut app = test_app_with(|config| config.desk.enabled = true);
 
         app.desk_clocks.entry(None).or_default().open();
-        app.screen_width = Some(1920.0);
+        app.screen.width = Some(1920.0);
         app.desk_clocks.entry(None).or_default().fold();
         app.send_the_islands_home(surface());
 

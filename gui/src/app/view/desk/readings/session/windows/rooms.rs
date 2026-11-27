@@ -47,8 +47,8 @@ pub fn workspaces(app: &App) -> Option<Panel> {
 /// A screen the bar has not been told the size of yields empty rooms rather
 /// than a drawing laid out against a guess.
 fn miniatures(app: &App) -> Vec<Miniature> {
-    let width = app.screen_width.unwrap_or_default();
-    let height = app.screen_height.unwrap_or_default();
+    let width = app.screen.width.unwrap_or_default();
+    let height = app.screen.height.unwrap_or_default();
 
     app.workspaces
         .items()

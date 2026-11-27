@@ -129,7 +129,7 @@ impl App {
             return;
         }
 
-        let beyond = self.screen_width.unwrap_or(1920.0);
+        let beyond = self.screen.width.unwrap_or(1920.0);
         let layout = std::sync::Arc::clone(&self.config);
 
         {

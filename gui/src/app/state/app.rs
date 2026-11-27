@@ -18,14 +18,14 @@ use hydebar_core::{
         weather::Weather, window_title::WindowTitle, workspaces::Workspaces
     },
     notifications_popup,
-    outputs::{AutoMetrics, Outputs},
+    outputs::Outputs,
     position_button::ButtonUIRef,
     style::AppearanceTransition
 };
-use hydebar_proto::config::{AppearanceStyle, Config};
+use hydebar_proto::config::Config;
 use iced::SurfaceId as Id;
 
-use super::runtime::Runtime;
+use super::{runtime::Runtime, screen::Screen};
 
 /// How long the greeting stays before it fades on its own.
 pub(in crate::app) const GREETING_LIFETIME: std::time::Duration =
@@ -45,24 +45,8 @@ pub struct App {
     pub(crate) theme_cache: iced::Theme,
     pub(crate) module_context: ModuleContext,
     pub(crate) icons: IconTheme,
-    /// Factor the screen calls for, folded into every configuration loaded.
-    pub(crate) magnification: f32,
-    /// Sizes the screen calls for, once an output has reported itself.
-    pub(crate) auto_metrics: Option<AutoMetrics>,
-    /// Logical height of the screen the bar stands on, once reported.
-    pub(crate) screen_height: Option<f32>,
-    /// Logical width of the screen the bar stands on, once reported.
-    ///
-    /// What the islands are sent beyond when they fly back onto the strip:
-    /// off screen has to be off *this* screen, not a guessed distance.
-    pub(crate) screen_width: Option<f32>,
-    /// Logical sizes each measured monitor calls for, by its name.
-    ///
-    /// Every output rings itself in its own numbers: a 4K panel and a 1080p
-    /// one report different sizes, and whichever report arrived last is what
-    /// the desk and the islands travel with, but the frame of a screen is a
-    /// shape of that screen and no other.
-    pub(crate) screen_sizes: HashMap<String, (f32, f32)>,
+    /// What the screens have reported about themselves.
+    pub(crate) screen: Screen,
     /// What the machine has been doing for the last few minutes.
     ///
     /// One reading is a number and a run of them is a shape; the canvas draws
@@ -82,13 +66,6 @@ pub struct App {
     /// Held for the same reason the wallpaper is: the canvas is rebuilt on
     /// every frame of an unfolding and reads no files while it draws.
     pub(crate) looks: hydebar_core::modules::desk::looks::Looks,
-    /// The row the strip stands on, screen by screen, as last measured.
-    ///
-    /// The canvas covers the screen from its very top and the strip does not
-    /// have to: a layer surface is never told its own place, so the row the
-    /// modules leave is asked of the compositor rather than assumed. Absent
-    /// until the first answer, which reads as a strip at the top.
-    pub(crate) strip_rows: HashMap<String, f32>,
     /// The configuration in force.
     pub config: Arc<Config>,
     /// The screens the bar stands on, and the surfaces it holds on them.
@@ -209,12 +186,7 @@ pub struct App {
     /// same sixty-fourth of the fade; cleared each frame, so the map holds
     /// a handful of entries and never staleness.
     pub(crate) derived_themes:
-        std::cell::RefCell<std::collections::HashMap<(u32, u32), iced::Theme>>,
-    /// The layer metrics last stated to the compositor.
-    ///
-    /// Style, scale bits and height bits: while they stand still, a reload
-    /// does not re-state the size and exclusive zone of every bar surface.
-    pub(crate) stated_layer_metrics: Option<(AppearanceStyle, u64, Option<u32>)>
+        std::cell::RefCell<std::collections::HashMap<(u32, u32), iced::Theme>>
 }
 
 impl std::fmt::Debug for App {
@@ -223,8 +195,8 @@ impl std::fmt::Debug for App {
             .field("config_path", &self.runtime.config_path)
             .field("navigation_mode", &self.navigation_mode)
             .field("focused_module_index", &self.focused_module_index)
-            .field("magnification", &self.magnification)
-            .field("screen_height", &self.screen_height)
+            .field("magnification", &self.screen.magnification)
+            .field("screen_height", &self.screen.height)
             .finish_non_exhaustive()
     }
 }
