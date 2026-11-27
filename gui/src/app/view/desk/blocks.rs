@@ -16,7 +16,7 @@ mod parts;
 mod room;
 mod trace;
 
-use iced::{Alignment, Color, Element};
+use iced::Element;
 
 pub(in crate::app::view::desk) use self::{
     ink::{Along, Ink, Side},
