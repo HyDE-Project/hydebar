@@ -6,7 +6,7 @@ use std::{
     path::Path
 };
 
-use chrono::Timelike;
+use jiff::ZonedDateTime;
 
 /// Claims the one greeting of this login session.
 ///
@@ -52,7 +52,10 @@ fn claim(marker: &Path, instance: &str) -> bool {
 /// shows.
 #[must_use]
 pub fn current() -> String {
-    line(chrono::Local::now().hour(), var("USER").ok().as_deref())
+    line(
+        u32::from(ZonedDateTime::now().hour().cast_unsigned()),
+        var("USER").ok().as_deref()
+    )
 }
 
 /// The greeting for `hour`, addressed to `user` when one is known.

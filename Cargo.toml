@@ -25,7 +25,7 @@ iced = { package = "iced_layershell", git = "https://github.com/MalpenZibo/iced_
 ] }
 iced_futures = "0.14"
 iced_core = "0.14"
-chrono = "0.4"
+jiff = "1.0"
 serde = { version = "1", features = ["derive"] }
 sysinfo = "0.40"
 tokio = { version = "1", features = ["full", "test-util"] }

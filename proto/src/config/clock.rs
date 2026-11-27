@@ -7,7 +7,7 @@ use serde::Deserialize;
 /// Clock module behaviour.
 #[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct ClockModuleConfig {
-    /// Primary `chrono` format string.
+    /// Primary `strftime` format string.
     pub format:       String,
     /// Alternative format strings a left click cycles through.
     ///

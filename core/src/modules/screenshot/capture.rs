@@ -24,7 +24,7 @@ impl Screenshot {
             return;
         }
 
-        let timestamp = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
+        let timestamp = super::file_stamp();
         let filename = screenshot_dir.join(format!("screenshot_{timestamp}.png"));
 
         spawn(move || {

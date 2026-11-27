@@ -10,7 +10,7 @@ description = "Modules, services and event bus behind the hydebar status bar"
 [dependencies]
 quick-xml.workspace = true
 ttf-parser.workspace = true
-chrono.workspace = true
+jiff.workspace = true
 dirs.workspace = true
 freedesktop-icons.workspace = true
 image.workspace = true

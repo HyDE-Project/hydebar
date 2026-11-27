@@ -3,6 +3,7 @@
 use std::{future::Future, ops::Deref, pin::Pin};
 
 use iced::Task;
+use jiff::Timestamp;
 use log::{debug, error};
 use masterror::{AppError, AppResult};
 
@@ -81,7 +82,7 @@ impl TrayService {
                 id,
                 "clicked",
                 &value,
-                chrono::offset::Local::now().timestamp_subsec_micros()
+                u32::try_from(Timestamp::now().subsec_microsecond()).unwrap_or(0)
             )
             .await
             .map_err(|e| bus_failure("Failed to trigger menu event", &e))?;

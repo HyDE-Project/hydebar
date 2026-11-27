@@ -91,7 +91,10 @@ mod tests {
         clock.update(Message::NextFormat, &config, false);
         let minutes = clock.data().format(clock.active_format(&config));
 
-        assert_eq!(hours, clock.data().current_time.format("%H").to_string());
-        assert_eq!(minutes, clock.data().current_time.format("%M").to_string());
+        assert_eq!(hours, clock.data().current_time.strftime("%H").to_string());
+        assert_eq!(
+            minutes,
+            clock.data().current_time.strftime("%M").to_string()
+        );
     }
 }

@@ -25,7 +25,7 @@ impl Screenshot {
             return;
         }
 
-        let timestamp = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
+        let timestamp = super::file_stamp();
         let filename = video_dir.join(format!("recording_{timestamp}.mp4"));
 
         debug!("Starting recording to: {}", filename.display());
