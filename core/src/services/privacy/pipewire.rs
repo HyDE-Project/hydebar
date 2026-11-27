@@ -1,3 +1,10 @@
+//! The `PipeWire` privacy source: which applications are using the
+//! microphone or camera right now.
+//!
+//! `PipeWire` delivers its announcements on a main loop of its own, so a
+//! dedicated thread owns that loop and forwards node arrivals and departures
+//! to the bar through a bounded channel.
+
 use std::{future::Future, pin::Pin, thread};
 
 use pipewire::{context::ContextRc, core::CoreRc, main_loop::MainLoopRc};
@@ -30,106 +37,97 @@ pub(crate) trait PipewireEventSource {
 #[derive(Debug, Default, Clone, Copy)]
 pub(crate) struct PipewireListener;
 
+/// The `PipeWire` main loop, its connection and the registry listener on it.
+struct PipewireRuntime {
+    mainloop:  MainLoopRc,
+    _context:  ContextRc,
+    _core:     CoreRc,
+    _listener: pipewire::registry::Listener
+}
+
+/// The media a node publishes, when its properties name one the bar watches.
+fn watched_media(props: &pipewire::spa::utils::dict::DictRef) -> Option<Media> {
+    match props.get("media.class") {
+        Some("Stream/Input/Video") => Some(Media::Video),
+        Some("Stream/Input/Audio") => Some(Media::Audio),
+        _ => None
+    }
+}
+
+/// Hands one event to the consumer, dropping it when the queue is full.
+fn forward(tx: &Sender<PrivacyEvent>, event: PrivacyEvent, what: &str) {
+    if let Err(error) = tx.try_send(event) {
+        log::warn!("Failed to forward PipeWire {what} event: {error}");
+    }
+}
+
+impl PipewireRuntime {
+    fn new(tx: Sender<PrivacyEvent>) -> Result<Self, PrivacyError> {
+        let mainloop = MainLoopRc::new(None)
+            .map_err(|err| PrivacyError::pipewire_mainloop(err.to_string()))?;
+        let context = ContextRc::new(&mainloop, None)
+            .map_err(|err| PrivacyError::pipewire_context(err.to_string()))?;
+        let core = context
+            .connect_rc(None)
+            .map_err(|err| PrivacyError::pipewire_core(err.to_string()))?;
+        let registry = core
+            .get_registry_rc()
+            .map_err(|err| PrivacyError::pipewire_registry(err.to_string()))?;
+        let remove_tx = tx.clone();
+        let listener = registry
+            .add_listener_local()
+            .global(move |global| {
+                if let Some(props) = global.props
+                    && let Some(media) = watched_media(props)
+                {
+                    forward(
+                        &tx,
+                        PrivacyEvent::AddNode(ApplicationNode {
+                            id: global.id,
+                            media
+                        }),
+                        "add"
+                    );
+                }
+            })
+            .global_remove(move |id| {
+                forward(&remove_tx, PrivacyEvent::RemoveNode(id), "remove");
+            })
+            .register();
+
+        Ok(Self {
+            mainloop,
+            _context: context,
+            _core: core,
+            _listener: listener
+        })
+    }
+
+    fn run(self) {
+        self.mainloop.run();
+    }
+}
+
 impl PipewireListener {
-    #[expect(
-        clippy::too_many_lines,
-        reason = "the PipeWire runtime, its registry listener and the bridging thread live in one closure by necessity"
-    )]
     async fn create_receiver(&self) -> Result<Receiver<PrivacyEvent>, PrivacyError> {
         let (tx, rx) = channel::<PrivacyEvent>(EVENT_CAPACITY);
         let (init_tx, init_rx) = oneshot::channel::<Result<(), PrivacyError>>();
 
         let builder = thread::Builder::new().name("privacy-pipewire".into());
         builder
-            .spawn(move || {
-                struct PipewireRuntime {
-                    mainloop:  MainLoopRc,
-                    _context:  ContextRc,
-                    _core:     CoreRc,
-                    _listener: pipewire::registry::Listener
+            .spawn(move || match PipewireRuntime::new(tx) {
+                Ok(runtime) => {
+                    if init_tx.send(Ok(())).is_err() {
+                        log::warn!("PipeWire initialisation receiver dropped before completion");
+                        return;
+                    }
+                    runtime.run();
+                    log::warn!("PipeWire mainloop exited");
                 }
-
-                impl PipewireRuntime {
-                    fn new(tx: Sender<PrivacyEvent>) -> Result<Self, PrivacyError> {
-                        let mainloop = MainLoopRc::new(None)
-                            .map_err(|err| PrivacyError::pipewire_mainloop(err.to_string()))?;
-                        let context = ContextRc::new(&mainloop, None)
-                            .map_err(|err| PrivacyError::pipewire_context(err.to_string()))?;
-                        let core = context
-                            .connect_rc(None)
-                            .map_err(|err| PrivacyError::pipewire_core(err.to_string()))?;
-                        let registry = core
-                            .get_registry_rc()
-                            .map_err(|err| PrivacyError::pipewire_registry(err.to_string()))?;
-                        let remove_tx = tx.clone();
-                        let listener = registry
-                            .add_listener_local()
-                            .global({
-                                let tx = tx;
-                                move |global| {
-                                    if let Some(props) = global.props
-                                        && let Some(media) =
-                                            props.get("media.class").filter(|value| {
-                                                *value == "Stream/Input/Video"
-                                                    || *value == "Stream/Input/Audio"
-                                            })
-                                    {
-                                        let event = PrivacyEvent::AddNode(ApplicationNode {
-                                            id:    global.id,
-                                            media: if media == "Stream/Input/Video" {
-                                                Media::Video
-                                            } else {
-                                                Media::Audio
-                                            }
-                                        });
-                                        if let Err(error) = tx.try_send(event) {
-                                            log::warn!(
-                                                "Failed to forward PipeWire add event: {error}"
-                                            );
-                                        }
-                                    }
-                                }
-                            })
-                            .global_remove(move |id| {
-                                if let Err(error) =
-                                    remove_tx.try_send(PrivacyEvent::RemoveNode(id))
-                                {
-                                    log::warn!("Failed to forward PipeWire remove event: {error}");
-                                }
-                            })
-                            .register();
-
-                        Ok(Self {
-                            mainloop,
-                            _context: context,
-                            _core: core,
-                            _listener: listener
-                        })
-                    }
-
-                    fn run(self) {
-                        self.mainloop.run();
-                    }
-                }
-
-                match PipewireRuntime::new(tx) {
-                    Ok(runtime) => {
-                        if init_tx.send(Ok(())).is_err() {
-                            log::warn!(
-                                "PipeWire initialisation receiver dropped before completion"
-                            );
-                            return;
-                        }
-                        runtime.run();
-                        log::warn!("PipeWire mainloop exited");
-                    }
-                    Err(error) => {
-                        log::error!("Failed to initialise PipeWire: {error}");
-                        if init_tx.send(Err(error.clone())).is_err() {
-                            log::warn!(
-                                "Unable to report PipeWire initialisation failure: {error}"
-                            );
-                        }
+                Err(error) => {
+                    log::error!("Failed to initialise PipeWire: {error}");
+                    if init_tx.send(Err(error.clone())).is_err() {
+                        log::warn!("Unable to report PipeWire initialisation failure: {error}");
                     }
                 }
             })
