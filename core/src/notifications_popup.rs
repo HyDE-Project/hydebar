@@ -106,6 +106,27 @@ pub const fn needs_expiry_clock(popups: &[Popup]) -> bool {
     !popups.is_empty()
 }
 
+/// Puts a notification on screen, replacing the one it stands for.
+///
+/// A sender that names a notification it supersedes keeps the freedesktop
+/// id, so a popup already drawn under that id is updated where it stands:
+/// its place in the stack is the reader's place, and a replacement that
+/// jumped to the newest end would move the card the eye is already on.
+/// Its lifetime restarts with the replacement, which is what the protocol
+/// asks for: the new word buys its own full time on screen.
+///
+/// Returns whether a popup stood in the way: `false` means the caller still
+/// has to append the notification as new.
+pub fn show(popups: &mut [Popup], notification: &Notification, now: Instant) -> bool {
+    popups
+        .iter_mut()
+        .find(|popup| popup.id == notification.id)
+        .is_some_and(|popup| {
+            *popup = Popup::new(notification, now);
+            true
+        })
+}
+
 /// Drops the popups that have outlived their time and keeps the newest ones.
 pub fn prune(popups: &mut Vec<Popup>, now: Instant) {
     popups.retain(|popup| !popup.expired(now));
@@ -345,5 +366,50 @@ mod tests {
 
         assert_eq!(popups.len(), MAX_SHOWN);
         assert_eq!(popups[0].id, 2);
+    }
+
+    fn notice(id: u32, summary: &str) -> Notification {
+        Notification {
+            id,
+            app_name: "test".to_owned(),
+            icon: String::new(),
+            summary: summary.to_owned(),
+            body: String::new(),
+            urgency: Urgency::Normal,
+            timestamp: std::time::SystemTime::now(),
+            actions: Vec::new(),
+            expire_timeout: -1
+        }
+    }
+
+    #[test]
+    fn a_replacement_updates_its_popup_where_it_stands() {
+        let now = Instant::now();
+        let later = now + Duration::from_secs(2);
+        let mut popups = vec![
+            popup(1, Duration::from_secs(5), now),
+            popup(2, Duration::from_secs(5), now),
+        ];
+
+        let replaced = show(&mut popups, &notice(1, "updated"), later);
+
+        assert!(replaced);
+        assert_eq!(popups.len(), 2);
+        assert_eq!(popups[0].id, 1);
+        assert_eq!(popups[0].summary, "updated");
+        assert_eq!(popups[0].shown, later);
+        assert!(!popups[0].expired(later + Duration::from_secs(4)));
+    }
+
+    #[test]
+    fn a_notification_nobody_supersedes_is_not_shown_in_place() {
+        let now = Instant::now();
+        let mut popups = vec![popup(1, Duration::from_secs(5), now)];
+
+        let replaced = show(&mut popups, &notice(7, "fresh"), now);
+
+        assert!(!replaced);
+        assert_eq!(popups.len(), 1);
+        assert_eq!(popups[0].id, 1);
     }
 }

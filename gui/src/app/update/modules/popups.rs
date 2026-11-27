@@ -9,10 +9,12 @@ impl App {
     /// Shows a popup for a notification that has just arrived.
     ///
     /// A notification the user dismissed is taken off the screen at once, so
-    /// clearing the centre also clears what is floating above it.
+    /// clearing the centre also clears what is floating above it. A
+    /// replacement of a notification still on screen updates its popup
+    /// where it stands instead of stacking a second copy of it.
     fn raise_popup(&mut self, message: &modules::notifications::NotificationsMessage) {
         use hydebar_core::{
-            notifications_popup::Popup,
+            notifications_popup::{self, Popup},
             services::{ServiceEvent, notifications::NotificationEvent}
         };
 
@@ -29,9 +31,15 @@ impl App {
                     return;
                 }
 
-                self.focus
-                    .notification_popups
-                    .push(Popup::new(notification, std::time::Instant::now()));
+                if !notifications_popup::show(
+                    &mut self.focus.notification_popups,
+                    notification,
+                    std::time::Instant::now()
+                ) {
+                    self.focus
+                        .notification_popups
+                        .push(Popup::new(notification, std::time::Instant::now()));
+                }
                 hydebar_core::notifications_popup::prune(
                     &mut self.focus.notification_popups,
                     std::time::Instant::now()
