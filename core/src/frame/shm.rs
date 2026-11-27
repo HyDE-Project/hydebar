@@ -21,6 +21,7 @@ use std::{
 };
 
 use hydebar_proto::config::FrameConfig;
+use num_traits::ToPrimitive;
 use smithay_client_toolkit::{
     compositor::{CompositorHandler, CompositorState},
     output::{OutputHandler, OutputState},
@@ -213,18 +214,8 @@ impl LayerShellHandler for App {
     ) {
         for state in &mut self.surfaces {
             if state.layer == *layer {
-                state.width = configure
-                    .new_size
-                    .0
-                    .max(1)
-                    .try_into()
-                    .unwrap_or(state.width);
-                state.height = configure
-                    .new_size
-                    .1
-                    .max(1)
-                    .try_into()
-                    .unwrap_or(state.height);
+                state.width = configure.new_size.0.max(1);
+                state.height = configure.new_size.1.max(1);
 
                 if !state.configured {
                     let size = (state.width * state.height * 4) as usize;
@@ -262,7 +253,7 @@ impl App {
         qh: &QueueHandle<Self>,
         output: &wl_output::WlOutput
     ) {
-        let thickness = self.config.thickness.max(1.0) as u32;
+        let thickness = self.config.thickness.max(1.0).to_u32().unwrap_or(1);
         let radius = self
             .config
             .rounding
@@ -271,7 +262,8 @@ impl App {
 
         self.create_strips(qh, output, thickness);
 
-        let corner_size = (thickness as f32 + radius).ceil().max(1.0) as u32;
+        let radius_px = radius.ceil().to_u32().unwrap_or(u32::MAX);
+        let corner_size = thickness.saturating_add(radius_px);
         self.create_corners(qh, output, corner_size);
     }
 
@@ -285,7 +277,7 @@ impl App {
         output: &wl_output::WlOutput,
         thickness: u32
     ) {
-        let bar_margin = self.bar_height.round() as i32;
+        let bar_margin = self.bar_height.round().to_i32().unwrap_or(0);
         let top_margin = if self.dock == Position::Top {
             bar_margin
         } else {
@@ -351,7 +343,7 @@ impl App {
                 SurfaceKind::StripTop | SurfaceKind::StripBottom => ls.set_size(0, thickness),
                 _ => {}
             }
-            ls.set_exclusive_zone(thickness as i32);
+            ls.set_exclusive_zone(i32::try_from(thickness).unwrap_or(i32::MAX));
             ls.set_margin(*mt, *mr, *mb, *ml);
             ls.commit();
 
@@ -426,45 +418,40 @@ impl App {
 }
 
 fn draw_surface(state: &mut SurfaceState, config: &FrameConfig, color: (u8, u8, u8, u8)) {
-    let pool = match state.pool.as_mut() {
-        Some(p) => p,
-        None => return
+    let (Ok(width), Ok(height), Ok(stride)) = (
+        i32::try_from(state.width),
+        i32::try_from(state.height),
+        i32::try_from(state.width.saturating_mul(4))
+    ) else {
+        return;
     };
-    let (buffer, canvas) = match pool.create_buffer(
-        state.width as i32,
-        state.height as i32,
-        (state.width * 4) as i32,
-        wl_shm::Format::Argb8888
-    ) {
-        Ok(v) => v,
-        Err(_) => return
+    let Some(mut pixmap) = Pixmap::new(state.width, state.height) else {
+        return;
+    };
+    let Some(pool) = state.pool.as_mut() else {
+        return;
+    };
+    let Ok((buffer, canvas)) = pool.create_buffer(width, height, stride, wl_shm::Format::Argb8888)
+    else {
+        return;
     };
 
-    let mut pixmap = match Pixmap::new(state.width, state.height) {
-        Some(p) => p,
-        None => return
-    };
-
-    let mut paint = Paint::default();
-    paint.set_color(Color::from_rgba8(color.0, color.1, color.2, color.3));
-    paint.anti_alias = true;
+    pixmap.fill(Color::from_rgba8(color.0, color.1, color.2, color.3));
 
     // Strips are solid 1px lines; corners get a quarter-circle cut so
     // the aperture reads rounded instead of square.
-    let rect = match tiny_skia::Rect::from_xywh(0.0, 0.0, state.width as f32, state.height as f32)
-    {
-        Some(r) => r,
-        None => return
-    };
-    pixmap.fill_rect(rect, &paint, Transform::identity(), None);
-
-    if matches!(
+    let corner_center = match (
         state.kind,
-        SurfaceKind::CornerTopLeft
-            | SurfaceKind::CornerTopRight
-            | SurfaceKind::CornerBottomLeft
-            | SurfaceKind::CornerBottomRight
+        u16::try_from(state.width),
+        u16::try_from(state.height)
     ) {
+        (SurfaceKind::CornerTopLeft, Ok(w), Ok(h)) => Some((f32::from(w), f32::from(h))),
+        (SurfaceKind::CornerTopRight, _, Ok(h)) => Some((0.0, f32::from(h))),
+        (SurfaceKind::CornerBottomLeft, Ok(w), _) => Some((f32::from(w), 0.0)),
+        (SurfaceKind::CornerBottomRight, _, _) => Some((0.0, 0.0)),
+        _ => None
+    };
+    if let Some((cx, cy)) = corner_center {
         let mut clear = Paint::default();
         clear.set_color(Color::from_rgba8(0, 0, 0, 0));
         clear.blend_mode = tiny_skia::BlendMode::Clear;
@@ -474,13 +461,6 @@ fn draw_surface(state: &mut SurfaceState, config: &FrameConfig, color: (u8, u8, 
             .rounding
             .unwrap_or(FrameConfig::DEFAULT_ROUNDING)
             .max(1.0);
-        let (cx, cy) = match state.kind {
-            SurfaceKind::CornerTopLeft => (state.width as f32, state.height as f32),
-            SurfaceKind::CornerTopRight => (0.0, state.height as f32),
-            SurfaceKind::CornerBottomLeft => (state.width as f32, 0.0),
-            SurfaceKind::CornerBottomRight => (0.0, 0.0),
-            _ => (0.0, 0.0)
-        };
 
         if let Some(path) = tiny_skia::PathBuilder::from_circle(cx, cy, r) {
             pixmap.fill_path(
@@ -500,10 +480,7 @@ fn draw_surface(state: &mut SurfaceState, config: &FrameConfig, color: (u8, u8, 
         .layer
         .wl_surface()
         .attach(Some(buffer.wl_buffer()), 0, 0);
-    state
-        .layer
-        .wl_surface()
-        .damage_buffer(0, 0, state.width as i32, state.height as i32);
+    state.layer.wl_surface().damage_buffer(0, 0, width, height);
     state.layer.commit();
 }
 

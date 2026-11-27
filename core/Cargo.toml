@@ -30,6 +30,7 @@ libpulse-binding.workspace = true
 linicon-theme.workspace = true
 log.workspace = true
 masterror.workspace = true
+num-traits.workspace = true
 pipewire.workspace = true
 reqwest.workspace = true
 serde.workspace = true
