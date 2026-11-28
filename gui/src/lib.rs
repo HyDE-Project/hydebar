@@ -8,7 +8,10 @@
 
 #![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 #![warn(missing_docs)]
-use flexi_logger::LogSpecification;
+use tracing_subscriber::{EnvFilter, Registry, reload};
+
+/// Shared filter handle, re-applicable at runtime.
+pub type Logger = reload::Handle<EnvFilter, Registry>;
 
 mod centerbox;
 mod views;
@@ -28,18 +31,31 @@ pub use app::{App, Message};
 /// A level that does not parse falls back to `info` instead of failing: the
 /// same string arrives from a live configuration reload, where a panic would
 /// take the whole bar down over a typo in one key.
+///
+/// `hydebar*` is a group quieted or loudened apart from the noisy renderers;
+/// in debug builds the bar's own crates always trace down to `debug`.
 #[must_use]
-pub fn log_spec(log_level: &str) -> LogSpecification {
-    let level = log_level.parse().unwrap_or(log::LevelFilter::Info);
+pub fn log_spec(log_level: &str) -> EnvFilter {
+    let level = match log_level
+        .parse::<log::LevelFilter>()
+        .unwrap_or(log::LevelFilter::Info)
+    {
+        log::LevelFilter::Off => "off",
+        log::LevelFilter::Error => "error",
+        log::LevelFilter::Warn => "warn",
+        log::LevelFilter::Info => "info",
+        log::LevelFilter::Debug => "debug",
+        log::LevelFilter::Trace => "trace"
+    };
 
-    if cfg!(debug_assertions) {
-        LogSpecification::builder()
-            .default(level)
-            .module("hydebar", log::LevelFilter::Debug)
-            .build()
+    let hydebar = if cfg!(debug_assertions) {
+        "debug"
     } else {
-        LogSpecification::builder().default(level).build()
-    }
+        level
+    };
+
+    EnvFilter::try_new(format!("{level},hydebar={hydebar}"))
+        .unwrap_or_else(|_| EnvFilter::new("info"))
 }
 
 #[cfg(test)]
@@ -49,27 +65,23 @@ mod tests {
 
     #[test]
     fn a_valid_level_parses_into_a_spec() {
-        let spec = log_spec("debug");
-
-        assert_eq!(spec.level_for_module(None), Some(log::LevelFilter::Debug));
+        assert_eq!(
+            log_spec("debug").max_level_hint(),
+            Some(tracing_subscriber::filter::LevelFilter::DEBUG)
+        );
     }
 
     #[cfg(debug_assertions)]
     #[test]
     fn the_bar_keeps_its_own_tracing_in_a_debug_build() {
-        let spec = log_spec("warn");
+        let spec = log_spec("warn").to_string();
 
-        assert_eq!(
-            spec.level_for_module(Some("hydebar")),
-            Some(log::LevelFilter::Debug)
-        );
-        assert_eq!(spec.level_for_module(None), Some(log::LevelFilter::Warn));
+        assert!(spec.contains("hydebar=debug"), "spec was: {spec}");
+        assert!(spec.contains("warn"), "spec was: {spec}");
     }
 
     #[test]
     fn an_unreadable_level_falls_back_to_info_instead_of_panicking() {
-        let spec = log_spec("hydebar=very-loud");
-
-        assert_eq!(spec.level_for_module(None), Some(log::LevelFilter::Info));
+        assert!(log_spec("hydebar=very-loud").to_string().contains("info"));
     }
 }

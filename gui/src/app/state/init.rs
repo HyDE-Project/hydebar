@@ -2,7 +2,6 @@
 
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
-use flexi_logger::LoggerHandle;
 use hydebar_core::{
     ModuleContext,
     animation::HoverFades,
@@ -27,7 +26,7 @@ use super::{
 };
 
 type AppDependencies = (
-    LoggerHandle,
+    crate::Logger,
     Arc<Config>,
     Arc<ConfigManager>,
     PathBuf,

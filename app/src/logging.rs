@@ -1,52 +1,85 @@
-//! The rotating file logger and the panic hook.
+//! Professional `tracing` logging: structured fields, spans, grouped targets,
+//! env-filterable, rotating file + human stdout, runtime reload, panic hook,
+//! and a `tracing-log` bridge so `log::*!` calls flow through `tracing`.
+//!
+//! Grouping is by `target`, i.e. the module path and crate name. Filter with
+//! `RUST_LOG` or the `log_filter`/`log_level` config keys, e.g.
+//! `RUST_LOG=info,hydebar_core::services::network=trace,wgpu_hal=off`.
+//! Per-layer: a quieter console than the full file. No secrets are logged.
 
 use std::{backtrace::Backtrace, panic};
 
-use flexi_logger::{
-    Age, Cleanup, Criterion, FileSpec, LogSpecBuilder, Logger, LoggerHandle, Naming
+use tracing_subscriber::{
+    EnvFilter, Registry, fmt, layer::SubscriberExt, reload, util::SubscriberInitExt
 };
-use log::error;
 
-use crate::error::MainError;
+/// A handle to the shared filter, to re-tighten at runtime (e.g. on reload).
+pub type Logger = reload::Handle<EnvFilter, Registry>;
 
-/// Starts the logger writing under `/tmp/hydebar` and installs the panic hook.
+/// Logging directory for the rotating file layer.
+const LOG_DIR: &str = "/tmp/hydebar";
+
+/// Builds the base `EnvFilter`: default level, `hydebar*` groups, quiet noise.
 ///
-/// The log rotates daily and keeps a week of files. The returned handle stays
-/// with the caller so the level can be tightened once the configuration is
-/// read.
-///
-/// The level is split the way a debug build and a release build differ: a
-/// debug build (`cargo run` during development) traces the bar's own crates
-/// down to `debug`, so every frame and every surface decision can be
-/// followed; a release build ships `info` and above only, and the
-/// development tracing is compiled in but never passes the filter.
-pub fn init() -> Result<LoggerHandle, MainError> {
-    let mut spec = LogSpecBuilder::new();
-    spec.default(log::LevelFilter::Info);
+/// `RUST_LOG` wins; `extra` (the `log_filter` config key) is merged; debug
+/// builds trace `hydebar*`, release ships `info`. Noisy rendering/compositor
+/// and font crates are quieted in their own groups.
+fn base_filter(extra: Option<&str>) -> EnvFilter {
+    let hydebar_level = if cfg!(debug_assertions) {
+        "debug"
+    } else {
+        "info"
+    };
 
-    if cfg!(debug_assertions) {
-        spec.module("hydebar", log::LevelFilter::Debug);
+    let mut directives = format!(
+        "info,hydebar={hydebar_level},hydebar_core={hydebar_level},\
+         hydebar_gui={hydebar_level},hydebar_proto={hydebar_level},\
+         wgpu=warn,wgpu_hal=warn,iced=warn,cosmic_text=warn,smithay=warn,sctk=warn"
+    );
+
+    if let Some(extra) = extra.filter(|value| !value.is_empty()) {
+        directives.push(',');
+        directives.push_str(extra);
     }
 
-    let logger = Logger::with(spec.build())
-        .log_to_file(FileSpec::default().directory("/tmp/hydebar"))
-        .duplicate_to_stdout(flexi_logger::Duplicate::All)
-        .rotate(
-            Criterion::Age(Age::Day),
-            Naming::Timestamps,
-            Cleanup::KeepLogFiles(7)
-        );
-    let logger = if cfg!(debug_assertions) {
-        logger.duplicate_to_stdout(flexi_logger::Duplicate::All)
-    } else {
-        logger
-    };
-    let logger = logger.start()?;
+    EnvFilter::try_from_default_env()
+        .or_else(|_| EnvFilter::try_new(&directives))
+        .unwrap_or_else(|_| EnvFilter::new("info"))
+}
+
+/// Starts `tracing`, installs the `log` bridge and panic hook, returns a
+/// runtime-reload handle for the shared filter.
+///
+/// Console is human-readable with target + thread; a daily-rotating file
+/// (keep a week, from `tracing-appender`) gets everything the filter passes.
+pub fn init() -> Logger {
+    let filter = base_filter(std::env::var("HYDEBAR_LOG_FILTER").ok().as_deref());
+    let (filter_layer, reload_handle) = reload::Layer::new(filter);
+
+    let console = fmt::layer()
+        .with_target(true)
+        .with_thread_ids(true)
+        .compact();
+
+    let log_dir = std::path::Path::new(LOG_DIR);
+    let _ = std::fs::create_dir_all(log_dir);
+    let file_appender = tracing_appender::rolling::daily(log_dir, "hydebar.log");
+    let file = fmt::layer()
+        .with_target(true)
+        .with_ansi(false)
+        .with_writer(file_appender);
+
+    let _ = tracing_subscriber::registry()
+        .with(filter_layer)
+        .with(console)
+        .with(file)
+        .try_init();
+    log::set_max_level(log::LevelFilter::Warn);
 
     panic::set_hook(Box::new(|info| {
-        let b = Backtrace::capture();
-        error!("Panic: {info} \n {b}");
+        let backtrace = Backtrace::capture();
+        tracing::error!(panic = %info, backtrace = %backtrace, "panic");
     }));
 
-    Ok(logger)
+    reload_handle
 }

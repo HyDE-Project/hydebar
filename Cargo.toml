@@ -36,7 +36,10 @@ zbus = { version = "6", default-features = false, features = [
 ] }
 libpulse-binding = { version = "2", features = ["pa_v15"] }
 log = { version = "0.4", features = ["serde"] }
-flexi_logger = "0.32"
+tracing = "0.1"
+tracing-appender = "0.2"
+tracing-log = "0.2"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "registry", "std", "tracing-log"] }
 pipewire = "0.10"
 wayland-client = "0.31"
 wayland-protocols = { version = "0.32", features = ["client", "unstable"] }

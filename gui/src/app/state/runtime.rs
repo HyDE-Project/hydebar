@@ -8,7 +8,6 @@
 
 use std::{path::PathBuf, sync::Arc};
 
-use flexi_logger::LoggerHandle;
 use hydebar_core::{config::ConfigManager, event_bus::EventReceiver};
 use hydebar_proto::ports::hyprland::HyprlandPort;
 
@@ -17,7 +16,7 @@ pub struct Runtime {
     /// The file the configuration in force was read from.
     pub(crate) config_path:    PathBuf,
     /// The live logger, so a reload can move its level without a restart.
-    pub(crate) logger:         LoggerHandle,
+    pub(crate) logger:         crate::Logger,
     /// Keeps the injected compositor adapter alive for the app's lifetime;
     /// the outputs facade is meant to adopt it in place of its own client.
     #[cfg_attr(

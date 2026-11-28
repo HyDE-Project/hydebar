@@ -83,7 +83,7 @@ pub fn run(runtime_handle: Handle) -> Result<(), MainError> {
     let args = Args::parse();
     debug!("args: {args:?}");
 
-    let logger = logging::init()?;
+    let logger = logging::init();
 
     let (raw_config, config_path) = config(args.config_path)?;
 
@@ -98,7 +98,7 @@ pub fn run(runtime_handle: Handle) -> Result<(), MainError> {
     let config = Arc::new(raw_config);
     let config_manager = Arc::new(ConfigManager::new((*config).clone()));
 
-    logger.set_new_spec(log_spec(&config.log_level));
+    let _ = logger.reload(log_spec(&config.log_level));
 
     let font = config
         .appearance

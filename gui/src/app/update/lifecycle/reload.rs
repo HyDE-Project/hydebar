@@ -157,9 +157,7 @@ impl App {
         }
 
         if impact.log_level_changed {
-            self.runtime
-                .logger
-                .set_new_spec(log_spec(&self.config.log_level));
+            let _ = self.runtime.logger.reload(log_spec(&self.config.log_level));
         }
 
         tasks.push(resize);
