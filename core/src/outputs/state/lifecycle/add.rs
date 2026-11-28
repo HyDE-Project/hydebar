@@ -19,7 +19,7 @@ use crate::{
         config::is_output_requested,
         wayland::{
             LayerSurfaceCreation, PanelSurfaces, create_layer_surfaces, create_panel_surfaces,
-            frame_settings, layer_height, new_layer_surface
+            draw_only, frame_settings, layer_height, new_layer_surface
         }
     }
 };
@@ -109,7 +109,7 @@ impl Outputs {
             let (frame_id, frame_task) = if config.appearance.frame.enabled {
                 let (id, task) = new_layer_surface(frame_settings(Some(wl_output), config.layer));
 
-                (Some(id), Some(task))
+                (Some(id), Some(Task::batch(vec![task, draw_only(id)])))
             } else {
                 (None, None)
             };

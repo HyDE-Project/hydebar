@@ -168,7 +168,7 @@ pub fn create_panel_surfaces<Message: 'static>(
         let (id, task) =
             new_layer_surface(panel_settings(edge, output, layer, dock, bar_height, width));
 
-        (Some(id), Some(task))
+        (Some(id), Some(Task::batch(vec![task, draw_only(id)])))
     };
 
     let (top_id, top_task) = one(PanelEdge::Top, widths.top);
