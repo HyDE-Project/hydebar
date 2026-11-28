@@ -94,12 +94,24 @@ fn blend_u8(from: u8, to: u8, t: f32) -> u8 {
 }
 
 fn blend_hex(from: HexColor, to: HexColor, t: f32) -> HexColor {
-    HexColor::rgba(
-        blend_u8(from.r, to.r, t),
-        blend_u8(from.g, to.g, t),
-        blend_u8(from.b, to.b, t),
-        blend_u8(from.a, to.a, t)
-    )
+    // A blend at its ends is the end itself, not a round trip through the
+    // perceptual space that happens to round back: the endpoints stay exact
+    // whatever the conversion would have made of them.
+    if t <= 0.0 {
+        return from;
+    }
+
+    if t >= 1.0 {
+        return to;
+    }
+
+    let mixed = crate::style::oklch::Oklch::from_rgb(from)
+        .mix(crate::style::oklch::Oklch::from_rgb(to), t);
+    let mixed = mixed.to_rgb();
+
+    // Alpha is coverage, not a colour: it travels linearly, the way a fade
+    // is measured, while the hues below it travel perceptually.
+    HexColor::rgba(mixed.r, mixed.g, mixed.b, blend_u8(from.a, to.a, t))
 }
 
 /// Interpolates two palette entries.
@@ -267,6 +279,15 @@ mod tests {
     }
 
     #[test]
+    fn the_ends_of_a_colour_blend_are_exact() {
+        let from = HexColor::rgb(137, 56, 190);
+        let to = HexColor::rgb(210, 140, 32);
+
+        assert_eq!(blend_hex(from, to, 0.0), from);
+        assert_eq!(blend_hex(from, to, 1.0), to);
+    }
+
+    #[test]
     fn optional_shades_blend_from_the_base_colour() {
         let from = AppearanceColor::Simple(hex(0));
         let to = AppearanceColor::Complete {
@@ -280,8 +301,19 @@ mod tests {
 
         match blended {
             AppearanceColor::Complete {
-                strong, ..
-            } => assert_eq!(strong, Some(hex(100))),
+                strong,
+                weak,
+                text,
+                ..
+            } => {
+                let strong = strong.expect("the target's strong shade survives the blend");
+
+                assert!(
+                    strong.r > 0 && strong.r < 200,
+                    "the shade travels from the base the source lacked"
+                );
+                assert!(weak.is_none() && text.is_none());
+            }
             other @ AppearanceColor::Simple(_) => {
                 panic!("expected a complete colour, got {other:?}")
             }

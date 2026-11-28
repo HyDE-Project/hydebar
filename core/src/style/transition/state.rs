@@ -218,7 +218,7 @@ mod tests {
         let mut transition = AppearanceTransition::new(appearance_with_background(0));
 
         transition.set_target(appearance_with_background(200), true);
-        let _ = transition.advance(Duration::from_millis(60));
+        let _ = transition.advance(Duration::from_millis(120));
 
         let midway = transition.current().background_color.base();
         assert!(midway.r > 0);
@@ -315,9 +315,11 @@ mod tests {
             transition.sample(1.0).background_color,
             AppearanceColor::Simple(hex(200))
         );
-        assert_eq!(
-            transition.sample(0.5).background_color,
-            AppearanceColor::Simple(hex(100))
+        let midway = transition.sample(0.5).background_color.base();
+
+        assert!(
+            midway.r > 0 && midway.r < 200,
+            "the perceptual midpoint sits between the ends, not at their arithmetic mean"
         );
         assert_eq!(
             transition.sample(7.0).background_color,
