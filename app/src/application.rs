@@ -5,10 +5,10 @@ use std::{borrow::Cow, num::NonZeroUsize, path::PathBuf, sync::Arc};
 use clap::Parser;
 use hydebar_core::{
     adapters::hyprland_client::HyprlandClient,
-    config::{config, Config, ConfigManager, RendererChoice},
-    event_bus::EventBus,
+    config::{Config, ConfigManager, RendererChoice, config},
+    event_bus::EventBus
 };
-use hydebar_gui::{log_spec, App};
+use hydebar_gui::{App, log_spec};
 use hydebar_proto::ports::hyprland::HyprlandPort;
 use iced::{Anchor, Font, KeyboardInteractivity, Layer, LayerShellSettings, SurfaceId};
 use log::debug;
@@ -28,7 +28,7 @@ const LICENCE_NOTICE: &str = "hydebar is free software under the GNU General Pub
 #[command(version, about, long_about = None, after_help = LICENCE_NOTICE)]
 struct Args {
     #[arg(short, long, value_parser = clap::value_parser!(PathBuf))]
-    config_path: Option<PathBuf>,
+    config_path: Option<PathBuf>
 }
 
 /// Surrenders `deps` to the first boot call and refuses a second.
@@ -68,7 +68,7 @@ fn apply_screen_look(raw_config: &mut Config) {
 
     raw_config.appearance.adopt_screen(
         magnification,
-        &hydebar_proto::compositor_look::CompositorLook::read(),
+        &hydebar_proto::compositor_look::CompositorLook::read()
     );
 
     hydebar_core::components::scale::set_base(raw_config.appearance.font_size_px());
@@ -101,9 +101,10 @@ fn apply_renderer_choice(renderer: RendererChoice) {
 
 /// Whether a device type names real graphics hardware rather than a rasterizer.
 ///
-/// `Cpu` is `lavapipe` or `SwiftShader`: a Vulkan device that exists but draws on
-/// the processor. Naming Vulkan for such a device would trade the OpenGL driver
-/// for software rasterization, which costs more, so only a real GPU counts.
+/// `Cpu` is `lavapipe` or `SwiftShader`: a Vulkan device that exists but draws
+/// on the processor. Naming Vulkan for such a device would trade the OpenGL
+/// driver for software rasterization, which costs more, so only a real GPU
+/// counts.
 #[must_use]
 const fn is_hardware_vulkan(device_type: wgpu::DeviceType) -> bool {
     !matches!(device_type, wgpu::DeviceType::Cpu)
@@ -211,15 +212,15 @@ pub fn run(runtime_handle: Handle) -> Result<(), MainError> {
             hyprland,
             event_sender,
             runtime_handle,
-            bus_receiver,
+            bus_receiver
         ),
-        App::new,
+        App::new
     );
 
     let outcome = iced::application(
         boot,
         |app: &mut App, message| app.update(message),
-        |app: &App, id| app.view(id),
+        |app: &App, id| app.view(id)
     )
     .layer_shell(LayerShellSettings {
         namespace: "hydebar-boot-layer".to_owned(),
@@ -262,7 +263,7 @@ mod tests {
             wgpu::DeviceType::DiscreteGpu,
             wgpu::DeviceType::IntegratedGpu,
             wgpu::DeviceType::VirtualGpu,
-            wgpu::DeviceType::Other,
+            wgpu::DeviceType::Other
         ] {
             assert!(
                 is_hardware_vulkan(device_type),

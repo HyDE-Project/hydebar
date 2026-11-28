@@ -22,6 +22,32 @@ impl App {
         self.motion.appearance_transition.current()
     }
 
+    /// Whether the bar may animate right now.
+    ///
+    /// The configuration says whether animations are wanted; the desktop's
+    /// reduced-motion preference, when set, overrides it and holds the bar
+    /// still regardless of what the file asked for. Every animation reads this
+    /// one gate instead of the configuration directly, so honouring the
+    /// preference is a single field, not a scattered check.
+    #[must_use]
+    pub(crate) fn animations_enabled(&self) -> bool {
+        self.config.appearance.animations.enabled && !self.reduced_motion
+    }
+
+    /// The animation settings as they apply right now: the configured timings,
+    /// with motion switched off when the desktop asks for reduced motion.
+    ///
+    /// The menu animation driver takes the whole settings table rather than the
+    /// flag alone, so the effective view of it is built here once instead of
+    /// every call site remembering to clear the flag.
+    #[must_use]
+    pub(crate) fn effective_animations(&self) -> hydebar_proto::config::AnimationConfig {
+        let mut animations = self.config.appearance.animations.clone();
+        animations.enabled = self.animations_enabled();
+
+        animations
+    }
+
     /// Rebuilds the cached theme from the appearance in force.
     pub(crate) fn rebuild_theme(&mut self) {
         self.theme_cache = hydebar_core::style::hydebar_theme(self.appearance());
@@ -77,7 +103,7 @@ impl App {
             IconTheme::from_config(&self.config.icons).with_size(appearance.font_size_px());
         self.rebuild_theme();
 
-        let blend_palette = appearance.animations.enabled;
+        let blend_palette = self.animations_enabled();
 
         let metrics = (
             appearance.style,
@@ -126,7 +152,7 @@ impl App {
             .with_response(self.motion.sweep.response)
             .with_damping_ratio(self.motion.sweep.damping);
 
-        if self.config.appearance.animations.enabled {
+        if self.animations_enabled() {
             self.motion.entrance.set_target(1.0);
 
             if self.config.appearance.greeting

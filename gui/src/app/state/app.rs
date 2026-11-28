@@ -48,6 +48,13 @@ pub struct App {
     pub(crate) looks:             hydebar_core::modules::desk::looks::Looks,
     /// The configuration in force.
     pub config:                   Arc<Config>,
+    /// Whether the desktop asked to reduce motion, mirrored from the portal.
+    ///
+    /// Held beside the configuration rather than folded into it: the setting is
+    /// the desktop's, not the user's file, and a configuration reload must not
+    /// lose what the portal last said. The bar draws its motion through
+    /// [`App::animations_enabled`], which respects both.
+    pub(crate) reduced_motion:    bool,
     /// The screens the bar stands on, and the surfaces it holds on them.
     pub outputs:                  Outputs,
     /// The last configuration as the file spelled it, before adoption.

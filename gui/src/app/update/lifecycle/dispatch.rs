@@ -59,6 +59,15 @@ impl App {
                 warn!("Configuration degradation reported: {}", degradation.reason);
                 Task::none()
             }
+            Message::ReducedMotion(reduced) => {
+                if self.reduced_motion == reduced {
+                    return Task::none();
+                }
+
+                info!("desktop reduced-motion preference is now {reduced}");
+                self.reduced_motion = reduced;
+                Task::none()
+            }
             _ => Task::none()
         }
     }

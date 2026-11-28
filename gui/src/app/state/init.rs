@@ -154,6 +154,7 @@ impl App {
             focus: initial_focus(),
             modules: initial_modules(&config, &hyprland_clone, custom, config_path),
             raw_config: None,
+            reduced_motion: false,
             derived_themes: std::cell::RefCell::new(std::collections::HashMap::new()),
             config
         };

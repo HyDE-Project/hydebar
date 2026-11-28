@@ -44,6 +44,9 @@ pub enum Message {
     ConfigChanged(ConfigApplied),
     /// The configuration file was read again and could not be used.
     ConfigDegraded(ConfigDegradation),
+    /// The desktop's reduced-motion preference, read from the portal and
+    /// restated whenever it changes. `true` asks the bar to hold its motion.
+    ReducedMotion(bool),
     /// The process was asked to quit, by a takeover or by the session.
     ///
     /// Handled by taking every surface off the screen before the runtime is

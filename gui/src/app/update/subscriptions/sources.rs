@@ -46,6 +46,8 @@ impl App {
         let mut subscriptions = vec![
             bus::subscription(self.runtime.bus_receiver.clone()).map(Message::BusFlushed),
             shutdown::subscription().map(Message::Shutdown),
+            hydebar_core::services::portal::reduced_motion_subscription()
+                .map(Message::ReducedMotion),
             self.frame_subscription(),
             self.wallpaper_loading_subscription(),
             self.bar_layout_loading_subscription(),

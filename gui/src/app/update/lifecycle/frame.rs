@@ -84,7 +84,7 @@ impl App {
             }
         }
 
-        let animated = self.config.appearance.animations.enabled;
+        let animated = self.animations_enabled();
         let served = self.focus.hints.served(now, animated);
         let (hints_fading, landed) = self.focus.hints.advance(elapsed);
         let tooltip_tasks =
@@ -94,9 +94,9 @@ impl App {
         hydebar_core::notifications_popup::prune(&mut self.focus.notification_popups, now);
         let popups_changed = popups_before != self.focus.notification_popups.len();
 
-        let (menus_animating, menu_tasks) = self
-            .outputs
-            .tick_menu_animations(&self.config.appearance.animations, elapsed);
+        let animations = self.effective_animations();
+        let (menus_animating, menu_tasks) =
+            self.outputs.tick_menu_animations(&animations, elapsed);
         let (theme_animating, palette_moved) =
             self.motion.appearance_transition.advance_reporting(elapsed);
         let hover_animating = self.focus.hover.advance(elapsed);

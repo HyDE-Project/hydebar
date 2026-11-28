@@ -59,17 +59,19 @@ impl App {
                 Task::none()
             }
             Message::KeyboardLayout(message) => {
+                let animated = self.animations_enabled();
+
                 self.modules.keyboard_layout.update(
                     message,
                     &self.config.keyboard_layout,
-                    self.config.appearance.animations.enabled
+                    animated
                 );
                 Task::none()
             }
             Message::KeyboardSubmap(message) => {
-                self.modules
-                    .keyboard_submap
-                    .update(message, self.config.appearance.animations.enabled);
+                let animated = self.animations_enabled();
+
+                self.modules.keyboard_submap.update(message, animated);
                 Task::none()
             }
             Message::Taskbar(msg) => {
@@ -114,11 +116,11 @@ impl App {
                 close_tray
             }
             Message::Clock(message) => {
-                self.modules.clock.update(
-                    message,
-                    &self.config.clock,
-                    self.config.appearance.animations.enabled
-                );
+                let animated = self.animations_enabled();
+
+                self.modules
+                    .clock
+                    .update(message, &self.config.clock, animated);
                 Task::none()
             }
             Message::Calendar(message) => {
@@ -138,9 +140,9 @@ impl App {
                 Task::none()
             }
             Message::Battery(message) => {
-                self.modules
-                    .battery
-                    .update(message, self.config.appearance.animations.enabled);
+                let animated = self.animations_enabled();
+
+                self.modules.battery.update(message, animated);
                 Task::none()
             }
             Message::Privacy(msg) => {

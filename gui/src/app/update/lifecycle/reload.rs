@@ -147,9 +147,7 @@ impl App {
             tasks.push(unfold);
         }
 
-        if (impact.layout_changed || impact.custom_modules_changed)
-            && self.config.appearance.animations.enabled
-        {
+        if (impact.layout_changed || impact.custom_modules_changed) && self.animations_enabled() {
             self.motion.flip.borrow_mut().depart();
             self.motion.relayout = hydebar_core::animation::Spring::new(0.0)
                 .with_response(hydebar_core::animation::STANDARD);

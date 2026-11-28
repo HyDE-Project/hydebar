@@ -52,7 +52,7 @@ impl App {
     /// while it is folded away would swallow every press meant for the
     /// desktop under it.
     pub(crate) fn unfold_desk(&mut self) -> Task<Message> {
-        let animated = self.config.appearance.animations.enabled;
+        let animated = self.animations_enabled();
         let enabled = self.config.desk.enabled;
         let unfolding = self.unfolding_response();
 
@@ -125,7 +125,7 @@ impl App {
     /// every module but the first without a seat to fly from, and they simply
     /// appeared while their neighbour flew.
     pub(crate) fn send_the_islands_home(&mut self, surface: iced::SurfaceId) {
-        if !self.config.appearance.animations.enabled {
+        if !self.animations_enabled() {
             return;
         }
 
