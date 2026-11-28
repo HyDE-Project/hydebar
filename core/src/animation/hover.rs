@@ -74,10 +74,10 @@ where
 
         spring.set_response(response);
 
-        if animated {
-            spring.set_target(target);
-        } else {
-            spring.snap_to(target);
+        match (animated, entered) {
+            (true, true) => spring.set_target(target),
+            (true, false) => spring.set_exit_target(0.0),
+            (false, _) => spring.snap_to(target)
         }
     }
 
@@ -91,7 +91,7 @@ where
             for (key, spring) in &mut self.springs {
                 if key != kept {
                     spring.set_response(response);
-                    spring.set_target(0.0);
+                    spring.set_exit_target(0.0);
                 }
             }
         } else {

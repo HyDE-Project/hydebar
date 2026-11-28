@@ -90,7 +90,7 @@ impl Hints {
         if animated && self.presence.value() > f32::EPSILON {
             self.closing = Some((surface, owner));
             self.presence.set_response(SNAPPY);
-            self.presence.set_target(0.0);
+            self.presence.set_exit_target(0.0);
 
             return None;
         }
