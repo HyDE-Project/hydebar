@@ -3,21 +3,19 @@
 use iced::{
     Element, Length, Padding, SurfaceId as Id,
     alignment::{Horizontal, Vertical},
-    widget::{container, mouse_area, scrollable}
+    widget::{Space, canvas, column, container, mouse_area, row, scrollable}
 };
 
-use super::size::MenuSize;
+use super::{
+    flare::{ConcaveFlare, FlareCorner},
+    placement::{PlacementInput, solve},
+    size::MenuSize
+};
 use crate::{
     config::{AppearanceStyle, Position},
     position_button::ButtonUIRef,
     style::{menu_backdrop_style, menu_container_style}
 };
-
-/// Distance the box travels while it fades in, in em of the themed size.
-///
-/// Small on purpose: the window should read as growing out of the bar, not
-/// as flying across the screen.
-const SLIDE_EM: f32 = 0.8;
 
 /// Inner padding of a menu box, in multiples of the themed text size.
 pub const PADDING_EM: f32 = 1.6;
@@ -76,6 +74,88 @@ pub fn grown_height(content: f32, padding: f32, cap: Option<f32>, progress: f32)
     rest * progress.clamp(0.0, 1.0)
 }
 
+fn add_concave_flares<'a, Message: 'a>(
+    menu_box: Element<'a, Message>,
+    layout: &MenuLayout,
+    width: f32
+) -> Element<'a, Message> {
+    let r = layout.radius.max(0.0);
+    if r <= 0.0 {
+        return menu_box;
+    }
+
+    let opacity = layout.opacity;
+    let flare = |corner| {
+        canvas(ConcaveFlare {
+            radius: r,
+            corner,
+            opacity
+        })
+        .width(Length::Fixed(r))
+        .height(Length::Fixed(r))
+    };
+
+    match layout.bar_position {
+        Position::Top | Position::Bottom => {
+            let (left_corner, right_corner) = match layout.bar_position {
+                Position::Top => (FlareCorner::BottomRight, FlareCorner::BottomLeft),
+                Position::Bottom => (FlareCorner::TopRight, FlareCorner::TopLeft),
+                _ => unreachable!()
+            };
+
+            let left_col = if layout.bar_position == Position::Top {
+                column![flare(left_corner), Space::new().height(Length::Fill),]
+                    .width(Length::Fixed(r))
+            } else {
+                column![Space::new().height(Length::Fill), flare(left_corner),]
+                    .width(Length::Fixed(r))
+            };
+
+            let right_col = if layout.bar_position == Position::Top {
+                column![flare(right_corner), Space::new().height(Length::Fill),]
+                    .width(Length::Fixed(r))
+            } else {
+                column![Space::new().height(Length::Fill), flare(right_corner),]
+                    .width(Length::Fixed(r))
+            };
+
+            row![left_col, menu_box, right_col]
+                .width(Length::Fixed(r.mul_add(2.0, width)))
+                .height(Length::Shrink)
+                .into()
+        }
+        Position::Left | Position::Right => {
+            let (top_corner, bottom_corner) = match layout.bar_position {
+                Position::Left => (FlareCorner::BottomRight, FlareCorner::TopRight),
+                Position::Right => (FlareCorner::BottomLeft, FlareCorner::TopLeft),
+                _ => unreachable!()
+            };
+
+            let make_row = |corner| {
+                if layout.bar_position == Position::Left {
+                    row![Space::new().width(Length::Fill), flare(corner),].height(Length::Fixed(r))
+                } else {
+                    row![flare(corner), Space::new().width(Length::Fill),].height(Length::Fixed(r))
+                }
+            };
+
+            let flare_col = column![
+                make_row(top_corner),
+                Space::new().height(Length::Fill),
+                make_row(bottom_corner)
+            ]
+            .width(Length::Fixed(r))
+            .height(Length::Fill);
+
+            match layout.bar_position {
+                Position::Left => row![flare_col, menu_box].height(Length::Shrink).into(),
+                Position::Right => row![menu_box, flare_col].height(Length::Shrink).into(),
+                _ => unreachable!()
+            }
+        }
+    }
+}
+
 /// Computes the outer padding that places the menu against the bar edge.
 fn menu_padding(
     layout: &MenuLayout,
@@ -86,9 +166,6 @@ fn menu_padding(
     viewport_width: f32,
     button_ui_ref: &ButtonUIRef
 ) -> Padding {
-    let edge_gap = 0.0;
-
-    let slide = SLIDE_EM * layout.font_size * (1.0 - layout.progress.clamp(0.0, 1.0));
     let menu_height = growing.unwrap_or_else(|| {
         if overflows {
             layout
@@ -99,39 +176,33 @@ fn menu_padding(
         }
     });
 
+    let placement = solve(PlacementInput {
+        bar_position: layout.bar_position,
+        anchor_x: button_ui_ref.position.x,
+        anchor_y: button_ui_ref.position.y,
+        viewport_width,
+        viewport_height: button_ui_ref.viewport.1,
+        menu_width: width,
+        content_height: menu_height,
+        available_height: menu_height,
+        font_size: layout.font_size,
+        progress: layout.progress,
+        edge_gap: 0.0
+    });
+
     match layout.bar_position {
         Position::Top => Padding::new(0.)
-            .top(edge_gap + slide)
-            .left(MenuSize::left_offset(
-                width,
-                button_ui_ref.position.x,
-                viewport_width,
-                layout.font_size
-            )),
+            .top(placement.main_offset)
+            .left(placement.cross_offset),
         Position::Bottom => Padding::new(0.)
-            .bottom(edge_gap + slide)
-            .left(MenuSize::left_offset(
-                width,
-                button_ui_ref.position.x,
-                viewport_width,
-                layout.font_size
-            )),
+            .bottom(placement.main_offset)
+            .left(placement.cross_offset),
         Position::Left => Padding::new(0.)
-            .left(edge_gap + slide)
-            .top(MenuSize::top_offset(
-                menu_height,
-                button_ui_ref.position.y,
-                button_ui_ref.viewport.1,
-                layout.font_size
-            )),
+            .left(placement.main_offset)
+            .top(placement.cross_offset),
         Position::Right => Padding::new(0.)
-            .right(edge_gap + slide)
-            .top(MenuSize::top_offset(
-                menu_height,
-                button_ui_ref.position.y,
-                button_ui_ref.viewport.1,
-                layout.font_size
-            ))
+            .right(placement.main_offset)
+            .top(placement.cross_offset)
     }
 }
 
@@ -199,6 +270,8 @@ pub fn menu_wrapper<Message: Clone + 'static>(
         Some(layout.bar_position)
     ));
 
+    let menu_box = add_concave_flares(menu_box.into(), &layout, width);
+
     mouse_area(
         container(
             mouse_area(menu_box)
@@ -213,15 +286,29 @@ pub fn menu_wrapper<Message: Clone + 'static>(
             Position::Top | Position::Left | Position::Right => Vertical::Top,
             Position::Bottom => Vertical::Bottom
         })
-        .padding(menu_padding(
-            &layout,
-            padding,
-            growing,
-            overflows,
-            width,
-            viewport_width,
-            &button_ui_ref
-        ))
+        .padding({
+            let mut pad = menu_padding(
+                &layout,
+                padding,
+                growing,
+                overflows,
+                width,
+                viewport_width,
+                &button_ui_ref
+            );
+            let r = layout.radius.max(0.0);
+            if r > 0.0 {
+                match layout.bar_position {
+                    Position::Top | Position::Bottom | Position::Left => {
+                        pad.left = (pad.left - r).max(0.0);
+                    }
+                    Position::Right => {
+                        pad.right = (pad.right - r).max(0.0);
+                    }
+                }
+            }
+            pad
+        })
         .width(Length::Fill)
         .height(Length::Fill)
         .style(menu_backdrop_style(

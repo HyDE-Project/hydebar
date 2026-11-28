@@ -103,7 +103,7 @@ fn footnotes_height(footnotes: &[String]) -> f32 {
 
 /// Height the window of one section needs.
 pub fn section_window_height(section: Option<&Section>) -> f32 {
-    let body = section.map_or(0.0, section_height);
+    let body = section.map_or_else(|| line(NOTE_SIZE), section_height);
 
     body + scale::scaled(2.0 * OUTER_PADDING)
 }
@@ -180,11 +180,12 @@ mod tests {
     }
 
     #[test]
-    fn an_absent_section_costs_only_the_padding() {
+    fn an_absent_section_shows_a_fallback_line() {
         let empty = section_window_height(None);
         let filled = section_window_height(Some(&section(vec![fact()], None)));
+        let expected = line(NOTE_SIZE) + scale::scaled(2.0 * OUTER_PADDING);
 
-        assert!((empty - scale::scaled(2.0 * OUTER_PADDING)).abs() < TOLERANCE);
+        assert!((empty - expected).abs() < TOLERANCE);
         assert!(filled > empty);
     }
 

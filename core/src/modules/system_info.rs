@@ -106,35 +106,55 @@ impl SystemInfo {
     /// The window of the standalone processor entry, with its height.
     #[must_use]
     pub fn cpu_window(&self, icons: &IconTheme) -> (Element<'_, Message>, f32) {
-        Self::section_window(window::model::processor_section(&self.data), icons)
+        Self::section_window(
+            window::model::processor_section(&self.data),
+            "No processor data available",
+            icons
+        )
     }
 
     /// The window of the standalone memory entry, with its height.
     #[must_use]
     pub fn memory_window(&self, icons: &IconTheme) -> (Element<'_, Message>, f32) {
-        Self::section_window(window::model::memory_section(&self.data).into(), icons)
+        Self::section_window(
+            window::model::memory_section(&self.data).into(),
+            "No memory data available",
+            icons
+        )
     }
 
     /// The window of the standalone processor temperature entry.
     #[must_use]
     pub fn cpu_temp_window(&self, icons: &IconTheme) -> (Element<'_, Message>, f32) {
-        Self::section_window(window::model::cpu_temperature_section(&self.data), icons)
+        Self::section_window(
+            window::model::cpu_temperature_section(&self.data),
+            "No processor temperature available",
+            icons
+        )
     }
 
     /// The window of the standalone graphics entry, with its height.
     #[must_use]
     pub fn gpu_window(&self, icons: &IconTheme) -> (Element<'_, Message>, f32) {
-        Self::section_window(window::model::graphics_section(&self.data), icons)
+        Self::section_window(
+            window::model::graphics_section(&self.data),
+            "No graphics data available",
+            icons
+        )
     }
 
     /// One section drawn and measured from a single build.
     fn section_window<'a>(
         section: Option<window::model::Section>,
+        fallback: &'a str,
         icons: &IconTheme
     ) -> (Element<'a, Message>, f32) {
         let height = window::section_window_height(section.as_ref());
 
-        (window::build_section_window(section, icons), height)
+        (
+            window::build_section_window(section, fallback, icons),
+            height
+        )
     }
 }
 

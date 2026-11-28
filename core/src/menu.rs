@@ -1,7 +1,9 @@
 //! Menus opened from the bar: what they are, how they fade and where they land.
 
 mod dismiss_area;
+mod flare;
 mod kind;
+mod placement;
 mod size;
 mod state;
 mod wrapper;

@@ -56,12 +56,16 @@ pub fn build_menu_view<'a>(
 /// so the monitor's title and the other sections stay out.
 pub fn build_section_window<'a>(
     section: Option<Section>,
+    fallback: &'a str,
     icons: &IconTheme
 ) -> Element<'a, Message> {
     let mut content = Column::new();
 
     if let Some(section) = section {
         content = content.push(section_view(section, icons));
+    } else {
+        content = content
+            .push(container(text(fallback).size(scale::scaled(NOTE_SIZE))).style(secondary_text));
     }
 
     content
