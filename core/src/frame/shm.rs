@@ -23,7 +23,7 @@ use std::{
 use hydebar_proto::config::FrameConfig;
 use num_traits::ToPrimitive;
 use smithay_client_toolkit::{
-    compositor::{CompositorHandler, CompositorState},
+    compositor::{CompositorHandler, CompositorState, Region},
     output::{OutputHandler, OutputState},
     registry::{ProvidesRegistryState, RegistryState},
     shell::{
@@ -217,13 +217,16 @@ impl LayerShellHandler for App {
                 state.width = configure.new_size.0.max(1);
                 state.height = configure.new_size.1.max(1);
 
-                if !state.configured {
-                    let size = (state.width * state.height * 4) as usize;
-                    if let Ok(pool) = SlotPool::new(size.max(4), &self.shm) {
-                        state.pool = Some(pool);
-                        state.configured = true;
-                        draw_surface(state, &self.config, self.color);
-                    }
+                let size = (state.width * state.height * 4) as usize;
+                if state.pool.is_none()
+                    && let Ok(pool) = SlotPool::new(size.max(4), &self.shm)
+                {
+                    state.pool = Some(pool);
+                }
+
+                if state.pool.is_some() {
+                    state.configured = true;
+                    draw_surface(state, &self.config, self.color);
                 }
             }
         }
@@ -328,6 +331,7 @@ impl App {
             if !self.strip_enabled(*kind) {
                 continue;
             }
+            let width = self.edge_width(*kind, thickness);
             let surface = self.compositor.create_surface(qh);
             let ls = self.layer_shell.create_layer_surface(
                 qh,
@@ -338,12 +342,13 @@ impl App {
             );
             ls.set_anchor(*anchor);
             ls.set_keyboard_interactivity(KeyboardInteractivity::None);
+            set_empty_input_region(&ls, &self.compositor);
             match *kind {
-                SurfaceKind::StripLeft | SurfaceKind::StripRight => ls.set_size(thickness, 0),
-                SurfaceKind::StripTop | SurfaceKind::StripBottom => ls.set_size(0, thickness),
+                SurfaceKind::StripLeft | SurfaceKind::StripRight => ls.set_size(width, 0),
+                SurfaceKind::StripTop | SurfaceKind::StripBottom => ls.set_size(0, width),
                 _ => {}
             }
-            ls.set_exclusive_zone(i32::try_from(thickness).unwrap_or(i32::MAX));
+            ls.set_exclusive_zone(i32::try_from(width).unwrap_or(i32::MAX));
             ls.set_margin(*mt, *mr, *mb, *ml);
             ls.commit();
 
@@ -377,6 +382,9 @@ impl App {
         ];
 
         for (kind, anchor) in corners {
+            if !self.corner_enabled(kind) {
+                continue;
+            }
             let surface = self.compositor.create_surface(qh);
             let ls = self.layer_shell.create_layer_surface(
                 qh,
@@ -388,6 +396,7 @@ impl App {
             ls.set_anchor(anchor);
             ls.set_size(corner_size, corner_size);
             ls.set_keyboard_interactivity(KeyboardInteractivity::None);
+            set_empty_input_region(&ls, &self.compositor);
             ls.set_exclusive_zone(-1);
             ls.commit();
 
@@ -414,6 +423,77 @@ impl App {
             | SurfaceKind::CornerBottomLeft
             | SurfaceKind::CornerBottomRight => false
         }
+    }
+
+    /// Whether a corner overlay is wanted: both edges it turns between are
+    /// drawn, so a frame missing one edge does not paint a corner on it.
+    const fn corner_enabled(&self, kind: SurfaceKind) -> bool {
+        match kind {
+            SurfaceKind::CornerTopLeft => {
+                self.config.edges.left.enabled && self.config.edges.top.enabled
+            }
+            SurfaceKind::CornerTopRight => {
+                self.config.edges.right.enabled && self.config.edges.top.enabled
+            }
+            SurfaceKind::CornerBottomLeft => {
+                self.config.edges.left.enabled && self.config.edges.bottom.enabled
+            }
+            SurfaceKind::CornerBottomRight => {
+                self.config.edges.right.enabled && self.config.edges.bottom.enabled
+            }
+            SurfaceKind::StripLeft
+            | SurfaceKind::StripRight
+            | SurfaceKind::StripTop
+            | SurfaceKind::StripBottom => false
+        }
+    }
+
+    /// Effective strip width for `kind`: the edge's own override, else the
+    /// shared thickness, never below one pixel.
+    fn edge_width(&self, kind: SurfaceKind, thickness: u32) -> u32 {
+        let width = match kind {
+            SurfaceKind::StripLeft => self.config.edges.left.width,
+            SurfaceKind::StripRight => self.config.edges.right.width,
+            SurfaceKind::StripTop => self.config.edges.top.width,
+            SurfaceKind::StripBottom => self.config.edges.bottom.width,
+            SurfaceKind::CornerTopLeft
+            | SurfaceKind::CornerTopRight
+            | SurfaceKind::CornerBottomLeft
+            | SurfaceKind::CornerBottomRight => None
+        };
+
+        width
+            .unwrap_or_else(|| thickness.to_f32().unwrap_or(f32::MAX))
+            .max(1.0)
+            .to_u32()
+            .unwrap_or(1)
+    }
+}
+
+/// Makes a frame surface pass clicks through: an empty input region means
+/// no point on the surface accepts pointer or touch input.
+fn set_empty_input_region(ls: &LayerSurface, compositor: &CompositorState) {
+    if let Ok(region) = Region::new(compositor) {
+        ls.wl_surface().set_input_region(Some(region.wl_region()));
+    }
+}
+
+/// Copies premultiplied **RGBA** pixels (tiny-skia) into a `wl_shm`
+/// **ARGB8888** buffer.
+///
+/// The protocol's `argb8888` is `[31:0] A:R:G:B 8:8:8:8` little endian, i.e.
+/// in memory byte order **B,G,R,A**; tiny-skia hands us **R,G,B,A**. Red and
+/// blue are swapped; premultiplied alpha is preserved. Any trailing bytes
+/// past a whole pixel are dropped.
+fn copy_rgba_premultiplied_to_argb8888(src: &[u8], dst: &mut [u8]) {
+    let (src_px, _) = src.as_chunks::<4>();
+    let (dst_px, _) = dst.as_chunks_mut::<4>();
+
+    for (src, dst) in src_px.iter().zip(dst_px.iter_mut()) {
+        dst[0] = src[2];
+        dst[1] = src[1];
+        dst[2] = src[0];
+        dst[3] = src[3];
     }
 }
 
@@ -475,7 +555,7 @@ fn draw_surface(state: &mut SurfaceState, config: &FrameConfig, color: (u8, u8, 
     }
 
     let n = canvas.len().min(pixmap.data().len());
-    canvas[..n].copy_from_slice(&pixmap.data()[..n]);
+    copy_rgba_premultiplied_to_argb8888(&pixmap.data()[..n], &mut canvas[..n]);
 
     state
         .layer

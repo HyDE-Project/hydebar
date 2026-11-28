@@ -18,6 +18,8 @@ use crate::config::{Appearance, AppearanceColor, MenuAppearance};
 
 /// Interpolates the animatable parts of an appearance.
 pub(super) fn blend_appearance(from: &Appearance, to: &Appearance, t: f32) -> Appearance {
+    let t = t.clamp(0.0, 1.0);
+
     Appearance {
         font_name:                to.font_name.clone(),
         font_size:                to.font_size,

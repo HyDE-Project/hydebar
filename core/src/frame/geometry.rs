@@ -164,18 +164,24 @@ pub fn frame_pieces(
     }
 
     if band_height > 0.0 {
-        let bar_y = match dock {
-            Position::Top => band_offset,
-            Position::Bottom => (screen_h - band_offset - band_height).max(0.0)
+        let (bar_y, bar_h) = match dock {
+            Position::Top => (band_offset, band_height.min(screen_h)),
+            Position::Bottom => {
+                let bar_y = (screen_h - band_offset - band_height).max(0.0);
+                let available = (screen_h - band_offset - bar_y).max(0.0);
+                (bar_y, band_height.min(screen_h).min(available))
+            }
         };
 
-        cuts.push(FramePiece {
-            x: left,
-            y: bar_y,
-            w: hole_w,
-            h: band_height.min(screen_h),
-            ..FramePiece::default()
-        });
+        if bar_h > 0.0 {
+            cuts.push(FramePiece {
+                x: left,
+                y: bar_y,
+                w: hole_w,
+                h: bar_h,
+                ..FramePiece::default()
+            });
+        }
     }
 
     FrameShape {

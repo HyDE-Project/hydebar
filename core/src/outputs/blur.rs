@@ -48,7 +48,7 @@ static ACCEPTED_SPELLING: AtomicU8 = AtomicU8::new(SPELLING_UNKNOWN);
 /// pills floating over a sharp wallpaper, which is not what a blurred bar looks
 /// like anywhere else on the desktop. Anything fully clear is still skipped, so
 /// a bar configured with no background at all costs the compositor nothing.
-const IGNORED_ALPHA: f32 = 0.05;
+const IGNORED_ALPHA: f32 = 0.0;
 
 /// One rule, stated in every syntax the compositor has had.
 ///
@@ -108,10 +108,10 @@ fn frame_no_blur() -> Rule {
 
     Rule {
         lua:        format!(
-            "hl.layer_rule({{ name = \"hydebar_frame_no_blur\", match = {{ namespace = \"{matched}\"              }}, no_blur = true }})"
+            "hl.layer_rule({{ name = \"hydebar_frame_no_blur\", match = {{ namespace = \"{matched}\" }}, blur = false }})"
         ),
-        keyword:    format!("no_blur true, match:namespace {matched}"),
-        positional: format!("no_blur, {matched}")
+        keyword:    format!("blur false, match:namespace {matched}"),
+        positional: format!("blur false, {matched}")
     }
 }
 
@@ -262,7 +262,7 @@ mod tests {
         );
         assert_eq!(
             ignore_alpha.keyword,
-            "ignore_alpha 0.05, match:namespace ^(hydebar-main-layer)$"
+            "ignore_alpha 0.00, match:namespace ^(hydebar-main-layer)$"
         );
     }
 
@@ -278,7 +278,7 @@ mod tests {
         assert_eq!(
             ignore_alpha.lua,
             "hl.layer_rule({ name = \"hydebar_ignore_alpha\", match = { namespace = \
-             \"^(hydebar-main-layer)$\" }, ignore_alpha = 0.05 })"
+             \"^(hydebar-main-layer)$\" }, ignore_alpha = 0.00 })"
         );
     }
 
@@ -289,7 +289,7 @@ mod tests {
         assert_eq!(blur.positional, "blur, ^(hydebar-main-layer)$");
         assert_eq!(
             ignore_alpha.positional,
-            "ignore_alpha 0.05, ^(hydebar-main-layer)$"
+            "ignore_alpha 0.00, ^(hydebar-main-layer)$"
         );
     }
 
@@ -314,8 +314,9 @@ mod tests {
     )]
     fn the_whole_strip_is_blurred_not_only_the_islands() {
         // the HyDE theme states the bar background at 0.01: a threshold above
-        // it would leave the space between the islands sharp
-        assert!(IGNORED_ALPHA > 0.01 && IGNORED_ALPHA < 0.1);
+        // it would leave the space between the islands sharp; 0.0 keeps
+        // every pixel except a fully transparent one in the blur
+        assert!(IGNORED_ALPHA < 0.01);
     }
 
     #[test]

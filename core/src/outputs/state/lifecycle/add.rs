@@ -7,6 +7,7 @@
 
 use iced::{OutputId, Task};
 use log::debug;
+use num_traits::ToPrimitive;
 
 use super::super::{Outputs, ShellInfo};
 use crate::{
@@ -18,7 +19,7 @@ use crate::{
         config::is_output_requested,
         wayland::{
             LayerSurfaceCreation, PanelSurfaces, create_layer_surfaces, create_panel_surfaces,
-            frame_settings, new_layer_surface
+            frame_settings, layer_height, new_layer_surface
         }
     }
 };
@@ -95,7 +96,13 @@ impl Outputs {
                 Some(wl_output),
                 config.layer,
                 position,
-                config.appearance.height_px().unwrap_or(fallback_bar_height),
+                layer_height(
+                    config.appearance.style,
+                    config.appearance.scale_factor,
+                    config.appearance.height_px()
+                )
+                .to_f32()
+                .unwrap_or(fallback_bar_height),
                 widths
             );
 

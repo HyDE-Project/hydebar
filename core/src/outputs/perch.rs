@@ -98,17 +98,30 @@ pub async fn strip_rows() -> HashMap<String, f32> {
 /// arrives.
 #[must_use]
 pub async fn strip_rows_settled() -> HashMap<String, f32> {
+    let mut best = remembered();
+
     for _ in 0..SETTLE_TRIES {
         let rows = strip_rows().await;
 
-        if !rows.is_empty() {
-            return rows;
+        if rows.len() > best.len() {
+            best = rows;
         }
 
         tokio::time::sleep(SETTLE_POLL).await;
     }
 
-    remembered()
+    if best.is_empty() { remembered() } else { best }
+}
+
+/// Drops the remembered strip rows so the next read asks the compositor.
+///
+/// A bar moved to another anchor has not kept its old row; the cache must
+/// not answer with a reading from before the move.
+pub fn invalidate_rows() {
+    LAST_READ
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .take();
 }
 
 /// Whatever was read last, however long ago.

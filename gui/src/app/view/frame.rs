@@ -96,7 +96,13 @@ impl App {
                 .screen
                 .strip_rows
                 .get(screen)
-                .zip(self.screen.height)
+                .zip(
+                    self.screen
+                        .sizes
+                        .get(screen)
+                        .map(|(_, height)| *height)
+                        .or(self.screen.height)
+                )
                 .map_or(0.0, |(row, height)| (height - row - bar_height).max(0.0))
         }
     }

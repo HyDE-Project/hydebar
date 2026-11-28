@@ -9,22 +9,22 @@ use std::fmt;
 /// Every spelling of a new module name.
 pub struct ModuleNames {
     /// Directory and file stem: `demo`.
-    pub snake: String,
+    pub snake:  String,
     /// Type and variant: `Demo`.
     pub pascal: String,
     /// Human label: `Demo` unless `--label` says otherwise.
-    pub label: String,
+    pub label:  String,
     /// Variant documentation: `--doc` or a marker to replace.
-    pub doc: String,
+    pub doc:    String
 }
 
 /// Why a name cannot become a module.
 #[derive(Debug, PartialEq, Eq)]
 pub struct InvalidName {
     /// What was typed.
-    pub input: String,
+    pub input:  String,
     /// What is wrong with it.
-    pub reason: &'static str,
+    pub reason: &'static str
 }
 
 impl fmt::Display for InvalidName {
@@ -37,12 +37,12 @@ impl fmt::Display for InvalidName {
 pub fn derive(
     input: &str,
     label: Option<&str>,
-    doc: Option<&str>,
+    doc: Option<&str>
 ) -> Result<ModuleNames, InvalidName> {
     if input.is_empty() {
         return Err(InvalidName {
-            input: input.to_owned(),
-            reason: "a name is required",
+            input:  input.to_owned(),
+            reason: "a name is required"
         });
     }
 
@@ -51,22 +51,22 @@ pub fn derive(
         .all(|char| char.is_ascii_lowercase() || char.is_ascii_digit() || char == '_')
     {
         return Err(InvalidName {
-            input: input.to_owned(),
-            reason: "use snake_case: lowercase letters, digits and underscores",
+            input:  input.to_owned(),
+            reason: "use snake_case: lowercase letters, digits and underscores"
         });
     }
 
     if input.starts_with(|char: char| char.is_ascii_digit()) || input.starts_with('_') {
         return Err(InvalidName {
-            input: input.to_owned(),
-            reason: "start with a lowercase letter",
+            input:  input.to_owned(),
+            reason: "start with a lowercase letter"
         });
     }
 
     if is_rust_keyword(input) {
         return Err(InvalidName {
-            input: input.to_owned(),
-            reason: "a reserved Rust keyword cannot name a module",
+            input:  input.to_owned(),
+            reason: "a reserved Rust keyword cannot name a module"
         });
     }
 
@@ -83,8 +83,8 @@ pub fn derive(
         .any(|char| matches!(char, '\n' | '\r' | '\u{2028}' | '\u{2029}'))
     {
         return Err(InvalidName {
-            input: doc.to_owned(),
-            reason: "the doc is one line; line terminators are not allowed",
+            input:  doc.to_owned(),
+            reason: "the doc is one line; line terminators are not allowed"
         });
     }
 
@@ -92,7 +92,7 @@ pub fn derive(
         snake: input.to_owned(),
         label: label.unwrap_or(&pascal).to_owned(),
         doc: doc.to_owned(),
-        pascal,
+        pascal
     })
 }
 
@@ -148,7 +148,7 @@ fn is_rust_keyword(word: &str) -> bool {
         "use",
         "where",
         "while",
-        "yield",
+        "yield"
     ];
 
     RUST_KEYWORDS.contains(&word)
@@ -208,7 +208,7 @@ mod tests {
             "self", "super", "crate", "mod", "fn", "match", "impl", "struct", "enum", "trait",
             "use", "pub", "let", "const", "static", "mut", "ref", "move", "as", "in", "for",
             "loop", "while", "if", "else", "return", "break", "continue", "where", "type", "dyn",
-            "extern", "unsafe", "async", "await",
+            "extern", "unsafe", "async", "await"
         ] {
             assert!(
                 derive(input, None, None).is_err(),
@@ -229,7 +229,7 @@ mod tests {
             "first\nsecond",
             "first\r\nsecond",
             "first\rsecond",
-            "first\u{2028}second",
+            "first\u{2028}second"
         ] {
             assert!(
                 derive("demo", None, Some(doc)).is_err(),
