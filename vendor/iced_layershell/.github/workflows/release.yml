@@ -1,0 +1,44 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  version-bump:
+    name: Bump version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.PAT_TOKEN }}
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-release
+        run: cargo install cargo-release
+
+      - name: Set version in Cargo.toml
+        run: cargo release version ${{ steps.version.outputs.VERSION }} --execute --no-confirm
+
+      - name: Commit and push version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Cargo.toml
+          git diff --cached --quiet && echo "Version already up to date" && exit 0
+          git commit -m "chore: bump version to ${{ steps.version.outputs.VERSION }}"
+          git push origin main
+
+      - name: Move tag to include version bump
+        run: |
+          git tag -f ${{ github.event.release.tag_name }}
+          git push origin ${{ github.event.release.tag_name }} --force

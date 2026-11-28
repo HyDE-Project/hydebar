@@ -1,0 +1,85 @@
+[package]
+name = "iced_layershell"
+version = "0.2.1"
+edition = "2024"
+description = "Wayland layer shell backend for iced"
+license = "MIT"
+
+[dependencies]
+# Iced 0.14 sub-crates
+iced_core = "0.14"
+iced_runtime = "0.14"
+iced_renderer = { version = "0.14", default-features = false }
+iced_widget = "0.14"
+iced_graphics = "0.14"
+iced_futures = "0.14"
+iced_highlighter = { version = "0.14", optional = true }
+
+# Wayland
+smithay-client-toolkit = { version = "0.20", default-features = false, features = [
+    "calloop",
+    "xkbcommon",
+] }
+wayland-client = "0.31.14"
+wayland-protocols = { version = "0.32.12", features = ["client", "staging"] }
+wayland-backend = { version = "0.3.15", features = ["client_system"] }
+
+# Event loop
+calloop = "0.14"
+calloop-wayland-source = "0.4"
+
+# Surface bridging
+raw-window-handle = "0.6"
+
+# Clipboard
+smithay-clipboard = { version = "0.7", default-features = false }
+
+# Image codec support (feature-unified with iced_graphics' `image` dep)
+image = { version = "0.25", optional = true, default-features = false, features = [
+  "jpeg",
+  "png",
+  "gif",
+  "webp",
+] }
+
+# Utilities
+thiserror = "2"
+log = "0.4.32"
+futures = "0.3"
+
+[features]
+default = ["wgpu", "thread-pool"]
+
+# Renderer backends
+wgpu = ["iced_renderer/wgpu", "iced_renderer/wgpu-bare"]
+tiny-skia = ["iced_renderer/tiny-skia", "iced_renderer/wayland"]
+
+# Async executors
+tokio = ["iced_futures/tokio"]
+smol = ["iced_futures/smol"]
+thread-pool = ["iced_futures/thread-pool"]
+
+# Widget features
+canvas = ["iced_widget/canvas"]
+svg = ["iced_widget/svg", "iced_renderer/svg"]
+image = ["iced_widget/image", "iced_renderer/image", "dep:image"]
+lazy = ["iced_widget/lazy"]
+markdown = ["iced_widget/markdown"]
+qr_code = ["iced_widget/qr_code"]
+highlighter = ["iced_widget/highlighter", "dep:iced_highlighter"]
+
+# Renderer features
+geometry = ["iced_renderer/geometry"]
+fira-sans = ["iced_renderer/fira-sans"]
+
+# Core features
+advanced = ["iced_core/advanced", "iced_widget/advanced"]
+crisp = ["iced_core/crisp", "iced_widget/crisp"]
+
+[[example]]
+name = "bar_with_menu"
+path = "examples/bar_with_menu.rs"
+
+[[example]]
+name = "simple_bar"
+path = "examples/simple_bar.rs"

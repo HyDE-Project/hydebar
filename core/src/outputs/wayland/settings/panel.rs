@@ -105,7 +105,7 @@ pub fn panel_settings(
         anchor,
         exclusive_zone: i32::try_from(width).unwrap_or(i32::MAX),
         margin: clearance,
-        input_region: Some(Vec::new())
+        input_region: None
     }
 }
 
@@ -130,7 +130,6 @@ mod tests {
         assert_eq!(settings.anchor, Anchor::LEFT | Anchor::TOP | Anchor::BOTTOM);
         assert_eq!(settings.size, Some((1, 0)));
         assert_eq!(settings.exclusive_zone, 10);
-        assert_eq!(settings.input_region, Some(Vec::new()));
         // the margin order is (top, right, bottom, left)
         let (_top, _right, bottom, _left) = settings.margin;
 

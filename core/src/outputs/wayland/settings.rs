@@ -155,7 +155,6 @@ pub fn frame_settings(output: Option<OutputId>, layer: BarLayer) -> LayerShellSe
         output,
         anchor: Anchor::TOP | Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT,
         exclusive_zone: -1,
-        input_region: Some(Vec::new()),
         ..Default::default()
     }
 }
@@ -333,7 +332,6 @@ mod tests {
 
         assert_eq!(settings.anchor, Anchor::all());
         assert_eq!(settings.exclusive_zone, -1);
-        assert_eq!(settings.input_region, Some(Vec::new()));
         assert_eq!(settings.namespace, "hydebar-frame");
     }
 }
