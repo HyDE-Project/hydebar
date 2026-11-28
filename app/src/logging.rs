@@ -9,12 +9,8 @@
 
 use std::{backtrace::Backtrace, panic};
 
-use tracing_subscriber::{
-    EnvFilter, Registry, fmt, layer::SubscriberExt, reload, util::SubscriberInitExt
-};
-
-/// A handle to the shared filter, to re-tighten at runtime (e.g. on reload).
-pub type Logger = reload::Handle<EnvFilter, Registry>;
+pub use hydebar_gui::Logger;
+use tracing_subscriber::{EnvFilter, Layer, fmt, layer::SubscriberExt, util::SubscriberInitExt};
 
 /// Logging directory for the rotating file layer.
 const LOG_DIR: &str = "/tmp/hydebar";
@@ -73,7 +69,7 @@ fn base_filter(extra: Option<&str>) -> EnvFilter {
 /// (keep a week, from `tracing-appender`) gets everything the filter passes.
 pub fn init() -> Logger {
     let filter = base_filter(std::env::var("HYDEBAR_LOG_FILTER").ok().as_deref());
-    let (filter_layer, reload_handle) = reload::Layer::new(filter);
+    let logger = Logger::new(filter);
 
     let console = fmt::layer()
         .with_target(true)
@@ -88,11 +84,8 @@ pub fn init() -> Logger {
         .with_ansi(false)
         .with_writer(file_appender);
 
-    let _ = tracing_subscriber::registry()
-        .with(filter_layer)
-        .with(console)
-        .with(file)
-        .try_init();
+    let filtered = console.and_then(file).with_filter(logger.clone());
+    let _ = tracing_subscriber::registry().with(filtered).try_init();
     log::set_max_level(log::LevelFilter::Warn);
     tracing::callsite::rebuild_interest_cache();
 
@@ -101,5 +94,5 @@ pub fn init() -> Logger {
         tracing::error!(panic = %info, backtrace = %backtrace, "panic");
     }));
 
-    reload_handle
+    logger
 }

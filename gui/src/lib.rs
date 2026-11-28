@@ -8,10 +8,95 @@
 
 #![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 #![warn(missing_docs)]
-use tracing_subscriber::{EnvFilter, Registry, reload};
+use std::sync::{Arc, RwLock};
+
+use tracing_subscriber::EnvFilter;
+
+fn apply_quiet_directives(mut filter: EnvFilter) -> EnvFilter {
+    for quiet in [
+        "sctk=off",
+        "calloop=off",
+        "calloop_wayland_source=off",
+        "smithay=off",
+        "smithay_clipboard=off",
+        "wgpu=off",
+        "wgpu_hal=off",
+        "wgpu_core=off",
+        "iced_wgpu=off",
+        "cosmic_text=off"
+    ] {
+        if let Ok(directive) = quiet.parse::<tracing_subscriber::filter::Directive>() {
+            filter = filter.add_directive(directive);
+        }
+    }
+
+    filter
+}
 
 /// Shared filter handle, re-applicable at runtime.
-pub type Logger = reload::Handle<EnvFilter, Registry>;
+#[derive(Clone, Debug)]
+pub struct Logger {
+    filter: Arc<RwLock<EnvFilter>>
+}
+
+impl Logger {
+    /// Creates a new logger handle wrapping the given filter.
+    #[must_use]
+    pub fn new(filter: EnvFilter) -> Self {
+        Self {
+            filter: Arc::new(RwLock::new(filter))
+        }
+    }
+
+    /// Replaces the active filter.
+    ///
+    /// Quiet renderer/compositor groups are always enforced on top.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the filter lock is poisoned.
+    pub fn reload(&self, filter: EnvFilter) -> Result<(), String> {
+        let mut guard = self
+            .filter
+            .write()
+            .map_err(|_| "logger filter lock poisoned".to_owned())?;
+        *guard = apply_quiet_directives(filter);
+        drop(guard);
+        tracing::callsite::rebuild_interest_cache();
+        Ok(())
+    }
+
+    fn with_filter<T>(&self, f: impl FnOnce(&EnvFilter) -> T) -> Option<T> {
+        self.filter.read().ok().map(|guard| f(&guard))
+    }
+}
+
+impl<S> tracing_subscriber::layer::Filter<S> for Logger {
+    fn enabled(
+        &self,
+        meta: &tracing::Metadata<'_>,
+        cx: &tracing_subscriber::layer::Context<'_, S>
+    ) -> bool {
+        self.with_filter(|filter| {
+            <EnvFilter as tracing_subscriber::layer::Filter<S>>::enabled(filter, meta, cx)
+        })
+        .unwrap_or(false)
+    }
+
+    fn callsite_enabled(
+        &self,
+        meta: &'static tracing::Metadata<'static>
+    ) -> tracing::subscriber::Interest {
+        self.with_filter(|filter| {
+            <EnvFilter as tracing_subscriber::layer::Filter<S>>::callsite_enabled(filter, meta)
+        })
+        .unwrap_or_else(tracing::subscriber::Interest::never)
+    }
+
+    fn max_level_hint(&self) -> Option<tracing::level_filters::LevelFilter> {
+        self.with_filter(EnvFilter::max_level_hint).flatten()
+    }
+}
 
 mod centerbox;
 mod views;

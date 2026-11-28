@@ -13,9 +13,7 @@ use super::{App, Message as AppMessage};
 pub(in crate::app) fn test_logger() -> crate::Logger {
     static LOGGER: OnceLock<crate::Logger> = OnceLock::new();
     LOGGER
-        .get_or_init(|| {
-            tracing_subscriber::reload::Layer::new(tracing_subscriber::EnvFilter::new("off")).1
-        })
+        .get_or_init(|| crate::Logger::new(tracing_subscriber::EnvFilter::new("off")))
         .clone()
 }
 
