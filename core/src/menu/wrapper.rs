@@ -86,10 +86,7 @@ fn menu_padding(
     viewport_width: f32,
     button_ui_ref: &ButtonUIRef
 ) -> Padding {
-    let edge_gap = match layout.style {
-        AppearanceStyle::Solid | AppearanceStyle::Gradient => 2.0,
-        AppearanceStyle::Islands => 0.0
-    };
+    let edge_gap = 0.0;
 
     let slide = SLIDE_EM * layout.font_size * (1.0 - layout.progress.clamp(0.0, 1.0));
     let menu_height = growing.unwrap_or_else(|| {
@@ -198,7 +195,8 @@ pub fn menu_wrapper<Message: Clone + 'static>(
     let menu_box = menu_box.style(menu_container_style(
         layout.opacity,
         layout.radius,
-        layout.finish
+        layout.finish,
+        Some(layout.bar_position)
     ));
 
     mouse_area(
