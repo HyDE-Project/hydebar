@@ -38,7 +38,7 @@ cd hydebar
 # Build release version
 cargo build --release
 
-# Binary will be at: target/release/hydebar-app
+# Binary will be at: target/release/hydebar
 ```
 
 Or run `./install.sh`, which builds the release binary and installs it as

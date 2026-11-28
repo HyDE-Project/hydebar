@@ -113,7 +113,7 @@ git remote add upstream https://github.com/RAprogramm/hydebar.git
 cargo build --release
 
 # Run
-./target/release/hydebar-app
+./target/release/hydebar
 ```
 
 ---
