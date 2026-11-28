@@ -319,8 +319,9 @@ text = "#1a1b26"      # Text on this background
 ## Contributing Themes
 
 Want to add a new theme? Copy one of the files in `proto/src/config/themes/`
-to a new kebab-case name, recolor it, and add one row to the roster there —
-no Rust logic changes. See [Contributing Guide](CONTRIBUTING.md) for details.
+to a new kebab-case name, recolor it, and add one row to `THEME_SOURCES` in
+`proto/src/config/themes.rs` — no Rust logic changes. The roster embeds
+each `.toml`. See [Contributing Guide](CONTRIBUTING.md) for details.
 
 Popular themes to consider:
 - Solarized Dark/Light

@@ -321,9 +321,8 @@ mod tests {
 
     #[test]
     fn test_theme_loads_correctly() {
-        let theme = PresetTheme::CatppuccinMocha;
-        let appearance = theme.to_appearance();
-        assert_eq!(appearance.animations.enabled, true);
+        let appearance = preset_appearance("catppuccin-mocha").expect("theme");
+        assert!(appearance.animations.enabled);
     }
 }
 ```
@@ -334,76 +333,25 @@ mod tests {
 
 ### Creating a New Theme
 
-1. **Choose colors** - Pick a cohesive palette
-2. **Add to PresetTheme enum** in `proto/src/config/themes.rs`
-   (the enum is `#[serde(rename_all = "kebab-case")]`, so `YourThemeName`
-   becomes `appearance = "your-theme-name"`):
+Themes are data, not Rust. A preset is a whole appearance table in a TOML
+file; the roster beside it embeds the file. **No Rust logic changes.**
 
-```rust
-#[derive(Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
-#[serde(rename_all = "kebab-case")]
-pub enum PresetTheme {
-    // ... existing themes
-    YourThemeName
-}
-```
+1. **Copy an existing theme.** Duplicate one `.toml` in
+   `proto/src/config/themes/`, rename it to a kebab-case name
+   (`your-theme-name.toml`), and recolor it. Keep every key an appearance
+   needs; a partial table falls back to `Appearance::default()` for the
+   rest, which is easier to read as a full table.
 
-3. **Implement theme function** — follow the existing constructors in
-   `themes.rs`; colors are `AppearanceColor::Simple(HexColor::rgb(r, g, b))`:
+2. **Add one row to `THEME_SOURCES`.** In `proto/src/config/themes.rs`,
+   add `("your-theme-name", include_str!("themes/your-theme-name.toml"))`.
+   The name is `appearance = "your-theme-name"`. `preset_appearance` and
+   `preset_names` read the roster; nothing else changes.
 
-```rust
-fn your_theme_name() -> Appearance {
-    Appearance {
-        style: AppearanceStyle::Islands,
-        opacity: 0.95,
-        background_color: AppearanceColor::Simple(HexColor::rgb(26, 27, 38)),
-        primary_color: AppearanceColor::Simple(HexColor::rgb(122, 162, 247)),
-        secondary_color: AppearanceColor::Simple(HexColor::rgb(22, 22, 30)),
-        success_color: AppearanceColor::Simple(HexColor::rgb(158, 206, 106)),
-        danger_color: AppearanceColor::Simple(HexColor::rgb(247, 118, 142)),
-        warning_color: AppearanceColor::Simple(HexColor::rgb(224, 175, 104)),
-        text_color: AppearanceColor::Simple(HexColor::rgb(192, 202, 245)),
-        workspace_colors: vec![
-            AppearanceColor::Simple(HexColor::rgb(122, 162, 247)),
-            AppearanceColor::Simple(HexColor::rgb(187, 154, 247)),
-        ],
-        special_workspace_colors: Some(vec![AppearanceColor::Simple(
-            HexColor::rgb(247, 118, 142)
-        )]),
-        menu: MenuAppearance {
-            opacity: 0.95,
-            backdrop: 0.3
-        },
-        ..Appearance::default()
-    }
-}
-```
+3. **Check it loads.** `cargo test -p hydebar-proto` runs the theme
+   round-trips; `preset_appearance("your-theme-name")` must return `Some`,
+   `preset_appearance("no-such-theme")` stays `None`.
 
-4. **Add to match statement** in `to_appearance()`:
-
-```rust
-impl PresetTheme {
-    pub fn to_appearance(self) -> Appearance {
-        match self {
-            // ... existing themes
-            PresetTheme::YourThemeName => your_theme_name(),
-        }
-    }
-}
-```
-
-5. **Add tests**:
-
-```rust
-#[test]
-fn your_theme_name_loads() {
-    let theme = PresetTheme::YourThemeName;
-    let appearance = theme.to_appearance();
-    assert!(appearance.animations.enabled);
-}
-```
-
-6. **Update documentation** in `docs/THEMES.md`:
+4. **Update documentation** in `docs/THEMES.md`:
 
 ```markdown
 ## Your Theme Name
@@ -437,9 +385,9 @@ listener entry opening a menu on press. The command writes the
 configuration, state, view and trait files, then prints the wiring
 checklist: the roster row, the `Config` field, the bus event and menu kind
 where the shape needs them, and the gui dispatch arms mirroring the clock
-module. Follow it top to bottom — every step keeps the tree compiling, and
-`cargo check --workspace` names any arm left behind. Finish with `cargo
-fmt`, `cargo clippy` and `cargo test` like any other change.
+module. Follow it top to bottom — the completed wiring passes
+`cargo check --workspace`, which also names any arm left behind. Finish
+with `cargo fmt`, `cargo clippy` and `cargo test` like any other change.
 
 What lands on disk: `proto/src/config/<name>.rs` holds the module
 configuration, `core/src/modules/<name>.rs` the shared state and messages,

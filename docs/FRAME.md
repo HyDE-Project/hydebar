@@ -75,7 +75,9 @@ frame's visual surface. No manual rule is needed, and a `HyDE` theme
 switch re-states the rules after the desktop reloads, as it already does
 for the bar. Pixels the frame paints fully clear are skipped by the
 compositor (`ignore_alpha 0.0`), so the blur is only paid for behind the
-strips the user switched on.
+strips the user switched on. The frame's own `hydebar-frame` surfaces are
+excluded from blur with a layer `blur = false` rule, so a theme blurring
+every namespace cannot pull the sharp paint under the bar.
 
 ## Honest limits
 
