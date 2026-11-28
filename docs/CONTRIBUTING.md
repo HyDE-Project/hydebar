@@ -432,18 +432,58 @@ Aim for:
 
 ### Performance Testing
 
-For performance-critical changes:
+The bar earns its place on a desktop by costing almost nothing while it stands
+there, so a performance change is only done when it is measured. The first tool
+is the resource budget check, not a profiler: it turns "feels light" into a
+number and a pass/fail.
 
 ```bash
-# Profile with perf
-perf record --call-graph dwarf ./target/release/hydebar-app
+# Measure a running bar against the budgets (finds the one running bar, or pass a PID)
+cargo xtask resource-check
+cargo xtask resource-check <pid>
+```
+
+It reads the kernel's own accounting from `/proc` for a bar that is already
+running under a live compositor: resident memory, anonymous (heap) memory,
+thread count, and the CPU it burns while idle, each against a budget. The exit
+status is non-zero when a budget is exceeded, so the same command gates a
+release. It measures a running process rather than spawning one because the bar
+only lives under a Wayland compositor — a harness that started its own would be
+testing the compositor, not the bar.
+
+Budgets are read from the environment, so a baseline can be tightened without a
+code change: `RSS_MAX_KIB`, `ANON_MAX_KIB`, `THREADS_MAX`, `CPU_MAX_PCT`,
+`SETTLE_SECS`, `CPU_SECS`. The defaults are a measured floor plus headroom, not
+aspiration.
+
+**What the floor is made of.** On a Radeon under the default renderer the bar
+resides at about 96 MiB, and most of it is not the bar: the graphics driver
+stack (LLVM for the Vulkan shader compiler, `libgallium`, the Radeon driver)
+accounts for roughly 46 MiB on its own. The bar's own heap is a fraction of
+that. Two consequences worth knowing before chasing a number:
+
+- The bar probes for a hardware Vulkan device at startup and names Vulkan to
+  wgpu when one is present, so it does not also map the OpenGL driver — worth
+  about 19 MiB and two threads. A `WGPU_BACKEND` in the environment overrules
+  the probe.
+- The software renderer (`ICED_BACKEND=tiny-skia`) was measured and is worse on
+  this workload — about 320 MiB resident and twice the idle CPU, because it
+  keeps a full framebuffer in RAM and composites on the CPU. The GPU renderer
+  is the cheaper default; the software path is a fallback for a machine with no
+  GPU, not a lighter option.
+
+For deeper profiling once a budget is the thing to move:
+
+```bash
+# Where the CPU goes
+perf record --call-graph dwarf ./target/release/hydebar
 perf report
 
-# Memory profiling
-heaptrack ./target/release/hydebar-app
+# Where the allocations go
+heaptrack ./target/release/hydebar
 
-# Benchmark comparisons
-hyperfine "./target/release/hydebar-app" "waybar"
+# Which mappings hold the resident memory
+awk '/^[0-9a-f]+-/{n=$6; if(n=="")n="[anon]"} /^Rss:/{r[n]+=$2} END{for(k in r) printf "%9d KiB  %s\n", r[k], k}' /proc/<pid>/smaps | sort -rn | head
 ```
 
 ---
@@ -496,10 +536,17 @@ Maintainers handle releases:
 
 1. Update version in `Cargo.toml`
 2. Update `CHANGELOG.md`
-3. Create git tag: `git tag vX.Y.Z`
-4. Push tag: `git push origin vX.Y.Z`
-5. GitHub Actions builds packages
-6. Publish to AUR, Nix, etc.
+3. **Check the resource budget.** Build the release binary, run it on a real
+   session, and measure it: `cargo build --release && cargo xtask
+   resource-check`. Every budget must hold. A regression here is a regression in
+   the one promise the bar makes — that it costs nothing while idle — so it is
+   settled before the tag, not after. See [Performance
+   Testing](#performance-testing) for what the budgets mean and what the floor
+   is made of.
+4. Create git tag: `git tag vX.Y.Z`
+5. Push tag: `git push origin vX.Y.Z`
+6. GitHub Actions builds packages
+7. Publish to AUR, Nix, etc.
 
 ---
 
