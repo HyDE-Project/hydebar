@@ -91,7 +91,7 @@ impl App {
                 Task::batch([
                     answered,
                     Task::perform(
-                        hydebar_core::outputs::perch::strip_rows(),
+                        hydebar_core::outputs::perch::strip_positions(),
                         Message::StripRowsMeasured
                     )
                 ])

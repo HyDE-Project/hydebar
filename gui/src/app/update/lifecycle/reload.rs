@@ -113,7 +113,7 @@ impl App {
         if outputs_need_sync {
             warn!("Outputs or layout changed, syncing");
             if impact.position_changed {
-                hydebar_core::outputs::perch::invalidate_rows();
+                hydebar_core::outputs::perch::invalidate_positions();
             }
             tasks.push(self.outputs.sync(
                 config.appearance.style,

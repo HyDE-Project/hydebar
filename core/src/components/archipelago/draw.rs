@@ -13,6 +13,124 @@ use super::builder::Archipelago;
 /// Pills of modules that draw near each other fuse into one island and
 /// part again as they pass; a pill fades in with the strongest arrival
 /// wave among its tenants.
+fn paint_clusters<Renderer: iced_core::Renderer>(
+    renderer: &mut Renderer,
+    bounds: Rectangle,
+    vertical: bool,
+    spans: &[(f32, f32)],
+    arrivals: &[f32],
+    paint: super::builder::PillPaint,
+    island_gap: f32
+) {
+    let mut clusters: Vec<(f32, f32, f32)> = Vec::new();
+    let mut sorted: Vec<(f32, f32, f32)> = spans
+        .iter()
+        .zip(arrivals.iter())
+        .map(|(&(start, end), &arrival)| (start, end, arrival))
+        .collect();
+    sorted.sort_by(|a, b| a.0.total_cmp(&b.0));
+
+    let fuse = island_gap * 0.5;
+    for (start, end, arrival) in sorted {
+        match clusters.last_mut() {
+            Some((_, tail, shown)) if start - *tail <= fuse => {
+                *tail = tail.max(end);
+                *shown = shown.max(arrival);
+            }
+            _ => clusters.push((start, end, arrival))
+        }
+    }
+
+    for (start, end, shown) in clusters {
+        if shown <= f32::EPSILON {
+            continue;
+        }
+
+        let quad_bounds = if vertical {
+            Rectangle {
+                x:      bounds.x,
+                y:      start,
+                width:  bounds.width,
+                height: end - start
+            }
+        } else {
+            Rectangle {
+                x:      start,
+                y:      bounds.y,
+                width:  end - start,
+                height: bounds.height
+            }
+        };
+
+        renderer.fill_quad(
+            renderer::Quad {
+                bounds: quad_bounds,
+                border: paint.border,
+                shadow: paint.shadow,
+                ..renderer::Quad::default()
+            },
+            paint.background.scale_alpha(shown)
+        );
+    }
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "mirrors the upstream widget draw signature"
+)]
+fn draw_children<Message, Theme, Renderer>(
+    strip: &Archipelago<'_, Message, Theme, Renderer>,
+    tree: &Tree,
+    renderer: &mut Renderer,
+    theme: &Theme,
+    style: &renderer::Style,
+    layout: Layout<'_>,
+    cursor: mouse::Cursor,
+    viewport: &Rectangle,
+    offsets: &[f32],
+    vertical: bool
+) where
+    Renderer: iced_core::Renderer
+{
+    for (index, ((child, sub_tree), child_layout)) in strip
+        .children
+        .iter()
+        .zip(tree.children.iter())
+        .zip(layout.children())
+        .enumerate()
+    {
+        let translation = if vertical {
+            Vector::new(0.0, offsets[index])
+        } else {
+            Vector::new(offsets[index], 0.0)
+        };
+
+        if offsets[index].abs() < f32::EPSILON {
+            child.as_widget().draw(
+                sub_tree,
+                renderer,
+                theme,
+                style,
+                child_layout,
+                cursor,
+                viewport
+            );
+        } else {
+            renderer.with_translation(translation, |renderer| {
+                child.as_widget().draw(
+                    sub_tree,
+                    renderer,
+                    theme,
+                    style,
+                    child_layout,
+                    cursor,
+                    viewport
+                );
+            });
+        }
+    }
+}
+
 #[expect(
     clippy::too_many_arguments,
     reason = "mirrors the upstream widget draw signature"
@@ -30,6 +148,8 @@ pub(super) fn draw<Message, Theme, Renderer>(
     Renderer: iced_core::Renderer
 {
     let bounds = layout.bounds();
+    let vertical = strip.vertical;
+    let pad = strip.pad_x;
 
     let (offsets, spans) = {
         let mut memo = strip.memo.borrow_mut();
@@ -38,100 +158,48 @@ pub(super) fn draw<Message, Theme, Renderer>(
 
         for (index, child_layout) in layout.children().enumerate() {
             let child_bounds = child_layout.bounds();
-
-            let offset = strip.offset(memo.from_map(), index, child_bounds.x);
-            let current = child_bounds.x + offset;
+            let main = if vertical {
+                child_bounds.y
+            } else {
+                child_bounds.x
+            };
+            let offset = strip.offset(memo.from_map(), index, main);
+            let current = main + offset;
+            let extent = if vertical {
+                child_bounds.height
+            } else {
+                child_bounds.width
+            };
 
             memo.record(
                 strip.keys[index],
                 iced_core::Rectangle {
-                    x: current,
+                    x: if vertical { child_bounds.x } else { current },
+                    y: if vertical { current } else { child_bounds.y },
                     ..child_bounds
                 }
             );
 
             offsets.push(offset);
-            spans.push((
-                current - strip.pad_x,
-                current + child_bounds.width + strip.pad_x
-            ));
+            spans.push((current - pad, current + extent + pad));
         }
 
         (offsets, spans)
     };
 
     if let Some(paint) = (strip.paint)(theme) {
-        let mut clusters: Vec<(f32, f32, f32)> = Vec::new();
-        let mut sorted: Vec<(f32, f32, f32)> = spans
-            .iter()
-            .zip(strip.arrivals.iter())
-            .map(|(&(start, end), &arrival)| (start, end, arrival))
-            .collect();
-        sorted.sort_by(|a, b| a.0.total_cmp(&b.0));
-
-        let fuse = strip.island_gap * 0.5;
-
-        for (start, end, arrival) in sorted {
-            match clusters.last_mut() {
-                Some((_, tail, shown)) if start - *tail <= fuse => {
-                    *tail = tail.max(end);
-                    *shown = shown.max(arrival);
-                }
-                _ => clusters.push((start, end, arrival))
-            }
-        }
-
-        for (start, end, shown) in clusters {
-            if shown <= f32::EPSILON {
-                continue;
-            }
-
-            renderer.fill_quad(
-                renderer::Quad {
-                    bounds: Rectangle {
-                        x:      start,
-                        y:      bounds.y,
-                        width:  end - start,
-                        height: bounds.height
-                    },
-                    border: paint.border,
-                    shadow: paint.shadow,
-                    ..renderer::Quad::default()
-                },
-                paint.background.scale_alpha(shown)
-            );
-        }
+        paint_clusters(
+            renderer,
+            bounds,
+            vertical,
+            &spans,
+            &strip.arrivals,
+            paint,
+            strip.island_gap
+        );
     }
 
-    for (index, ((child, sub_tree), child_layout)) in strip
-        .children
-        .iter()
-        .zip(tree.children.iter())
-        .zip(layout.children())
-        .enumerate()
-    {
-        if offsets[index].abs() < f32::EPSILON {
-            child.as_widget().draw(
-                sub_tree,
-                renderer,
-                theme,
-                style,
-                child_layout,
-                cursor,
-                viewport
-            );
-        } else {
-            renderer.with_translation(Vector::new(offsets[index], 0.0), |renderer| {
-                child.as_widget().draw(
-                    sub_tree,
-                    renderer,
-                    theme,
-                    style,
-                    child_layout,
-                    cursor,
-                    viewport
-                );
-            });
-        }
-    }
+    draw_children(
+        strip, tree, renderer, theme, style, layout, cursor, viewport, &offsets, vertical
+    );
 }

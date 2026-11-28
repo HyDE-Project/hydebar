@@ -56,9 +56,28 @@ pub fn main_settings(
 ) -> LayerShellSettings {
     let height = layer_height(style, scale_factor, configured_height);
 
+    let (size, anchor) = match position {
+        Position::Top => (
+            Some((0, height as u32)),
+            Anchor::TOP | Anchor::LEFT | Anchor::RIGHT
+        ),
+        Position::Bottom => (
+            Some((0, height as u32)),
+            Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT
+        ),
+        Position::Left => (
+            Some((height as u32, 0)),
+            Anchor::LEFT | Anchor::TOP | Anchor::BOTTOM
+        ),
+        Position::Right => (
+            Some((height as u32, 0)),
+            Anchor::RIGHT | Anchor::TOP | Anchor::BOTTOM
+        )
+    };
+
     LayerShellSettings {
         namespace: MAIN_NAMESPACE.to_string(),
-        size: Some((0, height as u32)),
+        size,
         layer: surface_layer(layer),
         keyboard_interactivity: if menu_keyboard_focus {
             KeyboardInteractivity::OnDemand
@@ -67,11 +86,7 @@ pub fn main_settings(
         },
         exclusive_zone: height as i32,
         output,
-        anchor: match position {
-            Position::Top => Anchor::TOP,
-            Position::Bottom => Anchor::BOTTOM
-        } | Anchor::LEFT
-            | Anchor::RIGHT,
+        anchor,
         ..Default::default()
     }
 }
@@ -168,16 +183,19 @@ pub fn frame_settings(output: Option<OutputId>, layer: BarLayer) -> LayerShellSe
 /// raised there later. Rising only when there is something to show is what
 /// keeps the popups above whatever the bar raised before them.
 pub fn notifications_settings(output: Option<OutputId>, position: Position) -> LayerShellSettings {
+    let anchor = match position {
+        Position::Top | Position::Left => Anchor::TOP | Anchor::RIGHT,
+        Position::Bottom => Anchor::BOTTOM | Anchor::RIGHT,
+        Position::Right => Anchor::TOP | Anchor::LEFT
+    };
+
     LayerShellSettings {
         namespace: NOTIFICATIONS_NAMESPACE.to_string(),
         size: Some((NOTIFICATIONS_WIDTH, 1)),
         layer: Layer::Background,
         keyboard_interactivity: KeyboardInteractivity::None,
         output,
-        anchor: match position {
-            Position::Top => Anchor::TOP,
-            Position::Bottom => Anchor::BOTTOM
-        } | Anchor::RIGHT,
+        anchor,
         ..Default::default()
     }
 }
@@ -228,23 +246,19 @@ mod tests {
     }
 
     #[test]
-    fn every_surface_anchors_its_own_edge_top_or_bottom() {
-        // the bar docks to either horizontal edge, and every follower
-        // surface travels with it
-        for position in [Position::Top, Position::Bottom] {
-            let edge = match position {
-                Position::Top => Anchor::TOP,
-                Position::Bottom => Anchor::BOTTOM
+    fn every_surface_anchors_to_its_bar_edge() {
+        for position in [
+            Position::Top,
+            Position::Bottom,
+            Position::Left,
+            Position::Right
+        ] {
+            let (edge, cross) = match position {
+                Position::Top => (Anchor::TOP, Anchor::LEFT | Anchor::RIGHT),
+                Position::Bottom => (Anchor::BOTTOM, Anchor::LEFT | Anchor::RIGHT),
+                Position::Left => (Anchor::LEFT, Anchor::TOP | Anchor::BOTTOM),
+                Position::Right => (Anchor::RIGHT, Anchor::TOP | Anchor::BOTTOM)
             };
-
-            assert!(menu_settings(None).anchor.contains(edge));
-            assert!(tooltip_settings(None).anchor.contains(edge));
-            assert!(notifications_settings(None, position).anchor.contains(edge));
-            assert!(
-                notifications_settings(None, position)
-                    .anchor
-                    .contains(Anchor::RIGHT)
-            );
 
             let bar = main_settings(
                 AppearanceStyle::Islands,
@@ -257,8 +271,21 @@ mod tests {
             );
 
             assert!(bar.anchor.contains(edge));
-            assert!(bar.anchor.contains(Anchor::LEFT | Anchor::RIGHT));
+            assert!(bar.anchor.contains(cross));
         }
+
+        // notifications avoid the right bar and follow top/bottom bars
+        for position in [Position::Top, Position::Left] {
+            let anchor = notifications_settings(None, position).anchor;
+            assert!(anchor.contains(Anchor::TOP));
+            assert!(anchor.contains(Anchor::RIGHT));
+        }
+        let bottom = notifications_settings(None, Position::Bottom).anchor;
+        assert!(bottom.contains(Anchor::BOTTOM));
+        assert!(bottom.contains(Anchor::RIGHT));
+        let right = notifications_settings(None, Position::Right).anchor;
+        assert!(right.contains(Anchor::TOP));
+        assert!(right.contains(Anchor::LEFT));
     }
 
     #[test]

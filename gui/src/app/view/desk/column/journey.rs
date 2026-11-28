@@ -107,8 +107,7 @@ impl App {
         self.outputs
             .screen_of(id)
             .flatten()
-            .and_then(|screen| self.screen.strip_rows.get(screen))
-            .copied()
-            .unwrap_or_default()
+            .and_then(|screen| self.screen.strip_positions.get(screen))
+            .map_or(0.0, |(_, y)| *y)
     }
 }

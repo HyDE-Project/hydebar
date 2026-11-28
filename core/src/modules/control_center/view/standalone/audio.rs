@@ -65,11 +65,11 @@ impl ControlCenter {
         });
 
         let (top_sink_slider, bottom_sink_slider) = match position {
-            Position::Top => (sink_slider, None),
+            Position::Top | Position::Left | Position::Right => (sink_slider, None),
             Position::Bottom => (None, sink_slider)
         };
         let (top_source_slider, bottom_source_slider) = match position {
-            Position::Top => (source_slider, None),
+            Position::Top | Position::Left | Position::Right => (source_slider, None),
             Position::Bottom => (None, source_slider)
         };
 

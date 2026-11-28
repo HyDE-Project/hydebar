@@ -97,24 +97,33 @@ pub fn frame_pieces(
             .then_some(edge.width.unwrap_or(frame.thickness))
             .filter(|width| *width > 0.0)
     };
-    let band = matches!(dock, Position::Top | Position::Bottom);
-    let band_height = if band { bar_height.max(0.0) } else { 0.0 };
-    let band_offset = if band { bar_offset.max(0.0) } else { 0.0 };
-    let band_reach = (band_offset + band_height).min(if band { screen_h } else { 0.0 });
 
     let mut top = inset(&frame.edges.top).unwrap_or(0.0);
     let mut bottom = inset(&frame.edges.bottom).unwrap_or(0.0);
+    let mut left = inset(&frame.edges.left).unwrap_or(0.0);
+    let mut right = inset(&frame.edges.right).unwrap_or(0.0);
 
-    if matches!(dock, Position::Top) {
-        top = top.max(band_reach);
+    let horizontal = matches!(dock, Position::Top | Position::Bottom);
+    let vertical = matches!(dock, Position::Left | Position::Right);
+    let band_thickness = if horizontal || vertical {
+        bar_height.max(0.0)
+    } else {
+        0.0
+    };
+    let band_offset = if horizontal || vertical {
+        bar_offset.max(0.0)
+    } else {
+        0.0
+    };
+    let band_span = if horizontal { screen_h } else { screen_w };
+    let band_reach = (band_offset + band_thickness).min(band_span);
+
+    match dock {
+        Position::Top => top = top.max(band_reach),
+        Position::Bottom => bottom = bottom.max(band_reach),
+        Position::Left => left = left.max(band_reach),
+        Position::Right => right = right.max(band_reach)
     }
-
-    if matches!(dock, Position::Bottom) {
-        bottom = bottom.max(band_reach);
-    }
-
-    let left = inset(&frame.edges.left).unwrap_or(0.0);
-    let right = inset(&frame.edges.right).unwrap_or(0.0);
 
     let outer = FramePiece {
         x: 0.0,
@@ -139,50 +148,14 @@ pub fn frame_pieces(
         bottom_left:  radius_in(radius, left, bottom, hole_clamp)
     };
 
-    let mut cuts = Vec::new();
-
-    if band_offset > 0.0 {
-        let clamped = band_offset.min(screen_h);
-
-        cuts.push(if matches!(dock, Position::Top) {
-            FramePiece {
-                x: 0.0,
-                y: 0.0,
-                w: screen_w,
-                h: clamped,
-                ..FramePiece::default()
-            }
-        } else {
-            FramePiece {
-                x: 0.0,
-                y: screen_h - clamped,
-                w: screen_w,
-                h: clamped,
-                ..FramePiece::default()
-            }
-        });
-    }
-
-    if band_height > 0.0 {
-        let (bar_y, bar_h) = match dock {
-            Position::Top => (band_offset, band_height.min(screen_h)),
-            Position::Bottom => {
-                let bar_y = (screen_h - band_offset - band_height).max(0.0);
-                let available = (screen_h - band_offset - bar_y).max(0.0);
-                (bar_y, band_height.min(screen_h).min(available))
-            }
-        };
-
-        if bar_h > 0.0 {
-            cuts.push(FramePiece {
-                x: left,
-                y: bar_y,
-                w: hole_w,
-                h: bar_h,
-                ..FramePiece::default()
-            });
-        }
-    }
+    let cuts = band_cuts(
+        dock,
+        band_thickness,
+        band_offset,
+        screen_w,
+        screen_h,
+        &inner
+    );
 
     FrameShape {
         outer,
@@ -191,6 +164,109 @@ pub fn frame_pieces(
     }
 }
 
+fn band_cuts(
+    dock: Position,
+    band_thickness: f32,
+    band_offset: f32,
+    screen_w: f32,
+    screen_h: f32,
+    inner: &FramePiece
+) -> Vec<FramePiece> {
+    let mut cuts = Vec::new();
+    let horizontal = matches!(dock, Position::Top | Position::Bottom);
+    let band_span = if horizontal { screen_h } else { screen_w };
+
+    if band_offset > 0.0 {
+        let clamped = band_offset.min(band_span);
+        let cut = match dock {
+            Position::Top => FramePiece {
+                x: 0.0,
+                y: 0.0,
+                w: screen_w,
+                h: clamped,
+                ..FramePiece::default()
+            },
+            Position::Bottom => FramePiece {
+                x: 0.0,
+                y: screen_h - clamped,
+                w: screen_w,
+                h: clamped,
+                ..FramePiece::default()
+            },
+            Position::Left => FramePiece {
+                x: 0.0,
+                y: 0.0,
+                w: clamped,
+                h: screen_h,
+                ..FramePiece::default()
+            },
+            Position::Right => FramePiece {
+                x: screen_w - clamped,
+                y: 0.0,
+                w: clamped,
+                h: screen_h,
+                ..FramePiece::default()
+            }
+        };
+        cuts.push(cut);
+    }
+
+    if band_thickness > 0.0 {
+        let cut = match dock {
+            Position::Top => {
+                let bar_y = band_offset;
+                let bar_h = band_thickness.min(screen_h);
+                FramePiece {
+                    x: inner.x,
+                    y: bar_y,
+                    w: inner.w,
+                    h: bar_h,
+                    ..FramePiece::default()
+                }
+            }
+            Position::Bottom => {
+                let bar_y = (screen_h - band_offset - band_thickness).max(0.0);
+                let available = (screen_h - band_offset - bar_y).max(0.0);
+                let bar_h = band_thickness.min(screen_h).min(available);
+                FramePiece {
+                    x: inner.x,
+                    y: bar_y,
+                    w: inner.w,
+                    h: bar_h,
+                    ..FramePiece::default()
+                }
+            }
+            Position::Left => {
+                let bar_x = band_offset;
+                let bar_w = band_thickness.min(screen_w);
+                FramePiece {
+                    x: bar_x,
+                    y: inner.y,
+                    w: bar_w,
+                    h: inner.h,
+                    ..FramePiece::default()
+                }
+            }
+            Position::Right => {
+                let bar_x = (screen_w - band_offset - band_thickness).max(0.0);
+                let available = (screen_w - band_offset - bar_x).max(0.0);
+                let bar_w = band_thickness.min(screen_w).min(available);
+                FramePiece {
+                    x: bar_x,
+                    y: inner.y,
+                    w: bar_w,
+                    h: inner.h,
+                    ..FramePiece::default()
+                }
+            }
+        };
+        if cut.w > 0.0 && cut.h > 0.0 {
+            cuts.push(cut);
+        }
+    }
+
+    cuts
+}
 /// Radius of an inner corner: the configured rounding, where the content
 /// hole has two drawn sides to round between; a corner one side gives way
 /// on stays square.
@@ -700,7 +776,12 @@ mod tests {
         // the even-odd fill clears each exactly once only while the cuts and
         // the hole stay disjoint: the hole's docked inset always reaches the
         // bar's far edge, wherever the bar stands
-        for dock in [Position::Top, Position::Bottom] {
+        for dock in [
+            Position::Top,
+            Position::Bottom,
+            Position::Left,
+            Position::Right
+        ] {
             for offset in [0.0, 38.0] {
                 let shape = frame_pieces(
                     1920.0,
@@ -724,10 +805,15 @@ mod tests {
                     assert!(clear, "the cut {cut:?} overlaps the hole");
                 }
 
-                if dock == Position::Top {
-                    assert!(shape.inner.y >= 38.0 + offset);
-                } else {
-                    assert!(shape.inner.y + shape.inner.h <= 1080.0 - 38.0 - offset);
+                match dock {
+                    Position::Top => assert!(shape.inner.y >= 38.0 + offset),
+                    Position::Bottom => {
+                        assert!(shape.inner.y + shape.inner.h <= 1080.0 - 38.0 - offset);
+                    }
+                    Position::Left => assert!(shape.inner.x >= 38.0 + offset),
+                    Position::Right => {
+                        assert!(shape.inner.x + shape.inner.w <= 1920.0 - 38.0 - offset);
+                    }
                 }
             }
         }

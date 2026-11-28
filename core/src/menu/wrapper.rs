@@ -76,6 +76,68 @@ pub fn grown_height(content: f32, padding: f32, cap: Option<f32>, progress: f32)
     rest * progress.clamp(0.0, 1.0)
 }
 
+/// Computes the outer padding that places the menu against the bar edge.
+fn menu_padding(
+    layout: &MenuLayout,
+    inner_padding: f32,
+    growing: Option<f32>,
+    overflows: bool,
+    width: f32,
+    viewport_width: f32,
+    button_ui_ref: &ButtonUIRef
+) -> Padding {
+    let edge_gap = match layout.style {
+        AppearanceStyle::Solid | AppearanceStyle::Gradient => 2.0,
+        AppearanceStyle::Islands => 0.0
+    };
+
+    let slide = SLIDE_EM * layout.font_size * (1.0 - layout.progress.clamp(0.0, 1.0));
+    let menu_height = growing.unwrap_or_else(|| {
+        if overflows {
+            layout
+                .available_height
+                .unwrap_or_else(|| MenuSize::max_height(button_ui_ref.viewport.1))
+        } else {
+            inner_padding.mul_add(2.0, layout.content_height.unwrap_or(0.0))
+        }
+    });
+
+    match layout.bar_position {
+        Position::Top => Padding::new(0.)
+            .top(edge_gap + slide)
+            .left(MenuSize::left_offset(
+                width,
+                button_ui_ref.position.x,
+                viewport_width,
+                layout.font_size
+            )),
+        Position::Bottom => Padding::new(0.)
+            .bottom(edge_gap + slide)
+            .left(MenuSize::left_offset(
+                width,
+                button_ui_ref.position.x,
+                viewport_width,
+                layout.font_size
+            )),
+        Position::Left => Padding::new(0.)
+            .left(edge_gap + slide)
+            .top(MenuSize::top_offset(
+                menu_height,
+                button_ui_ref.position.y,
+                button_ui_ref.viewport.1,
+                layout.font_size
+            )),
+        Position::Right => Padding::new(0.)
+            .right(edge_gap + slide)
+            .top(MenuSize::top_offset(
+                menu_height,
+                button_ui_ref.position.y,
+                button_ui_ref.viewport.1,
+                layout.font_size
+            ))
+    }
+}
+
 /// Wraps `content` into a menu box anchored under `button_ui_ref`.
 ///
 /// The box takes the width `menu_size` asks for on the output it lands on,
@@ -145,37 +207,23 @@ pub fn menu_wrapper<Message: Clone + 'static>(
                 .on_press(none_message.clone())
                 .on_right_press(none_message)
         )
+        .align_x(match layout.bar_position {
+            Position::Top | Position::Bottom | Position::Left => Horizontal::Left,
+            Position::Right => Horizontal::Right
+        })
         .align_y(match layout.bar_position {
-            Position::Top => Vertical::Top,
+            Position::Top | Position::Left | Position::Right => Vertical::Top,
             Position::Bottom => Vertical::Bottom
         })
-        .align_x(Horizontal::Left)
-        .padding({
-            let edge_gap = match layout.style {
-                AppearanceStyle::Solid | AppearanceStyle::Gradient => 2.0,
-                AppearanceStyle::Islands => 0.0
-            };
-
-            let slide = SLIDE_EM * layout.font_size * (1.0 - layout.progress.clamp(0.0, 1.0));
-
-            Padding::new(0.)
-                .top(if layout.bar_position == Position::Top {
-                    edge_gap + slide
-                } else {
-                    0.0
-                })
-                .bottom(if layout.bar_position == Position::Bottom {
-                    edge_gap + slide
-                } else {
-                    0.0
-                })
-                .left(MenuSize::left_offset(
-                    width,
-                    button_ui_ref.position.x,
-                    viewport_width,
-                    layout.font_size
-                ))
-        })
+        .padding(menu_padding(
+            &layout,
+            padding,
+            growing,
+            overflows,
+            width,
+            viewport_width,
+            &button_ui_ref
+        ))
         .width(Length::Fill)
         .height(Length::Fill)
         .style(menu_backdrop_style(

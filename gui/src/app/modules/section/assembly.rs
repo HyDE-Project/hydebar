@@ -1,6 +1,6 @@
 //! Assembly of the module strip of one bar section.
 
-use hydebar_core::config::ModuleDef;
+use hydebar_core::config::{ModuleDef, Position};
 use iced::{Element, SurfaceId as Id};
 
 use crate::app::state::{App, Message};
@@ -41,6 +41,8 @@ impl App {
         let finish = hydebar_core::style::IslandFinish::of(appearance);
         let radius = appearance.pill_radius();
 
+        let is_vertical = matches!(self.config.position, Position::Left | Position::Right);
+
         let mut strip = Archipelago::new(
             appearance.island_gap(),
             appearance.island_padding()[1],
@@ -54,7 +56,8 @@ impl App {
                 }),
                 AppearanceStyle::Solid | AppearanceStyle::Gradient => None
             }
-        );
+        )
+        .vertical(is_vertical);
 
         let total = self.island_count().max(1) as f32;
         let places = modules_def.iter().flat_map(Self::members).count();

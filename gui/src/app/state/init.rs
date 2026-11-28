@@ -64,7 +64,7 @@ fn initial_screen() -> Screen {
         height:               None,
         width:                None,
         sizes:                HashMap::new(),
-        strip_rows:           HashMap::new(),
+        strip_positions:      HashMap::new(),
         magnification:        hydebar_core::components::scale::screen_factor(),
         stated_layer_metrics: None
     }

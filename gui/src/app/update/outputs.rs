@@ -28,8 +28,8 @@ impl App {
                 Task::none()
             }
             Message::StripRowsMeasured(rows) => {
-                if !rows.is_empty() && self.screen.strip_rows != rows {
-                    self.screen.strip_rows = rows;
+                if !rows.is_empty() && self.screen.strip_positions != rows {
+                    self.screen.strip_positions = rows;
                 }
 
                 self.unfold_desk()
@@ -82,7 +82,7 @@ impl App {
             };
 
             let rows = Task::perform(
-                hydebar_core::outputs::perch::strip_rows_settled(),
+                hydebar_core::outputs::perch::strip_positions_settled(),
                 Message::StripRowsMeasured
             );
 

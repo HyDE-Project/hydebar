@@ -15,7 +15,23 @@ use super::builder::Centerbox;
 /// The edges are measured first so the centre section only ever claims what is
 /// left of the row, and the right section is anchored at the end of the content
 /// box instead of after its own siblings.
-pub(super) fn layout<'a, Message, Theme, Renderer>(
+pub(super) fn layout<Message, Theme, Renderer>(
+    centerbox: &mut Centerbox<'_, Message, Theme, Renderer>,
+    tree: &mut Tree,
+    renderer: &Renderer,
+    limits: &Limits
+) -> Node
+where
+    Renderer: iced::advanced::Renderer
+{
+    if centerbox.vertical {
+        layout_vertical(centerbox, tree, renderer, limits)
+    } else {
+        layout_horizontal(centerbox, tree, renderer, limits)
+    }
+}
+
+fn layout_horizontal<'a, Message, Theme, Renderer>(
     centerbox: &mut Centerbox<'a, Message, Theme, Renderer>,
     tree: &mut Tree,
     renderer: &Renderer,
@@ -122,6 +138,122 @@ where
         nodes[0].size().width + nodes[1].size().width + nodes[2].size().width + total_spacing;
 
     let (intrinsic_width, intrinsic_height) = (main, cross);
+    let size = limits.resolve(
+        centerbox.width,
+        centerbox.height,
+        Size::new(intrinsic_width, intrinsic_height)
+    );
+
+    Node::with_children(size.expand(centerbox.padding), nodes.into())
+}
+
+fn layout_vertical<'a, Message, Theme, Renderer>(
+    centerbox: &mut Centerbox<'a, Message, Theme, Renderer>,
+    tree: &mut Tree,
+    renderer: &Renderer,
+    limits: &Limits
+) -> Node
+where
+    Renderer: iced::advanced::Renderer
+{
+    let limits = limits
+        .width(centerbox.width)
+        .height(centerbox.height)
+        .shrink(centerbox.padding);
+
+    let total_spacing = centerbox.spacing * f32::from(3_u8.saturating_sub(1));
+    let max_cross = limits.max().width;
+
+    let mut cross = match centerbox.width {
+        Length::Shrink => 0.0,
+        _ => max_cross
+    };
+
+    let available = limits.max().height - total_spacing;
+
+    let mut nodes = [Node::default(), Node::default(), Node::default()];
+
+    let mut remaining = match centerbox.height {
+        Length::Shrink => 0.0,
+        _ => available.max(0.0)
+    };
+
+    let mut calculate_edge_layout = |i: usize,
+                                     (child, tree): (
+        &mut iced_core::Element<'a, Message, Theme, Renderer>,
+        &mut Tree
+    )| {
+        let fill_cross_factor = {
+            let size = child.as_widget_mut().size();
+
+            size.width.fill_factor()
+        };
+
+        let (max_width, max_height) = (
+            if fill_cross_factor != 0 {
+                cross
+            } else {
+                max_cross
+            },
+            remaining
+        );
+
+        let child_limits = Limits::new(Size::ZERO, Size::new(max_width, max_height));
+
+        let layout = child.as_widget_mut().layout(tree, renderer, &child_limits);
+        let size = layout.size();
+
+        remaining -= size.height;
+        cross = cross.max(size.width);
+
+        nodes[i] = layout;
+    };
+
+    calculate_edge_layout(0, (&mut centerbox.children[0], &mut tree.children[0]));
+    calculate_edge_layout(2, (&mut centerbox.children[2], &mut tree.children[2]));
+    calculate_edge_layout(1, (&mut centerbox.children[1], &mut tree.children[1]));
+
+    let content_start = centerbox.padding.top;
+    let content_end = content_start + limits.max().height;
+
+    nodes[0].move_to_mut(Point::new(centerbox.padding.left, content_start));
+    nodes[0].align_mut(
+        centerbox.align_items,
+        Alignment::Start,
+        Size::new(cross, 0.0)
+    );
+    nodes[2].move_to_mut(Point::new(centerbox.padding.left, content_end));
+    nodes[2].align_mut(centerbox.align_items, Alignment::End, Size::new(cross, 0.0));
+
+    let half_available = available / 2.0;
+    let half_center_height = nodes[1].size().height / 2.0;
+
+    if half_available - nodes[0].size().height < half_center_height
+        || half_available - nodes[2].size().height < half_center_height
+    {
+        nodes[1].move_to_mut(Point::new(
+            centerbox.padding.left,
+            content_start
+                + centerbox.spacing
+                + nodes[0].size().height
+                + (available - nodes[0].size().height - nodes[2].size().height) / 2.0
+        ));
+    } else {
+        nodes[1].move_to_mut(Point::new(
+            centerbox.padding.left,
+            f32::midpoint(content_start, content_end)
+        ));
+    }
+    nodes[1].align_mut(
+        centerbox.align_items,
+        Alignment::Center,
+        Size::new(cross, 0.0)
+    );
+
+    let main =
+        nodes[0].size().height + nodes[1].size().height + nodes[2].size().height + total_spacing;
+
+    let (intrinsic_width, intrinsic_height) = (cross, main);
     let size = limits.resolve(
         centerbox.width,
         centerbox.height,

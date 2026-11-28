@@ -35,7 +35,7 @@ pub enum Message {
         geometry: Option<hydebar_core::outputs::scaling::ScreenGeometry>
     },
     /// The compositor answered where the bar's own strip stands.
-    StripRowsMeasured(std::collections::HashMap<String, f32>),
+    StripRowsMeasured(std::collections::HashMap<String, (f32, f32)>),
     /// The wallpaper in force was read off the disk, ready to draw.
     WallpaperRead(Option<(std::path::PathBuf, iced::widget::image::Handle)>),
     /// The pictures the desktop keeps of its own look were read off the disk.

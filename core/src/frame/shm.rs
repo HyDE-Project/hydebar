@@ -281,15 +281,11 @@ impl App {
         thickness: u32
     ) {
         let bar_margin = self.bar_height.round().to_i32().unwrap_or(0);
-        let top_margin = if self.dock == Position::Top {
-            bar_margin
-        } else {
-            0
-        };
-        let bottom_margin = if self.dock == Position::Bottom {
-            bar_margin
-        } else {
-            0
+        let (top_margin, right_margin, bottom_margin, left_margin) = match self.dock {
+            Position::Top => (bar_margin, 0, 0, 0),
+            Position::Bottom => (0, 0, bar_margin, 0),
+            Position::Left => (0, 0, 0, bar_margin),
+            Position::Right => (0, bar_margin, 0, 0)
         };
 
         let edges: &[(SurfaceKind, Anchor, i32, i32, i32, i32)] = &[
@@ -313,17 +309,17 @@ impl App {
                 SurfaceKind::StripTop,
                 Anchor::TOP | Anchor::LEFT | Anchor::RIGHT,
                 0,
+                right_margin,
                 0,
-                0,
-                0
+                left_margin
             ),
             (
                 SurfaceKind::StripBottom,
                 Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT,
                 0,
+                right_margin,
                 0,
-                0,
-                0
+                left_margin
             )
         ];
 

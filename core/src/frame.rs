@@ -87,10 +87,11 @@ pub fn panel_widths(frame: &FrameConfig, dock: Position, scale_factor: f64) -> P
         }
     };
 
-    let docked = if dock == Position::Top {
-        |panel: &mut PanelWidths| panel.top = 0
-    } else {
-        |panel: &mut PanelWidths| panel.bottom = 0
+    let docked = match dock {
+        Position::Top => |panel: &mut PanelWidths| panel.top = 0,
+        Position::Bottom => |panel: &mut PanelWidths| panel.bottom = 0,
+        Position::Left => |panel: &mut PanelWidths| panel.left = 0,
+        Position::Right => |panel: &mut PanelWidths| panel.right = 0
     };
 
     let mut widths = PanelWidths {

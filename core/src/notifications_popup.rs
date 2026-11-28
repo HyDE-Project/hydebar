@@ -221,7 +221,7 @@ pub fn view<'a, Message: 'a>(
         .padding(gap)
         .align_x(Horizontal::Right)
         .align_y(match bar_position {
-            Position::Top => Vertical::Top,
+            Position::Top | Position::Left | Position::Right => Vertical::Top,
             Position::Bottom => Vertical::Bottom
         })
         .width(Length::Fill)

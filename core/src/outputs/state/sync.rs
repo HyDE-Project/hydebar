@@ -117,14 +117,13 @@ impl Outputs {
                 shell_info.id, position
             );
             shell_info.position = position;
-            tasks.push(set_anchor(
-                shell_info.id,
-                match position {
-                    Position::Top => Anchor::TOP,
-                    Position::Bottom => Anchor::BOTTOM
-                } | Anchor::LEFT
-                    | Anchor::RIGHT
-            ));
+            let anchor = match position {
+                Position::Top => Anchor::TOP | Anchor::LEFT | Anchor::RIGHT,
+                Position::Bottom => Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT,
+                Position::Left => Anchor::LEFT | Anchor::TOP | Anchor::BOTTOM,
+                Position::Right => Anchor::RIGHT | Anchor::TOP | Anchor::BOTTOM
+            };
+            tasks.push(set_anchor(shell_info.id, anchor));
         }
 
         #[expect(

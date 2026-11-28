@@ -90,12 +90,10 @@ impl App {
     /// counts what the screen leaves below it. A screen whose strip was never
     /// measured has nothing before the bar: the band stands on the edge.
     fn bar_offset(&self, screen: &str, bar_height: f32) -> f32 {
+        let position = self.screen.strip_positions.get(screen).copied();
         match self.config.position {
-            Position::Top => self.screen.strip_rows.get(screen).copied().unwrap_or(0.0),
-            Position::Bottom => self
-                .screen
-                .strip_rows
-                .get(screen)
+            Position::Top => position.map_or(0.0, |(_, y)| y),
+            Position::Bottom => position
                 .zip(
                     self.screen
                         .sizes
@@ -103,7 +101,17 @@ impl App {
                         .map(|(_, height)| *height)
                         .or(self.screen.height)
                 )
-                .map_or(0.0, |(row, height)| (height - row - bar_height).max(0.0))
+                .map_or(0.0, |((_, y), height)| (height - y - bar_height).max(0.0)),
+            Position::Left => position.map_or(0.0, |(x, _)| x),
+            Position::Right => position
+                .zip(
+                    self.screen
+                        .sizes
+                        .get(screen)
+                        .map(|(width, _)| *width)
+                        .or(self.screen.width)
+                )
+                .map_or(0.0, |((x, _), width)| (width - x - bar_height).max(0.0))
         }
     }
 }

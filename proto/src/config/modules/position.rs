@@ -10,7 +10,11 @@ pub enum Position {
     #[default]
     Top,
     /// Render the bar at the bottom of the output.
-    Bottom
+    Bottom,
+    /// Render the bar on the left of the output.
+    Left,
+    /// Render the bar on the right of the output.
+    Right
 }
 
 /// Compositor layer the bar surface is placed on.

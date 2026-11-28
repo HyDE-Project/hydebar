@@ -29,13 +29,13 @@ pub struct Screen {
     /// the desk and the islands travel with, but the frame of a screen is a
     /// shape of that screen and no other.
     pub(crate) sizes:                HashMap<String, (f32, f32)>,
-    /// The row the strip stands on, screen by screen, as last measured.
+    /// The origin the strip stands at, screen by screen, as last measured.
     ///
     /// The canvas covers the screen from its very top and the strip does not
-    /// have to: a layer surface is never told its own place, so the row the
-    /// modules leave is asked of the compositor rather than assumed. Absent
-    /// until the first answer, which reads as a strip at the top.
-    pub(crate) strip_rows:           HashMap<String, f32>,
+    /// have to: a layer surface is never told its own place, so the position
+    /// the modules leave is asked of the compositor rather than assumed.
+    /// Absent until the first answer, which reads as a strip at the edge.
+    pub(crate) strip_positions:      HashMap<String, (f32, f32)>,
     /// Factor the screen calls for, folded into every configuration loaded.
     pub(crate) magnification:        f32,
     /// The layer metrics last stated to the compositor.
