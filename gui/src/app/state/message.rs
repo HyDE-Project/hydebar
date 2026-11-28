@@ -66,7 +66,9 @@ pub enum Message {
         /// Whether the pointer is on the module now.
         entered: bool,
         /// Hint to show while it rests there, absent when it publishes none.
-        tooltip: Option<TooltipInfo>
+        tooltip: Option<TooltipInfo>,
+        /// On-screen reference of the module, for menu switching on hover.
+        anchor:  Option<ButtonUIRef>
     },
     /// The slow clock came due for the modules resting on the bar.
     PollAtRest,

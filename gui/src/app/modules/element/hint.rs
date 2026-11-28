@@ -103,14 +103,15 @@ impl App {
     ) -> Element<'a, Message> {
         tooltip_anchor(module, move |anchor| Message::ModuleHover {
             surface: id,
-            module:  module_name.clone(),
+            module: module_name.clone(),
             entered: anchor.is_some(),
             tooltip: anchor
                 .zip(anchor.and_then(|_| self.module_tooltip(module_name).flatten()))
                 .map(|(anchor, text)| TooltipInfo {
                     text,
                     anchor
-                })
+                }),
+            anchor
         })
         .into()
     }

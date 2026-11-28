@@ -1,4 +1,4 @@
-use iced::{Border, Theme, widget::container::Style};
+use iced::{Border, Color, Theme, widget::container::Style};
 
 use super::theme::backdrop_color;
 use crate::config::Position;
@@ -51,25 +51,33 @@ pub fn menu_container_style(
         let adopted = finish.border(radius);
         let joined = joined_radius(radius, bar_position);
 
+        let border = if adopted.width > 0.0 {
+            Border {
+                radius: joined,
+                ..adopted
+            }
+        } else if bar_position.is_some() {
+            Border {
+                color:  Color::TRANSPARENT,
+                width:  0.0,
+                radius: joined
+            }
+        } else {
+            Border {
+                color:  theme
+                    .extended_palette()
+                    .secondary
+                    .base
+                    .color
+                    .scale_alpha(opacity),
+                width:  1.0,
+                radius: joined
+            }
+        };
+
         Style {
             background: Some(theme.palette().background.scale_alpha(opacity).into()),
-            border: if adopted.width > 0.0 {
-                Border {
-                    radius: joined,
-                    ..adopted
-                }
-            } else {
-                Border {
-                    color:  theme
-                        .extended_palette()
-                        .secondary
-                        .base
-                        .color
-                        .scale_alpha(opacity),
-                    width:  1.0,
-                    radius: joined
-                }
-            },
+            border,
             shadow: finish.shadow(),
             ..Style::default()
         }

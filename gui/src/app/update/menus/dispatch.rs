@@ -12,8 +12,9 @@ impl App {
                 surface,
                 module,
                 entered,
-                tooltip
-            } => self.on_module_hover(surface, module, entered, tooltip),
+                tooltip,
+                anchor
+            } => self.on_module_hover(surface, module, entered, tooltip, anchor),
             Message::ToggleMenu(menu_type, id, button_ui_ref) => {
                 self.on_toggle_menu(menu_type, id, button_ui_ref)
             }
