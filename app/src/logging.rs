@@ -42,9 +42,28 @@ fn base_filter(extra: Option<&str>) -> EnvFilter {
         directives.push_str(extra);
     }
 
-    EnvFilter::try_from_default_env()
+    let mut filter = EnvFilter::try_from_default_env()
         .or_else(|_| EnvFilter::try_new(&directives))
-        .unwrap_or_else(|_| EnvFilter::new("info"))
+        .unwrap_or_else(|_| EnvFilter::new("info"));
+
+    for quiet in [
+        "sctk=off",
+        "calloop=off",
+        "calloop_wayland_source=off",
+        "smithay=off",
+        "smithay_clipboard=off",
+        "wgpu=off",
+        "wgpu_hal=off",
+        "wgpu_core=off",
+        "iced_wgpu=off",
+        "cosmic_text=off"
+    ] {
+        if let Ok(directive) = quiet.parse::<tracing_subscriber::filter::Directive>() {
+            filter = filter.add_directive(directive);
+        }
+    }
+
+    filter
 }
 
 /// Starts `tracing`, installs the `log` bridge and panic hook, returns a
@@ -75,6 +94,7 @@ pub fn init() -> Logger {
         .with(file)
         .try_init();
     log::set_max_level(log::LevelFilter::Warn);
+    tracing::callsite::rebuild_interest_cache();
 
     panic::set_hook(Box::new(|info| {
         let backtrace = Backtrace::capture();
