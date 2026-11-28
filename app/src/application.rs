@@ -5,10 +5,10 @@ use std::{borrow::Cow, num::NonZeroUsize, path::PathBuf, sync::Arc};
 use clap::Parser;
 use hydebar_core::{
     adapters::hyprland_client::HyprlandClient,
-    config::{Config, ConfigManager, RendererChoice, config},
-    event_bus::EventBus
+    config::{config, Config, ConfigManager, RendererChoice},
+    event_bus::EventBus,
 };
-use hydebar_gui::{App, log_spec};
+use hydebar_gui::{log_spec, App};
 use hydebar_proto::ports::hyprland::HyprlandPort;
 use iced::{Anchor, Font, KeyboardInteractivity, Layer, LayerShellSettings, SurfaceId};
 use log::debug;
@@ -28,7 +28,7 @@ const LICENCE_NOTICE: &str = "hydebar is free software under the GNU General Pub
 #[command(version, about, long_about = None, after_help = LICENCE_NOTICE)]
 struct Args {
     #[arg(short, long, value_parser = clap::value_parser!(PathBuf))]
-    config_path: Option<PathBuf>
+    config_path: Option<PathBuf>,
 }
 
 /// Surrenders `deps` to the first boot call and refuses a second.
@@ -68,7 +68,7 @@ fn apply_screen_look(raw_config: &mut Config) {
 
     raw_config.appearance.adopt_screen(
         magnification,
-        &hydebar_proto::compositor_look::CompositorLook::read()
+        &hydebar_proto::compositor_look::CompositorLook::read(),
     );
 
     hydebar_core::components::scale::set_base(raw_config.appearance.font_size_px());
@@ -99,6 +99,66 @@ fn apply_renderer_choice(renderer: RendererChoice) {
     }
 }
 
+/// Whether a device type names real graphics hardware rather than a rasterizer.
+///
+/// `Cpu` is `lavapipe` or `SwiftShader`: a Vulkan device that exists but draws on
+/// the processor. Naming Vulkan for such a device would trade the OpenGL driver
+/// for software rasterization, which costs more, so only a real GPU counts.
+#[must_use]
+const fn is_hardware_vulkan(device_type: wgpu::DeviceType) -> bool {
+    !matches!(device_type, wgpu::DeviceType::Cpu)
+}
+
+/// Reports whether the machine exposes a hardware Vulkan device.
+///
+/// Builds a wgpu instance limited to the Vulkan backend and asks it what it
+/// finds. The answer is the driver's own, not a guess from files on disk, so a
+/// `true` here guarantees the renderer will find a Vulkan adapter moments
+/// later. Any failure — no Vulkan, a driver that will not load — reads as
+/// `false`, which leaves the bar on the backend it would have chosen anyway.
+fn hardware_vulkan_present() -> bool {
+    let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
+        backends: wgpu::Backends::VULKAN,
+        ..Default::default()
+    });
+
+    instance
+        .enumerate_adapters(wgpu::Backends::VULKAN)
+        .iter()
+        .any(|adapter| is_hardware_vulkan(adapter.get_info().device_type))
+}
+
+/// Points the GPU renderer at Vulkan so it stops loading OpenGL alongside it.
+///
+/// wgpu's automatic backend initializes every backend it was compiled with to
+/// enumerate adapters, which maps the Mesa OpenGL driver and starts its threads
+/// even when the bar ends up drawing on Vulkan. Naming Vulkan when a hardware
+/// Vulkan device is present leaves that driver unmapped — about nineteen MiB of
+/// resident memory and two threads on a typical machine. When no hardware
+/// Vulkan device answers, the variable is left alone and wgpu falls back to
+/// OpenGL as before, so a machine without Vulkan loses nothing. A
+/// `WGPU_BACKEND` already in the environment wins: it is what a packager or a
+/// debugging user sets to overrule the probe.
+fn prefer_vulkan_backend(renderer: RendererChoice) {
+    if matches!(renderer, RendererChoice::Cpu) {
+        return;
+    }
+
+    if std::env::var_os("WGPU_BACKEND").is_some() {
+        return;
+    }
+
+    if hardware_vulkan_present() {
+        #[expect(
+            unsafe_code,
+            reason = "applied before the renderer reads it; the live runtime workers never touch the environment"
+        )]
+        unsafe {
+            std::env::set_var("WGPU_BACKEND", "vulkan");
+        }
+    }
+}
+
 /// Reads the configuration, becomes the single instance and runs the bar.
 ///
 /// The bridge's own first surface is not one of the bar's: it is parked as an
@@ -120,6 +180,7 @@ pub fn run(runtime_handle: Handle) -> Result<(), MainError> {
     let mut raw_config = raw_config;
     apply_screen_look(&mut raw_config);
     apply_renderer_choice(raw_config.renderer);
+    prefer_vulkan_backend(raw_config.renderer);
 
     let config = Arc::new(raw_config);
     let config_manager = Arc::new(ConfigManager::new((*config).clone()));
@@ -150,15 +211,15 @@ pub fn run(runtime_handle: Handle) -> Result<(), MainError> {
             hyprland,
             event_sender,
             runtime_handle,
-            bus_receiver
+            bus_receiver,
         ),
-        App::new
+        App::new,
     );
 
     let outcome = iced::application(
         boot,
         |app: &mut App, message| app.update(message),
-        |app: &App, id| app.view(id)
+        |app: &App, id| app.view(id),
     )
     .layer_shell(LayerShellSettings {
         namespace: "hydebar-boot-layer".to_owned(),
@@ -183,4 +244,30 @@ pub fn run(runtime_handle: Handle) -> Result<(), MainError> {
     drop(instance_lock);
 
     outcome
+}
+
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
+mod tests {
+    use super::is_hardware_vulkan;
+
+    #[test]
+    fn a_software_rasterizer_is_not_counted_as_hardware() {
+        assert!(!is_hardware_vulkan(wgpu::DeviceType::Cpu));
+    }
+
+    #[test]
+    fn every_real_device_type_counts_as_hardware() {
+        for device_type in [
+            wgpu::DeviceType::DiscreteGpu,
+            wgpu::DeviceType::IntegratedGpu,
+            wgpu::DeviceType::VirtualGpu,
+            wgpu::DeviceType::Other,
+        ] {
+            assert!(
+                is_hardware_vulkan(device_type),
+                "{device_type:?} is hardware"
+            );
+        }
+    }
 }

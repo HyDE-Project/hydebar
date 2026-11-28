@@ -29,6 +29,7 @@ jiff = "1.0"
 serde = { version = "1", features = ["derive"] }
 sysinfo = "0.40"
 tokio = { version = "1", features = ["full", "test-util"] }
+wgpu = "27"
 zbus = { version = "6", default-features = false, features = [
   "tokio",
   "proxy",
