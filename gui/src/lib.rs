@@ -54,6 +54,7 @@ mod tests {
         assert_eq!(spec.level_for_module(None), Some(log::LevelFilter::Debug));
     }
 
+    #[cfg(debug_assertions)]
     #[test]
     fn the_bar_keeps_its_own_tracing_in_a_debug_build() {
         let spec = log_spec("warn");

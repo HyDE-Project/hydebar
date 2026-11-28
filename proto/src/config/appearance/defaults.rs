@@ -47,6 +47,10 @@ where
 {
     let value = f32::deserialize(deserializer)?;
 
+    if !value.is_finite() {
+        return Err(D::Error::custom("Spacing scale must be a finite number"));
+    }
+
     if value <= 0.0 {
         return Err(D::Error::custom("Spacing scale must be greater than 0.0"));
     }
@@ -122,6 +126,11 @@ mod tests {
         let err_large: DeError = spacing_scale_deserializer(F32Deserializer::<DeError>::new(2.5))
             .expect_err("spacing scale > 2 should error");
         assert!(err_large.to_string().contains("greater than 2.0"));
+
+        let err_nan: DeError =
+            spacing_scale_deserializer(F32Deserializer::<DeError>::new(f32::NAN))
+                .expect_err("non-finite spacing scale should error");
+        assert!(err_nan.to_string().contains("finite"));
     }
 
     #[test]

@@ -80,6 +80,10 @@ where
 {
     let value = f32::deserialize(deserializer)?;
 
+    if !value.is_finite() {
+        return Err(D::Error::custom("Damping ratio must be a finite number"));
+    }
+
     if value < 0.5 {
         return Err(D::Error::custom(
             "Damping ratio must be at least 0.5, or the spring overshoots enough to read as a toy"
@@ -141,5 +145,9 @@ mod tests {
         let err = toml::from_str::<AnimationConfig>("damping_ratio = 2.5")
             .expect_err("a damping ratio above 2 should error");
         assert!(err.to_string().contains("greater than 2.0"));
+
+        let err = toml::from_str::<AnimationConfig>("damping_ratio = nan")
+            .expect_err("a non-finite damping ratio should error");
+        assert!(err.to_string().contains("finite"));
     }
 }
