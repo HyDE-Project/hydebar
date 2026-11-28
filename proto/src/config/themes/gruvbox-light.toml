@@ -1,0 +1,36 @@
+# The light Gruvbox preset palette.
+#
+# A whole appearance table: every key the `[appearance]` section of
+# `config.toml` accepts works here, anything left out falls back to the
+# built-in defaults. Copy this file to start a custom theme.
+
+style = "Islands"
+opacity = 0.95
+bar_opacity = 0.0
+greeting = true
+follow_hyde = true
+auto_scale = false
+scale_factor = 1.0
+island_borders = false
+
+background_color = "#fbf1c7"
+primary_color = "#9d0006"
+secondary_color = "#076678"
+success_color = "#79740e"
+danger_color = "#cc241d"
+warning_color = "#fab387"
+text_color = "#3c3836"
+
+workspace_colors = [
+    "#076678",
+    "#9d0006",
+    "#8f3f71",
+    "#af3a03",
+    "#b57614",
+    "#79740e",
+]
+special_workspace_colors = ["#cc241d"]
+
+[menu]
+opacity = 0.95
+backdrop = 0.3

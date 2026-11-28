@@ -4,7 +4,7 @@ use iced::Task;
 use log::{debug, info, warn};
 
 use super::super::super::state::{App, Message};
-use crate::get_log_spec;
+use crate::log_spec;
 
 /// Builds the notice announcing `source`, for the bar to paint itself.
 fn announcement(
@@ -85,11 +85,12 @@ impl App {
 
         if source_changed {
             if config.notifications.source.draws_popups() {
-                self.notification_popups
-                    .push(hydebar_core::notifications_popup::Popup::new(
+                self.focus.notification_popups.push(
+                    hydebar_core::notifications_popup::Popup::new(
                         &announcement(config.notifications.source),
                         std::time::Instant::now()
-                    ));
+                    )
+                );
                 tasks.push(self.fit_notification_surface());
             } else {
                 hydebar_core::modules::settings::announce_source(
@@ -105,11 +106,15 @@ impl App {
         )]
         let outputs_need_sync = impact.outputs_changed
             || impact.position_changed
+            || impact.frame_changed
             || self.config.appearance.style != config.appearance.style
             || self.config.appearance.scale_factor != config.appearance.scale_factor;
 
         if outputs_need_sync {
             warn!("Outputs or layout changed, syncing");
+            if impact.position_changed {
+                hydebar_core::outputs::perch::invalidate_positions();
+            }
             tasks.push(self.outputs.sync(
                 config.appearance.style,
                 &config.outputs,
@@ -118,6 +123,10 @@ impl App {
                 self.config.appearance.scale_factor,
                 self.config.appearance.height_px()
             ));
+
+            for name in self.outputs.screens().flatten() {
+                tasks.push(super::super::outputs::measure_screen(name.to_owned()));
+            }
         }
 
         if impact.custom_modules_changed {
@@ -125,7 +134,7 @@ impl App {
         }
 
         self.config = config;
-        self.themes.refresh();
+        self.modules.themes.refresh();
         hydebar_core::outputs::restate_blur();
         let resize = self.refresh_appearance();
 
@@ -138,18 +147,15 @@ impl App {
             tasks.push(unfold);
         }
 
-        if (impact.layout_changed || impact.custom_modules_changed)
-            && self.config.appearance.animations.enabled
-        {
-            self.flip.borrow_mut().depart();
-            self.relayout = hydebar_core::animation::Spring::new(0.0)
+        if (impact.layout_changed || impact.custom_modules_changed) && self.animations_enabled() {
+            self.motion.flip.borrow_mut().depart();
+            self.motion.relayout = hydebar_core::animation::Spring::new(0.0)
                 .with_response(hydebar_core::animation::STANDARD);
-            self.relayout.set_target(1.0);
+            self.motion.relayout.set_target(1.0);
         }
 
         if impact.log_level_changed {
-            self.logger
-                .set_new_spec(get_log_spec(&self.config.log_level));
+            let _ = self.runtime.logger.reload(log_spec(&self.config.log_level));
         }
 
         tasks.push(resize);

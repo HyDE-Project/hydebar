@@ -1,5 +1,7 @@
 //! The shape one module takes once it is down on the canvas.
 
+use std::iter::once;
+
 use hydebar_core::config::ModuleName;
 use iced::{
     Element, Length, SurfaceId as Id,
@@ -106,7 +108,7 @@ impl App {
 
         Some(
             container(
-                Column::with_children(std::iter::once(named).chain(opened))
+                Column::with_children(once(named).chain(opened))
                     .spacing(ink.size * 0.9)
                     .width(Length::Fill)
                     .align_x(side.alignment_x())
@@ -280,7 +282,7 @@ impl App {
         bloom: f32
     ) -> Vec<Element<'a, Message>> {
         if matches!(module, ModuleName::Clock) {
-            return std::iter::once(blocks::month(self.desk_month(), ink, bloom))
+            return once(blocks::month(self.desk_month(), ink, bloom))
                 .chain(
                     super::super::readings::seat(self)
                         .into_iter()
@@ -323,7 +325,7 @@ impl App {
         bloom: f32
     ) -> Option<Element<'a, Message>> {
         let opacity = self.appearance().opacity;
-        let (content, action) = self.get_module_view(unit, id, opacity)?;
+        let (content, action) = self.module_view(unit, id, opacity)?;
         let actions = self.module_actions(unit, action);
 
         Some(self.desk_pill(
@@ -413,6 +415,9 @@ impl App {
     /// whole from the first frame was the one thing on the canvas that did
     /// not open.
     fn desk_month(&self) -> Element<'_, Message> {
-        self.calendar.menu_view(self.icons()).map(Message::Calendar)
+        self.modules
+            .calendar
+            .menu_view(self.icons())
+            .map(Message::Calendar)
     }
 }

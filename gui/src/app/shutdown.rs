@@ -6,7 +6,7 @@
 //! owned by the runtime, so only the update loop can take them off the screen
 //! before the process exits.
 
-use std::{any::TypeId, hash::Hash, thread, time::Duration};
+use std::{any::TypeId, hash::Hash, process::exit, thread, time::Duration};
 
 use iced::{
     Subscription,
@@ -37,7 +37,7 @@ const FLUSH_BACKSTOP: Duration = Duration::from_secs(2);
 pub(super) fn exit_now() -> ! {
     hydebar_core::utils::process_group::terminate_all();
     info!("surfaces removed, exiting");
-    std::process::exit(0);
+    exit(0);
 }
 
 /// Ends the process even if the surface-removal confirmation never arrives.
@@ -46,7 +46,7 @@ pub(super) fn exit_backstop() {
         thread::sleep(FLUSH_BACKSTOP);
         error!("surface removal was never confirmed, exiting anyway");
         hydebar_core::utils::process_group::terminate_all();
-        std::process::exit(0);
+        exit(0);
     });
 }
 

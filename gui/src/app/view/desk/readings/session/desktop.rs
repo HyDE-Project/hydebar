@@ -1,6 +1,6 @@
 //! The state of the desk itself: its keyboard, its sky, its tray, its look.
 
-use super::super::{Figure, Panel, push};
+use super::super::panel::{Figure, Panel, push};
 use crate::app::state::App;
 
 /// What the desktop's own menu offers, as a row of its glyphs.
@@ -10,14 +10,14 @@ use crate::app::state::App;
 /// the top level of the very menu it opens, in the glyphs the desktop draws
 /// it with.
 pub fn desktop_menu(app: &App) -> Option<Panel> {
-    let choices = app.hyde_menu.choices();
+    let choices = app.modules.hyde_menu.choices();
 
     (!choices.is_empty()).then(|| Panel::drawn("hyde menu", Vec::new(), Figure::Choices(choices)))
 }
 
 /// The keyboard layout in force.
 pub fn keyboard(app: &App) -> Option<Panel> {
-    let active = app.keyboard_layout.active_layout();
+    let active = app.modules.keyboard_layout.active_layout();
 
     if active.is_empty() {
         return None;
@@ -36,7 +36,7 @@ pub fn keyboard(app: &App) -> Option<Panel> {
 
 /// The sky over the configured place.
 pub fn weather(app: &App) -> Option<Panel> {
-    let sky = app.weather.data();
+    let sky = app.modules.weather.data();
 
     if !sky.has_reading() {
         return None;
@@ -56,7 +56,7 @@ pub fn weather(app: &App) -> Option<Panel> {
 
 /// The applications keeping an icon in the tray.
 pub fn tray(app: &App) -> Option<Panel> {
-    let service = app.tray.service.as_ref()?;
+    let service = app.modules.tray.service.as_ref()?;
 
     if service.data.is_empty() {
         return None;
@@ -85,7 +85,7 @@ pub fn tray(app: &App) -> Option<Panel> {
 /// too — the one in force big in the middle of the row, the neighbours it
 /// would step to on either side.
 pub fn theme(app: &App) -> Option<Panel> {
-    let hyde = app.themes.hyde();
+    let hyde = app.modules.themes.hyde();
     let reel = &app.looks.themes;
     let mut rows = Vec::new();
 
@@ -93,7 +93,7 @@ pub fn theme(app: &App) -> Option<Panel> {
     push(
         &mut rows,
         "switching to",
-        app.themes.switching().map(ToOwned::to_owned)
+        app.modules.themes.switching().map(ToOwned::to_owned)
     );
     rows.push((
         "colours".to_owned(),
@@ -114,7 +114,7 @@ pub fn theme(app: &App) -> Option<Panel> {
     Some(Panel::drawn(
         "theme",
         rows,
-        super::super::Figure::Accordion(reel.clone())
+        super::super::panel::Figure::Accordion(reel.clone())
     ))
 }
 
@@ -140,7 +140,7 @@ pub fn wallpaper(app: &App) -> Option<Panel> {
             Some((_, picture)) => Some(Panel::drawn(
                 "wallpaper",
                 rows,
-                super::super::Figure::Picture(picture.clone())
+                super::super::panel::Figure::Picture(picture.clone())
             )),
             None => Panel::of("wallpaper", rows)
         };
@@ -149,7 +149,7 @@ pub fn wallpaper(app: &App) -> Option<Panel> {
     Some(Panel::drawn(
         "wallpaper",
         rows,
-        super::super::Figure::Accordion(reel.clone())
+        super::super::panel::Figure::Accordion(reel.clone())
     ))
 }
 
@@ -185,8 +185,9 @@ pub fn seat(app: &App) -> Option<Panel> {
     push(
         &mut rows,
         "screen",
-        app.screen_width
-            .zip(app.screen_height)
+        app.screen
+            .width
+            .zip(app.screen.height)
             .map(|(width, height)| format!("{width:.0} × {height:.0}"))
     );
 
@@ -198,7 +199,7 @@ pub fn seat(app: &App) -> Option<Panel> {
 mod tests {
     use hydebar_core::modules::desk::looks::{Reel, Slide};
 
-    use super::{super::super::Figure, *};
+    use super::{super::super::panel::Figure, *};
     use crate::app::state::test_support::test_app;
 
     /// A one pixel picture: what is asserted is which pictures are drawn, not
@@ -277,7 +278,7 @@ mod tests {
         let panel = theme(&app).expect("a theme block");
 
         assert_eq!(panel.figure, None);
-        assert!(!panel.rows.is_empty());
+        assert_ne!(panel.rows, []);
     }
 
     /// One picture is not a reel: a place reads as a choice, and there is

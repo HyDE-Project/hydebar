@@ -38,11 +38,8 @@ impl ControlCenter {
         let connection_indicator = self
             .network
             .as_ref()
-            .and_then(|n| n.get_connection_indicator(icons));
-        let vpn_indicator = self
-            .network
-            .as_ref()
-            .and_then(|n| n.get_vpn_indicator(icons));
+            .and_then(|n| n.connection_indicator(icons));
+        let vpn_indicator = self.network.as_ref().and_then(|n| n.vpn_indicator(icons));
         let battery_indicator = self
             .upower
             .as_ref()

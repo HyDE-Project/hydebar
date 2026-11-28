@@ -99,7 +99,7 @@ mod tests {
 
     #[test]
     fn a_file_naming_only_known_settings_reports_nothing() {
-        assert!(unknown_keys("log_level = \"warn\"\n").is_empty());
+        assert_eq!(unknown_keys("log_level = \"warn\"\n"), [] as [String; 0]);
     }
 
     #[test]
@@ -149,7 +149,10 @@ mod tests {
 
     #[test]
     fn an_appearance_named_as_a_preset_reports_nothing() {
-        assert!(unknown_keys("appearance = \"catppuccin-mocha\"\n").is_empty());
+        assert_eq!(
+            unknown_keys("appearance = \"catppuccin-mocha\"\n"),
+            [] as [String; 0]
+        );
     }
 
     #[test]

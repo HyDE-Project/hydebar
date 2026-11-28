@@ -8,7 +8,7 @@ use super::super::{
     backend::{AudioBackend, BackendEvent, BackendHandle, PulseAudioBackend},
     model::{AudioData, AudioEvent, Device, Volume}
 };
-use crate::services::{ServiceEvent, ServiceEventPublisher};
+use crate::services::{ServiceEvent, ServiceEventPublisher, reconnect_delay};
 
 pub(super) enum State {
     Init,
@@ -33,7 +33,7 @@ impl AudioService {
             match &state {
                 State::Error => {
                     failures = failures.saturating_add(1);
-                    sleep(crate::services::reconnect_delay(failures)).await;
+                    sleep(reconnect_delay(failures)).await;
                 }
                 State::Active(_) => failures = 0,
                 State::Init => {}
@@ -130,7 +130,7 @@ impl AudioService {
                     Some(if device.is_mute {
                         0.0
                     } else {
-                        device.volume.get_volume()
+                        device.volume.volume()
                     })
                 } else {
                     None

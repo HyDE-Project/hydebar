@@ -70,7 +70,8 @@ pub struct Spring {
     target:        f32,
     response:      f32,
     damping_ratio: f32,
-    precision:     f32
+    precision:     f32,
+    exit:          bool
 }
 
 impl Spring {
@@ -83,7 +84,8 @@ impl Spring {
             target: value,
             response: DEFAULT_RESPONSE,
             damping_ratio: 1.0,
-            precision: DEFAULT_PRECISION
+            precision: DEFAULT_PRECISION,
+            exit: false
         }
     }
 
@@ -159,8 +161,43 @@ impl Spring {
     }
 
     /// Points the spring at `target`, preserving the current velocity.
+    ///
+    /// A fresh aim may bounce past its target when the damping allows it; a
+    /// departure should use [`Spring::set_exit_target`] instead.
     pub const fn set_target(&mut self, target: f32) {
         self.target = target;
+        self.exit = false;
+    }
+
+    /// Points the spring at `target` as a departure: this travel may not
+    /// overshoot.
+    ///
+    /// A closing surface that bounces past closed flashes back into view
+    /// before it disappears. The spring keeps its speed on the way out, but
+    /// the moment it reaches or crosses the target it settles there, so the
+    /// exit lands in one clean pass however bouncy the damping is.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::time::Duration;
+    ///
+    /// use hydebar_core::animation::Spring;
+    ///
+    /// let mut spring = Spring::new(1.0).with_damping_ratio(0.4);
+    /// spring.set_exit_target(0.0);
+    ///
+    /// let mut lowest = 1.0_f32;
+    /// while spring.advance(Duration::from_millis(8)) {
+    ///     lowest = lowest.min(spring.value());
+    /// }
+    ///
+    /// assert_eq!(spring.value(), 0.0);
+    /// assert!(lowest >= 0.0, "a departure must not dip past closed");
+    /// ```
+    pub const fn set_exit_target(&mut self, target: f32) {
+        self.target = target;
+        self.exit = true;
     }
 
     /// Moves the spring to `value` immediately and clears its velocity.
@@ -171,6 +208,7 @@ impl Spring {
         self.value = value;
         self.target = value;
         self.velocity = 0.0;
+        self.exit = false;
     }
 
     /// Integrates the spring by `elapsed` and reports whether it keeps moving.
@@ -187,6 +225,7 @@ impl Spring {
         let angular_frequency = std::f32::consts::TAU / self.response;
         let stiffness = angular_frequency * angular_frequency;
         let damping = 2.0 * self.damping_ratio * angular_frequency;
+        let departure_side = self.exit.then_some((self.target - self.value).signum());
 
         #[expect(
             clippy::while_float,
@@ -197,9 +236,15 @@ impl Spring {
             let acceleration =
                 (-stiffness).mul_add(self.value - self.target, -(damping * self.velocity));
 
-            self.velocity += acceleration * step;
+            self.velocity = acceleration.mul_add(step, self.velocity);
             self.value = self.velocity.mul_add(step, self.value);
             remaining -= step;
+
+            if departure_side.is_some_and(|side| (self.target - self.value).signum() * side <= 0.0)
+            {
+                self.settle();
+                return false;
+            }
         }
 
         if self.is_animating() {
@@ -214,6 +259,7 @@ impl Spring {
     const fn settle(&mut self) {
         self.value = self.target;
         self.velocity = 0.0;
+        self.exit = false;
     }
 }
 
@@ -330,5 +376,60 @@ mod tests {
         }
 
         assert!(peak > 1.0);
+    }
+
+    #[test]
+    fn an_exit_spring_never_dips_past_its_target() {
+        let mut spring = Spring::new(1.0).with_damping_ratio(0.4);
+        spring.set_exit_target(0.0);
+
+        let mut lowest = 1.0_f32;
+        while spring.advance(Duration::from_millis(8)) {
+            lowest = lowest.min(spring.value());
+        }
+
+        assert_eq!(spring.value(), 0.0);
+        assert!(lowest >= 0.0, "a bouncy exit must not flash past closed");
+    }
+
+    #[test]
+    fn an_exit_spring_lands_sooner_than_a_bouncy_aim() {
+        let mut exit = Spring::new(1.0).with_damping_ratio(0.4);
+        let mut bounce = Spring::new(1.0).with_damping_ratio(0.4);
+
+        exit.set_exit_target(0.0);
+        bounce.set_target(0.0);
+
+        assert!(run_to_rest(&mut exit) < run_to_rest(&mut bounce));
+    }
+
+    #[test]
+    fn a_fresh_aim_after_an_exit_may_bounce_again() {
+        let mut spring = Spring::new(1.0).with_damping_ratio(0.4);
+        spring.set_exit_target(0.0);
+        run_to_rest(&mut spring);
+
+        spring.set_target(1.0);
+
+        let mut peak = 0.0_f32;
+        while spring.advance(Duration::from_millis(8)) {
+            peak = peak.max(spring.value());
+        }
+
+        assert!(
+            peak > 1.0,
+            "an entrance keeps the bounce the damping promises"
+        );
+    }
+
+    #[test]
+    fn an_exit_aimed_at_the_current_value_is_already_resting() {
+        let mut spring = Spring::new(0.5);
+
+        spring.set_exit_target(0.5);
+
+        assert!(!spring.is_animating());
+        assert!(!spring.advance(Duration::from_millis(16)));
+        assert_eq!(spring.value(), 0.5);
     }
 }

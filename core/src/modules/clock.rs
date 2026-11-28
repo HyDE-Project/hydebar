@@ -12,7 +12,7 @@
 
 use std::time::Duration;
 
-use chrono::{DateTime, Local};
+use jiff::ZonedDateTime;
 use tokio::task::JoinHandle;
 
 use crate::{ModuleEventSender, format_cycle::FormatCycle};
@@ -26,7 +26,7 @@ mod view;
 #[derive(Debug, Clone)]
 pub struct ClockData {
     /// The moment the clock last read.
-    pub current_time: DateTime<Local>
+    pub current_time: ZonedDateTime
 }
 
 impl ClockData {
@@ -34,19 +34,19 @@ impl ClockData {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            current_time: Local::now()
+            current_time: ZonedDateTime::now()
         }
     }
 
     /// Reads the moment again.
     pub fn update(&mut self) {
-        self.current_time = Local::now();
+        self.current_time = ZonedDateTime::now();
     }
 
-    /// The time rendered through a `chrono` format string.
+    /// The time rendered through a `strftime` format string.
     #[must_use]
     pub fn format(&self, format: &str) -> String {
-        self.current_time.format(format).to_string()
+        self.current_time.strftime(format).to_string()
     }
 }
 
@@ -60,7 +60,7 @@ impl Default for ClockData {
 #[derive(Debug, Clone)]
 pub enum ClockEvent {
     /// A moment came round.
-    Tick(DateTime<Local>)
+    Tick(ZonedDateTime)
 }
 
 /// What the clock reacts to.

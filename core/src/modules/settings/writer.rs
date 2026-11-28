@@ -201,10 +201,12 @@ fn apply_setting(
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
+    use std::env::temp_dir;
+
     use super::*;
 
     fn scratch(name: &str) -> std::path::PathBuf {
-        let mut path = std::env::temp_dir();
+        let mut path = temp_dir();
         path.push(format!("hydebar-settings-writer-{name}.toml"));
         let _ = fs::remove_file(&path);
         path

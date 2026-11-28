@@ -105,7 +105,7 @@ mod tests {
             config.modules.left,
             vec![ModuleDef::Single(ModuleName::Clock)]
         );
-        assert!(config.modules.center.is_empty());
+        assert_eq!(config.modules.center, []);
     }
 
     /// A hand-written `[modules]` section is manual control and no desktop

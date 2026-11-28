@@ -3,7 +3,7 @@
 use std::ops::Deref;
 
 use masterror::AppResult;
-use zbus::zvariant::OwnedObjectPath;
+use zbus::OwnedObjectPath;
 
 mod connect;
 mod events;
@@ -19,10 +19,10 @@ mod tests;
 use proxies::NetworkManagerProxy;
 pub use settings_dbus::NetworkSettingsDbus;
 
-use super::DeviceType;
+use super::NetworkBackend;
 use crate::services::{
     bus::bus_failure,
-    network::{AccessPoint, KnownConnection, NetworkBackend, NetworkData}
+    network::data::model::{AccessPoint, KnownConnection, NetworkData}
 };
 
 /// The conversation with the `NetworkManager` daemon.

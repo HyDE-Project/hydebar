@@ -14,10 +14,10 @@ impl App {
     ) -> Task<Message> {
         let listed = matches!(msg, modules::bar_layout::Message::Listed(_));
 
-        let task = self.bar_layout.update(msg).map(Message::BarLayout);
+        let task = self.modules.bar_layout.update(msg).map(Message::BarLayout);
 
-        if listed && let Some((id, button_ui_ref)) = self.bar_layout_pending.take() {
-            if self.bar_layout.is_empty() {
+        if listed && let Some((id, button_ui_ref)) = self.focus.bar_layout_pending.take() {
+            if self.modules.bar_layout.is_empty() {
                 log::warn!("the desktop lists no bar layouts, the picker stays closed");
 
                 return task;
@@ -47,10 +47,14 @@ impl App {
         let config = std::sync::Arc::clone(&self.config);
         let listed = matches!(msg, modules::wallpaper::Message::Listed(_));
 
-        let task = self.wallpaper.update(msg, &config).map(Message::Wallpaper);
+        let task = self
+            .modules
+            .wallpaper
+            .update(msg, &config)
+            .map(Message::Wallpaper);
 
-        if listed && let Some((id, button_ui_ref)) = self.wallpaper_pending.take() {
-            if self.wallpaper.is_empty() {
+        if listed && let Some((id, button_ui_ref)) = self.focus.wallpaper_pending.take() {
+            if self.modules.wallpaper.is_empty() {
                 log::warn!("the theme offers no wallpapers, the picker stays closed");
 
                 return task;

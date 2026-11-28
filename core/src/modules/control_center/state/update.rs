@@ -6,7 +6,7 @@ use tokio::runtime::Handle;
 use super::super::{ControlCenter, Message, SubMenu, commands::ControlCenterCommandExt};
 use crate::{
     ModuleEventSender, config::ControlCenterModuleConfig, menu::MenuType, outputs::Outputs,
-    services::network::NetworkCommand
+    services::network::NetworkCommand, utils::launcher::execute_command
 };
 
 mod audio;
@@ -109,7 +109,7 @@ impl ControlCenter {
             }
             Message::Lock => {
                 if let Some(lock_cmd) = &config.lock_cmd {
-                    crate::utils::launcher::execute_command(lock_cmd.clone());
+                    execute_command(lock_cmd.clone());
                 }
             }
             Message::Power(msg) => {

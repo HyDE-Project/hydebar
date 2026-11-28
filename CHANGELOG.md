@@ -7,6 +7,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Design tokens in `[appearance]`: `spacing_scale` loosens or tightens
+  every font-derived gap at once, and `damping_ratio` sets the character
+  of the menu entrance spring without touching hover feedback.
+- User theme files: a whole appearance table in
+  `~/.config/hydebar/themes/<name>.toml` answers to
+  `appearance = "<name>"`, shadowing the shipped theme of the same name.
+  Unknown names fail with the list of shipped themes and theme files.
+- Preset themes are stored as embedded TOML tables instead of Rust code,
+  so contributing a theme is a new file plus one roster row.
+- Module roster as a single declarative list: the `ModuleName` variants,
+  the shipped roster and both spellings grow from one macro invocation,
+  so adding a module touches one row instead of three files.
+- Module scaffolding: `cargo xtask new-module <name> --kind
+  simple|polling|listener|menu` writes the configuration, state, view and
+  trait files and prints the wiring checklist that turns the skeleton into
+  a module; the contributing guide walks through the whole flow.
+- Waybar migration: `cargo xtask import-waybar <config.jsonc> [--out
+  <config.toml>]` reuses the layout mapping to restate modules, pill
+  groups, clock format, layer and position, carrying scripted customs over
+  with their commands and reporting entries with no counterpart.
+- Theme morph prototype: corner radii, the bar height, the side padding
+  and the spacing scale ride the appearance transition instead of
+  snapping, so a theme switch breathes the geometry over with the
+  palette. Font sizes and discrete settings still snap: the global scale
+  base, the icon theme and the compositor surfaces rebuild from the
+  target.
+- Menus with a measured height grow out of the bar edge while they fade
+  in, clipped to the travelled share of their resting height, instead of
+  materialising at full size; scrolling boxes grow towards their room.
+- Opt-in screen frame: `[appearance.frame]` paints a ring along any
+  combination of screen edges on the desk surface, with rounded outer
+  corners, a rounded joint where a strip meets the bar band and per-edge
+  width overrides (see `docs/FRAME.md`). The ring paints the bar palette's
+  background at the island opacity from the same theme cache the islands
+  draw from — one source of truth, morphing with the bar — and the bar
+  asks the compositor to blur behind it exactly as it blurs the strip.
+  The docked edge never paints its run, which the bar band covers.
+
+### Fixed
+
+- The theme override examples in the theming guide named a preset and an
+  `[appearance]` table in the same file, which TOML rejects as a duplicate
+  key. Overrides now work through a `theme` key inside `[appearance]` that
+  layers the named theme under the keys beside it.
+- A custom module with only a click command and no readout failed to parse,
+  although the guide documents exactly that and the runtime supports it:
+  `listen_cmd` and `exec` are optional now.
+- The FAQ pointed at a `README.md#custom-modules` section that does not
+  exist; custom modules have their own guide with copy-paste examples now.
+
 ## [0.2.0] - 2026-09-02
 
 ## [0.1.3] - 2026-09-02

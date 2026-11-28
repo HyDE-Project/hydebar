@@ -21,20 +21,25 @@ impl App {
     ) -> Option<Page<'_>> {
         match menu_type {
             MenuType::HydeMenu => Some((
-                self.hyde_menu.menu_view(id, opacity).map(Message::HydeMenu),
+                self.modules
+                    .hyde_menu
+                    .menu_view(id, opacity)
+                    .map(Message::HydeMenu),
                 MenuSize::Small,
                 None
             )),
 
             MenuType::Wallpaper => Some((
-                self.wallpaper
+                self.modules
+                    .wallpaper
                     .menu_view(self.appearance().font_size_px())
                     .map(Message::Wallpaper),
                 MenuSize::Medium,
                 None
             )),
             MenuType::BarLayout => Some((
-                self.bar_layout
+                self.modules
+                    .bar_layout
                     .menu_view(self.appearance().font_size_px())
                     .map(Message::BarLayout),
                 MenuSize::Small,

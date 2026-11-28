@@ -16,8 +16,11 @@ use std::{
     time::SystemTime
 };
 
-use super::{color::parse_color, dcol::DcolPalette};
-use crate::{hyde_dirs::HydeDirs, hyde_files, theme_source::Rgba};
+use super::{
+    color::{Rgba, parse_color},
+    dcol::DcolPalette
+};
+use crate::{hyde_dirs::HydeDirs, hyde_files};
 
 /// Digest of a wallpaper file, remembered by the file's identity on disk.
 #[derive(Debug, Clone)]
@@ -216,6 +219,8 @@ pub(super) fn wallpaper_digest(image: &Path) -> Option<String> {
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
+    use std::os::unix::fs::symlink;
+
     use tempfile::TempDir;
 
     use super::{super::dcol::fixtures::WALL_DCOL, *};
@@ -305,7 +310,7 @@ mod tests {
 
         let image = root.path().join("wall.png");
         fs::write(&image, b"not really a picture").expect("image");
-        std::os::unix::fs::symlink(&image, theme_dir.join("wall.set")).expect("link");
+        symlink(&image, theme_dir.join("wall.set")).expect("link");
 
         let digest = sha1_smol::Sha1::from(b"not really a picture")
             .digest()

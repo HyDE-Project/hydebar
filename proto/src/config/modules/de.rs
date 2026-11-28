@@ -81,7 +81,7 @@ mod tests {
     /// back as itself.
     #[test]
     fn every_built_in_module_reads_back_as_it_is_written() {
-        for module in &ModuleName::BUILT_IN {
+        for module in ModuleName::BUILT_IN {
             let name: ModuleName =
                 Deserialize::deserialize(StrDeserializer::<DeError>::new(module.as_str()))
                     .expect("built-in name");

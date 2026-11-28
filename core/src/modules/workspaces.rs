@@ -59,7 +59,7 @@ impl Workspaces {
 
     /// An entry that has not read the session yet.
     pub fn new(hyprland: Arc<dyn HyprlandPort>, config: &WorkspacesModuleConfig) -> Self {
-        let workspaces = snapshot::get_workspaces(hyprland.as_ref(), config);
+        let workspaces = snapshot::workspaces(hyprland.as_ref(), config);
 
         Self {
             hyprland,

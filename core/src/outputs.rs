@@ -1,5 +1,9 @@
 //! Output management façade, re-exporting the collection state and helpers.
 
+use std::{
+    env::var_os,
+    thread::{sleep, spawn}
+};
 mod blur;
 mod config;
 pub mod perch;
@@ -27,11 +31,11 @@ const RELOAD_TAIL: std::time::Duration = std::time::Duration::from_secs(5);
 /// heaviest theme took to reach its reload, seconds on some. The tail stays as
 /// the backstop for a wipe the socket never announced.
 pub fn start_blur_guard() {
-    if std::env::var_os("HYPRLAND_INSTANCE_SIGNATURE").is_none() {
+    if var_os("HYPRLAND_INSTANCE_SIGNATURE").is_none() {
         return;
     }
 
-    std::thread::spawn(|| {
+    spawn(|| {
         let client = crate::adapters::hyprland_client::HyprlandClient::new();
         let mut reloads = client.config_reloads();
 
@@ -44,7 +48,7 @@ pub fn start_blur_guard() {
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => {}
                 Err(tokio::sync::broadcast::error::RecvError::Closed) => {
-                    std::thread::sleep(RELOAD_TAIL);
+                    sleep(RELOAD_TAIL);
                     reloads = client.config_reloads();
                 }
             }
@@ -86,13 +90,13 @@ pub fn restate_blur() {
         return;
     }
 
-    std::thread::spawn(|| {
+    spawn(|| {
         blur::request();
 
         let mut seen = RESTATE_GENERATION.load(Ordering::SeqCst);
 
         loop {
-            std::thread::sleep(RELOAD_TAIL);
+            sleep(RELOAD_TAIL);
             blur::request();
 
             let current = RESTATE_GENERATION.load(Ordering::SeqCst);

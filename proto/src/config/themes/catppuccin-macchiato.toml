@@ -1,0 +1,40 @@
+# The Catppuccin Macchiato preset palette.
+#
+# A whole appearance table: every key the `[appearance]` section of
+# `config.toml` accepts works here, anything left out falls back to the
+# built-in defaults. Copy this file to start a custom theme.
+
+style = "Islands"
+opacity = 0.95
+bar_opacity = 0.0
+greeting = true
+follow_hyde = true
+auto_scale = false
+scale_factor = 1.0
+island_borders = false
+
+background_color = "#24273a"
+primary_color = "#c6a0f6"
+secondary_color = "#8aadf4"
+success_color = "#a6da95"
+danger_color = "#ed8796"
+warning_color = "#fab387"
+text_color = "#cad3f5"
+
+workspace_colors = [
+    "#8aadf4",
+    "#c6a0f6",
+    "#f5bde6",
+    "#f5a97f",
+    "#eed49f",
+    "#a6da95",
+    "#8bd5ca",
+    "#91d7e3",
+    "#7dc4e4",
+    "#b7bdf8",
+]
+special_workspace_colors = ["#ee99a0"]
+
+[menu]
+opacity = 0.95
+backdrop = 0.3

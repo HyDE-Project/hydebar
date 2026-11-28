@@ -6,9 +6,12 @@ use std::pin::Pin;
 use tokio_stream::Stream;
 
 use super::{
-    HyprlandClientInfo, HyprlandError, HyprlandKeyboardEvent, HyprlandKeyboardState,
-    HyprlandMonitorSelector, HyprlandWindowEvent, HyprlandWindowInfo, HyprlandWorkspaceEvent,
-    HyprlandWorkspaceSelector, HyprlandWorkspaceSnapshot
+    data::{
+        HyprlandClientInfo, HyprlandKeyboardState, HyprlandMonitorSelector, HyprlandWindowInfo,
+        HyprlandWorkspaceSelector, HyprlandWorkspaceSnapshot
+    },
+    error::HyprlandError,
+    events::{HyprlandKeyboardEvent, HyprlandWindowEvent, HyprlandWorkspaceEvent}
 };
 
 /// Stream type alias used for Hyprland event subscriptions.

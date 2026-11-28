@@ -1,3 +1,5 @@
+use std::mem::take;
+
 use iced::{
     Rectangle,
     core::{Clipboard, Layout, Shell, event::Event, mouse, touch, widget::Tree},
@@ -80,7 +82,7 @@ pub(super) fn update<Message, Theme, Renderer>(
             if button.handler(*released).is_some() {
                 let state = tree.state.downcast_mut::<State>();
 
-                let _ = std::mem::take(state.hold_mut(*released));
+                let _ = take(state.hold_mut(*released));
             }
         }
         Event::Touch(touch::Event::FingerLifted {
@@ -89,7 +91,7 @@ pub(super) fn update<Message, Theme, Renderer>(
             if button.on_press.is_some() {
                 let state = tree.state.downcast_mut::<State>();
 
-                let _ = std::mem::take(&mut state.is_pressed);
+                let _ = take(&mut state.is_pressed);
             }
         }
         Event::Touch(touch::Event::FingerLost {
@@ -363,7 +365,7 @@ mod tests {
             node
         };
 
-        assert!(press(&mut harness, mouse::Button::Right).is_empty());
+        assert_eq!(press(&mut harness, mouse::Button::Right), []);
         assert_eq!(
             press(&mut harness, mouse::Button::Left),
             vec![Pressed::Left]

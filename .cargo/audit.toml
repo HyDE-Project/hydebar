@@ -1,0 +1,12 @@
+# cargo-audit configuration.
+#
+# Cargo.lock records every optional dependency of every resolved package,
+# regardless of which features the workspace actually enables. The entries
+# below are never compiled; each ignore says who keeps it in the lock file.
+[advisories]
+ignore = [
+    # chrono sits in the lock file only as serde_with's optional dependency.
+    # No feature in this workspace enables it, and `cargo tree -i chrono`
+    # resolves to nothing, so no chrono code is ever built or linked.
+    "RUSTSEC-2026-0543",
+]

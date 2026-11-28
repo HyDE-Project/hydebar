@@ -8,17 +8,13 @@
 
 use std::sync::{Arc, Mutex, OnceLock, PoisonError};
 
-use hydebar_proto::ports::hyprland::{
-    HyprlandKeyboardEvent, HyprlandWindowEvent, HyprlandWorkspaceEvent
-};
 use log::warn;
 use tokio::{sync::broadcast, time::sleep};
 
-use super::wiring::dispatch;
+use super::{channels::Multiplexer, wiring::dispatch};
 use crate::adapters::{
     compositor::events::EventStream,
     hyprland_client::{
-        HyprlandClient,
         config::HyprlandClientConfig,
         listeners::{runtime, supervisor::restart_delay}
     }
@@ -33,19 +29,6 @@ static MULTIPLEXER: OnceLock<Arc<Multiplexer>> = OnceLock::new();
 /// Serializes the fallible start so racing first callers start exactly once.
 static START_GATE: Mutex<()> = Mutex::new(());
 
-/// Broadcast taps of the one compositor connection.
-pub struct Multiplexer {
-    pub(super) window:    broadcast::Sender<HyprlandWindowEvent>,
-    pub(super) workspace: broadcast::Sender<HyprlandWorkspaceEvent>,
-    pub(super) keyboard:  broadcast::Sender<HyprlandKeyboardEvent>,
-    pub(super) reload:    broadcast::Sender<()>,
-    /// The configuration the supervisor was started with.
-    ///
-    /// The first caller decides the reconnect policy for everyone; a later
-    /// caller with different ideas deserves to know its own were discarded.
-    config:               Arc<HyprlandClientConfig>
-}
-
 /// The running multiplexer, started on first use.
 ///
 /// The singleton is published only after its supervisor is running: a
@@ -57,7 +40,6 @@ pub struct Multiplexer {
 /// Returns an error when the listener runtime cannot be started; the cell
 /// stays empty, so the next subscriber retries the whole start.
 pub(super) fn multiplexer(
-    client: &HyprlandClient,
     config: &Arc<HyprlandClientConfig>
 ) -> Result<Arc<Multiplexer>, hydebar_proto::ports::hyprland::HyprlandError> {
     if let Some(mux) = MULTIPLEXER.get() {
@@ -83,11 +65,10 @@ pub(super) fn multiplexer(
     });
 
     let supervised = Arc::clone(&mux);
-    let client = client.clone();
     let config = Arc::clone(config);
 
     handle.spawn(async move {
-        supervise(supervised, client, config).await;
+        supervise(supervised, config).await;
     });
 
     Ok(Arc::clone(MULTIPLEXER.get_or_init(|| mux)))
@@ -105,11 +86,7 @@ fn warn_on_discarded_config(mux: &Multiplexer, config: &Arc<HyprlandClientConfig
 }
 
 /// Keeps the one connection alive for the lifetime of the process.
-async fn supervise(
-    mux: Arc<Multiplexer>,
-    client: HyprlandClient,
-    config: Arc<HyprlandClientConfig>
-) {
+async fn supervise(mux: Arc<Multiplexer>, config: Arc<HyprlandClientConfig>) {
     let mut attempt = 0_u32;
 
     loop {
@@ -118,7 +95,7 @@ async fn supervise(
         match EventStream::connect().await {
             Ok(mut events) => {
                 while let Some(event) = events.next().await {
-                    dispatch(event, &mux, &client).await;
+                    dispatch(event, &mux).await;
                 }
 
                 warn!(

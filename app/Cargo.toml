@@ -9,13 +9,15 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-homepage.workspace = true
 description = "Status bar for Hyprland, themed by the HyDE desktop"
 
 [dependencies]
 serde_json.workspace = true
 clap.workspace = true
-flexi_logger.workspace = true
+tracing.workspace = true
+tracing-appender.workspace = true
+tracing-log.workspace = true
+tracing-subscriber.workspace = true
 hydebar-core = { path = "../core" }
 hydebar-gui = { path = "../gui" }
 hydebar-proto = { path = "../proto" }
@@ -23,6 +25,7 @@ iced.workspace = true
 libc.workspace = true
 log.workspace = true
 tokio.workspace = true
+wgpu.workspace = true
 
 [lints]
 workspace = true

@@ -99,7 +99,7 @@ impl App {
                         let travelling = hydebar_core::components::flip::FlipAnchor::new(
                             self.flip_key(unit, id),
                             travel,
-                            &self.flip,
+                            &self.motion.flip,
                             block
                         );
                         let travelling = travelling

@@ -33,7 +33,7 @@ const fn opaque(color: HexColor) -> Rgba {
 impl AppearanceColor {
     /// Returns the base colour of the configured palette entry.
     #[must_use]
-    pub const fn get_base(&self) -> Rgba {
+    pub const fn base(&self) -> Rgba {
         match self {
             Self::Simple(color) => opaque(*color),
             Self::Complete {
@@ -44,7 +44,7 @@ impl AppearanceColor {
 
     /// Returns the text colour of the entry, when it names one.
     #[must_use]
-    pub const fn get_text(&self) -> Option<Rgba> {
+    pub const fn text(&self) -> Option<Rgba> {
         match self {
             Self::Simple(_) => None,
             Self::Complete {
@@ -58,11 +58,11 @@ impl AppearanceColor {
 
     /// Returns the weak variant of the entry, when it names one.
     ///
-    /// The text colour that goes with it is [`AppearanceColor::get_text`]; the
+    /// The text colour that goes with it is [`AppearanceColor::text`]; the
     /// two are paired by the renderer, which is the layer that knows how to
     /// keep a text colour readable over a background.
     #[must_use]
-    pub const fn get_weak(&self) -> Option<Rgba> {
+    pub const fn weak(&self) -> Option<Rgba> {
         match self {
             Self::Simple(_) => None,
             Self::Complete {
@@ -76,7 +76,7 @@ impl AppearanceColor {
 
     /// Returns the strong variant of the entry, when it names one.
     #[must_use]
-    pub const fn get_strong(&self) -> Option<Rgba> {
+    pub const fn strong(&self) -> Option<Rgba> {
         match self {
             Self::Simple(_) => None,
             Self::Complete {
@@ -161,18 +161,18 @@ mod tests {
             text:   None
         };
 
-        assert_eq!(color.get_strong(), Some(Rgba::rgb(4, 5, 6)));
-        assert_eq!(color.get_weak(), Some(Rgba::rgb(7, 8, 9)));
-        assert_eq!(color.get_text(), None);
+        assert_eq!(color.strong(), Some(Rgba::rgb(4, 5, 6)));
+        assert_eq!(color.weak(), Some(Rgba::rgb(7, 8, 9)));
+        assert_eq!(color.text(), None);
     }
 
     #[test]
     fn a_simple_entry_names_nothing_but_its_base() {
         let color = AppearanceColor::Simple(HexColor::rgb(1, 2, 3));
 
-        assert_eq!(color.get_base(), Rgba::rgb(1, 2, 3));
-        assert_eq!(color.get_strong(), None);
-        assert_eq!(color.get_weak(), None);
-        assert_eq!(color.get_text(), None);
+        assert_eq!(color.base(), Rgba::rgb(1, 2, 3));
+        assert_eq!(color.strong(), None);
+        assert_eq!(color.weak(), None);
+        assert_eq!(color.text(), None);
     }
 }

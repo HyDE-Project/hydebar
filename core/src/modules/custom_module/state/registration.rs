@@ -1,8 +1,11 @@
 //! Starting and stopping the shell behind a custom module.
+//!
+//! The record it keeps of what it started lives with the state it feeds, in
+//! [`custom`](super::custom); this room only starts that shell, wakes it and
+//! tears it down.
 
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
 
-use hydebar_proto::config::CustomModuleSource;
 use log::error;
 
 use super::{
@@ -11,52 +14,13 @@ use super::{
         listener::{run_custom_listener, send_event},
         poller::run_custom_poller
     },
-    Custom, Message
+    custom::{Custom, CustomRegistration, RegistrationSource},
+    message::Message
 };
 use crate::{
     ModuleContext, ModuleEventSender, config::CustomModuleDef, event_bus::ModuleEvent,
     services::ServiceEvent
 };
-
-#[derive(Debug, Clone)]
-pub(super) struct CustomRegistration {
-    name:   Arc<str>,
-    source: RegistrationSource
-}
-
-/// Producing command of a registered module, together with its schedule.
-#[derive(Debug, Clone)]
-pub(super) enum RegistrationSource {
-    /// One long lived process streaming json lines.
-    Stream { command: Arc<str> },
-    /// A command re-run on a schedule or when a real time signal arrives.
-    Poll {
-        command: Arc<str>,
-        period:  Option<Duration>,
-        signal:  Option<u8>
-    }
-}
-
-impl RegistrationSource {
-    pub(super) fn from_config(source: CustomModuleSource<'_>) -> Self {
-        match source {
-            CustomModuleSource::Stream {
-                command
-            } => Self::Stream {
-                command: Arc::from(command)
-            },
-            CustomModuleSource::Poll {
-                command,
-                interval,
-                signal
-            } => Self::Poll {
-                command: Arc::from(command),
-                period: interval.map(Duration::from_secs),
-                signal
-            }
-        }
-    }
-}
 
 impl Custom {
     /// Tears down the feeding task and forgets the registration.

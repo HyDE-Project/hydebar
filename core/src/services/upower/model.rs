@@ -24,7 +24,7 @@ pub struct BatteryData {
 impl BatteryData {
     /// How much attention this reading deserves.
     #[must_use]
-    pub const fn get_indicator_state(&self) -> IndicatorState {
+    pub const fn indicator_state(&self) -> IndicatorState {
         match self {
             Self {
                 status: BatteryStatus::Charging(_),
@@ -41,7 +41,7 @@ impl BatteryData {
 
     /// The glyph this reading is drawn with.
     #[must_use]
-    pub const fn get_icon(&self) -> Icons {
+    pub const fn icon(&self) -> Icons {
         match self {
             Self {
                 status: BatteryStatus::Charging(_),

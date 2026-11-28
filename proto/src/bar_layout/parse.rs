@@ -1,13 +1,26 @@
-//! Restating a layout source in the bar's own modules.
+//! Restating a layout source in the bar's own modules, and the restated
+//! layout the restatement hands back.
 
 use std::collections::BTreeSet;
 
 use serde_json::Value;
 
-use super::{
-    RestatedLayout, jsonc::plain_json, mapping::module_for, synth::synthesize_text_entry
-};
+use super::{jsonc::plain_json, mapping::module_for, synth::synthesize_text_entry};
 use crate::config::{CustomModuleDef, ModuleDef, ModuleName, Modules};
+
+/// A layout restated in the bar's modules, with the entries it had to invent.
+///
+/// The decorative layouts carry static text entries defined inline in the
+/// layout file — a label and possibly a click command, nothing else. They map
+/// to no built-in, so the restatement synthesises a custom module for each:
+/// the label becomes the glyph, the click command stays the click command.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RestatedLayout {
+    /// The three position arrays in the bar's own modules.
+    pub modules:     Modules,
+    /// Custom modules invented for inline text entries, ready to adopt.
+    pub synthesized: Vec<CustomModuleDef>
+}
 
 /// Position arrays a layout may carry, in the order the bar draws them.
 const SECTIONS: [&str; 3] = ["modules-left", "modules-center", "modules-right"];
@@ -282,7 +295,7 @@ mod tests {
                 ModuleDef::Single(ModuleName::WindowTitle),
             ]
         );
-        assert!(modules.center.is_empty());
+        assert_eq!(modules.center, []);
         assert_eq!(modules.right, vec![ModuleDef::Single(ModuleName::Clock)]);
     }
 

@@ -111,7 +111,7 @@ impl App {
             return Vec::new();
         }
 
-        let memo = self.flip.borrow();
+        let memo = self.motion.flip.borrow();
         let (left, centre, right) = Self::desk_columns(&self.config.modules);
 
         [&left, &centre, &right]
@@ -180,7 +180,7 @@ mod tests {
 
     /// Sends a bar's canvas all the way out: travelled and written out.
     fn open(app: &mut App) {
-        app.desk_clocks.entry(None).or_default().open();
+        app.motion.desk_clocks.entry(None).or_default().open();
     }
 
     /// The journey the clock of a test layout is on.
@@ -205,7 +205,7 @@ mod tests {
     /// Starts a bar's canvas travelling, one frame in.
     fn set_off(app: &mut App) {
         let total = std::time::Duration::from_millis(900);
-        let clock = app.desk_clocks.entry(None).or_default();
+        let clock = app.motion.desk_clocks.entry(None).or_default();
 
         *clock = hydebar_core::animation::Unfold::default();
         clock.advance(std::time::Duration::from_millis(16), total);
@@ -216,9 +216,12 @@ mod tests {
     fn tick(app: &mut App) -> bool {
         let total = std::time::Duration::from_millis(900);
 
-        app.desk_clocks.values_mut().fold(false, |running, clock| {
-            clock.advance(std::time::Duration::from_millis(16), total) | running
-        })
+        app.motion
+            .desk_clocks
+            .values_mut()
+            .fold(false, |running, clock| {
+                clock.advance(std::time::Duration::from_millis(16), total) | running
+            })
     }
 
     fn surface() -> Id {
@@ -242,10 +245,11 @@ mod tests {
     fn a_canvas_a_window_took_the_screen_from_is_gone_on_that_very_frame() {
         let mut app = test_app_with(|config| config.desk.enabled = true);
         seed_machine_readings(&mut app);
-        app.screen_width = Some(1920.0);
+        app.screen.width = Some(1920.0);
         open(&mut app);
 
-        app.desk
+        app.modules
+            .desk
             .update(hydebar_core::modules::desk::Message::ScreensChanged(
                 hydebar_core::modules::desk::Bareness::default()
             ));
@@ -259,6 +263,7 @@ mod tests {
         );
 
         let beyond: Vec<f32> = app
+            .motion
             .flip
             .borrow()
             .from_map()
@@ -307,9 +312,9 @@ mod tests {
     #[test]
     fn a_screen_holding_a_window_keeps_its_strip_however_long_it_stands() {
         let mut app = test_app_with(|config| config.desk.enabled = true);
-        let hour = app.clock.data().format(&app.config.clock.format);
+        let hour = app.modules.clock.data().format(&app.config.clock.format);
 
-        app.desk_clocks.entry(None).or_default();
+        app.motion.desk_clocks.entry(None).or_default();
 
         for frame in 0..240 {
             let _ = app.advance_desk(std::time::Duration::from_millis(16));
@@ -376,7 +381,7 @@ mod tests {
         let mut app = unfolded(0.0);
         set_off(&mut app);
 
-        let month = app.clock.data().format("%B %Y");
+        let month = app.modules.clock.data().format("%B %Y");
         let mut seen_partly = false;
 
         for _ in 0..256 {
@@ -407,7 +412,7 @@ mod tests {
     #[test]
     fn the_clock_stands_over_the_month_it_opens() {
         let app = unfolded(1.0);
-        let month = app.clock.data().format("%B %Y");
+        let month = app.modules.clock.data().format("%B %Y");
         let mut ui = simulator(app.desk_surface(surface()));
 
         assert!(
@@ -425,7 +430,7 @@ mod tests {
     /// already on the canvas, and that is the whole point of the run. What
     /// must never happen is either of them being drawn twice or not at all.
     fn shapes_on_screen(app: &App) -> (bool, bool) {
-        let hour = app.clock.data().format(&app.config.clock.format);
+        let hour = app.modules.clock.data().format(&app.config.clock.format);
 
         let strip = simulator(app.bar_surface(surface()))
             .find(hour.as_str())
@@ -471,7 +476,7 @@ mod tests {
         let (strip, canvas) = shapes_on_screen(&app);
         assert!(!strip && canvas, "the canvas holds the bare screen");
 
-        app.desk_clocks.entry(None).or_default().fold();
+        app.motion.desk_clocks.entry(None).or_default().fold();
 
         let (strip, canvas) = shapes_on_screen(&app);
         assert!(
@@ -803,13 +808,13 @@ mod tests {
             config.modules.right = Vec::new();
         });
         seed_machine_readings(&mut app);
-        app.screen_width = Some(1920.0);
+        app.screen.width = Some(1920.0);
         open(&mut app);
 
-        app.desk_clocks.entry(None).or_default().fold();
+        app.motion.desk_clocks.entry(None).or_default().fold();
         app.send_the_islands_home(surface());
 
-        let seated = app.flip.borrow().from_map().len();
+        let seated = app.motion.flip.borrow().from_map().len();
 
         assert!(
             seated >= 2,
@@ -862,7 +867,7 @@ mod tests {
         for _ in 0..256 {
             for module in &watched {
                 let left = app.has_left_the_strip(None, clock_journey(&app));
-                let hour = app.clock.data().format(&app.config.clock.format);
+                let hour = app.modules.clock.data().format(&app.config.clock.format);
                 let probe = if matches!(module, ModuleName::Clock) {
                     hour.as_str()
                 } else {
@@ -903,7 +908,7 @@ mod tests {
             config.modules.right = Vec::new();
         });
         seed_machine_readings(&mut app);
-        app.screen_width = Some(1920.0);
+        app.screen.width = Some(1920.0);
         open(&mut app);
 
         let nearest = on_screen(&app)
@@ -971,10 +976,10 @@ mod tests {
         let mut ui = simulator(app.bar_surface(surface()));
         let _ = ui.snapshot(&iced::Theme::Dark).expect("the strip draws");
 
-        app.flip.borrow_mut().depart();
+        app.motion.flip.borrow_mut().depart();
 
         assert!(
-            !app.flip.borrow().from_map().is_empty(),
+            !app.motion.flip.borrow().from_map().is_empty(),
             "the seats the strip held are what the canvas travels from"
         );
     }
@@ -983,13 +988,14 @@ mod tests {
     fn a_screen_taken_by_a_window_sends_its_islands_beyond_the_edge() {
         let mut app = test_app_with(|config| config.desk.enabled = true);
         seed_machine_readings(&mut app);
-        app.screen_width = Some(1920.0);
+        app.screen.width = Some(1920.0);
         open(&mut app);
 
-        app.desk_clocks.entry(None).or_default().fold();
+        app.motion.desk_clocks.entry(None).or_default().fold();
         app.send_the_islands_home(surface());
 
         let seats: Vec<f32> = app
+            .motion
             .flip
             .borrow()
             .from_map()
@@ -1010,7 +1016,7 @@ mod tests {
             "the right hand section flies in from past the right edge"
         );
         assert!(
-            app.relayout.target() > 0.0,
+            app.motion.relayout.target() > 0.0,
             "the strip's own travel carries them in"
         );
     }

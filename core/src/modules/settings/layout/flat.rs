@@ -124,7 +124,7 @@ mod tests {
 
     #[test]
     fn an_empty_section_survives_the_round_trip() {
-        assert!(flatten(&[]).is_empty());
-        assert!(rebuild(&[]).is_empty());
+        assert_eq!(flatten(&[]), []);
+        assert_eq!(rebuild(&[]), []);
     }
 }

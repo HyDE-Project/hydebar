@@ -38,7 +38,13 @@ pub struct ConfigImpact {
     /// The desk is not a bar entry and owns no [`ModuleName`], so a section
     /// of its own is what tells a reload that its listener has to start or
     /// stop — and, with it, the sampler and the clock it draws from.
-    pub desk_changed:           bool
+    pub desk_changed:           bool,
+    /// Whether the frame configuration changed.
+    ///
+    /// The frame's surfaces are cut to the strip widths, so any flip of the
+    /// frame section — a switch, a thickness, one edge's width — resizes
+    /// surfaces the compositor already holds, which only a sync can do.
+    pub frame_changed:          bool
 }
 
 impl ConfigImpact {
@@ -102,6 +108,10 @@ pub(super) fn compute_impact(previous: &Config, next: &Config) -> ConfigImpact {
 
     if previous.desk != next.desk {
         impact.desk_changed = true;
+    }
+
+    if previous.appearance.frame != next.appearance.frame {
+        impact.frame_changed = true;
     }
 
     modules::mark_module_configs(&mut impact, previous, next);

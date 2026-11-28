@@ -14,7 +14,10 @@
 //! [`PollSchedule`] and owns no timer of its own, so the cost of an idle bar is
 //! two wakeups rather than one per readout.
 
-use std::time::{Duration, Instant};
+use std::{
+    mem::take,
+    time::{Duration, Instant}
+};
 
 use hydebar_proto::config::ModuleName;
 
@@ -104,7 +107,7 @@ impl Attention {
     where
         I: IntoIterator<Item = (ModuleName, PollSchedule)>
     {
-        let previous = std::mem::take(&mut self.placed);
+        let previous = take(&mut self.placed);
 
         self.placed = modules
             .into_iter()
@@ -418,7 +421,7 @@ mod tests {
         let start = Instant::now();
         attention.look_at(Some(ModuleName::SystemInfo));
 
-        assert!(attention.due_at_rest(start).is_empty());
+        assert_eq!(attention.due_at_rest(start), []);
     }
 
     #[test]
@@ -427,7 +430,7 @@ mod tests {
         let start = Instant::now();
 
         assert_eq!(attention.due_at_rest(start), vec![ModuleName::SystemInfo]);
-        assert!(attention.due_at_rest(start + REST / 2).is_empty());
+        assert_eq!(attention.due_at_rest(start + REST / 2), []);
         assert_eq!(
             attention.due_at_rest(start + REST),
             vec![ModuleName::SystemInfo]
@@ -442,7 +445,7 @@ mod tests {
             PollSchedule::only_when_attended(Duration::from_secs(2))
         )]);
 
-        assert!(attention.due_at_rest(Instant::now()).is_empty());
+        assert_eq!(attention.due_at_rest(Instant::now()), []);
         assert_eq!(attention.rest_period(), None);
     }
 

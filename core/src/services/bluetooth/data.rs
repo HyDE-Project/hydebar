@@ -1,6 +1,6 @@
 //! Data types describing the bluetooth adapter and its devices.
 
-use zbus::zvariant::OwnedObjectPath;
+use zbus::OwnedObjectPath;
 
 /// What the adapter is doing.
 #[derive(PartialEq, Eq, Debug, Clone)]

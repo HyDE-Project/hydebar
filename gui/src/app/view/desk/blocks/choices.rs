@@ -22,7 +22,10 @@ use iced::{
     widget::{Column, Row, Space, text}
 };
 
-use super::{super::super::super::state::Message, Ink, Side};
+use super::{
+    super::super::super::state::Message,
+    ink::{Ink, Side}
+};
 
 /// How big a choice's glyph is drawn, as a share of the body ink.
 ///

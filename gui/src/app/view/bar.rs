@@ -7,7 +7,7 @@
 mod backdrop;
 
 use hydebar_core::{HEIGHT, menu::dismiss_area};
-use hydebar_proto::config::AppearanceStyle;
+use hydebar_proto::config::{AppearanceStyle, Position};
 use iced::{Alignment, Element, Length, SurfaceId as Id, widget::container};
 
 use super::super::state::{App, Message};
@@ -59,16 +59,28 @@ impl App {
             clippy::cast_possible_truncation,
             reason = "the bar height constant is exactly representable in f32"
         )]
-        let bar_height = self.appearance().height_px().unwrap_or(HEIGHT as f32);
+        let bar_thickness = self.appearance().height_px().unwrap_or(HEIGHT as f32);
+        let is_vertical = matches!(self.config.position, Position::Left | Position::Right);
 
         let centerbox = centerbox::Centerbox::new([left, center, right])
             .spacing(self.appearance().group_gap())
-            .width(Length::Fill)
             .align_items(Alignment::Center)
-            .height(if self.appearance().style == AppearanceStyle::Islands {
-                bar_height
+            .vertical(is_vertical)
+            .width(if is_vertical {
+                if self.appearance().style == AppearanceStyle::Islands {
+                    Length::Fixed(bar_thickness)
+                } else {
+                    Length::Fixed(bar_thickness - 8.)
+                }
             } else {
-                bar_height - 8.
+                Length::Fill
+            })
+            .height(if is_vertical {
+                Length::Fill
+            } else if self.appearance().style == AppearanceStyle::Islands {
+                Length::Fixed(bar_thickness)
+            } else {
+                Length::Fixed(bar_thickness - 8.)
             })
             .padding(if self.appearance().style == AppearanceStyle::Islands {
                 self.appearance().bar_padding()

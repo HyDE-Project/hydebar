@@ -52,7 +52,7 @@ impl StatusNotifierWatcher {
             .await
             .map_err(|e| bus_failure("Failed to receive name owner changed signal", &e))?;
 
-        let flags = RequestNameFlags::AllowReplacement.into();
+        let flags = RequestNameFlags::ALLOW_REPLACEMENT;
         if dbus_proxy
             .request_name(NAME, flags)
             .await

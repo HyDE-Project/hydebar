@@ -1,5 +1,11 @@
 //! Burial of adopted children nobody is waiting for.
 
+use std::{
+    fs::{read_dir, read_to_string},
+    process::id,
+    ptr::null_mut,
+    thread::sleep
+};
 /// How often the reaper looks for adopted children nobody buried.
 const REAP_PERIOD: std::time::Duration = std::time::Duration::from_mins(1);
 
@@ -18,7 +24,7 @@ pub fn start_orphan_reaper() {
             let mut seen: std::collections::HashSet<i32> = std::collections::HashSet::new();
 
             loop {
-                std::thread::sleep(REAP_PERIOD);
+                sleep(REAP_PERIOD);
 
                 let dead = zombie_children();
 
@@ -35,7 +41,7 @@ pub fn start_orphan_reaper() {
                                   nothing is written back"
                     )]
                     unsafe {
-                        libc::waitpid(*pid, std::ptr::null_mut(), libc::WNOHANG);
+                        libc::waitpid(*pid, null_mut(), libc::WNOHANG);
                     }
                 }
 
@@ -56,7 +62,7 @@ fn zombie_children() -> std::collections::HashSet<i32> {
         children
             .into_iter()
             .filter(|pid| {
-                std::fs::read_to_string(format!("/proc/{pid}/stat"))
+                read_to_string(format!("/proc/{pid}/stat"))
                     .ok()
                     .and_then(|stat| {
                         Some(stat.rsplit(')').next()?.split_whitespace().next()? == "Z")
@@ -69,12 +75,12 @@ fn zombie_children() -> std::collections::HashSet<i32> {
 
 /// Every child pid the kernel lists for this process, across its threads.
 fn children_of_self() -> Option<std::collections::HashSet<i32>> {
-    let tasks = std::fs::read_dir("/proc/self/task").ok()?;
+    let tasks = read_dir("/proc/self/task").ok()?;
     let mut children = std::collections::HashSet::new();
     let mut listed = false;
 
     for task in tasks.flatten() {
-        let Ok(list) = std::fs::read_to_string(task.path().join("children")) else {
+        let Ok(list) = read_to_string(task.path().join("children")) else {
             continue;
         };
 
@@ -91,10 +97,10 @@ fn children_of_self() -> Option<std::collections::HashSet<i32>> {
 /// The children of this process that already exited, by scanning `/proc`.
 fn zombie_children_by_scan() -> std::collections::HashSet<i32> {
     #[expect(clippy::cast_possible_wrap, reason = "Linux PIDs fit in i32")]
-    let me = std::process::id() as i32;
+    let me = id() as i32;
     let mut zombies = std::collections::HashSet::new();
 
-    let Ok(entries) = std::fs::read_dir("/proc") else {
+    let Ok(entries) = read_dir("/proc") else {
         return zombies;
     };
 
@@ -104,7 +110,7 @@ fn zombie_children_by_scan() -> std::collections::HashSet<i32> {
             continue;
         };
 
-        let Ok(stat) = std::fs::read_to_string(format!("/proc/{pid}/stat")) else {
+        let Ok(stat) = read_to_string(format!("/proc/{pid}/stat")) else {
             continue;
         };
 

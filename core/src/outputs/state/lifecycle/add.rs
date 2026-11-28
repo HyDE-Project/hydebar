@@ -7,14 +7,20 @@
 
 use iced::{OutputId, Task};
 use log::debug;
+use num_traits::ToPrimitive;
 
 use super::super::{Outputs, ShellInfo};
 use crate::{
+    HEIGHT,
     config::{self, AppearanceStyle, Position},
+    frame::panel_widths,
     menu::Menu,
     outputs::{
         config::is_output_requested,
-        wayland::{LayerSurfaceCreation, create_layer_surfaces, destroy_layer_surfaces}
+        wayland::{
+            LayerSurfaceCreation, PanelSurfaces, create_layer_surfaces, create_panel_surfaces,
+            draw_only, frame_settings, layer_height, new_layer_surface
+        }
     }
 };
 
@@ -69,27 +75,46 @@ impl Outputs {
                 config.layer
             );
 
-            let destroy_task = match self
-                .0
-                .iter()
-                .position(|(key, _, _)| key.as_deref() == Some(name))
-            {
-                Some(index) => {
-                    let old_output = self.0.swap_remove(index);
+            #[expect(
+                clippy::cast_possible_truncation,
+                reason = "the bar height constant is small enough for pixel counts"
+            )]
+            let fallback_bar_height = HEIGHT as f32;
+            let widths = panel_widths(
+                &config.appearance.frame,
+                position,
+                config.appearance.scale_factor
+            );
 
-                    match old_output.1 {
-                        Some(shell_info) => destroy_layer_surfaces(
-                            shell_info.id,
-                            shell_info.menu.id,
-                            shell_info.tooltip_id,
-                            shell_info.desk_id,
-                            shell_info.notifications_id
-                        ),
-                        _ => Task::none()
-                    }
-                }
-                _ => Task::none()
+            let PanelSurfaces {
+                top_id,
+                left_id,
+                right_id,
+                bottom_id,
+                task: panel_task
+            } = create_panel_surfaces(
+                Some(wl_output),
+                config.layer,
+                position,
+                layer_height(
+                    config.appearance.style,
+                    config.appearance.scale_factor,
+                    config.appearance.height_px()
+                )
+                .to_f32()
+                .unwrap_or(fallback_bar_height),
+                widths
+            );
+
+            let (frame_id, frame_task) = if config.appearance.frame.enabled {
+                let (id, task) = new_layer_surface(frame_settings(Some(wl_output), config.layer));
+
+                (Some(id), Some(Task::batch(vec![task, draw_only(id)])))
+            } else {
+                (None, None)
             };
+
+            let destroy_task = self.destroy_matching(|entry| entry.0.as_deref() == Some(name));
 
             self.0.push((
                 Some(name.to_owned()),
@@ -103,52 +128,29 @@ impl Outputs {
                     tooltip_id,
                     tooltip: None,
                     desk_id,
-                    notifications_id
+                    notifications_id,
+                    frame_id,
+                    frame_enabled: config.appearance.frame.enabled,
+                    reservations: widths,
+                    left_panel_id: left_id,
+                    right_panel_id: right_id,
+                    bottom_panel_id: bottom_id,
+                    top_panel_id: top_id
                 }),
                 Some(wl_output)
             ));
 
-            let destroy_fallback_task = match self.0.iter().position(|(key, _, _)| key.is_none()) {
-                Some(index) => {
-                    let old_output = self.0.swap_remove(index);
+            let destroy_fallback_task = self.destroy_matching(|entry| entry.0.is_none());
 
-                    match old_output.1 {
-                        Some(shell_info) => destroy_layer_surfaces(
-                            shell_info.id,
-                            shell_info.menu.id,
-                            shell_info.tooltip_id,
-                            shell_info.desk_id,
-                            shell_info.notifications_id
-                        ),
-                        _ => Task::none()
-                    }
-                }
-                _ => Task::none()
-            };
+            let mut tasks = vec![destroy_task, destroy_fallback_task, task, panel_task];
 
-            Task::batch(vec![destroy_task, destroy_fallback_task, task])
+            if let Some(frame_task) = frame_task {
+                tasks.push(frame_task);
+            }
+
+            Task::batch(tasks)
         } else {
-            let destroy_task = match self
-                .0
-                .iter()
-                .position(|(key, _, _)| key.as_deref() == Some(name))
-            {
-                Some(index) => {
-                    let old_output = self.0.swap_remove(index);
-
-                    match old_output.1 {
-                        Some(shell_info) => destroy_layer_surfaces(
-                            shell_info.id,
-                            shell_info.menu.id,
-                            shell_info.tooltip_id,
-                            shell_info.desk_id,
-                            shell_info.notifications_id
-                        ),
-                        _ => Task::none()
-                    }
-                }
-                _ => Task::none()
-            };
+            let destroy_task = self.destroy_matching(|entry| entry.0.as_deref() == Some(name));
 
             self.0.push((Some(name.to_owned()), None, Some(wl_output)));
 

@@ -25,8 +25,8 @@ impl ControlCenter {
         M: 'static + From<Message>
     {
         let network = self.network.as_ref()?;
-        let connection = network.get_connection_indicator(icons);
-        let vpn = network.get_vpn_indicator(icons);
+        let connection = network.connection_indicator(icons);
+        let vpn = network.vpn_indicator(icons);
 
         if connection.is_none() && vpn.is_none() {
             return None;
@@ -62,7 +62,7 @@ impl ControlCenter {
 
         let buttons = vec![
             self.network.as_ref().and_then(|n| {
-                n.get_wifi_quick_setting_button(
+                n.wifi_quick_setting_button(
                     id,
                     self.sub_menu,
                     config.wifi_more_cmd.is_some(),
@@ -71,7 +71,7 @@ impl ControlCenter {
                 )
             }),
             self.network.as_ref().and_then(|n| {
-                n.get_vpn_quick_setting_button(
+                n.vpn_quick_setting_button(
                     id,
                     self.sub_menu,
                     config.vpn_more_cmd.is_some(),
@@ -83,7 +83,7 @@ impl ControlCenter {
                 if config.remove_airplane_btn {
                     None
                 } else {
-                    Some(n.get_airplane_mode_quick_setting_button(opacity, icons))
+                    Some(n.airplane_mode_quick_setting_button(opacity, icons))
                 }
             }),
         ];

@@ -3,7 +3,11 @@
 use log::error;
 use masterror::AppError;
 
-use super::{PowerProfile, UPowerEvent, UPowerService, dbus::PowerProfilesProxy};
+use super::{
+    dbus::PowerProfilesProxy,
+    handle::UPowerService,
+    model::{PowerProfile, UPowerEvent}
+};
 use crate::services::{Service, ServiceEvent, bus::bus_failure};
 
 impl UPowerService {

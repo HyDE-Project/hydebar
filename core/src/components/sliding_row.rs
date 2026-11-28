@@ -134,7 +134,7 @@ mod tests {
         let row: SlidingRow<'static, Msg> = SlidingRow::new(SPACING, 1.0);
         let (cache, messages) = frame(row, Cache::default(), mouse::Cursor::Unavailable, &[]);
 
-        assert!(messages.is_empty());
+        assert_eq!(messages, []);
         drop(cache);
     }
 
@@ -188,7 +188,7 @@ mod tests {
             &[]
         );
 
-        assert!(messages.is_empty());
+        assert_eq!(messages, []);
         drop(cache);
     }
 

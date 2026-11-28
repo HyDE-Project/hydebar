@@ -11,6 +11,7 @@
 //! renders any template.
 
 use super::palette::DcolMode;
+use crate::shell_vars::number;
 
 /// Value of `enableWallDcol` when the key is missing.
 ///
@@ -44,7 +45,7 @@ impl Recolour {
     /// Reads the setting out of the contents of `staterc`.
     #[must_use]
     pub(super) fn parse(staterc: &str) -> Self {
-        match crate::shell_vars::number::<u8>(staterc, RECOLOUR_KEY).unwrap_or(DEFAULT_RECOLOUR) {
+        match number::<u8>(staterc, RECOLOUR_KEY).unwrap_or(DEFAULT_RECOLOUR) {
             0 => Self::ThemeWins,
             1 => Self::Wallpaper,
             2 => Self::WallpaperForcedDark,

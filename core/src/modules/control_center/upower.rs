@@ -30,8 +30,8 @@ impl BatteryData {
     /// The bar reading of the power profile in force.
     #[must_use]
     pub fn indicator<Message: 'static>(&self, icons: &IconTheme) -> Element<'static, Message> {
-        let icon_type = self.get_icon();
-        let state = self.get_indicator_state();
+        let icon_type = self.icon();
+        let state = self.indicator_state();
 
         container(
             row!(icon(icons, icon_type), text(format!("{}%", self.capacity)))
@@ -55,12 +55,12 @@ impl BatteryData {
         &self,
         icons: &IconTheme
     ) -> Container<'a, Message> {
-        let state = self.get_indicator_state();
+        let state = self.indicator_state();
 
         container({
             let battery_info = container(
                 row!(
-                    icon(icons, self.get_icon()),
+                    icon(icons, self.icon()),
                     text(format!("{}%", self.capacity))
                 )
                 .spacing(scale::icon_gap())
@@ -122,7 +122,7 @@ impl PowerProfile {
 
     /// The power profile toggle of the quick settings.
     #[must_use]
-    pub fn get_quick_setting_button(
+    pub fn quick_setting_button(
         &self,
         opacity: f32,
         icons: &IconTheme
@@ -162,8 +162,7 @@ mod tests {
 
     use super::*;
 
-    #[derive(Debug, Clone, PartialEq, Eq)]
-    enum Probe {}
+    type Probe = std::convert::Infallible;
 
     fn icons() -> IconTheme {
         IconTheme::default()
@@ -196,14 +195,11 @@ mod tests {
         let resting = battery(50, BatteryStatus::Full);
 
         assert!(matches!(
-            charging.get_indicator_state(),
+            charging.indicator_state(),
             IndicatorState::Success
         ));
-        assert!(matches!(low.get_indicator_state(), IndicatorState::Danger));
-        assert!(matches!(
-            resting.get_indicator_state(),
-            IndicatorState::Normal
-        ));
+        assert!(matches!(low.indicator_state(), IndicatorState::Danger));
+        assert!(matches!(resting.indicator_state(), IndicatorState::Normal));
     }
 
     #[test]
@@ -290,7 +286,7 @@ mod tests {
     fn an_unknown_profile_offers_no_quick_setting() {
         assert!(
             PowerProfile::Unknown
-                .get_quick_setting_button(1.0, &icons())
+                .quick_setting_button(1.0, &icons())
                 .is_none()
         );
     }
@@ -303,7 +299,7 @@ mod tests {
             (PowerProfile::PowerSaver, "Power Saver")
         ] {
             let (button, submenu) = profile
-                .get_quick_setting_button(1.0, &icons())
+                .quick_setting_button(1.0, &icons())
                 .expect("a known profile offers a quick setting");
 
             assert!(submenu.is_none());
@@ -316,7 +312,7 @@ mod tests {
     #[test]
     fn pressing_the_profile_quick_setting_asks_to_cycle_it() {
         let (button, _) = PowerProfile::Balanced
-            .get_quick_setting_button(1.0, &icons())
+            .quick_setting_button(1.0, &icons())
             .expect("a known profile offers a quick setting");
 
         let mut ui = simulator(button);

@@ -99,9 +99,10 @@ impl AppearanceTransition {
     /// Blends towards `appearance`, or applies it immediately when `animated`
     /// is false.
     ///
-    /// Colours and opacities cross-fade; discrete settings such as the layout
-    /// style or the scale factor switch instantly because the compositor side
-    /// of the shell has to be reconfigured for them anyway.
+    /// Colours, opacities and the continuous geometry cross-fade; discrete
+    /// settings such as the layout style or the scale factor switch
+    /// instantly because the compositor side of the shell has to be
+    /// reconfigured for them anyway.
     ///
     /// A target the transition is already aimed at changes nothing at all,
     /// and one landing mid-flight only re-aims the running travel: a theme
@@ -217,9 +218,9 @@ mod tests {
         let mut transition = AppearanceTransition::new(appearance_with_background(0));
 
         transition.set_target(appearance_with_background(200), true);
-        let _ = transition.advance(Duration::from_millis(60));
+        let _ = transition.advance(Duration::from_millis(120));
 
-        let midway = transition.current().background_color.get_base();
+        let midway = transition.current().background_color.base();
         assert!(midway.r > 0);
         assert!(midway.r < 200);
 
@@ -314,9 +315,11 @@ mod tests {
             transition.sample(1.0).background_color,
             AppearanceColor::Simple(hex(200))
         );
-        assert_eq!(
-            transition.sample(0.5).background_color,
-            AppearanceColor::Simple(hex(100))
+        let midway = transition.sample(0.5).background_color.base();
+
+        assert!(
+            midway.r > 0 && midway.r < 200,
+            "the perceptual midpoint sits between the ends, not at their arithmetic mean"
         );
         assert_eq!(
             transition.sample(7.0).background_color,

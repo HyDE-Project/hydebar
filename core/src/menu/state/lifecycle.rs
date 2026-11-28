@@ -1,5 +1,7 @@
 //! Opening, closing and press-driven dismissal of the menu surface.
 
+use std::mem::take;
+
 use iced::{
     KeyboardInteractivity, Layer, Task, destroy_layer_surface, new_layer_surface,
     set_keyboard_interactivity, set_layer
@@ -27,7 +29,7 @@ impl Menu {
     /// A menu a module toggled in the meantime is no longer armed, so the press
     /// that opened it does not immediately take it back down.
     pub fn dismiss_if_armed<Message: 'static>(&mut self, config: &Config) -> Task<Message> {
-        if std::mem::take(&mut self.dismiss_armed) {
+        if take(&mut self.dismiss_armed) {
             self.close(config)
         } else {
             Task::none()

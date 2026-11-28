@@ -11,8 +11,10 @@ use super::{
     },
     defaults::{
         default_auto_scale, default_bar_opacity, default_follow_hyde, default_greeting,
-        default_opacity, default_scale_factor, opacity_deserializer, scale_factor_deserializer
+        default_opacity, default_scale_factor, default_spacing_scale, opacity_deserializer,
+        scale_factor_deserializer, spacing_scale_deserializer
     },
+    frame::FrameConfig,
     menu::MenuAppearance,
     size_value::SizeValue,
     style::AppearanceStyle,
@@ -68,6 +70,17 @@ pub struct Appearance {
     /// to a value of its own, whatever the compositor is configured with.
     #[serde(default)]
     pub side_padding:             Option<SizeValue>,
+    #[serde(
+        deserialize_with = "spacing_scale_deserializer",
+        default = "default_spacing_scale"
+    )]
+    /// Multiplier applied to every font-derived gap of the bar.
+    ///
+    /// All paddings and gaps are stated as factors of the themed font size;
+    /// this scale loosens or tightens the whole layout at once without
+    /// touching the text. `1.0` keeps the reference proportions, `1.5` breathes
+    /// one and a half times as wide, `0.75` packs the bar denser.
+    pub spacing_scale:            f32,
     /// Whether the appearance follows the theme published by the `HyDE`
     /// Project.
     ///
@@ -104,6 +117,9 @@ pub struct Appearance {
     #[serde(default)]
     /// How an open menu is drawn, and how far it stands from the bar.
     pub menu:                     MenuAppearance,
+    #[serde(default)]
+    /// The ring the bar draws around the screen, off unless asked for.
+    pub frame:                    FrameConfig,
     #[serde(default)]
     /// How long the bar's motion takes, and how it eases.
     pub animations:               AnimationConfig,
@@ -198,6 +214,7 @@ impl Default for Appearance {
             radius:                   None,
             height:                   None,
             side_padding:             None,
+            spacing_scale:            default_spacing_scale(),
             follow_hyde:              default_follow_hyde(),
             auto_scale:               default_auto_scale(),
             scale_factor:             1.0,
@@ -205,6 +222,7 @@ impl Default for Appearance {
             opacity:                  default_opacity(),
             bar_opacity:              default_bar_opacity(),
             menu:                     MenuAppearance::default(),
+            frame:                    FrameConfig::default(),
             animations:               AnimationConfig::default(),
             greeting:                 default_greeting(),
             background_color:         default_background_color(),
@@ -234,7 +252,7 @@ mod tests {
         let appearance = Appearance::default();
         assert_eq!(appearance.opacity, 1.0);
         assert_eq!(appearance.workspace_colors.len(), 3);
-        assert!(appearance.text_color.get_text().is_none());
+        assert!(appearance.text_color.text().is_none());
     }
 
     #[test]
@@ -294,5 +312,29 @@ mod tests {
         let appearance = Appearance::default();
         assert!(appearance.animations.enabled);
         assert_eq!(appearance.animations.menu_fade_duration_ms, 200);
+    }
+
+    #[test]
+    fn spacing_scale_defaults_to_neutral_and_deserializes() {
+        assert_eq!(Appearance::default().spacing_scale, 1.0);
+
+        let without_scale: Appearance =
+            toml::from_str("").expect("empty appearance table should deserialize");
+        assert_eq!(without_scale.spacing_scale, 1.0);
+
+        let with_scale: Appearance =
+            toml::from_str("spacing_scale = 1.5").expect("spacing_scale should deserialize");
+        assert_eq!(with_scale.spacing_scale, 1.5);
+    }
+
+    #[test]
+    fn spacing_scale_rejects_out_of_bounds_values() {
+        let err = toml::from_str::<Appearance>("spacing_scale = 0.0")
+            .expect_err("a zero spacing scale should error");
+        assert!(err.to_string().contains("greater than 0.0"));
+
+        let err = toml::from_str::<Appearance>("spacing_scale = 2.5")
+            .expect_err("a spacing scale above 2 should error");
+        assert!(err.to_string().contains("greater than 2.0"));
     }
 }

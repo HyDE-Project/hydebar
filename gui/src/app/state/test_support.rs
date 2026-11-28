@@ -2,7 +2,6 @@
 
 use std::sync::{Arc, OnceLock};
 
-use flexi_logger::LoggerHandle;
 use hydebar_core::{
     config::Config,
     modules::system_info::{Message, SystemInfoData}
@@ -11,15 +10,10 @@ use hydebar_core::{
 use super::{App, Message as AppMessage};
 
 /// The one logger every state test shares, started on first use.
-pub(in crate::app) fn test_logger() -> LoggerHandle {
-    static LOGGER: OnceLock<LoggerHandle> = OnceLock::new();
+pub(in crate::app) fn test_logger() -> crate::Logger {
+    static LOGGER: OnceLock<crate::Logger> = OnceLock::new();
     LOGGER
-        .get_or_init(|| {
-            flexi_logger::Logger::try_with_env_or_str("off")
-                .expect("failed to configure test logger")
-                .start()
-                .expect("failed to start test logger")
-        })
+        .get_or_init(|| crate::Logger::new(tracing_subscriber::EnvFilter::new("off")))
         .clone()
 }
 

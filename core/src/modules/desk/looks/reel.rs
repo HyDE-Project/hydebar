@@ -10,6 +10,8 @@ use std::path::{Path, PathBuf};
 
 use iced::widget::image::Handle;
 
+use crate::modules::wallpaper::current::thumbnail;
+
 /// How many pictures stand on either side of the one in force.
 ///
 /// Three: enough that the row reads as a row rather than as one picture with
@@ -90,7 +92,7 @@ pub(super) fn reel(all: &[(String, PathBuf)], at: usize) -> Reel {
 
 /// Decodes one slide down to the size a reel draws it at.
 fn decode(path: &Path) -> Option<Handle> {
-    crate::modules::wallpaper::current::thumbnail(path, SIDE)
+    thumbnail(path, SIDE)
 }
 
 /// Which of `total` things a row of `reach` either side draws, with `at` in
@@ -159,7 +161,7 @@ mod tests {
 
     #[test]
     fn nothing_is_drawn_for_nothing() {
-        assert!(centred(0, 0, REACH).is_empty());
-        assert!(centred(3, 7, REACH).is_empty());
+        assert_eq!(centred(0, 0, REACH), [] as [usize; 0]);
+        assert_eq!(centred(3, 7, REACH), [] as [usize; 0]);
     }
 }

@@ -12,7 +12,7 @@ impl App {
     /// module that publishes through the event bus rather than a stream
     /// answers nothing here — which is all of them but the notification
     /// server.
-    pub(crate) fn get_module_subscription(
+    pub(crate) fn module_subscription(
         &self,
         module_name: &ModuleName
     ) -> Option<Subscription<Message>> {
@@ -41,7 +41,7 @@ mod tests {
         let app = bar_with_the_bell(NotificationSource::Daemon);
 
         assert!(
-            app.get_module_subscription(&ModuleName::Notifications)
+            app.module_subscription(&ModuleName::Notifications)
                 .is_none(),
             "drawing the bell must not start the server the configuration declined"
         );
@@ -52,7 +52,7 @@ mod tests {
         let app = bar_with_the_bell(NotificationSource::Builtin);
 
         assert!(
-            app.get_module_subscription(&ModuleName::Notifications)
+            app.module_subscription(&ModuleName::Notifications)
                 .is_some(),
             "the bar was asked to serve the bus and has to"
         );

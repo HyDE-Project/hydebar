@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use masterror::AppResult;
-use zbus::zvariant::OwnedObjectPath;
+use zbus::OwnedObjectPath;
 
 use super::{
     IwdDbus, device::DeviceProxy, network::NetworkProxy, station_state::state_from_station
@@ -12,7 +12,7 @@ use super::{
 mod joined;
 use crate::services::{
     bus::bus_failure,
-    network::{AccessPoint, ActiveConnectionInfo, DeviceState}
+    network::data::model::{AccessPoint, ActiveConnectionInfo, DeviceState}
 };
 
 /// Turns the raw RSSI iwd reports into the percentage the bar renders.
@@ -156,8 +156,7 @@ impl IwdDbus<'_> {
                 let device_path = net
                     .device()
                     .await
-                    .map_err(|e| bus_failure("Failed to get network device", &e))?
-                    .clone();
+                    .map_err(|e| bus_failure("Failed to get network device", &e))?;
                 let state = states
                     .get(&device_path)
                     .copied()

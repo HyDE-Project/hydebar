@@ -189,7 +189,7 @@ impl Drop for PollingTask {
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
-    use std::num::NonZeroUsize;
+    use std::{num::NonZeroUsize, thread::sleep};
 
     use tokio::{task::yield_now, time::advance};
 
@@ -261,7 +261,7 @@ mod tests {
             }
 
             if spin % 64 == 63 {
-                std::thread::sleep(std::time::Duration::from_millis(1));
+                sleep(std::time::Duration::from_millis(1));
             }
 
             yield_now().await;
@@ -287,7 +287,7 @@ mod tests {
                 }
 
                 if spin % 64 == 63 {
-                    std::thread::sleep(std::time::Duration::from_millis(1));
+                    sleep(std::time::Duration::from_millis(1));
                 }
 
                 yield_now().await;

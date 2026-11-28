@@ -4,8 +4,8 @@ use iced::futures::{Stream, StreamExt, stream::select_all, stream_select};
 use masterror::{AppError, AppResult};
 
 use super::super::{
-    BluetoothService,
-    dbus::{BatteryProxy, BluetoothDbus}
+    dbus::{BatteryProxy, BluetoothDbus},
+    handle::BluetoothService
 };
 use crate::services::bus::bus_failure;
 
@@ -49,7 +49,6 @@ impl BluetoothService {
                 for device in devices.iter().filter(|d| d.battery.is_some()) {
                     let battery = BatteryProxy::builder(bluetooth.bluez.inner().connection())
                         .path(device.path.clone())
-                        .map_err(|e| bus_failure("Failed to set battery path", &e))?
                         .build()
                         .await
                         .map_err(|e| bus_failure("Failed to build battery proxy", &e))?;

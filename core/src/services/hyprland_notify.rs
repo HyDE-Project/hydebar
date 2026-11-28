@@ -5,7 +5,7 @@
 //! is what lets them follow the theme automatically, without anyone editing a
 //! second configuration to keep two things looking alike.
 
-use std::process::Command;
+use std::{process::Command, thread::spawn};
 
 use hydebar_proto::{
     compositor_ipc,
@@ -57,12 +57,15 @@ impl Notice {
     reason = "each channel is clamped to [0.0, 1.0] before scaling, so the rounded value is non-negative and fits in u8"
 )]
 pub fn compositor_color(color: AppearanceColor) -> String {
-    let base = color.get_base();
+    let base = color.base();
     let alpha = (base.a.clamp(0.0, 1.0) * 255.0).round() as u8;
 
     format!(
-        "rgba({:02x}{:02x}{:02x}{:02x})",
-        base.r, base.g, base.b, alpha
+        "rgba({red:02x}{green:02x}{blue:02x}{alpha:02x})",
+        red = base.r,
+        green = base.g,
+        blue = base.b,
+        alpha = alpha
     )
 }
 
@@ -102,7 +105,7 @@ pub fn notify_args(
 pub fn notify(notice: Notice, duration: u32, color: &str, font_size: f32, message: &str) {
     let request = notify_args(notice, duration, color, font_size, message).join(" ");
 
-    std::thread::spawn(move || match compositor_ipc::request(&request) {
+    spawn(move || match compositor_ipc::request(&request) {
         Some(answer) if answer.trim() == "ok" => {}
         Some(answer) => warn!("the compositor refused a notice: {}", answer.trim()),
         None => warn!("the compositor could not be reached for a notice")
@@ -168,7 +171,7 @@ pub fn post_to_bus(message: &str) {
 
     match sent {
         Ok(mut child) => {
-            std::thread::spawn(move || {
+            spawn(move || {
                 let _ = child.wait();
             });
         }

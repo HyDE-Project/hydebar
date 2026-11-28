@@ -88,7 +88,7 @@ impl App {
                             self.appearance().pill_radius(),
                             grouped,
                             false,
-                            self.hover.progress(module_name),
+                            self.focus.hover.progress(module_name),
                             hydebar_core::style::IslandFinish::of(self.appearance())
                         ));
 

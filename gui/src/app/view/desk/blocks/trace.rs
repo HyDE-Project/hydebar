@@ -11,7 +11,7 @@ use iced::{
     widget::canvas::{self, Canvas, Frame as Sheet, Geometry, Path, Stroke}
 };
 
-use super::Ink;
+use super::ink::Ink;
 use crate::app::Message;
 
 /// How tall a trace stands, as a share of the body ink.
@@ -186,6 +186,6 @@ mod tests {
 
     #[test]
     fn a_single_reading_draws_nothing() {
-        assert!(line(&[42.0], 100.0).points(sheet()).is_empty());
+        assert_eq!(line(&[42.0], 100.0).points(sheet()), []);
     }
 }

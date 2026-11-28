@@ -5,7 +5,7 @@ use masterror::AppResult;
 use super::super::super::proxies::{
     AccessPointProxy, ActiveConnectionProxy, DeviceProxy, WirelessDeviceProxy
 };
-use crate::services::{bus::bus_failure, network::ActiveConnectionInfo};
+use crate::services::{bus::bus_failure, network::data::model::ActiveConnectionInfo};
 
 /// Reads the network name and signal strength of a wireless connection.
 ///
@@ -17,7 +17,6 @@ pub(super) async fn describe(
 ) -> AppResult<Option<ActiveConnectionInfo>> {
     let wireless_device = WirelessDeviceProxy::builder(conn)
         .path(device.inner().path())
-        .map_err(|e| bus_failure("Failed to set WirelessDeviceProxy path", &e))?
         .build()
         .await
         .map_err(|e| bus_failure("Failed to build WirelessDeviceProxy", &e))?;
@@ -28,7 +27,6 @@ pub(super) async fn describe(
 
     let access_point = AccessPointProxy::builder(conn)
         .path(access_point)
-        .map_err(|e| bus_failure("Failed to set AccessPointProxy path", &e))?
         .build()
         .await
         .map_err(|e| bus_failure("Failed to build AccessPointProxy", &e))?;

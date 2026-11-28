@@ -208,7 +208,7 @@ fn interpret_theme_event_ignores_files_the_theme_is_not_read_from() {
 
 #[test]
 fn watch_targets_are_empty_when_the_bar_does_not_follow_hyde() {
-    assert!(watch_targets(false).is_empty());
+    assert_eq!(watch_targets(false), []);
 }
 
 #[test]
@@ -288,7 +288,7 @@ async fn a_palette_switch_repaints_the_bar_from_the_hyde_cache() {
         other => panic!("unexpected event: {other:?}")
     };
     assert_eq!(
-        first.config.appearance.background_color.get_base(),
+        first.config.appearance.background_color.base(),
         Rgba::rgb(0x48, 0x38, 0x28)
     );
     assert_eq!(first.config.appearance.opacity, 0.8);
@@ -315,7 +315,7 @@ async fn a_palette_switch_repaints_the_bar_from_the_hyde_cache() {
         "a palette switch should be reported as an appearance change"
     );
     assert_eq!(
-        second.config.appearance.background_color.get_base(),
+        second.config.appearance.background_color.base(),
         Rgba::rgb(0x1B, 0x1D, 0x1C)
     );
 }

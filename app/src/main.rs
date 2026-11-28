@@ -12,10 +12,11 @@
 #![allow(clippy::redundant_closure)]
 #![allow(clippy::double_ended_iterator_last)]
 
+mod alloc;
 mod application;
 mod error;
 mod housekeeping;
-mod instance;
+pub(crate) mod instance;
 mod logging;
 mod runtime;
 mod startup_scale;
@@ -45,13 +46,17 @@ fn main() -> ExitCode {
 
 /// Builds the runtime and runs the bar on it.
 ///
-/// The cap on borrowed runtimes comes first, while the process is still one
-/// thread: it is stated in the environment, and the toolkit reads it the
-/// moment it builds a runtime of its own.
+/// The allocator is tuned first, while the process is still one thread: the
+/// arena cap only holds if no thread has forced a new arena into existence
+/// yet. The cap on borrowed runtimes comes next, for the same reason: it is
+/// stated in the environment, and the toolkit reads it the moment it builds
+/// a runtime of its own.
 fn start() -> Result<(), MainError> {
+    alloc::init();
     runtime::cap_borrowed_pools();
 
     let runtime = runtime::build()?;
 
+    alloc::start_upkeep(runtime.handle());
     application::run(runtime.handle().clone())
 }

@@ -1,6 +1,6 @@
 //! The shared book of seats every gliding block reads and writes.
 
-use std::collections::HashMap;
+use std::{collections::HashMap, mem::take};
 
 use iced_core::Rectangle;
 
@@ -31,7 +31,7 @@ impl FlipMemo {
     /// nobody restates belonged to a surface or module that is gone —
     /// taking is what keeps the book from hoarding the dead.
     pub fn depart(&mut self) {
-        self.from = std::mem::take(&mut self.live);
+        self.from = take(&mut self.live);
     }
 
     /// Writes the seat `key` rests at on the current frame.

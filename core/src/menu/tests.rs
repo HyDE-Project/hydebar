@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use iced::{Point, SurfaceId as Id, Task};
 
-use super::{kind::MenuType, state::Menu};
+use super::{kind::MenuType, state::Menu, wrapper::grown_height};
 use crate::{config::Config, position_button::ButtonUIRef};
 
 fn button_ref() -> ButtonUIRef {
@@ -35,12 +35,12 @@ fn opening_a_menu_fades_in_over_frames() {
     let _task: Task<()> = menu.open(MenuType::Calendar, button_ref(), &config);
 
     assert!(menu.is_animating());
-    assert_eq!(menu.get_opacity(), 0.0);
+    assert_eq!(menu.opacity(), 0.0);
 
     drain_animation(&mut menu, &config);
 
     assert!(!menu.is_animating());
-    assert_eq!(menu.get_opacity(), config.appearance.menu.opacity);
+    assert_eq!(menu.opacity(), config.appearance.menu.opacity);
 }
 
 #[test]
@@ -53,7 +53,7 @@ fn closing_a_menu_snaps_dark_and_leaves_the_fade_to_the_compositor() {
     let _close: Task<()> = menu.close(&config);
 
     assert_eq!(
-        menu.get_opacity(),
+        menu.opacity(),
         0.0,
         "the app-side fade ends at once; the destroyed surface fades as one layer"
     );
@@ -69,7 +69,54 @@ fn disabled_animations_snap_to_the_target() {
     let _task: Task<()> = menu.open(MenuType::Calendar, button_ref(), &config);
 
     assert!(!menu.is_animating());
-    assert_eq!(menu.get_opacity(), config.appearance.menu.opacity);
+    assert_eq!(menu.opacity(), config.appearance.menu.opacity);
+}
+
+#[test]
+fn a_soft_menu_spring_overshoots_before_settling() {
+    let mut config = Config::default();
+    config.appearance.animations.damping_ratio = 0.6;
+    let mut menu = Menu::new(Id::unique(), None);
+
+    let _task: Task<()> = menu.open(MenuType::Calendar, button_ref(), &config);
+
+    let target = config.appearance.menu.opacity;
+    let mut peak = 0.0f32;
+    let mut frames = 0;
+    while menu
+        .tick_animation::<()>(&config.appearance.animations, Duration::from_millis(8))
+        .0
+    {
+        peak = peak.max(menu.opacity());
+        frames += 1;
+        assert!(frames < 1000, "menu fade failed to settle");
+    }
+
+    assert!(peak > target, "a soft spring overshoots its target");
+    assert_eq!(menu.opacity(), target);
+}
+
+#[test]
+fn a_critically_damped_menu_never_overshoots() {
+    let config = Config::default();
+    assert_eq!(config.appearance.animations.damping_ratio, 1.0);
+    let mut menu = Menu::new(Id::unique(), None);
+
+    let _task: Task<()> = menu.open(MenuType::Calendar, button_ref(), &config);
+
+    let target = config.appearance.menu.opacity;
+    let mut peak = 0.0f32;
+    let mut frames = 0;
+    while menu
+        .tick_animation::<()>(&config.appearance.animations, Duration::from_millis(8))
+        .0
+    {
+        peak = peak.max(menu.opacity());
+        frames += 1;
+        assert!(frames < 1000, "menu fade failed to settle");
+    }
+
+    assert!(peak <= target + f32::EPSILON);
 }
 
 fn open_type(menu: &Menu) -> Option<&MenuType> {
@@ -228,7 +275,7 @@ fn disabled_animations_close_at_once() {
     let _close: Task<()> = menu.close(&config);
 
     assert!(open_type(&menu).is_none());
-    assert_eq!(menu.get_opacity(), 0.0);
+    assert_eq!(menu.opacity(), 0.0);
 }
 
 #[test]
@@ -242,9 +289,33 @@ fn closing_mid_open_starts_the_successor_from_dark() {
     let _close: Task<()> = menu.close(&config);
 
     assert_eq!(
-        menu.get_opacity(),
+        menu.opacity(),
         0.0,
         "the successor surface must not inherit a half-travelled fade"
     );
     assert!(!menu.is_animating());
+}
+
+#[test]
+fn a_growing_box_rides_the_travelled_share_of_its_resting_height() {
+    assert_eq!(grown_height(100.0, 10.0, None, 0.5), 60.0);
+    assert_eq!(grown_height(100.0, 10.0, None, 1.0), 120.0);
+    assert_eq!(grown_height(100.0, 10.0, None, 0.0), 0.0);
+}
+
+#[test]
+fn a_box_taller_than_its_room_grows_towards_the_room() {
+    assert_eq!(grown_height(100.0, 10.0, Some(80.0), 0.5), 40.0);
+    assert_eq!(grown_height(100.0, 10.0, Some(80.0), 1.0), 80.0);
+}
+
+#[test]
+fn a_roomy_cap_leaves_a_fitting_box_alone() {
+    assert_eq!(grown_height(100.0, 10.0, Some(500.0), 0.5), 60.0);
+}
+
+#[test]
+fn growth_clamps_a_runaway_progress() {
+    assert_eq!(grown_height(100.0, 10.0, None, 1.5), 120.0);
+    assert_eq!(grown_height(100.0, 10.0, None, -0.5), 0.0);
 }

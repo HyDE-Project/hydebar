@@ -9,7 +9,8 @@ use crate::{
     modules::{Module, ModuleError},
     services::{
         ServiceEvent,
-        mpris::{ListenerState, MprisEventPublisher, MprisPlayerService}
+        mpris::{ListenerState, MprisEventPublisher, MprisPlayerService},
+        reconnect_delay
     }
 };
 
@@ -54,7 +55,7 @@ where
                         }
 
                         failures = failures.saturating_add(1);
-                        tokio::time::sleep(crate::services::reconnect_delay(failures)).await;
+                        tokio::time::sleep(reconnect_delay(failures)).await;
                         state = ListenerState::Init;
                     }
                 }

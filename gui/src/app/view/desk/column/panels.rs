@@ -12,7 +12,7 @@ impl App {
     /// not answered yet, or has nothing longer to say than its strip entry,
     /// yields no panel and stands on the canvas as it stands on the strip.
     pub(super) fn desk_panels(&self, module: &ModuleName) -> Vec<readings::Panel> {
-        let machine = self.system_info.data();
+        let machine = self.modules.system_info.data();
 
         match module {
             ModuleName::SystemInfo => [

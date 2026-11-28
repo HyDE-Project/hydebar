@@ -16,6 +16,7 @@
 //! the function that reads its output. The polling thread itself
 //! lives in [`feed`].
 
+use std::env::{split_paths, var_os};
 mod feed;
 
 use std::path::PathBuf;
@@ -93,8 +94,8 @@ pub fn for_vendor(vendor: GpuVendor) -> Option<&'static Utility> {
 /// Path a program resolves to on `PATH`, when it is installed at all.
 #[must_use]
 pub fn on_path(program: &str) -> Option<PathBuf> {
-    std::env::var_os("PATH").and_then(|paths| {
-        std::env::split_paths(&paths)
+    var_os("PATH").and_then(|paths| {
+        split_paths(&paths)
             .map(|directory| directory.join(program))
             .find(|candidate| candidate.is_file())
     })

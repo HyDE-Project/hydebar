@@ -12,7 +12,7 @@ use crate::{
     ModuleContext,
     event_bus::ModuleEvent,
     modules::{Module, ModuleError},
-    services::{ServiceEvent, privacy::State}
+    services::{ServiceEvent, privacy::State, reconnect_delay}
 };
 
 impl<M> Module<M> for Privacy
@@ -49,7 +49,7 @@ where
                             .send(PrivacyMessage::Event(ServiceEvent::Error(error.clone())));
 
                         failures = failures.saturating_add(1);
-                        tokio::time::sleep(crate::services::reconnect_delay(failures)).await;
+                        tokio::time::sleep(reconnect_delay(failures)).await;
                         state = State::Init;
                     }
                 }

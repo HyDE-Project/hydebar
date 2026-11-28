@@ -15,12 +15,12 @@ use hydebar_core::services::bluetooth::BluetoothState;
 pub use link::link;
 pub use sound::sound;
 
-use super::super::Panel;
+use super::super::panel::Panel;
 use crate::app::state::App;
 
 /// The radio and whatever is paired to it.
 pub fn radio(app: &App) -> Option<Panel> {
-    let bluetooth = app.control_center.bluetooth_readings()?;
+    let bluetooth = app.modules.control_center.bluetooth_readings()?;
 
     if matches!(bluetooth.state, BluetoothState::Unavailable) {
         return None;
@@ -60,7 +60,7 @@ pub fn radio(app: &App) -> Option<Panel> {
 
 /// The backlight, on a screen the session can dim.
 pub fn screen(app: &App) -> Option<Panel> {
-    let brightness = app.control_center.brightness_readings()?;
+    let brightness = app.modules.control_center.brightness_readings()?;
 
     if brightness.max == 0 {
         return None;

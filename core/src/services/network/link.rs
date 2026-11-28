@@ -9,7 +9,7 @@
 use serde::Deserialize;
 use tokio::process::Command;
 
-use super::LinkDetails;
+use super::data::model::LinkDetails;
 
 /// One default route as `ip -j route show default` spells it.
 #[derive(Debug, Deserialize)]
@@ -172,7 +172,13 @@ fn netmask(prefix: u8) -> String {
         .unwrap_or(0);
     let octets = bits.to_be_bytes();
 
-    format!("{}.{}.{}.{}", octets[0], octets[1], octets[2], octets[3])
+    format!(
+        "{first}.{second}.{third}.{fourth}",
+        first = octets[0],
+        second = octets[1],
+        third = octets[2],
+        fourth = octets[3]
+    )
 }
 
 #[cfg(test)]

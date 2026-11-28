@@ -32,8 +32,7 @@ pub(super) fn read() -> CompositorLook {
         .collect::<Vec<_>>();
 
     compositor_ipc::batch(commands.iter().map(String::as_str))
-        .map(|response| fill(&parse(&response)))
-        .unwrap_or_default()
+        .map_or_default(|response| fill(&parse(&response)))
 }
 
 /// Fills the look from the answers a batch wrote back.

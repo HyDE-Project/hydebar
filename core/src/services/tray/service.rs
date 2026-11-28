@@ -3,6 +3,7 @@
 use std::{future::Future, ops::Deref, pin::Pin};
 
 use iced::Task;
+use jiff::Timestamp;
 use log::{debug, error};
 use masterror::{AppError, AppResult};
 
@@ -73,7 +74,7 @@ impl TrayService {
         menu_proxy: &DBusMenuProxy<'_>,
         id: i32
     ) -> AppResult<Layout> {
-        let value = zbus::zvariant::Value::I32(32)
+        let value = zbus::Variant::I32(32)
             .try_to_owned()
             .map_err(|e| AppError::internal(format!("Failed to convert value to owned: {e}")))?;
         menu_proxy
@@ -81,7 +82,7 @@ impl TrayService {
                 id,
                 "clicked",
                 &value,
-                chrono::offset::Local::now().timestamp_subsec_micros()
+                u32::try_from(Timestamp::now().subsec_microsecond()).unwrap_or(0)
             )
             .await
             .map_err(|e| bus_failure("Failed to trigger menu event", &e))?;

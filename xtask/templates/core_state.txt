@@ -1,0 +1,29 @@
+//! Message folding for the {{label}} module.
+
+use super::{Message, {{Pascal}}};
+
+impl {{Pascal}} {
+    /// Applies one message to the readout.
+    ///
+    /// TODO: fold the real events here instead of the placeholder tick.
+    pub fn update(&mut self, message: Message) {
+        let Message::Tick(value) = message;
+
+        self.value = value;
+    }
+}
+
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_tick_updates_the_readout() {
+        let mut module = {{Pascal}}::default();
+
+        module.update(Message::Tick(String::from("tick")));
+
+        assert_eq!(module.value, "tick");
+    }
+}

@@ -1,0 +1,35 @@
+//! {{doc}}
+//!
+//! One folder, small rooms: [`state`] folds messages into the readout
+//! and [`view`] paints the bar entry.{{module_line}} The root holds the
+//! state the rooms share.
+
+{{root_imports}}{{root_modules}}
+
+/// {{doc}}
+{{struct_attr}}pub struct {{Pascal}} {
+{{root_fields}}
+}
+
+{{debug_impl}}impl {{Pascal}} {
+    /// An entry showing its own name until the real readout lands.
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+{{root_init}}
+        }
+    }
+}
+
+impl Default for {{Pascal}} {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// What the {{label}} module answers to.
+#[derive(Debug, Clone)]
+pub enum Message {
+    /// TODO: replace with the real events the module folds.
+    Tick(String)
+}

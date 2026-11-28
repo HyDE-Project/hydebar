@@ -267,8 +267,7 @@ mod paint_tests {
         Color::from_rgb(0.5, 0.0, 0.5)
     );
 
-    #[derive(Debug, Clone, PartialEq, Eq)]
-    enum Msg {}
+    type Msg = std::convert::Infallible;
 
     fn applying() -> ThemeChip {
         ThemeChip::Applying(Spinner::default())

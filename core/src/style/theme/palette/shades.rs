@@ -12,15 +12,15 @@ use crate::{config::AppearanceColor, style::color::readable_pair};
 /// The weak shade of an entry, paired with the text that has to read on it.
 pub(super) fn weak_pair(color: &AppearanceColor, text_fallback: Color) -> Option<palette::Pair> {
     color
-        .get_weak()
-        .map(|weak| readable_pair(weak, color.get_text(), text_fallback))
+        .weak()
+        .map(|weak| readable_pair(weak, color.text(), text_fallback))
 }
 
 /// The strong shade of an entry, paired with the text that has to read on it.
 pub(super) fn strong_pair(color: &AppearanceColor, text_fallback: Color) -> Option<palette::Pair> {
     color
-        .get_strong()
-        .map(|strong| readable_pair(strong, color.get_text(), text_fallback))
+        .strong()
+        .map(|strong| readable_pair(strong, color.text(), text_fallback))
 }
 
 pub(super) fn build_pair(

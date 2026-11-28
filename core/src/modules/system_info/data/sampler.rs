@@ -15,9 +15,13 @@ impl SystemInfoSampler {
         Self {
             system:       sysinfo::System::new_with_specifics(
                 sysinfo::RefreshKind::nothing()
-                    .with_cpu(sysinfo::CpuRefreshKind::nothing().with_cpu_usage())
+                    .with_cpu(sysinfo::CpuRefreshKind::nothing().with_usage())
                     .with_memory(sysinfo::MemoryRefreshKind::nothing().with_ram())
-            ),
+            )
+            .unwrap_or_else(|_| {
+                sysinfo::System::new_with_specifics(sysinfo::RefreshKind::nothing())
+                    .unwrap_or_else(|_| unreachable!("a zero-refresh collection cannot fail"))
+            }),
             sensors:      HardwareSensors::new(),
             disks:        None,
             networks:     None,
@@ -43,13 +47,13 @@ impl SystemInfoSampler {
 
     pub(super) fn ensure_disks(&mut self) {
         if self.disks.is_none() {
-            self.disks = Some(Disks::new_with_refreshed_list());
+            self.disks = Disks::new_with_refreshed_list().ok();
         }
     }
 
     pub(super) fn ensure_networks(&mut self) {
         if self.networks.is_none() {
-            self.networks = Some(Networks::new_with_refreshed_list());
+            self.networks = Networks::new_with_refreshed_list().ok();
         }
     }
 
@@ -57,7 +61,7 @@ impl SystemInfoSampler {
     /// subsequent samples.
     pub fn sample(&mut self) -> SystemInfoData {
         self.system
-            .refresh_cpu_specifics(sysinfo::CpuRefreshKind::nothing().with_cpu_usage());
+            .refresh_cpu_specifics(sysinfo::CpuRefreshKind::nothing().with_usage());
         self.system.refresh_memory();
 
         let (cpu_usage, cpu_count) = cpu_counters(&self.system);

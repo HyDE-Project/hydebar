@@ -22,7 +22,7 @@ use iced::{
     widget::{Column, Row, container, text}
 };
 
-use super::{super::readings::Miniature, Ink};
+use super::{super::readings::Miniature, ink::Ink};
 use crate::app::Message;
 
 /// How many workspaces stand on either side of the one in view.

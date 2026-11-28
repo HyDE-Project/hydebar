@@ -1,11 +1,11 @@
 //! Every workspace of a screen, and the miniature it is drawn as.
 
-use super::super::super::{Figure, Frame, Miniature, Panel, push};
+use super::super::super::panel::{Figure, Frame, Miniature, Panel, push};
 use crate::app::state::App;
 
 /// The workspaces of this screen, and what stands on each of them.
 pub fn workspaces(app: &App) -> Option<Panel> {
-    let items = app.workspaces.items();
+    let items = app.modules.workspaces.items();
 
     if items.is_empty() {
         return None;
@@ -47,10 +47,11 @@ pub fn workspaces(app: &App) -> Option<Panel> {
 /// A screen the bar has not been told the size of yields empty rooms rather
 /// than a drawing laid out against a guess.
 fn miniatures(app: &App) -> Vec<Miniature> {
-    let width = app.screen_width.unwrap_or_default();
-    let height = app.screen_height.unwrap_or_default();
+    let width = app.screen.width.unwrap_or_default();
+    let height = app.screen.height.unwrap_or_default();
 
-    app.workspaces
+    app.modules
+        .workspaces
         .items()
         .iter()
         .map(|space| Miniature {
@@ -58,7 +59,8 @@ fn miniatures(app: &App) -> Vec<Miniature> {
             active:  space.active,
             urgent:  space.urgent,
             windows: if width > 0.0 && height > 0.0 {
-                app.taskbar
+                app.modules
+                    .taskbar
                     .clients()
                     .iter()
                     .filter(|client| client.workspace_id == space.id)

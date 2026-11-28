@@ -48,7 +48,7 @@ impl Notifications {
             return;
         };
 
-        self.list = service.get_notifications();
+        self.list = service.notifications();
         self.unread = service.unread_count();
         self.dnd = service.is_dnd();
     }

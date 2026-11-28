@@ -155,7 +155,7 @@ mod tests {
                 },
                 ActiveConnectionInfo::Vpn {
                     name:        "work".to_owned(),
-                    object_path: zbus::zvariant::OwnedObjectPath::try_from("/").expect("path")
+                    object_path: zbus::OwnedObjectPath::try_from("/").expect("path")
                 },
             ],
             ..NetworkData::default()

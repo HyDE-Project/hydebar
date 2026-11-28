@@ -20,6 +20,8 @@ pub fn placement_rows(config: &Config, font_size: f32, opacity: f32) -> Element<
                     Position::Bottom,
                     config.position == Position::Bottom
                 ),
+                ("Left", Position::Left, config.position == Position::Left),
+                ("Right", Position::Right, config.position == Position::Right),
             ],
             Message::SetPosition,
             font_size,

@@ -42,19 +42,17 @@ pub struct Wind {
 #[derive(Debug, Clone)]
 pub struct WeatherData {
     /// Temperature, written the way the bar draws it.
-    pub temperature:  String,
+    pub temperature: String,
     /// What the sky is doing, in words.
-    pub description:  String,
+    pub description: String,
     /// Relative humidity, written the way the bar draws it.
-    pub humidity:     String,
+    pub humidity:    String,
     /// Wind speed, written the way the bar draws it.
-    pub wind_speed:   String,
+    pub wind_speed:  String,
     /// The place the reading is for.
-    pub location:     String,
+    pub location:    String,
     /// Whether the temperature above is in Celsius.
-    pub use_celsius:  bool,
-    /// When the reading arrived.
-    pub last_updated: chrono::DateTime<chrono::Local>
+    pub use_celsius: bool
 }
 
 /// Temperature stood in for while no reading has arrived.
@@ -74,8 +72,7 @@ impl WeatherData {
             humidity: String::from("--"),
             wind_speed: String::from("--"),
             location,
-            use_celsius,
-            last_updated: chrono::Local::now()
+            use_celsius
         }
     }
 
@@ -102,8 +99,7 @@ impl WeatherData {
             humidity: format!("{}%", response.main.humidity),
             wind_speed: format!("{:.1} m/s", response.wind.speed),
             location,
-            use_celsius,
-            last_updated: chrono::Local::now()
+            use_celsius
         }
     }
 

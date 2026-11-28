@@ -37,7 +37,7 @@ impl App {
     )]
     fn module_tooltip(&self, module_name: &ModuleName) -> Option<Option<String>> {
         match module_name {
-            ModuleName::Custom(name) => self.custom.get(name).map(|custom| {
+            ModuleName::Custom(name) => self.modules.custom.get(name).map(|custom| {
                 Some(custom.tooltip().map_or_else(
                     || hydebar_proto::bar_layout::display_label(name),
                     str::to_owned
@@ -46,33 +46,34 @@ impl App {
             ModuleName::IdleInhibitor => Some(
                 self.config
                     .idle_inhibitor
-                    .tooltip(self.control_center.is_idle_inhibited())
+                    .tooltip(self.modules.control_center.is_idle_inhibited())
                     .map(str::to_owned)
             ),
-            ModuleName::Battery => Some(self.battery.data().map(battery_hint)),
+            ModuleName::Battery => Some(self.modules.battery.data().map(battery_hint)),
             ModuleName::Network => Some(Some(
-                self.control_center
+                self.modules
+                    .control_center
                     .network_hint()
                     .unwrap_or_else(|| module_name.label().to_owned())
             )),
             ModuleName::Cpu => Some(Some(hydebar_core::modules::cpu::hint(
-                self.system_info.data()
+                self.modules.system_info.data()
             ))),
             ModuleName::Memory => Some(Some(hydebar_core::modules::memory::hint(
-                self.system_info.data()
+                self.modules.system_info.data()
             ))),
             ModuleName::CpuTemp => Some(Some(hydebar_core::modules::cpu_temp::hint(
-                self.system_info.data()
+                self.modules.system_info.data()
             ))),
             ModuleName::GpuTemp => Some(Some(hydebar_core::modules::gpu_temp::hint(
-                self.system_info.data()
+                self.modules.system_info.data()
             ))),
-            ModuleName::Clock => Some(Some(self.clock.data().format("%A, %-d %B %Y"))),
-            ModuleName::Updates => Some(self.updates.tooltip()),
+            ModuleName::Clock => Some(Some(self.modules.clock.data().format("%A, %-d %B %Y"))),
+            ModuleName::Updates => Some(self.modules.updates.tooltip()),
             ModuleName::KeyboardLayout => Some(Some(format!(
                 "{}: {}",
                 module_name.label(),
-                self.keyboard_layout.active_layout()
+                self.modules.keyboard_layout.active_layout()
             ))),
             ModuleName::Workspaces
             | ModuleName::WindowTitle
@@ -102,14 +103,15 @@ impl App {
     ) -> Element<'a, Message> {
         tooltip_anchor(module, move |anchor| Message::ModuleHover {
             surface: id,
-            module:  module_name.clone(),
+            module: module_name.clone(),
             entered: anchor.is_some(),
             tooltip: anchor
                 .zip(anchor.and_then(|_| self.module_tooltip(module_name).flatten()))
                 .map(|(anchor, text)| TooltipInfo {
                     text,
                     anchor
-                })
+                }),
+            anchor
         })
         .into()
     }

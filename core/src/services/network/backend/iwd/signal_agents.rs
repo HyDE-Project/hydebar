@@ -13,13 +13,14 @@
 //! registrations it made, and giving it back gives them back.
 
 use std::{
+    mem::take,
     pin::Pin,
     task::{Context, Poll}
 };
 
 use iced::futures::Stream;
 use log::debug;
-use zbus::{Connection, zvariant::OwnedObjectPath};
+use zbus::{Connection, OwnedObjectPath};
 
 use super::{agents::SignalAgent, station::StationProxy};
 
@@ -67,7 +68,7 @@ impl Drop for SignalAgents {
     /// call, which is the outcome wanted anyway.
     fn drop(&mut self) {
         let conn = self.conn.clone();
-        let agents = std::mem::take(&mut self.agents);
+        let agents = take(&mut self.agents);
 
         if agents.is_empty() {
             return;
@@ -75,10 +76,11 @@ impl Drop for SignalAgents {
 
         tokio::spawn(async move {
             for (station, agent) in agents {
-                if let Ok(builder) = StationProxy::builder(&conn)
+                if let Ok(proxy) = StationProxy::builder(&conn)
                     .destination("net.connman.iwd")
-                    .and_then(|builder| builder.path(station))
-                    && let Ok(proxy) = builder.build().await
+                    .path(station)
+                    .build()
+                    .await
                 {
                     let _ = proxy.unregister_signal_level_agent(&agent).await;
                 }

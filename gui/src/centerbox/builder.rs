@@ -2,7 +2,7 @@
 
 use iced::{Alignment, Length, Padding, Pixels};
 
-/// A container that distributes its contents horizontally.
+/// A container that distributes its contents along one axis.
 #[allow(missing_debug_implementations)]
 pub struct Centerbox<'a, Message, Theme = iced::Theme, Renderer = iced::Renderer> {
     pub(super) spacing:     f32,
@@ -10,6 +10,7 @@ pub struct Centerbox<'a, Message, Theme = iced::Theme, Renderer = iced::Renderer
     pub(super) width:       Length,
     pub(super) height:      Length,
     pub(super) align_items: Alignment,
+    pub(super) vertical:    bool,
     pub(super) children:    [iced_core::Element<'a, Message, Theme, Renderer>; 3]
 }
 
@@ -25,8 +26,16 @@ where
             width: Length::Shrink,
             height: Length::Shrink,
             align_items: Alignment::Start,
+            vertical: false,
             children
         }
+    }
+
+    /// Lays the three sections out along the vertical axis.
+    #[must_use]
+    pub const fn vertical(mut self, vertical: bool) -> Self {
+        self.vertical = vertical;
+        self
     }
 
     /// Sets the horizontal spacing _between_ elements.

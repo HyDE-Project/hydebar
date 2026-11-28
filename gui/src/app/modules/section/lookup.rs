@@ -11,11 +11,7 @@ impl App {
     ///
     /// Counted across the three sections in the order they are written, which
     /// is the order the keyboard selection walks them in.
-    pub fn get_module_at_index(
-        &self,
-        index: usize,
-        window_id: Id
-    ) -> Option<OnModulePress<Message>> {
+    pub fn module_at_index(&self, index: usize, window_id: Id) -> Option<OnModulePress<Message>> {
         use hydebar_core::config::{ModuleDef, ModuleName};
 
         let mut current_index = 0;
@@ -34,8 +30,7 @@ impl App {
 
                 for module_name in modules_in_def {
                     if current_index == index
-                        && let Some((_, action)) =
-                            self.get_module_view(module_name, window_id, 1.0)
+                        && let Some((_, action)) = self.module_view(module_name, window_id, 1.0)
                     {
                         return action;
                     }
@@ -55,13 +50,13 @@ impl App {
         for module_def in modules_def {
             match module_def {
                 ModuleDef::Single(module) => {
-                    if let Some(subscription) = self.get_module_subscription(module) {
+                    if let Some(subscription) = self.module_subscription(module) {
                         subscriptions.push(subscription);
                     }
                 }
                 ModuleDef::Group(group) => {
                     for module in group {
-                        if let Some(subscription) = self.get_module_subscription(module) {
+                        if let Some(subscription) = self.module_subscription(module) {
                             subscriptions.push(subscription);
                         }
                     }

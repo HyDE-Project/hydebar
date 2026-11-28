@@ -2,7 +2,7 @@
 
 use iced::{Element, Length, widget::container};
 
-use super::{super::super::super::state::Message, Ink};
+use super::{super::super::super::state::Message, ink::Ink};
 
 /// The room a block of `rows` lines, each `line` tall, takes when it is open.
 ///

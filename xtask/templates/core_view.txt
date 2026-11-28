@@ -1,0 +1,37 @@
+//! Drawing of the {{label}} entry.
+
+{{view_imports}}use iced::{Element, widget::text};
+
+use super::{{Pascal}};
+use crate::{components::scale, modules::OnModulePress};
+
+impl {{Pascal}} {
+    /// The bar entry: the current readout.
+    ///
+    /// TODO: draw the real readout instead of the placeholder text.
+    ///
+    /// Rendered by the module itself, so the bar layer holds no {{Snake}}
+    /// drawing of its own.
+    #[must_use]
+    pub fn bar_view<M>(&self) -> Option<(Element<'static, M>, Option<OnModulePress<M>>)>
+    where
+        M: 'static + Clone
+    {
+        let label = text(self.value.clone()).size(scale::base()).into();
+
+        Some((label, {{press_action}}))
+    }
+}
+
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_entry_draws_its_value() {
+        let module = {{Pascal}}::default();
+
+        assert!(module.bar_view::<()>().is_some());
+    }
+}

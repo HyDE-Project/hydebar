@@ -3,7 +3,7 @@
 use masterror::AppResult;
 
 use super::super::super::proxies::{ActiveConnectionProxy, DeviceProxy, WiredDeviceProxy};
-use crate::services::{bus::bus_failure, network::ActiveConnectionInfo};
+use crate::services::{bus::bus_failure, network::data::model::ActiveConnectionInfo};
 
 /// Reads the name and link speed of a wired connection.
 pub(super) async fn describe(
@@ -13,7 +13,6 @@ pub(super) async fn describe(
 ) -> AppResult<ActiveConnectionInfo> {
     let wired_device = WiredDeviceProxy::builder(conn)
         .path(device.inner().path())
-        .map_err(|e| bus_failure("Failed to set WiredDeviceProxy path", &e))?
         .build()
         .await
         .map_err(|e| bus_failure("Failed to build WiredDeviceProxy", &e))?;

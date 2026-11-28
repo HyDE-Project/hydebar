@@ -45,9 +45,9 @@ where
 /// deduplication that keeps an idle bar from repainting.
 #[must_use]
 pub fn hint(data: &SystemInfoData) -> String {
-    let load = sysinfo::System::load_average();
+    let load = sysinfo::System::load_average().ok();
 
-    compose(data, Some((load.one, load.five, load.fifteen)))
+    compose(data, load.map(|load| (load.one, load.five, load.fifteen)))
 }
 
 /// The hint text, from facts alone.

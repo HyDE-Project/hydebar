@@ -30,22 +30,23 @@ const FEATHER: f32 = 0.12;
 /// in one frame and reads as the blur being switched rather than parting. Held
 /// to the opening it grows out of nothing, and a strip with nothing open is
 /// the flat colour it was — the same gradient, its stops fallen together.
-fn parting(ground: Color, wash: f32) -> iced::Background {
+fn parting(ground: Color, wash: f32, vertical: bool) -> iced::Background {
     let wash = wash.clamp(0.0, 1.0);
     let opened = (1.0 - wash) * 0.5;
     let feather = FEATHER.min(opened);
     let near = (0.5 - opened).clamp(feather, 0.5);
     let far = (0.5 + opened).clamp(0.5, 1.0 - feather);
-    let left = ground.scale_alpha(wash);
+    let edge = ground.scale_alpha(wash);
+    let angle = if vertical { PI } else { PI / 2.0 };
 
     Gradient::Linear(
-        Linear::new(Radians(PI / 2.0))
-            .add_stop(0.0, left)
-            .add_stop(near - feather, left)
+        Linear::new(Radians(angle))
+            .add_stop(0.0, edge)
+            .add_stop(near - feather, edge)
             .add_stop(near, Color::TRANSPARENT)
             .add_stop(far, Color::TRANSPARENT)
-            .add_stop(far + feather, left)
-            .add_stop(1.0, left)
+            .add_stop(far + feather, edge)
+            .add_stop(1.0, edge)
     )
     .into()
 }
@@ -55,8 +56,10 @@ impl App {
     ///
     /// One colour for every style, because what it is wanted for is the going
     /// out: the styles differ in how the strip is painted at rest and not in
-    /// what is left of it as it leaves.
-    fn strip_ground(&self, theme: &iced::Theme) -> Color {
+    /// what is left of it as it leaves. The frame paints itself in this very
+    /// colour: the ring is the strip continued around the screen, and two
+    /// paints for one ground would read as two bars.
+    pub(crate) fn strip_ground(&self, theme: &iced::Theme) -> Color {
         let appearance = self.appearance();
         let opacity = if appearance.style == AppearanceStyle::Islands {
             appearance.bar_opacity
@@ -80,7 +83,8 @@ impl App {
     /// turned the blur off for as long as a menu was open.
     pub(super) fn strip_backdrop(&self, t: &iced::Theme, wash: f32) -> Option<iced::Background> {
         if wash < 1.0 {
-            return Some(parting(self.strip_ground(t), wash));
+            let vertical = matches!(self.config.position, Position::Left | Position::Right);
+            return Some(parting(self.strip_ground(t), wash, vertical));
         }
 
         match self.appearance().style {
@@ -110,13 +114,15 @@ impl App {
             Color::TRANSPARENT
         };
 
-        let (from, to) = match self.config.position {
-            Position::Top => (start_color, end_color),
-            Position::Bottom => (end_color, start_color)
+        let (from, to, angle) = match self.config.position {
+            Position::Top => (start_color, end_color, PI),
+            Position::Bottom => (end_color, start_color, PI),
+            Position::Left => (start_color, end_color, PI / 2.0),
+            Position::Right => (end_color, start_color, PI / 2.0)
         };
 
         Gradient::Linear(
-            Linear::new(Radians(PI))
+            Linear::new(Radians(angle))
                 .add_stop(0.0, from)
                 .add_stop(1.0, to)
         )
@@ -212,7 +218,7 @@ mod tests {
         );
 
         let total = std::time::Duration::from_millis(900);
-        let clock = app.desk_clocks.entry(None).or_default();
+        let clock = app.motion.desk_clocks.entry(None).or_default();
         *clock = hydebar_core::animation::Unfold::default();
         clock.advance(std::time::Duration::from_millis(16), total);
 
@@ -242,9 +248,13 @@ mod tests {
 
             wash = now;
 
-            let running = app.desk_clocks.values_mut().fold(false, |running, clock| {
-                clock.advance(std::time::Duration::from_millis(16), total) | running
-            });
+            let running = app
+                .motion
+                .desk_clocks
+                .values_mut()
+                .fold(false, |running, clock| {
+                    clock.advance(std::time::Duration::from_millis(16), total) | running
+                });
 
             if !running {
                 break;
@@ -258,13 +268,13 @@ mod tests {
     fn the_background_comes_back_from_the_ends_inwards_ahead_of_the_islands() {
         let mut app = test_app_with(|config| config.desk.enabled = true);
 
-        app.desk_clocks.entry(None).or_default().open();
-        app.screen_width = Some(1920.0);
-        app.desk_clocks.entry(None).or_default().fold();
+        app.motion.desk_clocks.entry(None).or_default().open();
+        app.screen.width = Some(1920.0);
+        app.motion.desk_clocks.entry(None).or_default().fold();
         app.send_the_islands_home(surface());
 
         assert!(
-            app.desk_returning.is_running(),
+            app.motion.desk_returning.is_running(),
             "the strip knows it is on its way back"
         );
         assert!(
@@ -281,7 +291,10 @@ mod tests {
             assert!(now >= wash, "the background only ever comes back");
             wash = now;
 
-            let sliding = app.relayout.advance(std::time::Duration::from_millis(16));
+            let sliding = app
+                .motion
+                .relayout
+                .advance(std::time::Duration::from_millis(16));
             let _ = app.advance_desk(std::time::Duration::from_millis(16));
 
             whole_before_they_land |= wash >= 1.0 && sliding;
@@ -301,7 +314,7 @@ mod tests {
     fn the_background_leaves_the_middle_of_the_strip_before_its_ends() {
         let ground = Color::from_rgba(1.0, 1.0, 1.0, 1.0);
 
-        let stops = |wash: f32| match parting(ground, wash) {
+        let stops = |wash: f32| match parting(ground, wash, false) {
             iced::Background::Gradient(Gradient::Linear(linear)) => linear,
             iced::Background::Color(_) => panic!("the parting is painted as a gradient")
         };
@@ -352,7 +365,7 @@ mod tests {
     fn a_strip_with_nothing_open_is_painted_as_flatly_as_one_that_never_parted() {
         let ground = Color::from_rgba(1.0, 1.0, 1.0, 1.0);
 
-        let stops = |wash: f32| match parting(ground, wash) {
+        let stops = |wash: f32| match parting(ground, wash, false) {
             iced::Background::Gradient(Gradient::Linear(linear)) => linear
                 .stops
                 .into_iter()

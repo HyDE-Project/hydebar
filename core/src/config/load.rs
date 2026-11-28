@@ -106,7 +106,7 @@ impl std::error::Error for ConfigLoadError {
 /// Returns a [`ConfigLoadError`] when the path cannot be expanded, the given
 /// file does not exist, or the default configuration directory cannot be
 /// resolved or created.
-pub fn get_config(path: Option<PathBuf>) -> Result<(Config, PathBuf), ConfigLoadError> {
+pub fn config(path: Option<PathBuf>) -> Result<(Config, PathBuf), ConfigLoadError> {
     if let Some(path) = path {
         info!("Config path provided {}", path.display());
         let expanded = expand_path(&path)?;
@@ -191,13 +191,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn get_config_returns_default_on_parse_error() {
+    fn config_returns_default_on_parse_error() {
         let temp_dir = TempDir::new().expect("failed to create temp dir");
         let config_path = temp_dir.path().join("config.toml");
         fs::write(&config_path, "invalid = [").expect("failed to write invalid config");
 
         let (config, returned_path) =
-            get_config(Some(config_path.clone())).expect("get_config should succeed");
+            config(Some(config_path.clone())).expect("config should succeed");
 
         assert_eq!(returned_path, config_path);
         let default = Config::default();
@@ -207,11 +207,11 @@ mod tests {
     }
 
     #[test]
-    fn get_config_errors_when_file_missing() {
+    fn config_errors_when_file_missing() {
         let temp_dir = TempDir::new().expect("failed to create temp dir");
         let config_path = temp_dir.path().join("missing.toml");
 
-        let error = get_config(Some(config_path.clone())).expect_err("expected error");
+        let error = config(Some(config_path.clone())).expect_err("expected error");
 
         match error {
             ConfigLoadError::Missing {

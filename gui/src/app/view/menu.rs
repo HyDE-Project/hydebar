@@ -74,7 +74,8 @@ impl App {
         )]
         let bar = self.appearance().height_px().unwrap_or(HEIGHT as f32);
 
-        self.screen_height
+        self.screen
+            .height
             .map(|screen| self.appearance().font_size_px().mul_add(-6.0, screen - bar))
             .filter(|room| *room > 0.0)
     }

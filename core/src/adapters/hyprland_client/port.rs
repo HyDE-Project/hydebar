@@ -12,33 +12,32 @@ use hydebar_proto::ports::hyprland::{
     HyprlandWorkspaceSnapshot
 };
 
-use super::{HyprlandClient, dispatch, listeners::multiplex, snapshot};
+use super::{HyprlandClient, dispatch, listeners::multiplex, snapshot, sync_ops};
 use crate::adapters::compositor::{command, query};
 
 const WORKSPACE_SNAPSHOT_OP: &str = "workspace_snapshot";
 const ACTIVE_WINDOW_OP: &str = "active_window";
 const CHANGE_WORKSPACE_OP: &str = "change_workspace";
 const TOGGLE_SPECIAL_OP: &str = "toggle_special_workspace";
-const KEYBOARD_STATE_OP: &str = "keyboard_state";
 const SWITCH_LAYOUT_OP: &str = "switch_keyboard_layout";
 const CLIENTS_SNAPSHOT_OP: &str = "clients_snapshot";
 const FOCUS_WINDOW_OP: &str = "focus_window";
 
 impl HyprlandPort for HyprlandClient {
     fn window_events(&self) -> Result<HyprlandEventStream<HyprlandWindowEvent>, HyprlandError> {
-        Ok(multiplex::window_events(self, &self.config))
+        Ok(multiplex::window_events(&self.config))
     }
 
     fn workspace_events(
         &self
     ) -> Result<HyprlandEventStream<HyprlandWorkspaceEvent>, HyprlandError> {
-        Ok(multiplex::workspace_events(self, &self.config))
+        Ok(multiplex::workspace_events(&self.config))
     }
 
     fn keyboard_events(
         &self
     ) -> Result<HyprlandEventStream<HyprlandKeyboardEvent>, HyprlandError> {
-        Ok(multiplex::keyboard_events(self, &self.config))
+        Ok(multiplex::keyboard_events(&self.config))
     }
 
     fn active_window(&self) -> Result<Option<HyprlandWindowInfo>, HyprlandError> {
@@ -100,30 +99,7 @@ impl HyprlandPort for HyprlandClient {
     }
 
     fn keyboard_state(&self) -> Result<HyprlandKeyboardState, HyprlandError> {
-        self.execute_with_retry(KEYBOARD_STATE_OP, || {
-            let layouts = query::option_text(KEYBOARD_STATE_OP, "input:kb_layout")?;
-            let has_multiple_layouts = layouts
-                .split(',')
-                .filter(|value| !value.trim().is_empty())
-                .count()
-                > 1;
-
-            let devices = query::devices(KEYBOARD_STATE_OP)?;
-            let active_layout = devices
-                .keyboards
-                .iter()
-                .find(|keyboard| keyboard.main)
-                .map_or_else(
-                    || "unknown".to_string(),
-                    |keyboard| keyboard.active_keymap.clone()
-                );
-
-            Ok(HyprlandKeyboardState {
-                active_layout,
-                has_multiple_layouts,
-                active_submap: None
-            })
-        })
+        sync_ops::keyboard_state(&self.config)
     }
 
     fn switch_keyboard_layout(&self) -> Result<(), HyprlandError> {

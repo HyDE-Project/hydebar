@@ -1,5 +1,7 @@
 //! Parsing of the desktop's GTK menu XML into the tree the window renders.
 
+use std::fs::read_to_string;
+
 use log::warn;
 use quick_xml::{Reader, events::Event};
 
@@ -19,6 +21,94 @@ struct PendingItem {
     children: Option<Vec<Entry>>
 }
 
+/// The stacks the parser walks the document with, and the tree it builds.
+struct TreeBuilder {
+    menus:    Vec<Vec<Entry>>,
+    items:    Vec<PendingItem>,
+    objects:  Vec<ObjectKind>,
+    result:   Option<Vec<Entry>>,
+    in_label: bool
+}
+
+impl TreeBuilder {
+    const fn new() -> Self {
+        Self {
+            menus:    Vec::new(),
+            items:    Vec::new(),
+            objects:  Vec::new(),
+            result:   None,
+            in_label: false
+        }
+    }
+
+    /// Opens one `<object>` of the given class.
+    fn open_object(&mut self, class: &str, id: String) {
+        match class {
+            "GtkMenu" => {
+                self.menus.push(Vec::new());
+                self.objects.push(ObjectKind::Menu);
+            }
+            "GtkMenuItem" => {
+                self.items.push(PendingItem {
+                    id,
+                    label: String::new(),
+                    children: None
+                });
+                self.objects.push(ObjectKind::Item);
+            }
+            _ => self.objects.push(ObjectKind::Other)
+        }
+    }
+
+    /// Draws a separator line in the innermost menu.
+    fn add_separator(&mut self) {
+        if let Some(menu) = self.menus.last_mut() {
+            menu.push(Entry::Separator);
+        }
+    }
+
+    /// Appends text to the label of the item being assembled.
+    fn add_label_text(&mut self, content: &str) {
+        if let Some(item) = self.items.last_mut() {
+            item.label.push_str(content);
+        }
+    }
+
+    /// Closes the innermost `<object>`, folding it into its parent.
+    fn close_object(&mut self) {
+        match self.objects.pop() {
+            Some(ObjectKind::Menu) => {
+                let entries = self.menus.pop().unwrap_or_default();
+
+                match self.items.last_mut() {
+                    Some(item) => item.children = Some(entries),
+                    None => self.result = Some(entries)
+                }
+            }
+            Some(ObjectKind::Item) => {
+                if let Some(item) = self.items.pop()
+                    && let Some(menu) = self.menus.last_mut()
+                {
+                    let label = item.label.trim().to_owned();
+
+                    menu.push(match item.children {
+                        Some(children) => Entry::Submenu {
+                            id: item.id,
+                            label,
+                            children
+                        },
+                        None => Entry::Item {
+                            id: item.id,
+                            label
+                        }
+                    });
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
 /// Parses the GTK menu XML into the tree the window renders.
 ///
 /// The file is a `GtkMenu` of `GtkMenuItem` objects: an item carries an
@@ -26,7 +116,7 @@ struct PendingItem {
 /// submenu, and `GtkSeparatorMenuItem` draws a line. Nothing else is
 /// read; the `<child>` wrappers carry no information of their own.
 pub(super) fn read_tree(path: &str) -> Option<Vec<Entry>> {
-    let source = std::fs::read_to_string(path)
+    let source = read_to_string(path)
         .inspect_err(|err| warn!("cannot read menu file {path}: {err}"))
         .ok()?;
 
@@ -37,84 +127,30 @@ pub(super) fn read_tree(path: &str) -> Option<Vec<Entry>> {
         tag.try_get_attribute(name)
             .ok()
             .flatten()
-            .map(|attribute| attribute.value.into_owned())
-            .unwrap_or_default()
+            .map_or_default(|attribute| attribute.value.into_owned())
     };
 
-    let mut menus: Vec<Vec<Entry>> = Vec::new();
-    let mut items: Vec<PendingItem> = Vec::new();
-    let mut objects: Vec<ObjectKind> = Vec::new();
-    let mut result: Option<Vec<Entry>> = None;
-    let mut in_label = false;
+    let mut builder = TreeBuilder::new();
 
     loop {
         match reader.read_event() {
             Ok(Event::Start(tag)) => match tag.name().as_ref() {
-                "object" => match attribute(&tag, "class").as_str() {
-                    "GtkMenu" => {
-                        menus.push(Vec::new());
-                        objects.push(ObjectKind::Menu);
-                    }
-                    "GtkMenuItem" => {
-                        items.push(PendingItem {
-                            id:       attribute(&tag, "id"),
-                            label:    String::new(),
-                            children: None
-                        });
-                        objects.push(ObjectKind::Item);
-                    }
-                    _ => objects.push(ObjectKind::Other)
-                },
-                "property" => {
-                    in_label = attribute(&tag, "name") == "label";
-                }
+                "object" => builder.open_object(&attribute(&tag, "class"), attribute(&tag, "id")),
+                "property" => builder.in_label = attribute(&tag, "name") == "label",
                 _ => {}
             },
             Ok(Event::Empty(tag))
                 if tag.name().as_ref() == "object"
                     && attribute(&tag, "class") == "GtkSeparatorMenuItem" =>
             {
-                if let Some(menu) = menus.last_mut() {
-                    menu.push(Entry::Separator);
-                }
+                builder.add_separator();
             }
-            Ok(Event::Text(content)) if in_label => {
-                if let Some(item) = items.last_mut() {
-                    item.label.push_str(&content);
-                }
+            Ok(Event::Text(content)) if builder.in_label => {
+                builder.add_label_text(&content);
             }
             Ok(Event::End(tag)) => match tag.name().as_ref() {
-                "property" => in_label = false,
-                "object" => match objects.pop() {
-                    Some(ObjectKind::Menu) => {
-                        let entries = menus.pop().unwrap_or_default();
-
-                        match items.last_mut() {
-                            Some(item) => item.children = Some(entries),
-                            None => result = Some(entries)
-                        }
-                    }
-                    Some(ObjectKind::Item) => {
-                        if let Some(item) = items.pop()
-                            && let Some(menu) = menus.last_mut()
-                        {
-                            let label = item.label.trim().to_owned();
-
-                            menu.push(match item.children {
-                                Some(children) => Entry::Submenu {
-                                    id: item.id,
-                                    label,
-                                    children
-                                },
-                                None => Entry::Item {
-                                    id: item.id,
-                                    label
-                                }
-                            });
-                        }
-                    }
-                    _ => {}
-                },
+                "property" => builder.in_label = false,
+                "object" => builder.close_object(),
                 _ => {}
             },
             Ok(Event::Eof) => break,
@@ -126,7 +162,7 @@ pub(super) fn read_tree(path: &str) -> Option<Vec<Entry>> {
         }
     }
 
-    result
+    builder.result
 }
 
 #[cfg(test)]
@@ -170,7 +206,7 @@ mod tests {
     fn an_empty_menu_yields_an_empty_tree() {
         let tree = tree_of(&menu("")).expect("the menu is read");
 
-        assert!(tree.is_empty());
+        assert_eq!(tree, []);
     }
 
     #[test]

@@ -12,8 +12,9 @@ impl App {
                 surface,
                 module,
                 entered,
-                tooltip
-            } => self.on_module_hover(surface, module, entered, tooltip),
+                tooltip,
+                anchor
+            } => self.on_module_hover(surface, module, entered, tooltip, anchor),
             Message::ToggleMenu(menu_type, id, button_ui_ref) => {
                 self.on_toggle_menu(menu_type, id, button_ui_ref)
             }
@@ -29,16 +30,16 @@ impl App {
                 task
             }
             Message::CloseMenu(id) => {
-                self.wallpaper_pending = None;
-                self.bar_layout_pending = None;
+                self.focus.wallpaper_pending = None;
+                self.focus.bar_layout_pending = None;
                 let task = self.outputs.close_menu(id, &self.config);
                 self.attend_the_open_menu();
 
                 task
             }
             Message::CloseAllMenus => {
-                self.wallpaper_pending = None;
-                self.bar_layout_pending = None;
+                self.focus.wallpaper_pending = None;
+                self.focus.bar_layout_pending = None;
                 if self.outputs.menu_is_open() {
                     let task = self.outputs.close_all_menus(&self.config);
                     self.attend_the_open_menu();

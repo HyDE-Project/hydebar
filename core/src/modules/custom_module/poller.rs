@@ -22,7 +22,7 @@ use super::{
     error::{CustomCommandError, CustomListenerError, truncate_snippet},
     listener::send_event
 };
-use crate::{ModuleEventSender, services::ServiceEvent};
+use crate::{ModuleEventSender, services::ServiceEvent, utils::process_group::guarded_output};
 
 /// Resolves the real time signal number an offset refers to.
 ///
@@ -109,7 +109,7 @@ async fn run_once(
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
-    let output = crate::utils::process_group::guarded_output(&mut spawner)
+    let output = guarded_output(&mut spawner)
         .await
         .map_err(|err| CustomListenerError::Command(CustomCommandError::Spawn(Arc::new(err))))?;
 
@@ -141,8 +141,6 @@ async fn run_once(
             *published = Some(data.clone());
 
             send_event(sender, ServiceEvent::Update(data));
-
-            Ok(())
         }
         Err(err) => {
             let parse_error = CustomCommandError::Parse(truncate_snippet(payload), Arc::new(err));
@@ -150,10 +148,10 @@ async fn run_once(
             *published = None;
 
             send_event(sender, ServiceEvent::Error(parse_error));
-
-            Ok(())
         }
     }
+
+    Ok(())
 }
 
 /// Drives a custom module by re-running its command.

@@ -7,7 +7,10 @@ use log::error;
 use masterror::{AppError, AppResult};
 use tokio::sync::mpsc::{Receiver, Sender};
 
-use super::super::{BackendCommand, BackendEvent, PulseAudioServer};
+use super::super::{
+    message::{BackendCommand, BackendEvent},
+    server::PulseAudioServer
+};
 
 impl PulseAudioServer {
     pub(in super::super) async fn start_commander(

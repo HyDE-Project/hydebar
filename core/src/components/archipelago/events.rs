@@ -26,6 +26,7 @@ pub(super) fn update<Message, Theme, Renderer>(
 ) where
     Renderer: iced_core::Renderer
 {
+    let vertical = strip.vertical;
     let offsets: Vec<f32> = {
         let memo = strip.memo.borrow();
 
@@ -33,7 +34,12 @@ pub(super) fn update<Message, Theme, Renderer>(
             .children()
             .enumerate()
             .map(|(index, child_layout)| {
-                strip.offset(memo.from_map(), index, child_layout.bounds().x)
+                let main = if vertical {
+                    child_layout.bounds().y
+                } else {
+                    child_layout.bounds().x
+                };
+                strip.offset(memo.from_map(), index, main)
             })
             .collect()
     };
@@ -45,9 +51,14 @@ pub(super) fn update<Message, Theme, Renderer>(
         .zip(layout.children())
         .enumerate()
     {
+        let shift = if vertical {
+            Vector::new(0.0, offsets[index])
+        } else {
+            Vector::new(offsets[index], 0.0)
+        };
         let shifted = match cursor {
             mouse::Cursor::Available(point) if offsets[index].abs() > f32::EPSILON => {
-                mouse::Cursor::Available(point - Vector::new(offsets[index], 0.0))
+                mouse::Cursor::Available(point - shift)
             }
             other => other
         };
@@ -78,6 +89,7 @@ pub(super) fn mouse_interaction<Message, Theme, Renderer>(
 where
     Renderer: iced_core::Renderer
 {
+    let vertical = strip.vertical;
     let offsets: Vec<f32> = {
         let memo = strip.memo.borrow();
 
@@ -85,7 +97,12 @@ where
             .children()
             .enumerate()
             .map(|(index, child_layout)| {
-                strip.offset(memo.from_map(), index, child_layout.bounds().x)
+                let main = if vertical {
+                    child_layout.bounds().y
+                } else {
+                    child_layout.bounds().x
+                };
+                strip.offset(memo.from_map(), index, main)
             })
             .collect()
     };
@@ -97,10 +114,14 @@ where
         .zip(layout.children())
         .enumerate()
         .map(|(index, ((child, sub_tree), child_layout))| {
-            let _ = child_layout;
+            let shift = if vertical {
+                Vector::new(0.0, offsets[index])
+            } else {
+                Vector::new(offsets[index], 0.0)
+            };
             let shifted = match cursor {
                 mouse::Cursor::Available(point) if offsets[index].abs() > f32::EPSILON => {
-                    mouse::Cursor::Available(point - Vector::new(offsets[index], 0.0))
+                    mouse::Cursor::Available(point - shift)
                 }
                 other => other
             };

@@ -21,8 +21,38 @@ type ResolvedIcons = HashMap<(String, String), Option<TrayIcon>>;
 /// Icons already resolved, keyed by the theme and the icon name.
 ///
 /// A theme switch changes the key, so stale entries are simply never asked
-/// for again; the map stays small — a tray holds a handful of names.
+/// for again; [`prune_to_cap`] drops them once the map outgrows its cap, so
+/// a machine that cycles icon themes does not carry every theme it ever
+/// resolved for the rest of the session.
 static ICON_CACHE: LazyLock<Mutex<ResolvedIcons>> = LazyLock::new(Mutex::default);
+
+/// Most resolved icons the cache may hold before a prune is asked for.
+///
+/// Generous against a tray's handful of names and small against what a
+/// theme can hold: the cap only ever bites after theme switches piled up.
+const CACHE_CAP: usize = 256;
+
+/// Drops everything the active theme did not resolve once the map outgrew
+/// [`CACHE_CAP`].
+///
+/// Entries are keyed by theme, so the moment a theme stops being active its
+/// entries stop being asked for: dropping them costs nothing a later lookup
+/// cannot rebuild. If even the active theme alone outgrew the cap, the map
+/// starts over — a tray that big is rare, and a rebuild is one directory
+/// walk per name.
+///
+/// `active_theme` is the theme the entries of the next lookup will carry.
+fn prune_to_cap(cache: &mut ResolvedIcons, active_theme: &str) {
+    if cache.len() < CACHE_CAP {
+        return;
+    }
+
+    cache.retain(|(theme, _), _| theme == active_theme);
+
+    if cache.len() >= CACHE_CAP {
+        cache.clear();
+    }
+}
 
 /// Finds the picture the icon theme keeps under this name.
 pub fn icon_from_name(icon_name: &str) -> Option<TrayIcon> {
@@ -39,10 +69,11 @@ pub fn icon_from_name(icon_name: &str) -> Option<TrayIcon> {
 
     let resolved = resolve_icon(theme.as_deref(), icon_name);
 
-    ICON_CACHE
-        .lock()
-        .unwrap_or_else(PoisonError::into_inner)
-        .insert(key, resolved.clone());
+    {
+        let mut cache = ICON_CACHE.lock().unwrap_or_else(PoisonError::into_inner);
+        prune_to_cap(&mut cache, &key.0);
+        cache.insert(key, resolved.clone());
+    }
 
     resolved
 }
@@ -76,9 +107,63 @@ fn resolve_icon(theme: Option<&str>, icon_name: &str) -> Option<TrayIcon> {
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use std::{
+        collections::HashMap,
         path::PathBuf,
         sync::atomic::{AtomicUsize, Ordering}
     };
+
+    use super::{CACHE_CAP, ResolvedIcons, prune_to_cap};
+
+    fn cache_with(themes: &[&str]) -> ResolvedIcons {
+        themes
+            .iter()
+            .enumerate()
+            .map(|(index, theme)| ((theme.to_string(), format!("icon-{index}")), None))
+            .collect()
+    }
+
+    #[test]
+    fn a_cache_below_the_cap_is_left_alone() {
+        let mut cache = cache_with(&["old", "new"]);
+
+        prune_to_cap(&mut cache, "new");
+
+        assert_eq!(cache.len(), 2, "nothing to prune below the cap");
+    }
+
+    #[test]
+    fn a_prune_keeps_only_the_active_theme() {
+        let mut stale: Vec<&str> = (0..CACHE_CAP).map(|_| "old").collect();
+        stale.push("new");
+        let mut cache = cache_with(&stale);
+
+        prune_to_cap(&mut cache, "new");
+
+        assert_eq!(cache.len(), 1);
+        assert!(
+            cache.keys().all(|(theme, _)| theme == "new"),
+            "every stale-theme entry is gone"
+        );
+    }
+
+    #[test]
+    fn a_single_theme_outgrowing_the_cap_starts_the_cache_over() {
+        let crowded: Vec<&str> = (0..=CACHE_CAP).map(|_| "only").collect();
+        let mut cache = cache_with(&crowded);
+
+        prune_to_cap(&mut cache, "only");
+
+        assert!(cache.is_empty(), "one theme past the cap earns a reset");
+    }
+
+    #[test]
+    fn an_empty_cache_prunes_to_nothing() {
+        let mut icons: ResolvedIcons = HashMap::new();
+
+        prune_to_cap(&mut icons, "new");
+
+        assert!(icons.is_empty(), "pruning nothing stays empty");
+    }
 
     fn icon_path_with_theme_fallback<F, G>(
         theme: Option<&str>,

@@ -10,7 +10,15 @@ mod presses;
 
 use iced::{Length, Padding, id::Id, widget::button::Catalog};
 
-use super::{DEFAULT_PADDING, press::OnPress};
+use super::press::OnPress;
+
+/// The default [`Padding`] of a [`PositionButton`].
+const DEFAULT_PADDING: Padding = Padding {
+    top:    5.0,
+    bottom: 5.0,
+    right:  10.0,
+    left:   10.0
+};
 
 /// Button reporting the on-screen position it was pressed at.
 pub struct PositionButton<'a, Message, Theme = iced::Theme, Renderer = iced::Renderer>

@@ -1,64 +1,13 @@
 //! Compositor output hotplug handling.
 
-use hydebar_core::outputs::{
-    auto_metrics,
-    scaling::{ScreenGeometry, screen_geometry}
-};
+pub mod reads;
+
+use hydebar_core::outputs::{auto_metrics, scaling::ScreenGeometry};
 use iced::{OutputEvent, Task};
 use log::info;
+pub use reads::{measure_screen, read_looks, read_wallpaper};
 
 use super::super::state::{App, Message};
-
-/// Reads the wallpaper in force off the drawing thread.
-///
-/// Decoding even a thumbnail costs more than a frame is worth, and the answer
-/// is wanted once per wallpaper rather than once per repaint.
-pub fn read_wallpaper() -> Task<Message> {
-    Task::perform(
-        async {
-            tokio::task::spawn_blocking(hydebar_core::modules::wallpaper::current::current)
-                .await
-                .unwrap_or_default()
-        },
-        Message::WallpaperRead
-    )
-}
-
-/// Reads the pictures the desktop keeps of its own look, off the drawing
-/// thread.
-///
-/// Hashing wallpapers and decoding a row of crops costs far more than a frame,
-/// and the answer is wanted once per change of look rather than once per
-/// repaint.
-pub fn read_looks() -> Task<Message> {
-    Task::perform(
-        async {
-            tokio::task::spawn_blocking(hydebar_core::modules::desk::looks::looks)
-                .await
-                .unwrap_or_default()
-        },
-        |looks| Message::LooksRead(Box::new(looks))
-    )
-}
-
-/// Asks the compositor for the screen's geometry off the drawing thread.
-///
-/// The question travels the compositor's own socket and the compositor may
-/// answer slowly; the drawing thread must never stand waiting on it, so the
-/// answer comes back as a message of its own.
-fn measure_screen(name: String) -> Task<Message> {
-    Task::perform(
-        async move {
-            let answer = screen_geometry(&name).await;
-
-            (name, answer)
-        },
-        |(name, geometry)| Message::ScreenMeasured {
-            name,
-            geometry
-        }
-    )
-}
 
 impl App {
     /// Handles the messages this module owns.
@@ -67,29 +16,7 @@ impl App {
             Message::ScreenMeasured {
                 name,
                 geometry
-            } => {
-                let Some(geometry) = geometry else {
-                    if self.outputs.has_name(&name) {
-                        return Task::perform(
-                            async move {
-                                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
-                                name
-                            },
-                            |name| Message::RemeasureScreen {
-                                name
-                            }
-                        );
-                    }
-
-                    return Task::none();
-                };
-
-                if self.outputs.has_name(&name) && self.adopt_measured(geometry) {
-                    self.refresh_appearance()
-                } else {
-                    Task::none()
-                }
-            }
+            } => self.screen_measured(name, geometry),
             Message::WallpaperRead(read) => {
                 self.wallpaper_preview = read;
 
@@ -101,8 +28,8 @@ impl App {
                 Task::none()
             }
             Message::StripRowsMeasured(rows) => {
-                if !rows.is_empty() {
-                    self.strip_rows = rows;
+                if !rows.is_empty() && self.screen.strip_positions != rows {
+                    self.screen.strip_positions = rows;
                 }
 
                 self.unfold_desk()
@@ -116,50 +43,105 @@ impl App {
                     Task::none()
                 }
             }
-            Message::OutputEvent(event) => match event {
-                OutputEvent::Added(info) => {
-                    info!("Output created: {info:?}");
-
-                    let measure = measure_screen(info.name.clone());
-
-                    let appearance = self.scaled_appearance();
-
-                    let add = self.outputs.add(
-                        appearance.style,
-                        &self.config.outputs,
-                        self.config.position,
-                        &info.name,
-                        info.id,
-                        &self.config,
-                        appearance.scale_factor,
-                        appearance.height_px()
-                    );
-
-                    let unfold = self.unfold_desk();
-
-                    Task::batch([measure, add, unfold])
-                }
-                OutputEvent::Removed(id) => {
-                    info!("Output destroyed");
-
-                    let removed = self.outputs.remove(
-                        self.config.appearance.style,
-                        self.config.position,
-                        id,
-                        &self.config
-                    );
-
-                    Task::batch([removed, self.unfold_desk()])
-                }
-                OutputEvent::InfoChanged(info) => measure_screen(info.name),
-                OutputEvent::SurfaceEnteredOutput {
-                    ..
-                }
-                | OutputEvent::SurfaceLeftOutput {
-                    ..
-                } => Task::none()
-            },
+            Message::OutputEvent(event) => self.output_event(event),
             _ => Task::none()
+        }
+    }
+
+    /// Applies one fresh measurement of one screen.
+    fn screen_measured(
+        &mut self,
+        name: String,
+        geometry: Option<ScreenGeometry>
+    ) -> Task<Message> {
+        let Some(geometry) = geometry else {
+            log::debug!("frame: screen {name} measured as gone");
+
+            if self.outputs.has_name(&name) {
+                return Task::perform(
+                    async move {
+                        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+                        name
+                    },
+                    |name| Message::RemeasureScreen {
+                        name
+                    }
+                );
+            }
+
+            return Task::none();
+        };
+
+        if self.outputs.has_name(&name) {
+            log::debug!("frame: screen {name} measured");
+
+            let looked = if self.adopt_measured(name, geometry) {
+                self.refresh_appearance()
+            } else {
+                Task::none()
+            };
+
+            let rows = Task::perform(
+                hydebar_core::outputs::perch::strip_positions_settled(),
+                Message::StripRowsMeasured
+            );
+
+            Task::batch([looked, rows])
+        } else {
+            Task::none()
+        }
+    }
+
+    /// Applies one compositor output hotplug event.
+    fn output_event(&mut self, event: OutputEvent) -> Task<Message> {
+        match event {
+            OutputEvent::Added(info) => {
+                info!("Output created: {info:?}");
+
+                let measure = measure_screen(info.name.clone());
+
+                let appearance = self.scaled_appearance();
+
+                let add = self.outputs.add(
+                    appearance.style,
+                    &self.config.outputs,
+                    self.config.position,
+                    &info.name,
+                    info.id,
+                    &self.config,
+                    appearance.scale_factor,
+                    appearance.height_px()
+                );
+
+                let unfold = self.unfold_desk();
+
+                Task::batch([measure, add, unfold])
+            }
+            OutputEvent::Removed(id) => {
+                info!("Output destroyed");
+
+                let name = self.outputs.output_name(id).map(str::to_owned);
+
+                let removed = self.outputs.remove(
+                    self.config.appearance.style,
+                    self.config.position,
+                    id,
+                    &self.config
+                );
+
+                if let Some(name) = name {
+                    self.screen.sizes.remove(&name);
+                }
+
+                Task::batch([removed, self.unfold_desk()])
+            }
+            OutputEvent::InfoChanged(info) => measure_screen(info.name),
+            OutputEvent::SurfaceEnteredOutput {
+                ..
+            }
+            | OutputEvent::SurfaceLeftOutput {
+                ..
+            } => Task::none()
         }
     }
 
@@ -168,16 +150,21 @@ impl App {
     /// The compositor scale is handed on so the sizes are not scaled a second
     /// time by a compositor that already scales the surface, and the scale the
     /// bar applies to its own surface is divided out for the same reason.
-    /// Reports whether the sizes changed.
-    fn adopt_measured(&mut self, geometry: ScreenGeometry) -> bool {
+    /// The sizes are kept per monitor as well, because each output rings
+    /// itself in its own numbers. Reports whether the shared metrics changed.
+    fn adopt_measured(&mut self, name: String, geometry: ScreenGeometry) -> bool {
         #[expect(
             clippy::cast_possible_truncation,
             reason = "surface scale factors are small values that fit f32"
         )]
         let surface_scale = self.config.appearance.scale_factor as f32;
 
-        self.screen_height = Some(geometry.pixels.1 / geometry.scale.max(f32::EPSILON));
-        self.screen_width = Some(geometry.pixels.0 / geometry.scale.max(f32::EPSILON));
+        let height = geometry.pixels.1 / geometry.scale.max(f32::EPSILON);
+        let width = geometry.pixels.0 / geometry.scale.max(f32::EPSILON);
+
+        self.screen.height = Some(height);
+        self.screen.width = Some(width);
+        self.screen.sizes.insert(name, (width, height));
 
         let metrics = auto_metrics(
             geometry.pixels.0,
@@ -186,13 +173,204 @@ impl App {
             geometry.physical
         );
 
-        if self.auto_metrics == Some(metrics) {
+        if self.screen.auto_metrics == Some(metrics) {
             return false;
         }
 
         info!("screen calls for a bar magnified {} times", metrics.scale);
-        self.auto_metrics = Some(metrics);
+        self.screen.auto_metrics = Some(metrics);
 
         true
+    }
+}
+
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
+mod tests {
+    #![allow(clippy::float_cmp)]
+
+    use hydebar_core::outputs::scaling::ScreenGeometry;
+
+    use super::{
+        super::super::state::{Message, test_support::test_app_with},
+        *
+    };
+
+    fn measured(pixels: (f32, f32), scale: f32) -> ScreenGeometry {
+        ScreenGeometry {
+            pixels,
+            physical: (0.0, 0.0),
+            scale
+        }
+    }
+
+    fn tracked(app: &mut App, name: &str) -> iced::OutputId {
+        let id = iced::OutputId::for_tests();
+        let task = app.outputs.add::<Message>(
+            app.config.appearance.style,
+            &app.config.outputs,
+            app.config.position,
+            name,
+            id,
+            &app.config,
+            1.0,
+            None
+        );
+        let _ = task;
+
+        id
+    }
+
+    #[test]
+    fn each_output_adopts_its_own_measured_size() {
+        let mut app = test_app_with(|config| {
+            config.outputs = hydebar_core::config::Outputs::Targets(vec![
+                "DP-1".to_owned(),
+                "HDMI-1".to_owned(),
+            ]);
+            config.appearance.frame.enabled = true;
+        });
+
+        tracked(&mut app, "DP-1");
+        tracked(&mut app, "HDMI-1");
+
+        let task = app.update_outputs(Message::ScreenMeasured {
+            name:     "DP-1".to_owned(),
+            geometry: Some(measured((1920.0, 1080.0), 1.0))
+        });
+        let _ = task;
+        let task = app.update_outputs(Message::ScreenMeasured {
+            name:     "HDMI-1".to_owned(),
+            geometry: Some(measured((3840.0, 2160.0), 2.0))
+        });
+        let _ = task;
+
+        // the last report does not overwrite the first: every output rings
+        // itself in its own numbers
+        assert_eq!(app.screen.sizes.get("DP-1"), Some(&(1920.0, 1080.0)));
+        assert_eq!(app.screen.sizes.get("HDMI-1"), Some(&(1920.0, 1080.0)));
+        assert_eq!(app.screen.sizes.len(), 2);
+    }
+
+    #[test]
+    fn a_departed_output_leaves_no_size_behind() {
+        let mut app = test_app_with(|config| {
+            config.outputs = hydebar_core::config::Outputs::Targets(vec![
+                "DP-1".to_owned(),
+                "HDMI-1".to_owned(),
+            ]);
+        });
+
+        let dp = tracked(&mut app, "DP-1");
+        tracked(&mut app, "HDMI-1");
+
+        let task = app.update_outputs(Message::ScreenMeasured {
+            name:     "DP-1".to_owned(),
+            geometry: Some(measured((1920.0, 1080.0), 1.0))
+        });
+        let _ = task;
+
+        assert!(app.screen.sizes.contains_key("DP-1"));
+
+        let _ = app.update_outputs(Message::OutputEvent(iced::OutputEvent::Removed(dp)));
+
+        assert!(!app.screen.sizes.contains_key("DP-1"));
+    }
+
+    #[test]
+    fn an_arriving_output_is_tracked() {
+        let mut app = test_app_with(|config| {
+            config.outputs = hydebar_core::config::Outputs::Targets(vec!["DP-1".to_owned()]);
+        });
+
+        let info = iced::OutputInfo {
+            id:           iced::OutputId::for_tests(),
+            name:         "DP-1".to_owned(),
+            scale_factor: 1,
+            logical_size: Some((1920, 1080)),
+            make:         String::new(),
+            model:        String::new()
+        };
+        let task = app.update_outputs(Message::OutputEvent(iced::OutputEvent::Added(info)));
+        let _ = task;
+
+        assert!(app.outputs.has_name("DP-1"));
+    }
+
+    #[test]
+    fn a_gone_output_schedules_a_remeasure() {
+        let mut app = test_app_with(|config| {
+            config.outputs = hydebar_core::config::Outputs::Targets(vec!["DP-1".to_owned()]);
+        });
+
+        tracked(&mut app, "DP-1");
+
+        // the compositor reports the screen as gone: no size is adopted,
+        // and the bar asks again later instead of ringing a ghost
+        let task = app.update_outputs(Message::ScreenMeasured {
+            name:     "DP-1".to_owned(),
+            geometry: None
+        });
+        let _ = task;
+
+        assert!(!app.screen.sizes.contains_key("DP-1"));
+    }
+
+    #[test]
+    fn an_untracked_gone_screen_schedules_nothing() {
+        let mut app = test_app_with(|config| {
+            config.outputs = hydebar_core::config::Outputs::Targets(vec!["DP-1".to_owned()]);
+        });
+
+        // no group answers to the name: the answer is dropped instead of
+        // remeasuring a screen the bar never stood on
+        let task = app.update_outputs(Message::ScreenMeasured {
+            name:     "HDMI-1".to_owned(),
+            geometry: None
+        });
+        let _ = task;
+
+        assert!(app.screen.sizes.is_empty());
+    }
+
+    #[test]
+    fn a_remeasure_only_fires_for_a_tracked_output() {
+        let mut app = test_app_with(|config| {
+            config.outputs = hydebar_core::config::Outputs::Targets(vec!["DP-1".to_owned()]);
+        });
+
+        tracked(&mut app, "DP-1");
+
+        let task = app.update_outputs(Message::RemeasureScreen {
+            name: "DP-1".to_owned()
+        });
+        let _ = task;
+
+        let task = app.update_outputs(Message::RemeasureScreen {
+            name: "HDMI-1".to_owned()
+        });
+        let _ = task;
+    }
+
+    #[test]
+    fn surface_traffic_leaves_the_outputs_alone() {
+        let mut app = test_app_with(|_| {});
+        let id = iced::OutputId::for_tests();
+
+        for event in [
+            iced::OutputEvent::SurfaceEnteredOutput {
+                surface: iced::SurfaceId::unique(),
+                output:  id
+            },
+            iced::OutputEvent::SurfaceLeftOutput {
+                surface: iced::SurfaceId::unique(),
+                output:  id
+            }
+        ] {
+            let task = app.update_outputs(Message::OutputEvent(event));
+            let _ = task;
+        }
+
+        assert!(app.screen.sizes.is_empty());
     }
 }

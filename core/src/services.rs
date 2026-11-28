@@ -30,6 +30,8 @@ pub mod mpris;
 pub mod network;
 /// The notification bus, when the bar serves it.
 pub mod notifications;
+/// Desktop-wide portal preferences the bar honours, such as reduced motion.
+pub mod portal;
 /// Whether the microphone, camera or screen is being read.
 pub mod privacy;
 /// The icons applications register with the system tray.

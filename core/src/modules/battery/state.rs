@@ -44,11 +44,7 @@ impl Battery {
             }
             ServiceEvent::Update(update) => match update {
                 UPowerEvent::UpdateBattery(battery) => {
-                    let profile = self
-                        .data
-                        .as_ref()
-                        .map(|d| d.power_profile)
-                        .unwrap_or_default();
+                    let profile = self.data.as_ref().map_or_default(|d| d.power_profile);
                     self.update_battery_data(battery, profile);
                 }
                 UPowerEvent::NoBattery => {

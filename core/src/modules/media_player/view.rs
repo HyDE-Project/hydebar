@@ -44,7 +44,7 @@ impl MediaPlayer {
         let title = self
             .bar_title
             .clone()
-            .unwrap_or_else(|| Self::get_title(leading, config));
+            .unwrap_or_else(|| Self::title(leading, config));
 
         Some((
             row![
@@ -75,7 +75,7 @@ impl MediaPlayer {
                     text("Players").size(scale::scaled(20.0)),
                     rule::horizontal(1),
                     column(s.iter().map(|d| {
-                        let title = text(Self::get_title(d, config))
+                        let title = text(Self::title(d, config))
                             .wrapping(iced::widget::text::Wrapping::WordOrGlyph)
                             .width(Length::Fill);
 

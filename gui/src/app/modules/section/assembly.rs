@@ -1,6 +1,6 @@
 //! Assembly of the module strip of one bar section.
 
-use hydebar_core::config::ModuleDef;
+use hydebar_core::config::{ModuleDef, Position};
 use iced::{Element, SurfaceId as Id};
 
 use crate::app::state::{App, Message};
@@ -37,24 +37,27 @@ impl App {
 
         let appearance = self.appearance();
         let style = appearance.style;
-        let opacity_paint = appearance.opacity;
+        let island_alpha = appearance.opacity;
         let finish = hydebar_core::style::IslandFinish::of(appearance);
         let radius = appearance.pill_radius();
+
+        let is_vertical = matches!(self.config.position, Position::Left | Position::Right);
 
         let mut strip = Archipelago::new(
             appearance.island_gap(),
             appearance.island_padding()[1],
-            self.relayout.value().clamp(0.0, 1.0),
-            &self.flip,
+            self.motion.relayout.value().clamp(0.0, 1.0),
+            &self.motion.flip,
             move |theme: &iced::Theme| match style {
                 AppearanceStyle::Islands => Some(PillPaint {
-                    background: theme.palette().background.scale_alpha(opacity_paint),
+                    background: theme.palette().background.scale_alpha(island_alpha),
                     border:     finish.border(radius),
                     shadow:     finish.shadow()
                 }),
                 AppearanceStyle::Solid | AppearanceStyle::Gradient => None
             }
-        );
+        )
+        .vertical(is_vertical);
 
         let total = self.island_count().max(1) as f32;
         let places = modules_def.iter().flat_map(Self::members).count();
@@ -72,7 +75,7 @@ impl App {
             };
 
             let ordinal = ((island_offset + index) as f32 + 0.5) / total;
-            let position = if self.sweep.from_left {
+            let position = if self.motion.sweep.from_left {
                 ordinal
             } else {
                 1.0 - ordinal
@@ -92,7 +95,7 @@ impl App {
                     continue;
                 }
 
-                if let Some((content, action)) = self.get_module_view(module_name, id, opacity) {
+                if let Some((content, action)) = self.module_view(module_name, id, opacity) {
                     let actions = self.module_actions(module_name, action);
                     let element = self.module_element(content, actions, module_name, id, true);
                     let element = self.with_tooltip(module_name, element, id);
@@ -106,14 +109,13 @@ impl App {
                     strip = strip.push(
                         self.flip_key(module_name, id).wrapping_add(occurrence),
                         island_index,
-                        self.entrance
-                            .value()
-                            .clamp(0.0, 1.0)
-                            .min(hydebar_core::animation::sweep(
-                                self.entrance.value().clamp(0.0, 1.0),
+                        self.motion.entrance.value().clamp(0.0, 1.0).min(
+                            hydebar_core::animation::sweep(
+                                self.motion.entrance.value().clamp(0.0, 1.0),
                                 position,
-                                self.sweep.spread
-                            )),
+                                self.motion.sweep.spread
+                            )
+                        ),
                         element
                     );
                     seated = true;

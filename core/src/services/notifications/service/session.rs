@@ -9,19 +9,14 @@ use zbus::{
     fdo::{RequestNameFlags, RequestNameReply}
 };
 
-use super::NotificationsService;
+use super::{end::SessionEnd, handle::NotificationsService};
 use crate::services::{
     ServiceEvent,
-    notifications::{NotificationStorage, NotificationsError, NotificationsServer, takeover}
+    notifications::{
+        error::NotificationsError, server::NotificationsServer, storage::NotificationStorage,
+        takeover
+    }
 };
-
-/// Why one attempt at serving the notification bus came to an end.
-pub(super) enum SessionEnd {
-    /// The bar dropped its receiver; there is nobody left to serve.
-    UiClosed,
-    /// The bus or the takeover refused; worth another knock later.
-    Failed
-}
 
 /// Serves org.freedesktop.Notifications until the bus or the UI lets go.
 ///
@@ -95,6 +90,14 @@ pub(super) async fn serve(
     SessionEnd::Failed
 }
 
+/// Whether the unreplaceable-daemon refusal has already been reported.
+///
+/// The service retries the claim for as long as it runs, and a daemon that
+/// refuses replacement answers the same verdict every time: one report is a
+/// diagnosis, every further one is noise.
+static UNREPLACEABLE_REPORTED: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
 /// Claims the notification name, deposing a holder that can be stopped.
 ///
 /// # Errors
@@ -105,7 +108,7 @@ async fn claim_name(
     connection: &Connection,
     output: &mut iced::futures::channel::mpsc::Sender<ServiceEvent<NotificationsService>>
 ) -> Result<(), SessionEnd> {
-    let flags = RequestNameFlags::ReplaceExisting | RequestNameFlags::AllowReplacement;
+    let flags = RequestNameFlags::REPLACE_EXISTING | RequestNameFlags::ALLOW_REPLACEMENT;
 
     match connection
         .request_name_with_flags("org.freedesktop.Notifications", flags)
@@ -117,10 +120,16 @@ async fn claim_name(
         }
         Ok(RequestNameReply::InQueue) => {
             let Some(unit) = takeover::replaceable_unit(connection).await else {
-                error!(
-                    "a notification daemon the bar cannot safely replace holds the bus; \
-                     stop it to let the bar draw its own popups"
-                );
+                if UNREPLACEABLE_REPORTED.swap(true, std::sync::atomic::Ordering::Relaxed) {
+                    debug!(
+                        "a notification daemon the bar cannot safely replace still holds the bus"
+                    );
+                } else {
+                    error!(
+                        "a notification daemon the bar cannot safely replace holds the bus; \
+                         stop it to let the bar draw its own popups"
+                    );
+                }
                 return Err(SessionEnd::Failed);
             };
 

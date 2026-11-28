@@ -1,8 +1,8 @@
 //! Data model shared by the network service and its backends.
 
 mod error;
-mod event;
-mod model;
+pub(super) mod event;
+pub(super) mod model;
 
 pub use error::NetworkServiceError;
 pub use event::{NetworkCommand, NetworkEvent};

@@ -13,7 +13,7 @@ pub use hydebar_proto::config::{
     ClockModuleConfig, Config, ControlCenterModuleConfig, CustomMenuEntry, CustomModuleDef,
     DEFAULT_CONFIG_FILE_PATH, DEFAULT_RADIUS, HydeBranch, KeyboardLayoutModuleConfig,
     MODULE_VERTICAL_PADDING_EM, MediaPlayerModuleConfig, MemoryFormat, MenuAppearance, ModuleDef,
-    ModuleName, Modules, NotificationSource, Outputs, Position, SystemIndicator,
+    ModuleName, Modules, NotificationSource, Outputs, Position, RendererChoice, SystemIndicator,
     SystemModuleConfig, UpdatesModuleConfig, WORKSPACE_ACTIVE_MARGIN_EM,
     WORKSPACE_ACTIVE_PADDING_EM, WORKSPACE_GAP_EM, WORKSPACE_GLYPH_ADVANCE_EM,
     WORKSPACE_MIN_HEIGHT_EM, WORKSPACE_MIN_WIDTH_EM, WORKSPACE_PADDING_EM, WindowTitleConfig,
@@ -28,7 +28,7 @@ pub mod manager;
 pub mod theme_watch;
 pub mod watch;
 
-pub use load::{ConfigLoadError, get_config};
+pub use load::{ConfigLoadError, config};
 pub use manager::{
     ConfigApplied, ConfigDegradation, ConfigImpact, ConfigManager, ConfigUpdateError
 };

@@ -20,7 +20,10 @@
 //! configuration. A Hyprland reading the older configuration format has no
 //! evaluator at all. Both spellings are therefore offered, the Lua one first.
 
-use std::sync::atomic::{AtomicU8, Ordering};
+use std::{
+    env::var_os,
+    sync::atomic::{AtomicU8, Ordering}
+};
 
 use hydebar_proto::compositor_ipc;
 
@@ -64,10 +67,13 @@ struct Rule {
 
 /// Rules that make the compositor blur what shows through `namespace`.
 ///
-/// Only the surface the bar itself is drawn on is named. The menus, the
-/// tooltips and the notifications live on surfaces that span the screen so
-/// their content can be placed anywhere on it, and a blur rule matching those
-/// would blur the whole desktop for as long as one of them is up.
+/// Only the surface the bar itself is drawn on is named. The frame reads as
+/// one paint with the strip, so the surface it is drawn on shares the bar's
+/// namespace and is covered by the very same rule — blur stated once, from
+/// one place. The menus, the tooltips and the notifications live on surfaces
+/// that span the screen so their content can be placed anywhere on it, and
+/// a blur rule matching those would blur the whole desktop for as long as
+/// one of them is up.
 fn rules(namespace: &str) -> [Rule; 2] {
     let matched = format!("^({namespace})$");
 
@@ -83,12 +89,30 @@ fn rules(namespace: &str) -> [Rule; 2] {
         Rule {
             lua:        format!(
                 "hl.layer_rule({{ name = \"hydebar_ignore_alpha\", match = {{ namespace = \
-                 \"{matched}\" }}, ignore_alpha = {IGNORED_ALPHA:.1} }})"
+                 \"{matched}\" }}, ignore_alpha = {IGNORED_ALPHA:.2} }})"
             ),
-            keyword:    format!("ignore_alpha {IGNORED_ALPHA:.1}, match:namespace {matched}"),
-            positional: format!("ignore_alpha {IGNORED_ALPHA:.1}, {matched}")
+            keyword:    format!("ignore_alpha {IGNORED_ALPHA:.2}, match:namespace {matched}"),
+            positional: format!("ignore_alpha {IGNORED_ALPHA:.2}, {matched}")
         }
     ]
+}
+
+/// Keeps the compositor from blurring the frame's own surfaces.
+///
+/// `HyDE`'s own configuration blurs every namespace beginning with
+/// `hydebar`, which would drag the frame into the blur behind it. The
+/// frame is a solid paint and must stay sharp, so it opts out under a
+/// namespace of its own.
+fn frame_no_blur() -> Rule {
+    let matched = "^hydebar-frame";
+
+    Rule {
+        lua:        format!(
+            "hl.layer_rule({{ name = \"hydebar_frame_no_blur\", match = {{ namespace = \"{matched}\" }}, blur = false }})"
+        ),
+        keyword:    format!("blur false, match:namespace {matched}"),
+        positional: format!("blur false, {matched}")
+    }
 }
 
 /// Where the canvas is drawn in the pile of surfaces on the strip's level.
@@ -130,7 +154,7 @@ fn accepted(answer: &str) -> bool {
 
 /// Whether the bar is running on the compositor these rules are written for.
 fn on_hyprland() -> bool {
-    std::env::var_os("HYPRLAND_INSTANCE_SIGNATURE").is_some()
+    var_os("HYPRLAND_INSTANCE_SIGNATURE").is_some()
 }
 
 /// States one rule and returns what the compositor answered.
@@ -188,7 +212,7 @@ fn try_spelling(command: &str, argument: &str) -> bool {
     state_rule(command, &spelled).is_some_and(|answer| accepted(&answer))
 }
 
-/// Asks the compositor to blur what shows through the bar.
+/// Asks the compositor to blur what shows through the bar and the frame.
 ///
 /// Does nothing anywhere the compositor is not Hyprland, and nothing beyond
 /// wasting a moment where the desktop already states the same rule or has blur
@@ -199,6 +223,7 @@ pub fn request() {
     }
 
     state(&stacking(DESK_NAMESPACE));
+    state(&frame_no_blur());
 
     if hydebar_proto::compositor_look::CompositorLook::read().blur == Some(false) {
         return;
@@ -237,7 +262,7 @@ mod tests {
         );
         assert_eq!(
             ignore_alpha.keyword,
-            "ignore_alpha 0.0, match:namespace ^(hydebar-main-layer)$"
+            "ignore_alpha 0.00, match:namespace ^(hydebar-main-layer)$"
         );
     }
 
@@ -253,7 +278,7 @@ mod tests {
         assert_eq!(
             ignore_alpha.lua,
             "hl.layer_rule({ name = \"hydebar_ignore_alpha\", match = { namespace = \
-             \"^(hydebar-main-layer)$\" }, ignore_alpha = 0.0 })"
+             \"^(hydebar-main-layer)$\" }, ignore_alpha = 0.00 })"
         );
     }
 
@@ -264,7 +289,7 @@ mod tests {
         assert_eq!(blur.positional, "blur, ^(hydebar-main-layer)$");
         assert_eq!(
             ignore_alpha.positional,
-            "ignore_alpha 0.0, ^(hydebar-main-layer)$"
+            "ignore_alpha 0.00, ^(hydebar-main-layer)$"
         );
     }
 
@@ -289,7 +314,8 @@ mod tests {
     )]
     fn the_whole_strip_is_blurred_not_only_the_islands() {
         // the HyDE theme states the bar background at 0.01: a threshold above
-        // it would leave the space between the islands sharp
+        // it would leave the space between the islands sharp; 0.0 keeps
+        // every pixel except a fully transparent one in the blur
         assert!(IGNORED_ALPHA < 0.01);
     }
 

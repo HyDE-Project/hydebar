@@ -70,7 +70,7 @@ impl Custom {
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
-    use std::{num::NonZeroUsize, path::Path, sync::Arc, time::Duration};
+    use std::{fs::read_to_string, num::NonZeroUsize, path::Path, sync::Arc, time::Duration};
 
     use tokio::{
         io::{self, AsyncBufReadExt, AsyncWriteExt, BufReader},
@@ -560,7 +560,7 @@ invalid
     /// Waits until the command has recorded the identifier of its helper.
     async fn recorded_helper(pid_file: &Path) -> u32 {
         loop {
-            if let Ok(contents) = std::fs::read_to_string(pid_file)
+            if let Ok(contents) = read_to_string(pid_file)
                 && let Ok(pid) = contents.trim().parse::<u32>()
             {
                 return pid;

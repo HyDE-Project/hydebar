@@ -23,7 +23,8 @@ pub fn available(modules: &Modules, custom: &[String]) -> Vec<ModuleName> {
     let placed = placed(modules);
 
     ModuleName::BUILT_IN
-        .into_iter()
+        .iter()
+        .cloned()
         .chain(custom.iter().cloned().map(ModuleName::Custom))
         .filter(|module| !placed.contains(module))
         .collect()

@@ -45,7 +45,7 @@ impl MediaPlayer {
                     .service
                     .as_ref()
                     .and_then(|s| s.first())
-                    .map(|d| Self::get_title(d, config));
+                    .map(|d| Self::title(d, config));
             }
         }
     }

@@ -154,10 +154,11 @@ impl Appearance {
     /// Converts a spacing expressed in `em` into pixels of the themed font.
     ///
     /// Every gap of the bar row is stated as a factor of the text size, so a
-    /// theme raising or lowering its font moves the whole layout with it.
+    /// theme raising or lowering its font moves the whole layout with it. The
+    /// `spacing_scale` multiplier loosens or tightens all of them at once.
     #[must_use]
     pub fn spacing(&self, em: f32) -> f32 {
-        self.font_size_px() * em
+        self.font_size_px() * em * self.spacing_scale
     }
 
     /// Returns the padding of a single module, as `[vertical, horizontal]`
@@ -266,6 +267,19 @@ mod tests {
         };
         assert_eq!(themed.spacing(0.4), 4.0);
         assert_eq!(themed.spacing(0.2), 2.0);
+    }
+
+    #[test]
+    fn spacing_scale_loosens_every_gap_at_once() {
+        let airy = Appearance {
+            font_size: Some(SizeValue::Pixels(10.0)),
+            spacing_scale: 1.5,
+            ..Appearance::default()
+        };
+
+        assert_eq!(airy.spacing(0.4), 6.0);
+        assert_eq!(airy.module_gap(), 6.0);
+        assert_eq!(airy.group_gap(), 30.0);
     }
 
     #[test]

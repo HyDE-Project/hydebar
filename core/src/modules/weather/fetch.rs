@@ -3,6 +3,7 @@
 use masterror::{AppError, AppResult};
 
 use super::data::WeatherResponse;
+use crate::utils::http_client;
 
 /// Spells `value` safely inside one URL query component.
 ///
@@ -41,19 +42,15 @@ pub(super) async fn fetch_weather(
         percent_encoded(api_key)
     );
 
-    let response = crate::utils::http_client()
-        .get(&url)
-        .send()
-        .await
-        .map_err(|e| {
-            if e.is_timeout() {
-                AppError::timeout(format!("Weather API timeout for location '{location}'"))
-            } else if e.is_connect() {
-                AppError::service_unavailable("No internet connection - cannot fetch weather")
-            } else {
-                AppError::external_api(format!("Network error fetching weather: {e}"))
-            }
-        })?;
+    let response = http_client().get(&url).send().await.map_err(|e| {
+        if e.is_timeout() {
+            AppError::timeout(format!("Weather API timeout for location '{location}'"))
+        } else if e.is_connect() {
+            AppError::service_unavailable("No internet connection - cannot fetch weather")
+        } else {
+            AppError::external_api(format!("Network error fetching weather: {e}"))
+        }
+    })?;
 
     let status = response.status();
     if !status.is_success() {

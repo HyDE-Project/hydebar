@@ -9,10 +9,12 @@ impl App {
     /// Shows a popup for a notification that has just arrived.
     ///
     /// A notification the user dismissed is taken off the screen at once, so
-    /// clearing the centre also clears what is floating above it.
+    /// clearing the centre also clears what is floating above it. A
+    /// replacement of a notification still on screen updates its popup
+    /// where it stands instead of stacking a second copy of it.
     fn raise_popup(&mut self, message: &modules::notifications::NotificationsMessage) {
         use hydebar_core::{
-            notifications_popup::Popup,
+            notifications_popup::{self, Popup},
             services::{ServiceEvent, notifications::NotificationEvent}
         };
 
@@ -29,18 +31,27 @@ impl App {
                     return;
                 }
 
-                self.notification_popups
-                    .push(Popup::new(notification, std::time::Instant::now()));
+                if !notifications_popup::show(
+                    &mut self.focus.notification_popups,
+                    notification,
+                    std::time::Instant::now()
+                ) {
+                    self.focus
+                        .notification_popups
+                        .push(Popup::new(notification, std::time::Instant::now()));
+                }
                 hydebar_core::notifications_popup::prune(
-                    &mut self.notification_popups,
+                    &mut self.focus.notification_popups,
                     std::time::Instant::now()
                 );
             }
             modules::notifications::NotificationsMessage::Dismiss(id) => {
-                self.notification_popups.retain(|popup| popup.id != *id);
+                self.focus
+                    .notification_popups
+                    .retain(|popup| popup.id != *id);
             }
             modules::notifications::NotificationsMessage::ClearAll => {
-                self.notification_popups.clear();
+                self.focus.notification_popups.clear();
             }
             _ => {}
         }
@@ -90,7 +101,7 @@ impl App {
     /// Grows or shrinks the notification surface to what the popups need.
     pub(crate) fn fit_notification_surface(&mut self) -> Task<Message> {
         let height = hydebar_core::notifications_popup::surface_height(
-            &self.notification_popups,
+            &self.focus.notification_popups,
             self.appearance()
         );
 
@@ -99,14 +110,14 @@ impl App {
 
     /// Takes down the popups whose time is up.
     pub(super) fn expire_popups(&mut self) -> Task<Message> {
-        let before = self.notification_popups.len();
+        let before = self.focus.notification_popups.len();
 
         hydebar_core::notifications_popup::prune(
-            &mut self.notification_popups,
+            &mut self.focus.notification_popups,
             std::time::Instant::now()
         );
 
-        if before == self.notification_popups.len() {
+        if before == self.focus.notification_popups.len() {
             Task::none()
         } else {
             self.fit_notification_surface()
@@ -118,12 +129,12 @@ impl App {
         &mut self,
         msg: modules::notifications::NotificationsMessage
     ) -> Task<Message> {
-        let popups_before = self.notification_popups.len();
+        let popups_before = self.focus.notification_popups.len();
 
         self.raise_popup(&msg);
-        self.notifications.update(msg);
+        self.modules.notifications.update(msg);
 
-        if popups_before == self.notification_popups.len() {
+        if popups_before == self.focus.notification_popups.len() {
             Task::none()
         } else {
             self.fit_notification_surface()

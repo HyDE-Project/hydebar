@@ -11,7 +11,9 @@
 
 use std::{
     collections::HashMap,
-    sync::{LazyLock, Mutex, RwLock}
+    fs::read,
+    sync::{LazyLock, Mutex, RwLock},
+    thread::spawn
 };
 
 use iced::Font;
@@ -89,7 +91,7 @@ pub(super) fn resolved(glyph: &str) -> IconFace {
         .unwrap_or_else(std::sync::PoisonError::into_inner)
         .insert(first)
     {
-        std::thread::spawn(move || {
+        spawn(move || {
             let face = resolve(first);
 
             RESOLVED
@@ -166,7 +168,7 @@ fn fontconfig_match(symbol: char) -> Option<(String, String, u32)> {
 
 /// Share of its box the glyph for `symbol` inks in the named face.
 fn measured_share(symbol: char, file: &str, index: u32) -> Option<f32> {
-    let data = std::fs::read(file).ok()?;
+    let data = read(file).ok()?;
     let face = ttf_parser::Face::parse(&data, index).ok()?;
     let glyph = face.glyph_index(symbol)?;
     let bounds = face.glyph_bounding_box(glyph)?;

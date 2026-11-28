@@ -66,9 +66,9 @@ impl NetworkData {
                             container(
                                 row!(
                                     icon(icons, if ac.public {
-                                        ActiveConnectionInfo::get_wifi_icon(ac.strength)
+                                        ActiveConnectionInfo::wifi_icon(ac.strength)
                                     } else {
-                                        ActiveConnectionInfo::get_wifi_lock_icon(ac.strength)
+                                        ActiveConnectionInfo::wifi_lock_icon(ac.strength)
                                     })
                                     .width(Length::Shrink),
                                     text(ac.ssid.clone()).width(Length::Fill),
@@ -139,7 +139,7 @@ mod tests {
     use std::convert::TryFrom;
 
     use iced_test::simulator;
-    use zbus::zvariant::OwnedObjectPath;
+    use zbus::OwnedObjectPath;
 
     use super::*;
     use crate::services::network::DeviceState;

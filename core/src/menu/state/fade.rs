@@ -31,6 +31,8 @@ impl Menu {
             self.opacity.set_response(Duration::from_millis(
                 animation_config.menu_fade_duration_ms
             ));
+            self.opacity
+                .set_damping_ratio(animation_config.damping_ratio);
             self.opacity.set_target(target);
         } else {
             self.opacity.snap_to(target);
@@ -62,7 +64,7 @@ impl Menu {
 
     /// Get the current animated opacity for rendering
     #[must_use]
-    pub const fn get_opacity(&self) -> f32 {
+    pub const fn opacity(&self) -> f32 {
         self.opacity.value()
     }
 }

@@ -1,6 +1,9 @@
 //! The `HyDE` state snapshot and the entry points that read it from disk.
 
-use std::path::{Path, PathBuf};
+use std::{
+    env::var,
+    path::{Path, PathBuf}
+};
 
 use super::themes;
 use crate::{hyde_files, shell_vars as staterc};
@@ -111,7 +114,7 @@ fn xdg_dir(key: &str, fallback: &str) -> Option<PathBuf> {
 
 /// Returns an environment variable only when it holds a non empty value.
 fn non_empty_var(key: &str) -> Option<String> {
-    std::env::var(key).ok().filter(|value| !value.is_empty())
+    var(key).ok().filter(|value| !value.is_empty())
 }
 
 #[cfg(test)]

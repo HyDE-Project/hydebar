@@ -15,5 +15,3 @@ pub use model::{Notification, NotificationEvent, Urgency};
 pub use server::NotificationsServer;
 pub use service::NotificationsService;
 pub use storage::NotificationStorage;
-
-const MAX_NOTIFICATIONS: usize = 50;

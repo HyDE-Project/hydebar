@@ -7,6 +7,7 @@
 //! process id, recorded so a newcomer can name and signal the incumbent.
 
 use std::{
+    env::var_os,
     fs::{self, File, OpenOptions},
     io::{self, Seek, SeekFrom, Write},
     os::{fd::AsRawFd, unix::fs::OpenOptionsExt},
@@ -45,7 +46,7 @@ impl InstanceLock {
 
 /// Directory the lock file is created in.
 fn lock_dir() -> PathBuf {
-    match std::env::var_os("XDG_RUNTIME_DIR") {
+    match var_os("XDG_RUNTIME_DIR") {
         Some(dir) if !dir.is_empty() => PathBuf::from(dir).join("hydebar"),
         _ => PathBuf::from(format!("/tmp/hydebar-{}", current_uid()))
     }

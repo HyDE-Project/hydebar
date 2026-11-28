@@ -41,12 +41,11 @@ impl IwdDbus<'_> {
 
         let network = match NetworkProxy::builder(self.inner().connection())
             .destination("net.connman.iwd")
-            .and_then(|builder| builder.path(path))
+            .path(path)
+            .build()
+            .await
         {
-            Ok(builder) => match builder.build().await {
-                Ok(network) => network,
-                Err(err) => return report(&err, "addressing the network the station is joined to")
-            },
+            Ok(network) => network,
             Err(err) => return report(&err, "addressing the network the station is joined to")
         };
 

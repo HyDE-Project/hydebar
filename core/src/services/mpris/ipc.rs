@@ -6,7 +6,7 @@ use futures::{Stream, StreamExt, stream::SelectAll};
 use masterror::AppResult;
 use zbus::{Connection, fdo::DBusProxy};
 
-use super::data::{MprisPlayerMetadata, PlaybackStatus};
+use super::data::{MprisPlayerData, MprisPlayerMetadata, PlaybackStatus};
 
 mod players;
 
@@ -30,6 +30,9 @@ pub enum IpcEvent {
 /// Combined event stream type returned by [`build_event_stream`].
 pub type EventStream = SelectAll<Pin<Box<dyn Stream<Item = IpcEvent> + Send>>>;
 
+/// One subscription to one player property, shaped into [`IpcEvent`]s.
+type BoxedStream = Pin<Box<dyn Stream<Item = IpcEvent> + Send>>;
+
 /// Builds a stream that emits [`IpcEvent`] values for all active players.
 pub async fn build_event_stream(conn: &Connection) -> AppResult<EventStream> {
     let dbus = DBusProxy::new(conn)
@@ -38,100 +41,109 @@ pub async fn build_event_stream(conn: &Connection) -> AppResult<EventStream> {
     let data = collect_players(conn).await?;
     let mut combined = SelectAll::new();
 
-    combined.push(Box::pin(
-        dbus.receive_name_owner_changed()
-            .await
-            .map_err(|e| bus_failure("Failed to receive name owner changed", &e))?
-            .filter_map(|signal| async move {
-                match signal.args() {
-                    Ok(args) if is_mpris_service(&args.name) => Some(IpcEvent::NameOwner),
-                    _ => None
-                }
-            })
-    ) as Pin<Box<dyn Stream<Item = IpcEvent> + Send>>);
+    combined.push(name_owner_stream(&dbus).await?);
 
     for entry in &data {
-        let cache = Arc::new(entry.metadata.clone());
-        let service = entry.service.clone();
-
-        combined.push(
-            Box::pin(entry.proxy.receive_metadata_changed().await.filter_map({
-                let cache = Arc::clone(&cache);
-                let service = service.clone();
-
-                move |metadata| {
-                    let cache = Arc::clone(&cache);
-                    let service = service.clone();
-
-                    async move {
-                        let new_metadata =
-                            metadata.get().await.map(MprisPlayerMetadata::from).ok();
-
-                        if new_metadata.as_ref() == cache.as_ref().as_ref() {
-                            None
-                        } else {
-                            Some(IpcEvent::Metadata(service, new_metadata))
-                        }
-                    }
-                }
-            })) as Pin<Box<dyn Stream<Item = IpcEvent> + Send>>
-        );
+        combined.push(metadata_stream(entry).await);
     }
 
     for entry in &data {
-        let service = entry.service.clone();
-        let volume = entry.volume;
-
-        combined.push(
-            Box::pin(
-                entry
-                    .proxy
-                    .receive_volume_changed()
-                    .await
-                    .filter_map(move |signal| {
-                        let service = service.clone();
-
-                        async move {
-                            let new_volume = signal.get().await.ok();
-                            if new_volume == volume {
-                                None
-                            } else {
-                                Some(IpcEvent::Volume(service, new_volume))
-                            }
-                        }
-                    })
-            ) as Pin<Box<dyn Stream<Item = IpcEvent> + Send>>
-        );
+        combined.push(volume_stream(entry).await);
     }
 
     for entry in &data {
-        let service = entry.service.clone();
-        let state = entry.state;
-
-        combined.push(Box::pin(
-            entry
-                .proxy
-                .receive_playback_status_changed()
-                .await
-                .filter_map(move |signal| {
-                    let service = service.clone();
-
-                    async move {
-                        let new_state = signal
-                            .get()
-                            .await
-                            .map(PlaybackStatus::from)
-                            .unwrap_or_default();
-
-                        if new_state == state {
-                            None
-                        } else {
-                            Some(IpcEvent::State(service, new_state))
-                        }
-                    }
-                })
-        ) as Pin<Box<dyn Stream<Item = IpcEvent> + Send>>);
+        combined.push(playback_stream(entry).await);
     }
 
     Ok(combined)
+}
+
+/// Fires when any MPRIS name changes owner on the bus.
+async fn name_owner_stream(dbus: &DBusProxy<'_>) -> AppResult<BoxedStream> {
+    Ok(dbus
+        .receive_name_owner_changed()
+        .await
+        .map_err(|e| bus_failure("Failed to receive name owner changed", &e))?
+        .filter_map(|signal| async move {
+            match signal.args() {
+                Ok(args) if is_mpris_service(&args.name) => Some(IpcEvent::NameOwner),
+                _ => None
+            }
+        })
+        .boxed())
+}
+
+/// Emits when a player's metadata moves off the cached one.
+async fn metadata_stream(entry: &MprisPlayerData) -> BoxedStream {
+    let cache = Arc::new(entry.metadata.clone());
+    let service = entry.service.clone();
+
+    entry
+        .proxy
+        .receive_metadata_changed()
+        .await
+        .filter_map(move |metadata| {
+            let cache = Arc::clone(&cache);
+            let service = service.clone();
+
+            async move {
+                let new_metadata = metadata.get().await.map(MprisPlayerMetadata::from).ok();
+
+                if new_metadata.as_ref() == cache.as_ref().as_ref() {
+                    None
+                } else {
+                    Some(IpcEvent::Metadata(service, new_metadata))
+                }
+            }
+        })
+        .boxed()
+}
+
+/// Emits when a player's volume moves off the cached one.
+async fn volume_stream(entry: &MprisPlayerData) -> BoxedStream {
+    let service = entry.service.clone();
+    let volume = entry.volume;
+
+    entry
+        .proxy
+        .receive_volume_changed()
+        .await
+        .filter_map(move |signal| {
+            let service = service.clone();
+
+            async move {
+                let new_volume = signal.get().await.ok();
+                if new_volume == volume {
+                    None
+                } else {
+                    Some(IpcEvent::Volume(service, new_volume))
+                }
+            }
+        })
+        .boxed()
+}
+
+/// Emits when a player's playback state moves off the cached one.
+async fn playback_stream(entry: &MprisPlayerData) -> BoxedStream {
+    let service = entry.service.clone();
+    let state = entry.state;
+
+    entry
+        .proxy
+        .receive_playback_status_changed()
+        .await
+        .filter_map(move |signal| {
+            let service = service.clone();
+
+            async move {
+                let new_state = signal.get().await.map_or_default(PlaybackStatus::from);
+
+                if new_state == state {
+                    None
+                } else {
+                    Some(IpcEvent::State(service, new_state))
+                }
+            }
+        })
+        .boxed()
 }

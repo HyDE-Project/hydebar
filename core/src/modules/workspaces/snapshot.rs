@@ -26,7 +26,7 @@ pub struct Workspace {
 }
 
 /// Asks the port for a snapshot and maps it, empty on failure.
-pub(super) fn get_workspaces(
+pub(super) fn workspaces(
     port: &dyn HyprlandPort,
     config: &WorkspacesModuleConfig
 ) -> Vec<Workspace> {

@@ -6,9 +6,11 @@
 //! socket, and every subscriber taps a broadcast channel instead of the
 //! compositor.
 //!
-//! The singleton and its supervisor live in [`singleton`], the handler
-//! registrations in [`wiring`] and the subscription surface in [`taps`].
+//! The singleton and its supervisor live in [`singleton`], the broadcast taps
+//! they share in [`channels`], the handler registrations in [`wiring`] and the
+//! subscription surface in [`taps`].
 
+mod channels;
 mod singleton;
 mod taps;
 mod wiring;

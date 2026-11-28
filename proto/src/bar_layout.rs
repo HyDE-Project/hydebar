@@ -15,11 +15,11 @@
 //! and outranks whatever `HyDE` has on file, exactly as every other setting
 //! does.
 //!
-//! The restatement itself lives in [`parse`], the entry-to-module tables in
-//! [`mapping`], the invented text entries in [`synth`], the human spelling of
-//! configured names in [`labels`] and the relaxed-JSON stripping in [`jsonc`].
-//! This file keeps the restated layout type and the walk from `staterc` to
-//! the layout file it records.
+//! The restatement itself, with the restated layout type it hands back, lives
+//! in [`parse`]; the entry-to-module tables in [`mapping`], the invented text
+//! entries in [`synth`], the human spelling of configured names in [`labels`]
+//! and the relaxed-JSON stripping in [`jsonc`]. This file keeps the walk from
+//! `staterc` to the layout file it records.
 
 mod jsonc;
 mod labels;
@@ -32,27 +32,10 @@ use std::{fs, path::PathBuf};
 pub use jsonc::plain_json;
 pub use labels::display_label;
 use log::{debug, warn};
-pub use parse::parse;
+pub use mapping::module_for;
+pub use parse::{RestatedLayout, parse};
 
-use crate::{
-    config::{CustomModuleDef, Modules},
-    hyde_dirs::HydeDirs,
-    shell_vars
-};
-
-/// A layout restated in the bar's modules, with the entries it had to invent.
-///
-/// The decorative layouts carry static text entries defined inline in the
-/// layout file — a label and possibly a click command, nothing else. They map
-/// to no built-in, so the restatement synthesises a custom module for each:
-/// the label becomes the glyph, the click command stays the click command.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RestatedLayout {
-    /// The three position arrays in the bar's own modules.
-    pub modules:     Modules,
-    /// Custom modules invented for inline text entries, ready to adopt.
-    pub synthesized: Vec<CustomModuleDef>
-}
+use crate::{hyde_dirs::HydeDirs, shell_vars};
 
 /// Key under which `staterc` records the layout file in force.
 const LAYOUT_PATH_KEY: &str = "WAYBAR_LAYOUT_PATH";

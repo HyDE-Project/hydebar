@@ -22,6 +22,12 @@ impl Appearance {
             self.radius = look.rounding.map(SizeValue::Pixels);
         }
 
+        if self.frame.rounding.is_none()
+            && let Some(rounding) = look.rounding
+        {
+            self.frame.rounding = Some(rounding);
+        }
+
         if self.side_padding.is_none() {
             self.side_padding = look
                 .gaps_out
@@ -130,6 +136,25 @@ mod tests {
         appearance.follow_compositor(&look());
 
         assert_eq!(appearance.radius, Some(SizeValue::Pixels(10.0)));
+    }
+
+    #[test]
+    fn an_unset_frame_rounding_follows_the_windows() {
+        let mut appearance = Appearance::default();
+
+        appearance.follow_compositor(&look());
+
+        assert_eq!(appearance.frame.rounding, Some(3.0));
+    }
+
+    #[test]
+    fn a_configured_frame_rounding_is_kept() {
+        let mut appearance = Appearance::default();
+        appearance.frame.rounding = Some(12.0);
+
+        appearance.follow_compositor(&look());
+
+        assert_eq!(appearance.frame.rounding, Some(12.0));
     }
 
     #[test]

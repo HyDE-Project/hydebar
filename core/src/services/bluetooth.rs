@@ -1,6 +1,6 @@
 //! Bluetooth service exposing adapter state and paired devices to the bar.
 
-use std::{any::TypeId, ops::Deref};
+use std::any::TypeId;
 
 use iced::{Subscription, Task, stream::channel};
 
@@ -9,26 +9,13 @@ use super::{ReadOnlyService, Service, ServiceEvent};
 mod commands;
 mod data;
 mod dbus;
+mod handle;
 mod listener;
 mod rfkill;
 
 pub use commands::BluetoothCommand;
 pub use data::{BluetoothData, BluetoothDevice, BluetoothState};
-
-/// The conversation with the bluetooth daemon.
-#[derive(Debug, Clone)]
-pub struct BluetoothService {
-    conn: zbus::Connection,
-    data: BluetoothData
-}
-
-impl Deref for BluetoothService {
-    type Target = BluetoothData;
-
-    fn deref(&self) -> &Self::Target {
-        &self.data
-    }
-}
+pub use handle::BluetoothService;
 
 impl ReadOnlyService for BluetoothService {
     type UpdateEvent = BluetoothData;

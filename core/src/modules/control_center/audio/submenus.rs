@@ -113,7 +113,7 @@ pub fn audio_submenu<'a, Message: 'a + Clone>(
             .map(|e| {
                 if e.active {
                     container(
-                        row!(icon(icons, e.device.get_icon()), text(e.name))
+                        row!(icon(icons, e.device.icon()), text(e.name))
                             .align_y(Alignment::Center)
                             .spacing(scale::scaled(16.0))
                             .padding([scale::scaled(4.0), scale::scaled(12.0)])
@@ -125,7 +125,7 @@ pub fn audio_submenu<'a, Message: 'a + Clone>(
                     .into()
                 } else {
                     button(
-                        row!(icon(icons, e.device.get_icon()), text(e.name))
+                        row!(icon(icons, e.device.icon()), text(e.name))
                             .spacing(scale::scaled(16.0))
                             .align_y(Alignment::Center)
                     )

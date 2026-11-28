@@ -15,32 +15,38 @@ impl App {
         let layout = &self.config.modules;
         let hosts = |name: ModuleName| layout.hosts(&name);
 
-        gate("tray", hosts(ModuleName::Tray), &mut self.tray, ctx, ());
+        gate(
+            "tray",
+            hosts(ModuleName::Tray),
+            &mut self.modules.tray,
+            ctx,
+            ()
+        );
         gate(
             "privacy",
             hosts(ModuleName::Privacy),
-            &mut self.privacy,
+            &mut self.modules.privacy,
             ctx,
             ()
         );
         gate(
             "hardware-services",
             layout.hosts_any(&CONTROL_CENTER_CONSUMERS),
-            &mut self.control_center,
+            &mut self.modules.control_center,
             ctx,
             ()
         );
         gate(
             "media-player",
             hosts(ModuleName::MediaPlayer),
-            &mut self.media_player,
+            &mut self.modules.media_player,
             ctx,
             ()
         );
         gate(
             "notifications",
             notifications_hosted(&self.config),
-            &mut self.notifications,
+            &mut self.modules.notifications,
             ctx,
             ()
         );

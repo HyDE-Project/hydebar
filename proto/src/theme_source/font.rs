@@ -93,8 +93,7 @@ impl Sources {
     fn read(dirs: &HydeDirs) -> Self {
         let staterc = hyde_files::text_or_empty(&dirs.staterc());
         let hypr_theme = shell_vars::value_of(&staterc, THEME_KEY)
-            .map(|theme| hyde_files::text_or_empty(&dirs.hypr_theme(&theme)))
-            .unwrap_or_default();
+            .map_or_default(|theme| hyde_files::text_or_empty(&dirs.hypr_theme(&theme)));
         let config = hyde_files::text(&dirs.hyde_config_export())
             .or_else(|| hyde_files::text(&dirs.hyde_config()))
             .unwrap_or_default();

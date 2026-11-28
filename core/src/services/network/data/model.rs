@@ -1,8 +1,8 @@
 //! Snapshot types describing the network state a backend reports.
 
-use zbus::zvariant::OwnedObjectPath;
+use zbus::OwnedObjectPath;
 
-use super::NetworkServiceError;
+use super::error::NetworkServiceError;
 
 /// Facts about the live link, read beside the backend rather than from it.
 ///
@@ -73,7 +73,7 @@ pub struct NetworkData {
 /// use std::convert::TryFrom;
 ///
 /// use hydebar_core::services::network::{AccessPoint, DeviceState};
-/// use zbus::zvariant::OwnedObjectPath;
+/// use zbus::OwnedObjectPath;
 ///
 /// let ap = AccessPoint {
 ///     ssid:        "example".into(),
@@ -108,7 +108,7 @@ pub struct AccessPoint {
 /// use std::convert::TryFrom;
 ///
 /// use hydebar_core::services::network::Vpn;
-/// use zbus::zvariant::OwnedObjectPath;
+/// use zbus::OwnedObjectPath;
 ///
 /// let vpn = Vpn {
 ///     name: "work".into(),
@@ -131,7 +131,7 @@ pub struct Vpn {
 /// use std::convert::TryFrom;
 ///
 /// use hydebar_core::services::network::{AccessPoint, DeviceState, KnownConnection};
-/// use zbus::zvariant::OwnedObjectPath;
+/// use zbus::OwnedObjectPath;
 ///
 /// let ap = AccessPoint {
 ///     ssid:        "lab".into(),
@@ -159,7 +159,7 @@ pub enum KnownConnection {
 /// use std::convert::TryFrom;
 ///
 /// use hydebar_core::services::network::ActiveConnectionInfo;
-/// use zbus::zvariant::OwnedObjectPath;
+/// use zbus::OwnedObjectPath;
 ///
 /// let info = ActiveConnectionInfo::Vpn {
 ///     name:        "vpn".into(),
@@ -200,7 +200,7 @@ impl ActiveConnectionInfo {
     /// # Examples
     /// ```
     /// use hydebar_core::services::network::ActiveConnectionInfo;
-    /// use zbus::zvariant::OwnedObjectPath;
+    /// use zbus::OwnedObjectPath;
     ///
     /// let info = ActiveConnectionInfo::Vpn {
     ///     name:        "vpn".into(),

@@ -1,5 +1,7 @@
 //! The update fetch: the one the button runs, and the quiet daily one.
 
+use std::fs::{create_dir_all, metadata, write};
+
 use iced::Task;
 use log::info;
 
@@ -51,7 +53,7 @@ impl Themes {
             return Task::none();
         };
 
-        let fresh = std::fs::metadata(&stamp)
+        let fresh = metadata(&stamp)
             .ok()
             .and_then(|meta| meta.modified().ok())
             .and_then(|modified| modified.elapsed().ok())
@@ -68,9 +70,9 @@ impl Themes {
         }
 
         if let Some(dir) = stamp.parent() {
-            let _ = std::fs::create_dir_all(dir);
+            let _ = create_dir_all(dir);
         }
-        let _ = std::fs::write(&stamp, b"");
+        let _ = write(&stamp, b"");
 
         fetch
     }

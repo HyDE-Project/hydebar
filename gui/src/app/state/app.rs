@@ -1,81 +1,37 @@
 //! The application state every surface renders from.
 
-use std::{collections::HashMap, path::PathBuf, sync::Arc, time::Instant};
+use std::sync::Arc;
 
-use flexi_logger::LoggerHandle;
-use hydebar_core::{
-    ModuleContext,
-    animation::HoverFades,
-    attention::Attention,
-    components::icons::IconTheme,
-    config::{ConfigManager, ModuleName},
-    event_bus::EventReceiver,
-    modules::{
-        battery::Battery, calendar::Calendar, clock::Clock, command_button::CommandButton,
-        control_center::ControlCenter, custom_module::Custom, desk::Desk, hyde_menu::HydeMenu,
-        keyboard_layout::KeyboardLayout, keyboard_submap::KeyboardSubmap,
-        media_player::MediaPlayer, notifications::Notifications, privacy::Privacy,
-        screenshot::Screenshot, settings::Settings, system_info::SystemInfo, taskbar::Taskbar,
-        themes::Themes, tray::TrayModule, updates::Updates, wallpaper::Wallpaper,
-        weather::Weather, window_title::WindowTitle, workspaces::Workspaces
-    },
-    notifications_popup,
-    outputs::{AutoMetrics, Outputs},
-    position_button::ButtonUIRef,
-    style::AppearanceTransition
-};
-use hydebar_proto::{
-    config::{AppearanceStyle, Config},
-    ports::hyprland::HyprlandPort
-};
-use iced::SurfaceId as Id;
+use hydebar_core::{ModuleContext, components::icons::IconTheme, outputs::Outputs};
+use hydebar_proto::config::Config;
 
-/// How long the greeting stays before it fades on its own.
-pub(in crate::app) const GREETING_LIFETIME: std::time::Duration =
-    std::time::Duration::from_secs(3);
+use super::{entries::Modules, focus::Focus, motion::Motion, runtime::Runtime, screen::Screen};
 
 /// Everything the bar is, at this moment, on every screen it stands on.
 pub struct App {
-    pub(crate) config_path: PathBuf,
-    pub(crate) logger: LoggerHandle,
-    /// Keeps the injected compositor adapter alive for the app's lifetime;
-    /// the outputs facade is meant to adopt it in place of its own client.
-    #[cfg_attr(
-        not(test),
-        expect(
-            dead_code,
-            reason = "held until the outputs facade adopts the injected port"
-        )
-    )]
-    pub(crate) hyprland: Arc<dyn HyprlandPort>,
-    pub(crate) config_manager: Arc<ConfigManager>,
-    pub(crate) bus_receiver: EventReceiver,
-    pub(crate) last_frame: Option<Instant>,
-    pub(crate) appearance_transition: AppearanceTransition,
+    /// The machinery the binary booted the bar with.
+    pub(crate) runtime:           Runtime,
+    /// The clocks the bar is currently riding.
+    pub(crate) motion:            Motion,
+    /// What the bar is paying attention to, and what is unfolded around it.
+    pub(crate) focus:             Focus,
     /// Theme built from the appearance in force, rebuilt only when it moves.
     ///
     /// Building a theme runs the whole palette derivation; the renderer asks
     /// for the theme on every loop turn, and an idle bar must answer with a
     /// reference-count bump, not five colour cascades.
-    pub(crate) theme_cache: iced::Theme,
-    pub(crate) module_context: ModuleContext,
-    pub(crate) icons: IconTheme,
-    /// Factor the screen calls for, folded into every configuration loaded.
-    pub(crate) magnification: f32,
-    /// Sizes the screen calls for, once an output has reported itself.
-    pub(crate) auto_metrics: Option<AutoMetrics>,
-    /// Logical height of the screen the bar stands on, once reported.
-    pub(crate) screen_height: Option<f32>,
-    /// Logical width of the screen the bar stands on, once reported.
-    ///
-    /// What the islands are sent beyond when they fly back onto the strip:
-    /// off screen has to be off *this* screen, not a guessed distance.
-    pub(crate) screen_width: Option<f32>,
+    pub(crate) theme_cache:       iced::Theme,
+    pub(crate) module_context:    ModuleContext,
+    pub(crate) icons:             IconTheme,
+    /// What the screens have reported about themselves.
+    pub(crate) screen:            Screen,
+    /// Every module the bar carries.
+    pub(crate) modules:           Modules,
     /// What the machine has been doing for the last few minutes.
     ///
     /// One reading is a number and a run of them is a shape; the canvas draws
     /// the shape beside the number, and nothing else in the bar keeps one.
-    pub(crate) history: super::history::History,
+    pub(crate) history:           super::history::History,
     /// The wallpaper in force, decoded ready to draw, and where it was read.
     ///
     /// Held rather than read where it is drawn: the canvas is built on every
@@ -89,150 +45,41 @@ pub struct App {
     /// each already centred on the one in force and each already decoded.
     /// Held for the same reason the wallpaper is: the canvas is rebuilt on
     /// every frame of an unfolding and reads no files while it draws.
-    pub(crate) looks: hydebar_core::modules::desk::looks::Looks,
-    /// The row the strip stands on, screen by screen, as last measured.
-    ///
-    /// The canvas covers the screen from its very top and the strip does not
-    /// have to: a layer surface is never told its own place, so the row the
-    /// modules leave is asked of the compositor rather than assumed. Absent
-    /// until the first answer, which reads as a strip at the top.
-    pub(crate) strip_rows: HashMap<String, f32>,
+    pub(crate) looks:             hydebar_core::modules::desk::looks::Looks,
     /// The configuration in force.
-    pub config: Arc<Config>,
+    pub config:                   Arc<Config>,
+    /// Whether the desktop asked to reduce motion, mirrored from the portal.
+    ///
+    /// Held beside the configuration rather than folded into it: the setting is
+    /// the desktop's, not the user's file, and a configuration reload must not
+    /// lose what the portal last said. The bar draws its motion through
+    /// [`App::animations_enabled`], which respects both.
+    pub(crate) reduced_motion:    bool,
     /// The screens the bar stands on, and the surfaces it holds on them.
-    pub outputs: Outputs,
-    /// Whether the bar currently holds the keyboard.
-    pub navigation_mode: bool,
-    /// Which entry the keyboard selection rests on, while it holds it.
-    pub focused_module_index: Option<usize>,
-    /// Bar entry running the launcher the desktop is configured with.
-    pub app_launcher: CommandButton,
-    /// The modules the user wrote, by the key each is named under.
-    pub custom: HashMap<String, Custom>,
-    /// Bar entry counting what is waiting to be installed.
-    pub updates: Updates,
-    /// Bar entry opening the clipboard history.
-    pub clipboard: CommandButton,
-    /// Bar entry drawing the compositor’s workspaces.
-    pub workspaces: Workspaces,
-    /// Bar entry naming the window holding focus.
-    pub window_title: WindowTitle,
-    /// Bar entry reading the machine, and the sample every readout shares.
-    pub system_info: SystemInfo,
-    /// Bar entry naming the keyboard layout in force.
-    pub keyboard_layout: KeyboardLayout,
-    /// Bar entry naming the compositor submap the keyboard is in.
-    pub keyboard_submap: KeyboardSubmap,
-    /// Bar entry holding the icons applications registered.
-    pub tray: TrayModule,
-    /// Bar entry listing the open windows.
-    pub taskbar: Taskbar,
-    /// The canvas the bar unfolds into on a screen holding no window.
-    pub desk: Desk,
-    /// Bar entry stating the date and the time.
-    pub clock: Clock,
-    /// The calendar the clock opens.
-    pub calendar: Calendar,
-    /// Bar entry opening the menu the desktop publishes.
-    pub hyde_menu: HydeMenu,
-    /// Bar entry reading the charge and the power source.
-    pub battery: Battery,
-    /// Bar entry warning while the microphone, camera or screen is read.
-    pub privacy: Privacy,
-    /// Bar entry gathering the quick settings, and the services behind them.
-    pub control_center: ControlCenter,
-    /// Bar entry naming what is playing.
-    pub media_player: MediaPlayer,
-    /// Bar entry holding the notices that arrived.
-    pub notifications: Notifications,
-    /// Bar entry taking a picture of the screen.
-    pub screenshot: Screenshot,
-    /// Bar entry opening the window the bar is configured from.
-    pub settings: Settings,
-    /// Bar entry choosing the desktop theme, and the one holder of a running
-    /// switch.
-    pub themes: Themes,
-    /// Bar entry stepping through the wallpapers of the theme in force.
-    pub wallpaper: Wallpaper,
-    /// Bar entry stepping through the layouts the desktop ships.
-    pub bar_layout: hydebar_core::modules::bar_layout::BarLayout,
-    /// Bar entry reading the weather where the machine stands.
-    pub weather: Weather,
-    /// Notifications currently shown as popups.
-    pub notification_popups: Vec<notifications_popup::Popup>,
-    /// The one module the user is looking at, and the clocks that follow it.
-    pub attention: Attention,
-    /// Fade of the hover highlight of every module the pointer touched.
-    pub hover: HoverFades<ModuleName>,
-    /// Signature the current or incoming theme crosses the bar with.
-    pub sweep: hydebar_core::style::SweepStyle,
-    /// Birth of the bar: the islands ride in on the theme's own wave once.
-    pub entrance: hydebar_core::animation::Spring,
-    /// Travel of the blocks gliding to a rearranged layout's places.
-    pub relayout: hydebar_core::animation::Spring,
-    /// The book of seats every module records its place in, per frame.
-    pub flip: std::cell::RefCell<hydebar_core::components::flip::FlipMemo>,
-    /// Presence of the greeting shown mid-screen while the bar comes up.
-    pub greeting: hydebar_core::animation::Spring,
-    /// The menu surfaces the greeting has raised, each exactly once.
-    pub(crate) greeting_raised: Vec<Id>,
-    /// The frame instant past which the greeting lets itself out.
-    pub(crate) greeting_deadline: Option<Instant>,
-    /// Unfolding of the desk, one clock per screen it may unfold on.
-    ///
-    /// A clock apiece because the screens answer for themselves: one monitor
-    /// may be folding back under a window that just mapped while the other is
-    /// still unfolding over a workspace that was cleared.
-    ///
-    /// Even, not sprung: the blocks leave one after another and every one of
-    /// them deserves the same slice of the travel. A spring driving the whole
-    /// sequence spends its tail on the last blocks, where it barely moves, and
-    /// they read as stalling. The easing belongs to each block's own slice.
-    pub desk_clocks: std::collections::HashMap<Option<String>, hydebar_core::animation::Unfold>,
-    /// How far the strip's own background has come back from a folded canvas.
-    ///
-    /// A clock of its own rather than a reading off the islands' spring: the
-    /// spring is all but home in its first tenth of a second, and a
-    /// background painted on that schedule is back before the eye has it. The
-    /// islands ride the spring and the background runs ahead of them on this,
-    /// which is the order the two are wanted in.
-    pub desk_returning: hydebar_core::animation::Unfold,
-    /// The one tooltip lifecycle: dwell, warmth and the fade either way.
-    pub hints: hydebar_core::tooltip::Hints,
-    /// The greeting line, composed once when the greeting is armed.
-    pub greeting_line: String,
+    pub outputs:                  Outputs,
     /// The last configuration as the file spelled it, before adoption.
     ///
     /// The cheap gate against reload bursts: a reload whose raw text matches
     /// is finished before the adoption clone and the compositor questions it
     /// asks.
-    pub(crate) raw_config: Option<Arc<Config>>,
-    /// The wallpaper press waiting for its pictures before its window opens.
-    pub(crate) wallpaper_pending: Option<(Id, ButtonUIRef)>,
-    /// The layout press waiting for its roster before its window opens.
-    pub(crate) bar_layout_pending: Option<(Id, ButtonUIRef)>,
+    pub(crate) raw_config:        Option<Arc<Config>>,
     /// Faded and swept themes derived this frame, by quantised key.
     ///
     /// One palette blend serves every island and menu that lands on the
     /// same sixty-fourth of the fade; cleared each frame, so the map holds
     /// a handful of entries and never staleness.
     pub(crate) derived_themes:
-        std::cell::RefCell<std::collections::HashMap<(u32, u32), iced::Theme>>,
-    /// The layer metrics last stated to the compositor.
-    ///
-    /// Style, scale bits and height bits: while they stand still, a reload
-    /// does not re-state the size and exclusive zone of every bar surface.
-    pub(crate) stated_layer_metrics: Option<(AppearanceStyle, u64, Option<u32>)>
+        std::cell::RefCell<std::collections::HashMap<(u32, u32), iced::Theme>>
 }
 
 impl std::fmt::Debug for App {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("App")
-            .field("config_path", &self.config_path)
-            .field("navigation_mode", &self.navigation_mode)
-            .field("focused_module_index", &self.focused_module_index)
-            .field("magnification", &self.magnification)
-            .field("screen_height", &self.screen_height)
+            .field("config_path", &self.runtime.config_path)
+            .field("navigation_mode", &self.focus.navigation_mode)
+            .field("focused_module_index", &self.focus.focused_module_index)
+            .field("magnification", &self.screen.magnification)
+            .field("screen_height", &self.screen.height)
             .finish_non_exhaustive()
     }
 }

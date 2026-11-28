@@ -1,6 +1,6 @@
 //! What the session wants the user to know about.
 
-use super::super::{Panel, push};
+use super::super::panel::{Panel, push};
 use crate::app::state::App;
 
 /// Longest a list of pending packages is written out.
@@ -11,11 +11,11 @@ const LISTED: usize = 12;
 
 /// What is waiting to be installed, package by package.
 pub fn updates(app: &App) -> Option<Panel> {
-    let pending = app.updates.updates();
-    let behind = app.updates.hyde_pending();
+    let pending = app.modules.updates.updates();
+    let behind = app.modules.updates.hyde_pending();
     let mut rows = Vec::new();
 
-    push(&mut rows, "state", app.updates.tooltip());
+    push(&mut rows, "state", app.modules.updates.tooltip());
     rows.push(("packages".to_owned(), pending.len().to_string()));
 
     if behind > 0 {
@@ -40,12 +40,12 @@ pub fn updates(app: &App) -> Option<Panel> {
 
 /// The bells: what is unread and whether they are being held back.
 pub fn notifications(app: &App) -> Option<Panel> {
-    let service = app.notifications.service.as_ref()?;
+    let service = app.modules.notifications.service.as_ref()?;
     let mut rows = vec![
         ("unread".to_owned(), service.unread_count().to_string()),
         (
             "stored".to_owned(),
-            service.get_notifications().len().to_string()
+            service.notifications().len().to_string()
         ),
         (
             "do not disturb".to_owned(),
@@ -57,7 +57,7 @@ pub fn notifications(app: &App) -> Option<Panel> {
         &mut rows,
         "latest",
         service
-            .get_notifications()
+            .notifications()
             .first()
             .map(|latest| latest.summary.clone())
     );
@@ -67,7 +67,7 @@ pub fn notifications(app: &App) -> Option<Panel> {
 
 /// What is watching or listening right now.
 pub fn privacy(app: &App) -> Option<Panel> {
-    let service = app.privacy.service.as_ref()?;
+    let service = app.modules.privacy.service.as_ref()?;
 
     let state = |in_use: bool| if in_use { "in use" } else { "idle" }.to_owned();
 

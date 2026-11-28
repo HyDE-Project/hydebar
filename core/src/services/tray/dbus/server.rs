@@ -29,7 +29,6 @@ pub struct StatusNotifierWatcher {
 #[interface(
     name = "org.kde.StatusNotifierWatcher",
     proxy(
-        gen_blocking = false,
         default_service = "org.kde.StatusNotifierWatcher",
         default_path = "/StatusNotifierWatcher",
     )

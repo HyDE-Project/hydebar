@@ -30,7 +30,7 @@ impl App {
             Message::PollAtRest => {
                 let now = std::time::Instant::now();
 
-                for module in self.attention.due_at_rest(now) {
+                for module in self.focus.attention.due_at_rest(now) {
                     self.poll_module(&module);
                 }
 
@@ -39,7 +39,7 @@ impl App {
             Message::PollAttended => {
                 let now = std::time::Instant::now();
 
-                if let Some(module) = self.attention.due_attended(now) {
+                if let Some(module) = self.focus.attention.due_attended(now) {
                     self.poll_module(&module);
                 }
 
@@ -57,6 +57,15 @@ impl App {
             Message::SurfacesRemoved => shutdown::exit_now(),
             Message::ConfigDegraded(degradation) => {
                 warn!("Configuration degradation reported: {}", degradation.reason);
+                Task::none()
+            }
+            Message::ReducedMotion(reduced) => {
+                if self.reduced_motion == reduced {
+                    return Task::none();
+                }
+
+                info!("desktop reduced-motion preference is now {reduced}");
+                self.reduced_motion = reduced;
                 Task::none()
             }
             _ => Task::none()

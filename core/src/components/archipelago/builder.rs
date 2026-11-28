@@ -4,7 +4,7 @@ use std::{cell::RefCell, collections::HashMap};
 
 use iced::{Border, Shadow};
 
-use super::FlipMemo;
+use crate::components::flip::FlipMemo;
 
 /// The paint one pill is drawn with.
 #[derive(Debug, Clone, Copy)]
@@ -36,6 +36,8 @@ where
     pub(super) pad_x:      f32,
     /// How far the journey has travelled, one meaning at rest.
     pub(super) progress:   f32,
+    /// Whether the strip lays out along the vertical axis.
+    pub(super) vertical:   bool,
     pub(super) memo:       &'a RefCell<FlipMemo>,
     pub(super) paint:      PaintFn<'a, Theme>
 }
@@ -60,6 +62,7 @@ where
             island_gap,
             pad_x,
             progress,
+            vertical: false,
             memo,
             paint: Box::new(paint)
         }
@@ -81,25 +84,35 @@ where
         self
     }
 
+    /// Lays the strip out along the vertical axis.
+    #[must_use]
+    pub const fn vertical(mut self, vertical: bool) -> Self {
+        self.vertical = vertical;
+        self
+    }
+
     /// Whether the strip holds nothing.
     #[must_use]
     pub const fn is_empty(&self) -> bool {
         self.children.is_empty()
     }
 
-    /// The drawing offset of the child at `index`, given its absolute `x`.
+    /// The drawing offset of the child at `index`, given its absolute main-axis
+    /// position.
     pub(super) fn offset(
         &self,
         from: &HashMap<u64, iced_core::Rectangle>,
         index: usize,
-        x: f32
+        main: f32
     ) -> f32 {
         if self.progress >= 1.0 {
             return 0.0;
         }
 
-        from.get(&self.keys[index])
-            .map_or(0.0, |from| (from.x - x) * (1.0 - self.progress))
+        from.get(&self.keys[index]).map_or(0.0, |from| {
+            let from_main = if self.vertical { from.y } else { from.x };
+            (from_main - main) * (1.0 - self.progress)
+        })
     }
 }
 

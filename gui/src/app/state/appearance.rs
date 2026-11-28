@@ -19,7 +19,33 @@ impl App {
     /// transition settles.
     #[must_use]
     pub const fn appearance(&self) -> &Appearance {
-        self.appearance_transition.current()
+        self.motion.appearance_transition.current()
+    }
+
+    /// Whether the bar may animate right now.
+    ///
+    /// The configuration says whether animations are wanted; the desktop's
+    /// reduced-motion preference, when set, overrides it and holds the bar
+    /// still regardless of what the file asked for. Every animation reads this
+    /// one gate instead of the configuration directly, so honouring the
+    /// preference is a single field, not a scattered check.
+    #[must_use]
+    pub(crate) fn animations_enabled(&self) -> bool {
+        self.config.appearance.animations.enabled && !self.reduced_motion
+    }
+
+    /// The animation settings as they apply right now: the configured timings,
+    /// with motion switched off when the desktop asks for reduced motion.
+    ///
+    /// The menu animation driver takes the whole settings table rather than the
+    /// flag alone, so the effective view of it is built here once instead of
+    /// every call site remembering to clear the flag.
+    #[must_use]
+    pub(crate) fn effective_animations(&self) -> hydebar_proto::config::AnimationConfig {
+        let mut animations = self.config.appearance.animations.clone();
+        animations.enabled = self.animations_enabled();
+
+        animations
     }
 
     /// Rebuilds the cached theme from the appearance in force.
@@ -42,7 +68,9 @@ impl App {
     /// Restates `config` against a compositor look the caller already has.
     fn adopted_with(&self, config: &Config, look: &CompositorLook) -> Arc<Config> {
         let mut adopted = config.clone();
-        adopted.appearance.adopt_screen(self.magnification, look);
+        adopted
+            .appearance
+            .adopt_screen(self.screen.magnification, look);
 
         Arc::new(adopted)
     }
@@ -75,17 +103,17 @@ impl App {
             IconTheme::from_config(&self.config.icons).with_size(appearance.font_size_px());
         self.rebuild_theme();
 
-        let blend_palette = appearance.animations.enabled;
+        let blend_palette = self.animations_enabled();
 
         let metrics = (
             appearance.style,
             appearance.scale_factor.to_bits(),
             appearance.height_px().map(f32::to_bits)
         );
-        let resize = if self.stated_layer_metrics == Some(metrics) {
+        let resize = if self.screen.stated_layer_metrics == Some(metrics) {
             Task::none()
         } else {
-            self.stated_layer_metrics = Some(metrics);
+            self.screen.stated_layer_metrics = Some(metrics);
             self.outputs.resize(
                 appearance.style,
                 appearance.scale_factor,
@@ -94,14 +122,17 @@ impl App {
         };
 
         let incoming = self
+            .modules
             .themes
             .switching()
-            .or_else(|| self.themes.hyde().theme.as_deref());
-        self.sweep = hydebar_core::style::SweepStyle::of(incoming, &appearance);
-        self.appearance_transition
-            .restyle(self.sweep.response, self.sweep.damping);
+            .or_else(|| self.modules.themes.hyde().theme.as_deref());
+        self.motion.sweep = hydebar_core::style::SweepStyle::of(incoming, &appearance);
+        self.motion
+            .appearance_transition
+            .restyle(self.motion.sweep.response, self.motion.sweep.damping);
 
-        self.appearance_transition
+        self.motion
+            .appearance_transition
             .set_target(appearance, blend_palette);
 
         resize
@@ -113,27 +144,27 @@ impl App {
     /// off the entrance snaps straight to its resting end and no greeting is
     /// armed at all.
     pub(super) fn arm_birth_animations(&mut self) {
-        self.sweep = hydebar_core::style::SweepStyle::of(
-            self.themes.hyde().theme.as_deref(),
+        self.motion.sweep = hydebar_core::style::SweepStyle::of(
+            self.modules.themes.hyde().theme.as_deref(),
             &self.config.appearance
         );
-        self.entrance = hydebar_core::animation::Spring::new(0.0)
-            .with_response(self.sweep.response)
-            .with_damping_ratio(self.sweep.damping);
+        self.motion.entrance = hydebar_core::animation::Spring::new(0.0)
+            .with_response(self.motion.sweep.response)
+            .with_damping_ratio(self.motion.sweep.damping);
 
-        if self.config.appearance.animations.enabled {
-            self.entrance.set_target(1.0);
+        if self.animations_enabled() {
+            self.motion.entrance.set_target(1.0);
 
             if self.config.appearance.greeting
                 && hydebar_core::components::greeting::claim_first_entry()
             {
-                self.greeting_line = hydebar_core::components::greeting::current();
-                self.greeting = hydebar_core::animation::Spring::new(0.0)
+                self.focus.greeting_line = hydebar_core::components::greeting::current();
+                self.focus.greeting = hydebar_core::animation::Spring::new(0.0)
                     .with_response(hydebar_core::animation::STANDARD);
-                self.greeting.set_target(1.0);
+                self.focus.greeting.set_target(1.0);
             }
         } else {
-            self.entrance.snap_to(1.0);
+            self.motion.entrance.snap_to(1.0);
         }
     }
 
@@ -148,7 +179,7 @@ impl App {
 
     #[must_use]
     /// How many entries the bar draws across its three sections.
-    pub fn get_all_modules_count(&self) -> usize {
+    pub fn all_modules_count(&self) -> usize {
         let count_modules = |modules_def: &[ModuleDef]| -> usize {
             modules_def
                 .iter()
@@ -199,7 +230,7 @@ mod tests {
             runtime_handle,
             bus_receiver
         ));
-        app.magnification = magnification;
+        app.screen.magnification = magnification;
 
         app
     }

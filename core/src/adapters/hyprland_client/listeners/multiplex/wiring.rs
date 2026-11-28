@@ -14,14 +14,14 @@
 use std::sync::Arc;
 
 use hydebar_proto::ports::hyprland::{
-    HyprlandKeyboardEvent, HyprlandPort, HyprlandWindowEvent, HyprlandWorkspaceEvent
+    HyprlandKeyboardEvent, HyprlandWindowEvent, HyprlandWorkspaceEvent
 };
 use tokio::sync::broadcast;
 
-use super::singleton::Multiplexer;
+use super::channels::Multiplexer;
 use crate::adapters::{
     compositor::{events::CompositorEvent, query},
-    hyprland_client::HyprlandClient
+    hyprland_client::sync_ops
 };
 
 /// The name a lookup made while answering an announcement reports under.
@@ -33,11 +33,7 @@ fn fan_out<T>(tx: &broadcast::Sender<T>, event: T) {
 }
 
 /// Answers one announcement with every port event it stands for.
-pub(super) async fn dispatch(
-    event: CompositorEvent,
-    mux: &Arc<Multiplexer>,
-    client: &HyprlandClient
-) {
+pub(super) async fn dispatch(event: CompositorEvent, mux: &Arc<Multiplexer>) {
     match event {
         CompositorEvent::WorkspaceChanged => {
             fan_out(&mux.workspace, HyprlandWorkspaceEvent::Changed);
@@ -86,10 +82,10 @@ pub(super) async fn dispatch(
         CompositorEvent::Urgent {
             address
         } => mark_urgent(mux, address).await,
-        CompositorEvent::LayoutChanged => announce_layout(mux, client).await,
+        CompositorEvent::LayoutChanged => announce_layout(mux).await,
         CompositorEvent::ConfigReloaded => {
             fan_out(&mux.reload, ());
-            announce_layout_count(mux, client).await;
+            announce_layout_count(mux).await;
         }
     }
 }
@@ -123,8 +119,8 @@ async fn mark_urgent(mux: &Arc<Multiplexer>, address: String) {
 }
 
 /// Announces the layout the keyboard is now in.
-async fn announce_layout(mux: &Arc<Multiplexer>, client: &HyprlandClient) {
-    if let Some(state) = keyboard_state(client).await {
+async fn announce_layout(mux: &Arc<Multiplexer>) {
+    if let Some(state) = keyboard_state(mux).await {
         fan_out(
             &mux.keyboard,
             HyprlandKeyboardEvent::LayoutChanged(state.active_layout)
@@ -133,8 +129,8 @@ async fn announce_layout(mux: &Arc<Multiplexer>, client: &HyprlandClient) {
 }
 
 /// Announces whether the keyboard still has more than one layout to step to.
-async fn announce_layout_count(mux: &Arc<Multiplexer>, client: &HyprlandClient) {
-    if let Some(state) = keyboard_state(client).await {
+async fn announce_layout_count(mux: &Arc<Multiplexer>) {
+    if let Some(state) = keyboard_state(mux).await {
         fan_out(
             &mux.keyboard,
             HyprlandKeyboardEvent::LayoutConfigurationChanged(state.has_multiple_layouts)
@@ -144,11 +140,11 @@ async fn announce_layout_count(mux: &Arc<Multiplexer>, client: &HyprlandClient) 
 
 /// Asks the compositor what the keyboard is doing, off the socket thread.
 async fn keyboard_state(
-    client: &HyprlandClient
+    mux: &Arc<Multiplexer>
 ) -> Option<hydebar_proto::ports::hyprland::HyprlandKeyboardState> {
-    let client = client.clone();
+    let config = Arc::clone(&mux.config);
 
-    tokio::task::spawn_blocking(move || client.keyboard_state().ok())
+    tokio::task::spawn_blocking(move || sync_ops::keyboard_state(&config).ok())
         .await
         .ok()
         .flatten()

@@ -62,6 +62,8 @@ pub fn desired_height(font_size: f32, auto_scale: bool, hyde_branch: bool) -> f3
 mod tests {
     #![allow(clippy::float_cmp, clippy::cast_precision_loss)]
 
+    use std::iter::once;
+
     use super::{super::NOTIFICATIONS, *};
     use crate::components::page::metrics::text_width;
 
@@ -70,7 +72,7 @@ mod tests {
         SECTIONS
             .into_iter()
             .flat_map(|(_, rows)| rows.iter().map(|(label, _)| *label))
-            .chain(std::iter::once(NOTIFICATIONS))
+            .chain(once(NOTIFICATIONS))
             .collect()
     }
 

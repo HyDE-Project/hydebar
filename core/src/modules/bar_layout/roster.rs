@@ -1,5 +1,7 @@
 //! Reading the desktop's layout roster and the record of the one in force.
 
+use std::fs::read_to_string;
+
 use super::LayoutEntry;
 
 /// Reads the roster and the record of the layout in force.
@@ -20,16 +22,13 @@ pub(super) fn list_layouts() -> Vec<LayoutEntry> {
 
     let active = active_layout_name();
 
-    let names: Vec<String> = listed["layouts"]
-        .as_array()
-        .map(|layouts| {
-            layouts
-                .iter()
-                .filter_map(|entry| entry["name"].as_str())
-                .map(str::to_owned)
-                .collect()
-        })
-        .unwrap_or_default();
+    let names: Vec<String> = listed["layouts"].as_array().map_or_default(|layouts| {
+        layouts
+            .iter()
+            .filter_map(|entry| entry["name"].as_str())
+            .map(str::to_owned)
+            .collect()
+    });
 
     let chosen = active
         .as_deref()
@@ -76,7 +75,7 @@ fn active_index(names: &[String], recorded: &str) -> Option<usize> {
 /// disagree about what the record says.
 fn active_layout_name() -> Option<String> {
     let staterc = hydebar_proto::hyde_dirs::HydeDirs::from_env()?.staterc();
-    let source = std::fs::read_to_string(staterc).ok()?;
+    let source = read_to_string(staterc).ok()?;
 
     hydebar_proto::shell_vars::value_of(&source, "WAYBAR_LAYOUT_NAME")
 }

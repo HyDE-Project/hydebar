@@ -40,7 +40,7 @@ impl App {
     pub(crate) fn poll_attended_now(&mut self) {
         let now = std::time::Instant::now();
 
-        if let Some(module) = self.attention.due_attended(now) {
+        if let Some(module) = self.focus.attention.due_attended(now) {
             self.poll_module(&module);
         }
     }

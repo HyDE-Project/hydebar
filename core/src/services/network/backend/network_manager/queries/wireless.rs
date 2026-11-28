@@ -3,10 +3,13 @@
 mod scan;
 
 use masterror::AppResult;
-use zbus::zvariant::OwnedObjectPath;
+use zbus::OwnedObjectPath;
 
-use super::super::{DeviceType, NetworkDbus, proxies::DeviceProxy};
-use crate::services::{bus::bus_failure, network::AccessPoint};
+use super::super::{NetworkDbus, proxies::DeviceProxy};
+use crate::services::{
+    bus::bus_failure,
+    network::{backend::common::DeviceType, data::model::AccessPoint}
+};
 
 impl NetworkDbus<'_> {
     /// Lists the object paths of every wifi device.
@@ -26,7 +29,6 @@ impl NetworkDbus<'_> {
         for path in devices {
             let device = DeviceProxy::builder(conn)
                 .path(&path)
-                .map_err(|e| bus_failure("Failed to set DeviceProxy path", &e))?
                 .build()
                 .await
                 .map_err(|e| bus_failure("Failed to build DeviceProxy", &e))?;

@@ -53,6 +53,14 @@ fn left_offset(anchor: &ButtonUIRef, width: f32, gap: f32) -> f32 {
     (anchor.position.x - width / 2.).clamp(gap, rightmost)
 }
 
+/// Places the top edge of the tooltip so it is centred on its module and
+/// still fully on screen.
+fn top_offset(anchor: &ButtonUIRef, height: f32, gap: f32) -> f32 {
+    let bottommost = (anchor.viewport.1 - height - gap).max(gap);
+
+    (anchor.position.y - height / 2.).clamp(gap, bottommost)
+}
+
 /// Builds the tooltip surface content showing `info`.
 ///
 /// The surface starts where the bar ends, so the tooltip only has to add the
@@ -69,8 +77,9 @@ pub fn tooltip_wrapper<'a, Message: 'a>(
     ];
     let gap = appearance.spacing(TOOLTIP_GAP_EM);
     let width = estimated_width(&info.text, appearance.font_size_px(), padding[1]);
+    let height = padding[0].mul_add(2.0, appearance.font_size_px() * 1.4);
 
-    container(
+    let tooltip = container(
         container(text(info.text.clone()).size(appearance.font_size_px()))
             .padding(padding)
             .style(tooltip_container_style(
@@ -78,26 +87,45 @@ pub fn tooltip_wrapper<'a, Message: 'a>(
                 appearance.pill_radius()
             ))
     )
-    .align_x(Horizontal::Left)
-    .align_y(match bar_position {
-        Position::Top => Vertical::Top,
-        Position::Bottom => Vertical::Bottom
-    })
-    .padding(
-        Padding::new(0.)
-            .top(match bar_position {
-                Position::Top => gap,
-                Position::Bottom => 0.
-            })
-            .bottom(match bar_position {
-                Position::Top => 0.,
-                Position::Bottom => gap
-            })
-            .left(left_offset(&info.anchor, width, gap))
-    )
     .width(Length::Fill)
-    .height(Length::Fill)
-    .into()
+    .height(Length::Fill);
+
+    let tooltip = match bar_position {
+        Position::Top => tooltip
+            .align_x(Horizontal::Left)
+            .align_y(Vertical::Top)
+            .padding(
+                Padding::new(0.)
+                    .top(gap)
+                    .left(left_offset(&info.anchor, width, gap))
+            ),
+        Position::Bottom => tooltip
+            .align_x(Horizontal::Left)
+            .align_y(Vertical::Bottom)
+            .padding(
+                Padding::new(0.)
+                    .bottom(gap)
+                    .left(left_offset(&info.anchor, width, gap))
+            ),
+        Position::Left => tooltip
+            .align_x(Horizontal::Left)
+            .align_y(Vertical::Top)
+            .padding(
+                Padding::new(0.)
+                    .left(gap)
+                    .top(top_offset(&info.anchor, height, gap))
+            ),
+        Position::Right => tooltip
+            .align_x(Horizontal::Right)
+            .align_y(Vertical::Top)
+            .padding(
+                Padding::new(0.)
+                    .right(gap)
+                    .top(top_offset(&info.anchor, height, gap))
+            )
+    };
+
+    tooltip.into()
 }
 
 #[cfg(test)]

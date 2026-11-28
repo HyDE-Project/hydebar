@@ -3,13 +3,15 @@
 //! The palette lives in [`color`], the layout metrics derived from the themed
 //! font size in [`metrics`], the overlay of the `HyDE` Project theme in
 //! [`hyde`], the border and shadow adopted from the compositor's windows in
-//! [`window`], the serde defaults and range checks in [`defaults`] and the
-//! configuration struct tying them together in [`settings`].
+//! [`window`], the serde defaults and range checks in [`defaults`], the ring
+//! around the screen in [`frame`] and the configuration struct tying them
+//! together in [`settings`].
 
 mod animation;
 mod color;
 mod compositor;
 mod defaults;
+mod frame;
 mod hyde;
 mod menu;
 mod metrics;
@@ -20,6 +22,7 @@ mod window;
 
 pub use animation::AnimationConfig;
 pub use color::AppearanceColor;
+pub use frame::{EntryAlignment, FrameConfig, FrameEdge, FrameEdges, FrameEntry};
 pub use menu::MenuAppearance;
 pub use metrics::{
     BAR_PADDING_EM, DEFAULT_FONT_SIZE, DEFAULT_RADIUS, GROUP_GAP_EM, ICON_LABEL_GAP_EM,

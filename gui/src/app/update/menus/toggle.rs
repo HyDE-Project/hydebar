@@ -17,31 +17,37 @@ impl App {
         id: Id,
         button_ui_ref: ButtonUIRef
     ) -> Task<Message> {
-        self.hints.dismiss();
-        self.wallpaper_pending = None;
-        self.bar_layout_pending = None;
+        self.focus.hints.dismiss();
+        self.focus.wallpaper_pending = None;
+        self.focus.bar_layout_pending = None;
 
         let mut cmd = vec![];
         match &menu_type {
             MenuType::Updates => {
-                self.updates.collapse();
+                self.modules.updates.collapse();
             }
             MenuType::Tray(name) => {
                 if self
+                    .modules
                     .tray
                     .service
                     .as_ref()
                     .is_some_and(|t| t.iter().any(|t| &t.name == name))
                 {
-                    self.tray.collapse_submenus();
+                    self.modules.tray.collapse_submenus();
                 }
             }
             MenuType::Wallpaper => {
                 if self.outputs.open_menu() != Some(&MenuType::Wallpaper) {
-                    cmd.push(self.wallpaper.load_entries().map(Message::Wallpaper));
+                    cmd.push(
+                        self.modules
+                            .wallpaper
+                            .load_entries()
+                            .map(Message::Wallpaper)
+                    );
 
-                    if self.wallpaper.is_empty() {
-                        self.wallpaper_pending = Some((id, button_ui_ref));
+                    if self.modules.wallpaper.is_empty() {
+                        self.focus.wallpaper_pending = Some((id, button_ui_ref));
                         cmd.push(self.outputs.close_all_menus(&self.config));
                         self.attend_the_open_menu();
 
@@ -51,10 +57,15 @@ impl App {
             }
             MenuType::BarLayout => {
                 if self.outputs.open_menu() != Some(&MenuType::BarLayout) {
-                    cmd.push(self.bar_layout.load_entries().map(Message::BarLayout));
+                    cmd.push(
+                        self.modules
+                            .bar_layout
+                            .load_entries()
+                            .map(Message::BarLayout)
+                    );
 
-                    if self.bar_layout.is_empty() {
-                        self.bar_layout_pending = Some((id, button_ui_ref));
+                    if self.modules.bar_layout.is_empty() {
+                        self.focus.bar_layout_pending = Some((id, button_ui_ref));
                         cmd.push(self.outputs.close_all_menus(&self.config));
                         self.attend_the_open_menu();
 
@@ -64,21 +75,22 @@ impl App {
             }
             MenuType::Themes => {
                 if self.outputs.open_menu() != Some(&MenuType::Themes) {
-                    cmd.push(self.themes.load_swatches().map(Message::Themes));
-                    cmd.push(self.themes.load_catalogue().map(Message::Themes));
+                    cmd.push(self.modules.themes.load_swatches().map(Message::Themes));
+                    cmd.push(self.modules.themes.load_catalogue().map(Message::Themes));
                 }
             }
             MenuType::Audio => {
-                self.control_center.open_audio_menu();
+                self.modules.control_center.open_audio_menu();
             }
             MenuType::HydeMenu => {
-                cmd.push(self.hyde_menu.reload().map(Message::HydeMenu));
+                cmd.push(self.modules.hyde_menu.reload().map(Message::HydeMenu));
             }
             MenuType::Network => {
                 if self.outputs.open_menu() != Some(&MenuType::Network) {
-                    self.control_center.close_submenu();
+                    self.modules.control_center.close_submenu();
                     cmd.push(
-                        self.control_center
+                        self.modules
+                            .control_center
                             .update(
                                 modules::control_center::Message::ToggleSubMenu(SubMenu::Wifi),
                                 &self.config.control_center,
@@ -90,12 +102,13 @@ impl App {
                 }
             }
             MenuType::Bluetooth => {
-                self.control_center.open_bluetooth_menu();
+                self.modules.control_center.open_bluetooth_menu();
             }
             MenuType::ControlCenter => {
-                self.control_center.close_submenu();
+                self.modules.control_center.close_submenu();
                 cmd.push(
-                    self.control_center
+                    self.modules
+                        .control_center
                         .refresh_brightness()
                         .map(Message::ControlCenter)
                 );
@@ -154,7 +167,7 @@ mod tests {
         for menu_type in every_menu() {
             let mut app = test_app();
 
-            let _ = app.on_toggle_menu(menu_type.clone(), surface(), press());
+            let _ = app.on_toggle_menu(menu_type, surface(), press());
         }
     }
 
@@ -165,7 +178,7 @@ mod tests {
         let _ = app.on_toggle_menu(MenuType::Wallpaper, surface(), press());
 
         assert!(
-            app.wallpaper_pending.is_some(),
+            app.focus.wallpaper_pending.is_some(),
             "the press is held until the wallpapers are read"
         );
     }
@@ -177,7 +190,7 @@ mod tests {
         let _ = app.on_toggle_menu(MenuType::BarLayout, surface(), press());
 
         assert!(
-            app.bar_layout_pending.is_some(),
+            app.focus.bar_layout_pending.is_some(),
             "the press is held until the layouts are read"
         );
     }
@@ -187,12 +200,12 @@ mod tests {
         let mut app = test_app();
 
         let _ = app.on_toggle_menu(MenuType::Wallpaper, surface(), press());
-        assert!(app.wallpaper_pending.is_some());
+        assert!(app.focus.wallpaper_pending.is_some());
 
         let _ = app.on_toggle_menu(MenuType::Updates, surface(), press());
 
-        assert!(app.wallpaper_pending.is_none());
-        assert!(app.bar_layout_pending.is_none());
+        assert!(app.focus.wallpaper_pending.is_none());
+        assert!(app.focus.bar_layout_pending.is_none());
     }
 
     #[test]
@@ -201,6 +214,6 @@ mod tests {
 
         let _ = app.on_toggle_menu(MenuType::Tray("gone".to_owned()), surface(), press());
 
-        assert!(app.tray.service.is_none());
+        assert!(app.modules.tray.service.is_none());
     }
 }

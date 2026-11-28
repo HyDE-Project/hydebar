@@ -2,8 +2,11 @@
 
 use masterror::AppResult;
 
-use super::super::{DeviceType, NetworkDbus, proxies::DeviceProxy};
-use crate::services::{bus::bus_failure, network::ConnectivityState};
+use super::super::{NetworkDbus, proxies::DeviceProxy};
+use crate::services::{
+    bus::bus_failure,
+    network::{backend::common::DeviceType, data::model::ConnectivityState}
+};
 
 impl NetworkDbus<'_> {
     /// Reads the daemon's overall connectivity state.
@@ -33,7 +36,6 @@ impl NetworkDbus<'_> {
         for d in devices {
             let device = DeviceProxy::builder(self.0.inner().connection())
                 .path(d)
-                .map_err(|e| bus_failure("Failed to set DeviceProxy path", &e))?
                 .build()
                 .await
                 .map_err(|e| bus_failure("Failed to build DeviceProxy", &e))?;

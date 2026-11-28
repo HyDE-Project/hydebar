@@ -13,7 +13,10 @@ use super::{
 };
 use crate::services::{
     bus::bus_failure,
-    network::{AccessPoint, DeviceState, NetworkEvent}
+    network::data::{
+        event::NetworkEvent,
+        model::{AccessPoint, DeviceState}
+    }
 };
 
 impl<'a> NetworkDbus<'a> {
@@ -32,7 +35,6 @@ impl<'a> NetworkDbus<'a> {
         for access_point in wireless_access_points {
             let device_proxy = DeviceProxy::builder(conn)
                 .path(access_point.device_path.clone())
-                .map_err(|e| bus_failure("Failed to set DeviceProxy path", &e))?
                 .build()
                 .await
                 .map_err(|e| bus_failure("Failed to build DeviceProxy", &e))?;
@@ -87,7 +89,6 @@ impl<'a> NetworkDbus<'a> {
             let ssid = access_point.ssid.clone();
             let proxy = AccessPointProxy::builder(conn)
                 .path(access_point.path.clone())
-                .map_err(|e| bus_failure("Failed to set AccessPointProxy path", &e))?
                 .build()
                 .await
                 .map_err(|e| bus_failure("Failed to build AccessPointProxy", &e))?;

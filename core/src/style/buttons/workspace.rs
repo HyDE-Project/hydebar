@@ -37,11 +37,9 @@ fn indicator_colors(theme: &Theme, colors: Option<Option<AppearanceColor>>) -> I
         },
         Some(Some(color)) => {
             let generated = palette::Primary::generate(
-                painted(color.get_base()),
+                painted(color.base()),
                 theme.palette().background,
-                color
-                    .get_text()
-                    .map_or_else(|| theme.palette().text, painted)
+                color.text().map_or_else(|| theme.palette().text, painted)
             );
 
             IndicatorColors {

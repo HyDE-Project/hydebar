@@ -6,8 +6,8 @@ use tokio::{runtime::Handle, sync::Notify, task::JoinHandle, time::sleep};
 
 use super::{
     super::commands::{self, CheckFailure},
-    HydeSnapshot, Message,
-    failures::{FailureLog, report}
+    failures::{FailureLog, report},
+    message::{HydeSnapshot, Message}
 };
 use crate::{ModuleEventSender, config::UpdatesModuleConfig};
 

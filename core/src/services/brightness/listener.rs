@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use log::{debug, error, info, warn};
 
 use super::{BrightnessError, BrightnessEvent, BrightnessService};
-use crate::services::{ServiceEvent, ServiceEventPublisher};
+use crate::services::{ServiceEvent, ServiceEventPublisher, reconnect_delay};
 
 pub(super) enum State {
     Init,
@@ -55,7 +55,7 @@ impl BrightnessService {
             }
             State::Active(device_path) => {
                 info!("Listening for brightness events");
-                let mut current_value = Self::get_actual_brightness(&device_path)?;
+                let mut current_value = Self::actual_brightness(&device_path)?;
                 let mut socket = Self::backlight_monitor_listener()?;
 
                 loop {
@@ -71,7 +71,7 @@ impl BrightnessService {
                         match evt.event_type() {
                             udev::EventType::Change => {
                                 debug!("Changed backlight device: {}", evt.syspath().display());
-                                let new_value = Self::get_actual_brightness(&device_path)?;
+                                let new_value = Self::actual_brightness(&device_path)?;
 
                                 if new_value != current_value {
                                     current_value = new_value;
@@ -126,7 +126,7 @@ impl BrightnessService {
             match &state {
                 State::Error => {
                     failures = failures.saturating_add(1);
-                    tokio::time::sleep(crate::services::reconnect_delay(failures)).await;
+                    tokio::time::sleep(reconnect_delay(failures)).await;
                 }
                 State::Active(_) => failures = 0,
                 State::Init => {}

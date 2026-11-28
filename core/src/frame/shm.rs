@@ -1,0 +1,611 @@
+//! Software-drawn frame surfaces via shared memory.
+//!
+//! The frame's ring and its reservation strips are drawn here, on small
+//! layer surfaces that never allocate a GPU swapchain buffer: a 4K ring on
+//! wgpu held ~122 MiB of GPU memory, and each additional wgpu surface
+//! cost ~3 MiB of fixed overhead.  Shared-memory surfaces cost the
+//! compositor nothing beyond the few kilobytes they actually paint, and
+//! they commit only when the configuration changes.
+//!
+//! The module owns its own Wayland connection and event loop on a
+//! background thread.  Configuration changes are applied by stopping and
+//! restarting the thread; the handle returned by [`start`] carries the
+//! join handle and a stop flag for that purpose.
+
+use std::{
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering}
+    },
+    thread::{self, JoinHandle}
+};
+
+use hydebar_proto::config::FrameConfig;
+use num_traits::ToPrimitive;
+use smithay_client_toolkit::{
+    compositor::{CompositorHandler, CompositorState, Region},
+    output::{OutputHandler, OutputState},
+    registry::{ProvidesRegistryState, RegistryState},
+    shell::{
+        WaylandSurface,
+        wlr_layer::{
+            Anchor, KeyboardInteractivity, Layer, LayerShell, LayerShellHandler, LayerSurface,
+            LayerSurfaceConfigure
+        }
+    },
+    shm::{Shm, ShmHandler, slot::SlotPool}
+};
+use tiny_skia::{Color, Paint, Pixmap, Transform};
+use wayland_client::{
+    Connection, Proxy, QueueHandle,
+    globals::registry_queue_init,
+    protocol::{wl_output, wl_shm, wl_surface}
+};
+
+use crate::config::Position;
+
+/// Handle to a running shared-memory frame.
+#[derive(Debug)]
+pub struct ShmFrameHandle {
+    stop:   Arc<AtomicBool>,
+    thread: Option<JoinHandle<()>>
+}
+
+impl ShmFrameHandle {
+    /// Signal the background thread to exit and wait for it.
+    pub fn stop(mut self) {
+        self.stop.store(true, Ordering::Relaxed);
+        if let Some(t) = self.thread.take() {
+            let _ = t.join();
+        }
+    }
+}
+
+/// Spawn the frame on a background thread.
+///
+/// The thread enumerates outputs itself and creates one thin strip per
+/// drawn edge plus one corner overlay per outer corner.  It blocks until
+/// [`ShmFrameHandle::stop`] is called.
+#[must_use]
+pub fn start(
+    config: FrameConfig,
+    dock: Position,
+    bar_height: f32,
+    color: (u8, u8, u8, u8)
+) -> ShmFrameHandle {
+    let stop = Arc::new(AtomicBool::new(false));
+    let stop_clone = Arc::clone(&stop);
+
+    let thread = thread::spawn(move || {
+        run(config, dock, bar_height, color, &stop_clone);
+    });
+
+    ShmFrameHandle {
+        stop,
+        thread: Some(thread)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+enum SurfaceKind {
+    StripLeft,
+    StripRight,
+    StripTop,
+    StripBottom,
+    CornerTopLeft,
+    CornerTopRight,
+    CornerBottomLeft,
+    CornerBottomRight
+}
+
+struct SurfaceState {
+    kind:       SurfaceKind,
+    layer:      LayerSurface,
+    width:      u32,
+    height:     u32,
+    pool:       Option<SlotPool>,
+    configured: bool,
+    output:     wl_output::WlOutput
+}
+
+struct App {
+    registry_state: RegistryState,
+    output_state:   OutputState,
+    shm:            Shm,
+    compositor:     CompositorState,
+    layer_shell:    LayerShell,
+    config:         FrameConfig,
+    dock:           Position,
+    bar_height:     f32,
+    color:          (u8, u8, u8, u8),
+    exit:           bool,
+    surfaces:       Vec<SurfaceState>
+}
+
+impl CompositorHandler for App {
+    fn scale_factor_changed(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        _surface: &wl_surface::WlSurface,
+        _new_factor: i32
+    ) {
+    }
+
+    fn transform_changed(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        _surface: &wl_surface::WlSurface,
+        _new_transform: wl_output::Transform
+    ) {
+    }
+
+    fn frame(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        _surface: &wl_surface::WlSurface,
+        _time: u32
+    ) {
+    }
+
+    fn surface_enter(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        _surface: &wl_surface::WlSurface,
+        _output: &wl_output::WlOutput
+    ) {
+    }
+
+    fn surface_leave(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        _surface: &wl_surface::WlSurface,
+        _output: &wl_output::WlOutput
+    ) {
+    }
+}
+
+impl OutputHandler for App {
+    fn output_state(&mut self) -> &mut OutputState {
+        &mut self.output_state
+    }
+
+    fn new_output(
+        &mut self,
+        _conn: &Connection,
+        qh: &QueueHandle<Self>,
+        output: wl_output::WlOutput
+    ) {
+        self.create_surfaces_for_output(qh, &output);
+    }
+
+    fn update_output(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        _output: wl_output::WlOutput
+    ) {
+    }
+
+    fn output_destroyed(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        output: wl_output::WlOutput
+    ) {
+        self.surfaces.retain(|s| s.output.id() != output.id());
+    }
+}
+
+impl LayerShellHandler for App {
+    fn closed(&mut self, _conn: &Connection, _qh: &QueueHandle<Self>, _layer: &LayerSurface) {}
+
+    fn configure(
+        &mut self,
+        _conn: &Connection,
+        qh: &QueueHandle<Self>,
+        layer: &LayerSurface,
+        configure: LayerSurfaceConfigure,
+        _serial: u32
+    ) {
+        for state in &mut self.surfaces {
+            if state.layer == *layer {
+                state.width = configure.new_size.0.max(1);
+                state.height = configure.new_size.1.max(1);
+
+                let size = (state.width * state.height * 4) as usize;
+                if state.pool.is_none()
+                    && let Ok(pool) = SlotPool::new(size.max(4), &self.shm)
+                {
+                    state.pool = Some(pool);
+                }
+
+                if state.pool.is_some() {
+                    state.configured = true;
+                    draw_surface(state, &self.config, self.color);
+                }
+            }
+        }
+        let _ = qh;
+    }
+}
+
+impl ShmHandler for App {
+    fn shm_state(&mut self) -> &mut Shm {
+        &mut self.shm
+    }
+}
+
+impl ProvidesRegistryState for App {
+    fn registry(&mut self) -> &mut RegistryState {
+        &mut self.registry_state
+    }
+    smithay_client_toolkit::registry_handlers![OutputState];
+}
+
+smithay_client_toolkit::delegate_registry!(App);
+smithay_client_toolkit::delegate_dispatch2!(App);
+
+impl App {
+    fn create_surfaces_for_output(
+        &mut self,
+        qh: &QueueHandle<Self>,
+        output: &wl_output::WlOutput
+    ) {
+        let thickness = self.config.thickness.max(1.0).to_u32().unwrap_or(1);
+        let radius = self
+            .config
+            .rounding
+            .unwrap_or(FrameConfig::DEFAULT_ROUNDING)
+            .max(0.0);
+
+        self.create_strips(qh, output, thickness);
+
+        let radius_px = radius.ceil().to_u32().unwrap_or(u32::MAX);
+        let corner_size = thickness.saturating_add(radius_px);
+        self.create_corners(qh, output, corner_size);
+    }
+
+    /// Creates the four thin reservation strips, skipping disabled edges.
+    ///
+    /// Size along a strip's own axis is set by the compositor; the
+    /// perpendicular axis is one pixel wide, reserving the full thickness.
+    fn create_strips(
+        &mut self,
+        qh: &QueueHandle<Self>,
+        output: &wl_output::WlOutput,
+        thickness: u32
+    ) {
+        let bar_margin = self.bar_height.round().to_i32().unwrap_or(0);
+        let (top_margin, right_margin, bottom_margin, left_margin) = match self.dock {
+            Position::Top => (bar_margin, 0, 0, 0),
+            Position::Bottom => (0, 0, bar_margin, 0),
+            Position::Left => (0, 0, 0, bar_margin),
+            Position::Right => (0, bar_margin, 0, 0)
+        };
+
+        let edges: &[(SurfaceKind, Anchor, i32, i32, i32, i32)] = &[
+            (
+                SurfaceKind::StripLeft,
+                Anchor::LEFT | Anchor::TOP | Anchor::BOTTOM,
+                top_margin,
+                0,
+                bottom_margin,
+                0
+            ),
+            (
+                SurfaceKind::StripRight,
+                Anchor::RIGHT | Anchor::TOP | Anchor::BOTTOM,
+                top_margin,
+                0,
+                bottom_margin,
+                0
+            ),
+            (
+                SurfaceKind::StripTop,
+                Anchor::TOP | Anchor::LEFT | Anchor::RIGHT,
+                0,
+                right_margin,
+                0,
+                left_margin
+            ),
+            (
+                SurfaceKind::StripBottom,
+                Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT,
+                0,
+                right_margin,
+                0,
+                left_margin
+            )
+        ];
+
+        for (kind, anchor, mt, mr, mb, ml) in edges {
+            if !self.strip_enabled(*kind) {
+                continue;
+            }
+            let width = self.edge_width(*kind, thickness);
+            let surface = self.compositor.create_surface(qh);
+            let ls = self.layer_shell.create_layer_surface(
+                qh,
+                surface,
+                Layer::Top,
+                Some("hydebar-frame-strip"),
+                Some(output)
+            );
+            ls.set_anchor(*anchor);
+            ls.set_keyboard_interactivity(KeyboardInteractivity::None);
+            set_empty_input_region(&ls, &self.compositor);
+            match *kind {
+                SurfaceKind::StripLeft | SurfaceKind::StripRight => ls.set_size(width, 0),
+                SurfaceKind::StripTop | SurfaceKind::StripBottom => ls.set_size(0, width),
+                _ => {}
+            }
+            ls.set_exclusive_zone(i32::try_from(width).unwrap_or(i32::MAX));
+            ls.set_margin(*mt, *mr, *mb, *ml);
+            ls.commit();
+
+            self.surfaces.push(SurfaceState {
+                kind:       *kind,
+                layer:      ls,
+                width:      1,
+                height:     1,
+                pool:       None,
+                configured: false,
+                output:     output.clone()
+            });
+        }
+    }
+
+    /// Creates the four corner overlays, sized to cover the rounded aperture.
+    fn create_corners(
+        &mut self,
+        qh: &QueueHandle<Self>,
+        output: &wl_output::WlOutput,
+        corner_size: u32
+    ) {
+        let corners = [
+            (SurfaceKind::CornerTopLeft, Anchor::LEFT | Anchor::TOP),
+            (SurfaceKind::CornerTopRight, Anchor::RIGHT | Anchor::TOP),
+            (SurfaceKind::CornerBottomLeft, Anchor::LEFT | Anchor::BOTTOM),
+            (
+                SurfaceKind::CornerBottomRight,
+                Anchor::RIGHT | Anchor::BOTTOM
+            )
+        ];
+
+        for (kind, anchor) in corners {
+            if !self.corner_enabled(kind) {
+                continue;
+            }
+            let surface = self.compositor.create_surface(qh);
+            let ls = self.layer_shell.create_layer_surface(
+                qh,
+                surface,
+                Layer::Top,
+                Some("hydebar-frame-corner"),
+                Some(output)
+            );
+            ls.set_anchor(anchor);
+            ls.set_size(corner_size, corner_size);
+            ls.set_keyboard_interactivity(KeyboardInteractivity::None);
+            set_empty_input_region(&ls, &self.compositor);
+            ls.set_exclusive_zone(-1);
+            ls.commit();
+
+            self.surfaces.push(SurfaceState {
+                kind,
+                layer: ls,
+                width: corner_size,
+                height: corner_size,
+                pool: None,
+                configured: false,
+                output: output.clone()
+            });
+        }
+    }
+
+    const fn strip_enabled(&self, kind: SurfaceKind) -> bool {
+        match kind {
+            SurfaceKind::StripLeft => self.config.edges.left.enabled,
+            SurfaceKind::StripRight => self.config.edges.right.enabled,
+            SurfaceKind::StripTop => self.config.edges.top.enabled,
+            SurfaceKind::StripBottom => self.config.edges.bottom.enabled,
+            SurfaceKind::CornerTopLeft
+            | SurfaceKind::CornerTopRight
+            | SurfaceKind::CornerBottomLeft
+            | SurfaceKind::CornerBottomRight => false
+        }
+    }
+
+    /// Whether a corner overlay is wanted: both edges it turns between are
+    /// drawn, so a frame missing one edge does not paint a corner on it.
+    const fn corner_enabled(&self, kind: SurfaceKind) -> bool {
+        match kind {
+            SurfaceKind::CornerTopLeft => {
+                self.config.edges.left.enabled && self.config.edges.top.enabled
+            }
+            SurfaceKind::CornerTopRight => {
+                self.config.edges.right.enabled && self.config.edges.top.enabled
+            }
+            SurfaceKind::CornerBottomLeft => {
+                self.config.edges.left.enabled && self.config.edges.bottom.enabled
+            }
+            SurfaceKind::CornerBottomRight => {
+                self.config.edges.right.enabled && self.config.edges.bottom.enabled
+            }
+            SurfaceKind::StripLeft
+            | SurfaceKind::StripRight
+            | SurfaceKind::StripTop
+            | SurfaceKind::StripBottom => false
+        }
+    }
+
+    /// Effective strip width for `kind`: the edge's own override, else the
+    /// shared thickness, never below one pixel.
+    fn edge_width(&self, kind: SurfaceKind, thickness: u32) -> u32 {
+        let width = match kind {
+            SurfaceKind::StripLeft => self.config.edges.left.width,
+            SurfaceKind::StripRight => self.config.edges.right.width,
+            SurfaceKind::StripTop => self.config.edges.top.width,
+            SurfaceKind::StripBottom => self.config.edges.bottom.width,
+            SurfaceKind::CornerTopLeft
+            | SurfaceKind::CornerTopRight
+            | SurfaceKind::CornerBottomLeft
+            | SurfaceKind::CornerBottomRight => None
+        };
+
+        width
+            .unwrap_or_else(|| thickness.to_f32().unwrap_or(f32::MAX))
+            .max(1.0)
+            .to_u32()
+            .unwrap_or(1)
+    }
+}
+
+/// Makes a frame surface pass clicks through: an empty input region means
+/// no point on the surface accepts pointer or touch input.
+fn set_empty_input_region(ls: &LayerSurface, compositor: &CompositorState) {
+    if let Ok(region) = Region::new(compositor) {
+        ls.wl_surface().set_input_region(Some(region.wl_region()));
+    }
+}
+
+/// Copies premultiplied **RGBA** pixels (tiny-skia) into a `wl_shm`
+/// **ARGB8888** buffer.
+///
+/// The protocol's `argb8888` is `[31:0] A:R:G:B 8:8:8:8` little endian, i.e.
+/// in memory byte order **B,G,R,A**; tiny-skia hands us **R,G,B,A**. Red and
+/// blue are swapped; premultiplied alpha is preserved. Any trailing bytes
+/// past a whole pixel are dropped.
+fn copy_rgba_premultiplied_to_argb8888(src: &[u8], dst: &mut [u8]) {
+    let (src_px, _) = src.as_chunks::<4>();
+    let (dst_px, _) = dst.as_chunks_mut::<4>();
+
+    for (src, dst) in src_px.iter().zip(dst_px.iter_mut()) {
+        dst[0] = src[2];
+        dst[1] = src[1];
+        dst[2] = src[0];
+        dst[3] = src[3];
+    }
+}
+
+/// Paints one frame surface: the whole rectangle is filled with `color`, then
+/// the aperture is cut out of it. Strips are solid 1px lines; corners get a
+/// quarter-circle cut so the aperture reads rounded instead of square.
+fn draw_surface(state: &mut SurfaceState, config: &FrameConfig, color: (u8, u8, u8, u8)) {
+    let (Ok(width), Ok(height), Ok(stride)) = (
+        i32::try_from(state.width),
+        i32::try_from(state.height),
+        i32::try_from(state.width.saturating_mul(4))
+    ) else {
+        return;
+    };
+    let Some(mut pixmap) = Pixmap::new(state.width, state.height) else {
+        return;
+    };
+    let Some(pool) = state.pool.as_mut() else {
+        return;
+    };
+    let Ok((buffer, canvas)) = pool.create_buffer(width, height, stride, wl_shm::Format::Argb8888)
+    else {
+        return;
+    };
+
+    pixmap.fill(Color::from_rgba8(color.0, color.1, color.2, color.3));
+
+    let corner_center = match (
+        state.kind,
+        u16::try_from(state.width),
+        u16::try_from(state.height)
+    ) {
+        (SurfaceKind::CornerTopLeft, Ok(w), Ok(h)) => Some((f32::from(w), f32::from(h))),
+        (SurfaceKind::CornerTopRight, _, Ok(h)) => Some((0.0, f32::from(h))),
+        (SurfaceKind::CornerBottomLeft, Ok(w), _) => Some((f32::from(w), 0.0)),
+        (SurfaceKind::CornerBottomRight, _, _) => Some((0.0, 0.0)),
+        _ => None
+    };
+    if let Some((cx, cy)) = corner_center {
+        let mut clear = Paint::default();
+        clear.set_color(Color::from_rgba8(0, 0, 0, 0));
+        clear.blend_mode = tiny_skia::BlendMode::Clear;
+        clear.anti_alias = true;
+
+        let r = config
+            .rounding
+            .unwrap_or(FrameConfig::DEFAULT_ROUNDING)
+            .max(1.0);
+
+        if let Some(path) = tiny_skia::PathBuilder::from_circle(cx, cy, r) {
+            pixmap.fill_path(
+                &path,
+                &clear,
+                tiny_skia::FillRule::Winding,
+                Transform::identity(),
+                None
+            );
+        }
+    }
+
+    let n = canvas.len().min(pixmap.data().len());
+    copy_rgba_premultiplied_to_argb8888(&pixmap.data()[..n], &mut canvas[..n]);
+
+    state
+        .layer
+        .wl_surface()
+        .attach(Some(buffer.wl_buffer()), 0, 0);
+    state.layer.wl_surface().damage_buffer(0, 0, width, height);
+    state.layer.commit();
+}
+
+fn run(
+    config: FrameConfig,
+    dock: Position,
+    bar_height: f32,
+    color: (u8, u8, u8, u8),
+    stop: &AtomicBool
+) {
+    let Ok(conn) = Connection::connect_to_env() else {
+        return;
+    };
+    let Ok((globals, mut event_queue)) = registry_queue_init(&conn) else {
+        return;
+    };
+    let qh = event_queue.handle();
+
+    let Ok(compositor) = CompositorState::bind(&globals, &qh) else {
+        return;
+    };
+    let Ok(layer_shell) = LayerShell::bind(&globals, &qh) else {
+        return;
+    };
+    let Ok(shm) = Shm::bind(&globals, &qh) else {
+        return;
+    };
+
+    let mut app = App {
+        registry_state: RegistryState::new(&globals),
+        output_state: OutputState::new(&globals, &qh),
+        shm,
+        compositor,
+        layer_shell,
+        config,
+        dock,
+        bar_height,
+        color,
+        exit: false,
+        surfaces: Vec::new()
+    };
+
+    loop {
+        if stop.load(Ordering::Relaxed) || app.exit {
+            break;
+        }
+        if event_queue.blocking_dispatch(&mut app).is_err() {
+            break;
+        }
+    }
+}

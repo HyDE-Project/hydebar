@@ -5,7 +5,7 @@ use std::{
     pin::Pin
 };
 
-use super::Message;
+use super::messages::Message;
 use crate::{
     ModuleEventSender,
     modules::ModuleError,

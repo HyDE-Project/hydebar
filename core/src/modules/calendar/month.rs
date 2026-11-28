@@ -1,6 +1,22 @@
 //! What a month is: days, shape and names. No rendering in this room.
 
-use chrono::{Datelike, Local, Month, NaiveDate};
+use jiff::{ZonedDateTime, civil};
+
+/// The twelve month names, indexed one past the month number they name.
+const MONTH_NAMES: [&str; 12] = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December"
+];
 
 /// Month and year the calendar is looking at.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -11,11 +27,11 @@ pub struct CalendarState {
 
 impl Default for CalendarState {
     fn default() -> Self {
-        let now = Local::now();
+        let now = ZonedDateTime::now().date();
 
         Self {
-            year:  now.year(),
-            month: now.month()
+            year:  i32::from(now.year()),
+            month: u32::from(now.month().cast_unsigned())
         }
     }
 }
@@ -80,10 +96,12 @@ impl CalendarState {
     /// English name of the month in view.
     #[must_use]
     pub fn month_name(&self) -> &'static str {
-        u8::try_from(self.month)
+        usize::try_from(self.month)
             .ok()
-            .and_then(|month| Month::try_from(month).ok())
-            .map_or("Unknown", |month| month.name())
+            .and_then(|month| month.checked_sub(1))
+            .and_then(|index| MONTH_NAMES.get(index))
+            .copied()
+            .unwrap_or("Unknown")
     }
 
     /// The grid of days this month shows.
@@ -117,40 +135,41 @@ pub struct CalendarData {
 impl CalendarData {
     /// The grid for `year`/`month`, padded with the neighbouring months.
     ///
-    /// # Panics
-    ///
-    /// Panics when `year` lies outside the range `chrono::NaiveDate`
-    /// supports, so even the fallback first of January cannot be built.
+    /// A `year` or `month` outside what `jiff` can name falls back to a grid
+    /// around the first of January of the nearest buildable year rather than
+    /// leaving the calendar empty.
     #[must_use]
     pub fn generate(year: i32, month: u32) -> Self {
-        let today = Local::now().date_naive();
+        let today = ZonedDateTime::now().date();
+        let year = i16::try_from(year).unwrap_or(1970);
+        let month = i8::try_from(month).unwrap_or(1);
 
-        let first_day = NaiveDate::from_ymd_opt(year, month, 1)
-            .or_else(|| NaiveDate::from_ymd_opt(year, 1, 1))
-            .unwrap_or_default();
-        let weekday = first_day.weekday().num_days_from_monday();
-        let days_in_month = Self::days_in_month(year, month);
-        let prev_month_days = if month == 1 {
-            Self::days_in_month(year - 1, 12)
-        } else {
-            Self::days_in_month(year, month - 1)
-        };
+        let first_day = civil::Date::new(year, month, 1)
+            .or_else(|_| civil::Date::new(year, 1, 1))
+            .unwrap_or(civil::Date::MIN);
+        let weekday = i32::from(first_day.weekday().to_monday_zero_offset());
+        let days_in_month = first_day.days_in_month();
+        let prev_month_days = i32::from(
+            civil::Date::new(year, month - 1, 1)
+                .or_else(|_| civil::Date::new(year - 1, 12, 1))
+                .map_or(30, civil::Date::days_in_month)
+        );
 
         let mut days = Vec::with_capacity(42);
 
         for i in 0..weekday {
             days.push(DayInfo {
-                day:      prev_month_days - weekday + i + 1,
+                day:      (prev_month_days - weekday + i + 1).cast_unsigned(),
                 is_today: false,
                 in_month: false
             });
         }
 
         for day in 1..=days_in_month {
-            let date = NaiveDate::from_ymd_opt(year, month, day).unwrap_or(first_day);
+            let date = civil::Date::new(year, month, day).unwrap_or(first_day);
 
             days.push(DayInfo {
-                day,
+                day:      u32::from(day.cast_unsigned()),
                 is_today: date == today,
                 in_month: true
             });
@@ -169,19 +188,6 @@ impl CalendarData {
         Self {
             days
         }
-    }
-
-    fn days_in_month(year: i32, month: u32) -> u32 {
-        NaiveDate::from_ymd_opt(year, month, 1)
-            .and_then(|date| {
-                if month == 12 {
-                    NaiveDate::from_ymd_opt(year + 1, 1, 1)
-                } else {
-                    NaiveDate::from_ymd_opt(year, month + 1, 1)
-                }
-                .and_then(|next| u32::try_from(next.signed_duration_since(date).num_days()).ok())
-            })
-            .unwrap_or(30)
     }
 }
 
@@ -212,17 +218,17 @@ impl std::error::Error for CalendarError {}
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
-    use chrono::{Datelike, Local};
+    use jiff::ZonedDateTime;
 
     use super::*;
 
     #[test]
     fn the_default_view_is_the_current_month() {
         let state = CalendarState::default();
-        let now = Local::now();
+        let now = ZonedDateTime::now().date();
 
-        assert_eq!(state.year(), now.year());
-        assert_eq!(state.month(), now.month());
+        assert_eq!(state.year(), i32::from(now.year()));
+        assert_eq!(state.month(), u32::from(now.month().cast_unsigned()));
     }
 
     #[test]

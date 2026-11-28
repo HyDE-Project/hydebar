@@ -73,6 +73,10 @@ pub struct CustomModuleDef {
     pub menu:           Vec<CustomMenuEntry>,
 
     /// Yields json lines containing text, alt and an optional tooltip.
+    ///
+    /// Left unset the module shows its icon and answers presses, producing
+    /// no readout of its own.
+    #[serde(default)]
     pub listen_cmd: Option<String>,
     /// Command producing a single json object per run, the Waybar `exec`
     /// equivalent.
@@ -82,6 +86,10 @@ pub struct CustomModuleDef {
     /// [`CustomModuleDef::interval`] tick and whenever
     /// [`CustomModuleDef::signal`] is delivered. When unset but a schedule is
     /// configured, [`CustomModuleDef::listen_cmd`] is executed instead.
+    ///
+    /// Left unset the module shows its icon and answers presses, producing
+    /// no readout of its own.
+    #[serde(default)]
     pub exec:       Option<String>,
     /// Seconds between two runs of the producing command.
     ///
@@ -341,6 +349,21 @@ mod tests {
     }
 
     #[test]
+    fn a_button_without_a_readout_parses_and_produces_nothing() {
+        let definition = parse(
+            r#"
+            name = "MyModule"
+            command = "notify-send 'Clicked!'"
+            "#
+        );
+
+        assert_eq!(definition.name, "MyModule");
+        assert_eq!(definition.exec, None);
+        assert_eq!(definition.listen_cmd, None);
+        assert_eq!(definition.source(), None);
+    }
+
+    #[test]
     fn deserializes_the_context_menu_entries_in_order() {
         let definition = parse(
             r#"
@@ -379,7 +402,7 @@ mod tests {
             "#
         );
 
-        assert!(definition.menu.is_empty());
+        assert_eq!(definition.menu, []);
         assert!(!definition.has_menu());
     }
 

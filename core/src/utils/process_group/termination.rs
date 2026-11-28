@@ -1,7 +1,9 @@
 //! Ending the families, politely first, and the handler for a signalled bar.
 
 use std::{
-    io, ptr,
+    io,
+    process::exit,
+    ptr,
     sync::atomic::{AtomicI32, Ordering},
     thread,
     time::Duration
@@ -70,7 +72,7 @@ pub(super) fn kill_group(pid: u32) {
 /// detachment, because the environment does, so those stragglers are still
 /// recognisable as this run's.
 pub fn terminate_all() {
-    let ended = LIVE_GROUPS.terminate_all();
+    let ended = LIVE_GROUPS.terminate_all(kill_group);
 
     if ended > 0 {
         info!("ended {ended} process groups on the way out");
@@ -165,7 +167,7 @@ fn open_wake_pipe() -> io::Result<i32> {
 
 /// Ends every group and wakes the reaper, using only what a handler may call.
 fn on_termination_signal() {
-    LIVE_GROUPS.terminate_all();
+    LIVE_GROUPS.terminate_all(kill_group);
 
     let writer = WAKE_WRITER.load(Ordering::Acquire);
 
@@ -194,7 +196,7 @@ fn await_termination(reader: i32) {
     info!("termination signal reaped, ending the process");
     thread::sleep(HARD_EXIT_GRACE);
     terminate_all();
-    std::process::exit(0);
+    exit(0);
 }
 
 /// Blocks until the handler writes, reporting whether a wake arrived.

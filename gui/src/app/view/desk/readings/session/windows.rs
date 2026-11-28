@@ -9,7 +9,7 @@ mod rooms;
 use hydebar_core::services::mpris::PlaybackStatus;
 pub use rooms::workspaces;
 
-use super::super::{Panel, push};
+use super::super::panel::{Panel, push};
 use crate::app::state::App;
 
 /// Longest a window title is written out before it is cut.
@@ -21,7 +21,7 @@ const TITLE_ROOM: usize = 48;
 
 /// The windows the compositor is holding, whichever screen they are on.
 pub fn windows(app: &App) -> Option<Panel> {
-    let clients = app.taskbar.clients();
+    let clients = app.modules.taskbar.clients();
 
     if clients.is_empty() {
         return None;
@@ -37,7 +37,7 @@ pub fn windows(app: &App) -> Option<Panel> {
     push(
         &mut rows,
         "in focus",
-        app.window_title.full().map(shortened)
+        app.modules.window_title.full().map(shortened)
     );
 
     for client in clients {
@@ -63,7 +63,7 @@ fn shortened(title: &str) -> String {
 
 /// What the session is playing, on a player that has anything loaded.
 pub fn playing(app: &App) -> Option<Panel> {
-    let players = app.media_player.players();
+    let players = app.modules.media_player.players();
     let leading = players
         .iter()
         .find(|player| matches!(player.state, PlaybackStatus::Playing))
@@ -112,7 +112,7 @@ fn player_name(service: &str) -> String {
 
 /// The keyboard submap the compositor is in, while it is in one.
 pub fn submap(app: &App) -> Option<Panel> {
-    let submap = app.keyboard_submap.active();
+    let submap = app.modules.keyboard_submap.active();
 
     if submap.is_empty() {
         return None;

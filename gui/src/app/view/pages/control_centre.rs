@@ -24,7 +24,8 @@ impl App {
     ) -> Option<Page<'_>> {
         match menu_type {
             MenuType::ControlCenter => Some((
-                self.control_center
+                self.modules
+                    .control_center
                     .menu_view(
                         id,
                         &self.config.control_center,
@@ -38,7 +39,8 @@ impl App {
             )),
             MenuType::Audio => Some((
                 iced::widget::mouse_area(
-                    self.control_center
+                    self.modules
+                        .control_center
                         .audio_menu(
                             id,
                             &self.config.control_center,
@@ -60,21 +62,24 @@ impl App {
                 None
             )),
             MenuType::Network => Some((
-                self.control_center
+                self.modules
+                    .control_center
                     .network_menu(id, &self.config.control_center, opacity, self.icons())
                     .map(Message::ControlCenter),
                 MenuSize::Medium,
                 None
             )),
             MenuType::Bluetooth => Some((
-                self.control_center
+                self.modules
+                    .control_center
                     .bluetooth_menu(id, &self.config.control_center, opacity, self.icons())
                     .map(Message::ControlCenter),
                 MenuSize::Medium,
                 None
             )),
             MenuType::PowerProfile => Some((
-                self.control_center
+                self.modules
+                    .control_center
                     .power_profile_menu(opacity, &self.config.control_center, self.icons())
                     .map(Message::ControlCenter),
                 MenuSize::Small,

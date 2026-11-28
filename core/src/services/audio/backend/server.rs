@@ -9,7 +9,7 @@ use libpulse_binding::{
 };
 use masterror::{AppError, AppResult};
 
-use super::BackendHandle;
+use super::handle::BackendHandle;
 
 /// Connection to the `PulseAudio` daemon owned by a single backend thread.
 ///

@@ -104,7 +104,9 @@ impl Message {
         match self {
             Self::SetPosition(position) => match position {
                 Position::Top => "Top".into(),
-                Position::Bottom => "Bottom".into()
+                Position::Bottom => "Bottom".into(),
+                Position::Left => "Left".into(),
+                Position::Right => "Right".into()
             },
             Self::SetLayer(layer) => match layer {
                 BarLayer::Background => "Background".into(),

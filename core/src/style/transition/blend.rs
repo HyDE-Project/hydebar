@@ -1,22 +1,32 @@
 //! The arithmetic of mixing two appearance snapshots.
 //!
-//! Colours and opacities interpolate channel by channel; discrete settings
-//! such as the layout style or the scale factor take the target's value
-//! outright, because the compositor side of the shell has to be reconfigured
-//! for them anyway.
+//! Colours, opacities and the continuous geometry — corner radii, the bar
+//! height, the side padding and the spacing scale every gap derives from —
+//! interpolate channel by channel; discrete settings such as the layout
+//! target's value outright, because the compositor side of the shell has to
+//! be reconfigured for them anyway. Font sizes stay snapped as well: the
+//! global scale base and the icon theme rebuild from the target on reload,
+//! so a blended size would move the text but leave its metrics behind. The
+//! frame rides along with the target outright: it lives on a surface of its
+//! own, and growing its strips mid-flight would resize that surface under
+//! the compositor while the palette is still travelling.
 
 use hex_color::HexColor;
+use hydebar_proto::config::SizeValue;
 
 use crate::config::{Appearance, AppearanceColor, MenuAppearance};
 
 /// Interpolates the animatable parts of an appearance.
 pub(super) fn blend_appearance(from: &Appearance, to: &Appearance, t: f32) -> Appearance {
+    let t = t.clamp(0.0, 1.0);
+
     Appearance {
         font_name:                to.font_name.clone(),
         font_size:                to.font_size,
-        radius:                   to.radius,
-        height:                   to.height,
-        side_padding:             to.side_padding,
+        radius:                   blend_size(from.radius, to.radius, t),
+        height:                   blend_size(from.height, to.height, t),
+        side_padding:             blend_size(from.side_padding, to.side_padding, t),
+        spacing_scale:            blend_f32(from.spacing_scale, to.spacing_scale, t),
         follow_hyde:              to.follow_hyde,
         auto_scale:               to.auto_scale,
         scale_factor:             to.scale_factor,
@@ -27,6 +37,7 @@ pub(super) fn blend_appearance(from: &Appearance, to: &Appearance, t: f32) -> Ap
             opacity:  blend_f32(from.menu.opacity, to.menu.opacity, t),
             backdrop: blend_f32(from.menu.backdrop, to.menu.backdrop, t)
         },
+        frame:                    to.frame.clone(),
         animations:               to.animations.clone(),
         greeting:                 to.greeting,
         background_color:         blend_color(from.background_color, to.background_color, t),
@@ -52,6 +63,23 @@ fn blend_f32(from: f32, to: f32, t: f32) -> f32 {
     (to - from).mul_add(t, from)
 }
 
+/// Interpolates two optional sizes sharing a unit.
+///
+/// Pixels melt into pixels and percents into percents; anything else —
+/// including a size appearing out of nothing — takes the target's value,
+/// because there is no common unit to travel in.
+fn blend_size(from: Option<SizeValue>, to: Option<SizeValue>, t: f32) -> Option<SizeValue> {
+    match (from, to) {
+        (Some(SizeValue::Pixels(from)), Some(SizeValue::Pixels(to))) => {
+            Some(SizeValue::Pixels(blend_f32(from, to, t)))
+        }
+        (Some(SizeValue::Percent(from)), Some(SizeValue::Percent(to))) => {
+            Some(SizeValue::Percent(blend_f32(from, to, t)))
+        }
+        (_, to) => to
+    }
+}
+
 fn blend_u8(from: u8, to: u8, t: f32) -> u8 {
     let blended = (f32::from(to) - f32::from(from)).mul_add(t, f32::from(from));
 
@@ -66,12 +94,24 @@ fn blend_u8(from: u8, to: u8, t: f32) -> u8 {
 }
 
 fn blend_hex(from: HexColor, to: HexColor, t: f32) -> HexColor {
-    HexColor::rgba(
-        blend_u8(from.r, to.r, t),
-        blend_u8(from.g, to.g, t),
-        blend_u8(from.b, to.b, t),
-        blend_u8(from.a, to.a, t)
-    )
+    // A blend at its ends is the end itself, not a round trip through the
+    // perceptual space that happens to round back: the endpoints stay exact
+    // whatever the conversion would have made of them.
+    if t <= 0.0 {
+        return from;
+    }
+
+    if t >= 1.0 {
+        return to;
+    }
+
+    let mixed = crate::style::oklch::Oklch::from_rgb(from)
+        .mix(crate::style::oklch::Oklch::from_rgb(to), t);
+    let mixed = mixed.to_rgb();
+
+    // Alpha is coverage, not a colour: it travels linearly, the way a fade
+    // is measured, while the hues below it travel perceptually.
+    HexColor::rgba(mixed.r, mixed.g, mixed.b, blend_u8(from.a, to.a, t))
 }
 
 /// Interpolates two palette entries.
@@ -154,10 +194,97 @@ fn blend_optional_colors(
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
+    #![allow(clippy::float_cmp)]
+
     use super::*;
 
     fn hex(value: u8) -> HexColor {
         HexColor::rgb(value, value, value)
+    }
+
+    #[test]
+    fn radii_melt_when_they_share_a_unit() {
+        let from = Appearance {
+            radius: Some(SizeValue::Pixels(4.0)),
+            ..Appearance::default()
+        };
+        let to = Appearance {
+            radius: Some(SizeValue::Pixels(12.0)),
+            ..Appearance::default()
+        };
+
+        let blended = blend_appearance(&from, &to, 0.5);
+
+        assert_eq!(blended.radius, Some(SizeValue::Pixels(8.0)));
+    }
+
+    #[test]
+    fn radii_without_a_common_unit_take_the_target() {
+        let pixels = Appearance {
+            radius: Some(SizeValue::Pixels(4.0)),
+            ..Appearance::default()
+        };
+        let percent = Appearance {
+            radius: Some(SizeValue::Percent(2.0)),
+            ..Appearance::default()
+        };
+
+        assert_eq!(
+            blend_appearance(&pixels, &percent, 0.5).radius,
+            Some(SizeValue::Percent(2.0))
+        );
+        assert_eq!(
+            blend_appearance(&percent, &pixels, 0.5).radius,
+            pixels.radius
+        );
+        assert_eq!(
+            blend_appearance(&Appearance::default(), &pixels, 0.5).radius,
+            pixels.radius
+        );
+    }
+
+    #[test]
+    fn spacing_scale_breathes_with_the_blend() {
+        let from = Appearance {
+            spacing_scale: 1.0,
+            ..Appearance::default()
+        };
+        let to = Appearance {
+            spacing_scale: 2.0,
+            ..Appearance::default()
+        };
+
+        let blended = blend_appearance(&from, &to, 0.5);
+
+        assert_eq!(blended.spacing_scale, 1.5);
+    }
+
+    #[test]
+    fn bar_geometry_breathes_with_the_blend() {
+        let from = Appearance {
+            height: Some(SizeValue::Pixels(30.0)),
+            side_padding: Some(SizeValue::Pixels(4.0)),
+            ..Appearance::default()
+        };
+        let to = Appearance {
+            height: Some(SizeValue::Pixels(40.0)),
+            side_padding: Some(SizeValue::Pixels(12.0)),
+            ..Appearance::default()
+        };
+
+        let blended = blend_appearance(&from, &to, 0.5);
+
+        assert_eq!(blended.height, Some(SizeValue::Pixels(35.0)));
+        assert_eq!(blended.side_padding, Some(SizeValue::Pixels(8.0)));
+    }
+
+    #[test]
+    fn the_ends_of_a_colour_blend_are_exact() {
+        let from = HexColor::rgb(137, 56, 190);
+        let to = HexColor::rgb(210, 140, 32);
+
+        assert_eq!(blend_hex(from, to, 0.0), from);
+        assert_eq!(blend_hex(from, to, 1.0), to);
     }
 
     #[test]
@@ -174,8 +301,19 @@ mod tests {
 
         match blended {
             AppearanceColor::Complete {
-                strong, ..
-            } => assert_eq!(strong, Some(hex(100))),
+                strong,
+                weak,
+                text,
+                ..
+            } => {
+                let strong = strong.expect("the target's strong shade survives the blend");
+
+                assert!(
+                    strong.r > 0 && strong.r < 200,
+                    "the shade travels from the base the source lacked"
+                );
+                assert!(weak.is_none() && text.is_none());
+            }
             other @ AppearanceColor::Simple(_) => {
                 panic!("expected a complete colour, got {other:?}")
             }

@@ -15,7 +15,7 @@ impl App {
             Some(HasOutput::Main) => self.bar_surface(id),
             Some(HasOutput::Menu(menu_info)) => {
                 let menu_opacity = self.config.appearance.menu.opacity;
-                let menu_progress = self.outputs.get_menu_progress(id);
+                let menu_progress = self.outputs.menu_progress(id);
 
                 let menu = menu_info.and_then(|(menu_type, button_ui_ref)| {
                     self.menu_page(menu_type, id, menu_opacity).map(
@@ -46,8 +46,10 @@ impl App {
                 )
             }
             Some(HasOutput::Desk) => self.desk_surface(id),
+            Some(HasOutput::Frame) => self.frame_surface(id),
+            Some(HasOutput::Panel) | None => Row::new().into(),
             Some(HasOutput::Notifications) => notifications_popup::view(
-                &self.notification_popups,
+                &self.focus.notification_popups,
                 self.appearance(),
                 self.config.position
             ),
@@ -56,11 +58,10 @@ impl App {
                 |info| {
                     self.faded_menu(
                         tooltip_wrapper(info, self.config.position, self.appearance()),
-                        self.hints.presence()
+                        self.focus.hints.presence()
                     )
                 }
-            ),
-            None => Row::new().into()
+            )
         }
     }
 }

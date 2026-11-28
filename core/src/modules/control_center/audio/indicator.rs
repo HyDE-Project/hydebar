@@ -17,7 +17,7 @@ impl AudioData {
         if self.sinks.is_empty() {
             None
         } else {
-            let icon_type = self.sinks.get_icon(&self.server_info.default_sink);
+            let icon_type = self.sinks.icon(&self.server_info.default_sink);
 
             Some(icon(icons, icon_type).into())
         }

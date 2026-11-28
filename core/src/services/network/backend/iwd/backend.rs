@@ -3,12 +3,15 @@
 use log::debug;
 use masterror::{AppError, AppResult};
 use tokio::process::Command;
-use zbus::zvariant::OwnedObjectPath;
+use zbus::OwnedObjectPath;
 
 use super::{IwdDbus, adapter::AdapterProxy};
 use crate::services::{
     bus::bus_failure,
-    network::{AccessPoint, KnownConnection, NetworkBackend, NetworkData}
+    network::{
+        backend::NetworkBackend,
+        data::model::{AccessPoint, KnownConnection, NetworkData}
+    }
 };
 
 mod connect;

@@ -90,7 +90,7 @@ mod tests {
     #[test]
     fn every_choice_is_named() {
         for source in NotificationSource::ALL {
-            assert!(!source.label().is_empty());
+            assert_ne!(source.label(), "");
         }
     }
 

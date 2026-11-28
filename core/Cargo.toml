@@ -5,19 +5,20 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-homepage.workspace = true
 description = "Modules, services and event bus behind the hydebar status bar"
 
 [dependencies]
 quick-xml.workspace = true
 ttf-parser.workspace = true
-chrono.workspace = true
+jiff.workspace = true
 dirs.workspace = true
 freedesktop-icons.workspace = true
 image.workspace = true
 resvg.workspace = true
 futures.workspace = true
 hex_color.workspace = true
+smithay-client-toolkit.workspace = true
+tiny-skia.workspace = true
 hydebar-proto = { path = "../proto" }
 iced.workspace = true
 iced_core.workspace = true
@@ -29,6 +30,7 @@ libpulse-binding.workspace = true
 linicon-theme.workspace = true
 log.workspace = true
 masterror.workspace = true
+num-traits.workspace = true
 pipewire.workspace = true
 reqwest.workspace = true
 serde.workspace = true

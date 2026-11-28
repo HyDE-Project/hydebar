@@ -1,12 +1,15 @@
 //! D-Bus interface implementing the freedesktop notifications spec.
 
-use std::time::SystemTime;
+use std::{thread::spawn, time::SystemTime};
 
 use iced::futures::channel::mpsc::UnboundedSender;
 use log::debug;
 use zbus::interface;
 
-use super::{Notification, NotificationEvent, NotificationStorage, Urgency};
+use super::{
+    model::{Notification, NotificationEvent, Urgency},
+    storage::NotificationStorage
+};
 
 /// D-Bus org.freedesktop.Notifications server implementation
 pub struct NotificationsServer {
@@ -30,7 +33,7 @@ impl std::fmt::Debug for NotificationsServer {
 /// Notices arrive with the urgency as an untyped hint, and a caller that
 /// states none, or states one the specification does not name, means an
 /// ordinary notice — not the loudest one.
-fn urgency_of(hints: &std::collections::HashMap<String, zbus::zvariant::Value<'_>>) -> Urgency {
+fn urgency_of(hints: &std::collections::HashMap<String, zbus::Variant<'_>>) -> Urgency {
     hints
         .get("urgency")
         .and_then(|value| value.downcast_ref::<u8>().ok())
@@ -110,7 +113,7 @@ impl NotificationsServer {
         summary: String,
         body: String,
         actions: Vec<String>,
-        hints: std::collections::HashMap<String, zbus::zvariant::Value<'_>>,
+        hints: std::collections::HashMap<String, zbus::Variant<'_>>,
         expire_timeout: i32
     ) -> u32 {
         debug!(
@@ -193,7 +196,7 @@ impl NotificationsServer {
             .spawn()
         {
             Ok(mut child) => {
-                std::thread::spawn(move || {
+                spawn(move || {
                     let _ = child.wait();
                 });
             }

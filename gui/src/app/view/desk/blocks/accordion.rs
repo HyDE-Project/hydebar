@@ -13,7 +13,7 @@ use iced::{
     widget::{Row, Stack, container, image, text}
 };
 
-use super::{super::super::super::state::Message, Ink};
+use super::{super::super::super::state::Message, ink::Ink};
 
 /// How tall the row stands, as a share of the body ink.
 ///

@@ -171,7 +171,7 @@ impl HardwareSensors {
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
-    use std::fs;
+    use std::{fs, os::unix::fs::symlink};
 
     use tempfile::TempDir;
 
@@ -260,8 +260,8 @@ mod tests {
             }
 
             fs::remove_dir_all(&card_device).expect("replace card device");
-            std::os::unix::fs::symlink(&device, &card_device).expect("card link");
-            std::os::unix::fs::symlink(
+            symlink(&device, &card_device).expect("card link");
+            symlink(
                 &device,
                 self.hwmon
                     .path()

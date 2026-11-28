@@ -97,6 +97,18 @@ impl MenuSize {
 
         (anchor_x - width / 2.0).clamp(margin, rightmost)
     }
+
+    /// Top offset placing a `height` tall menu next to a button at `anchor_y`.
+    ///
+    /// The menu is centred on its button, then pushed back inside the
+    /// screen: a module near either edge keeps its menu fully visible.
+    #[must_use]
+    pub fn top_offset(height: f32, anchor_y: f32, viewport_height: f32, font_size: f32) -> f32 {
+        let margin = EDGE_MARGIN_EM * font_size;
+        let bottommost = (viewport_height - height - margin).max(margin);
+
+        (anchor_y - height / 2.0).clamp(margin, bottommost)
+    }
 }
 
 #[cfg(test)]

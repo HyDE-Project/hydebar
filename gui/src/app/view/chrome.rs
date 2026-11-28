@@ -43,13 +43,13 @@ impl App {
     /// birth and lets itself out three seconds later. An empty row whenever
     /// the greeting is over, disabled, or animations are off.
     pub(super) fn screen_greeting(&self) -> Element<'_, Message> {
-        let presence = self.greeting.value().clamp(0.0, 1.0);
+        let presence = self.focus.greeting.value().clamp(0.0, 1.0);
 
         if presence <= 0.004 {
             return Row::new().into();
         }
 
-        let line = iced::widget::text(self.greeting_line.as_str())
+        let line = iced::widget::text(self.focus.greeting_line.as_str())
             .size(self.appearance().font_size_px() * 2.4)
             .color(self.theme_cache.palette().text.scale_alpha(presence));
 

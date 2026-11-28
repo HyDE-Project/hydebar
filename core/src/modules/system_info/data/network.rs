@@ -48,9 +48,9 @@ impl NetworkSnapshot {
     }
 
     pub(super) fn to_data(&self, previous: Option<&Self>) -> NetworkData {
-        let elapsed = previous
-            .map(|snapshot| self.timestamp.saturating_duration_since(snapshot.timestamp))
-            .unwrap_or_default();
+        let elapsed = previous.map_or_default(|snapshot| {
+            self.timestamp.saturating_duration_since(snapshot.timestamp)
+        });
         let seconds = elapsed.as_secs();
 
         #[expect(

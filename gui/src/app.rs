@@ -1,7 +1,7 @@
 mod bus;
 mod modules;
 mod shutdown;
-mod state;
+pub(crate) mod state;
 mod update;
 mod view;
 

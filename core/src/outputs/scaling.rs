@@ -6,6 +6,7 @@
 //! reports about an output into a text size and a bar height, so a fresh
 //! install is readable before anything is configured.
 
+use std::env::var_os;
 /// Height of the screen the built in sizes were tuned for, in logical pixels.
 ///
 /// A full high definition screen: the sizes of the reference waybar theme are
@@ -77,6 +78,11 @@ pub fn physical_factor(width_mm: f32, height_mm: f32) -> f32 {
 /// hands the bar half as many logical pixels, and the bar must not double them
 /// a second time.
 ///
+/// The physical diagonal is consulted only when the compositor does not scale:
+/// a scale above one already carries the density and viewing-distance signal,
+/// so a 4K television at scale two presents logical 1080p and must not be
+/// magnified again for its panel size.
+///
 /// The result is rounded to quarters, so a screen that reports itself slightly
 /// differently after a mode change does not nudge the whole bar by a pixel.
 #[must_use]
@@ -94,11 +100,6 @@ pub fn metrics(
 
     let by_pixels = scale_factor(width / scale, height / scale);
 
-    // When the compositor already scales the output, its scale factor
-    // compensates for screen density and viewing distance.  Applying
-    // physical_factor on top would double-count the same signal — a 4K
-    // television at compositor scale 2 already presents logical 1080p,
-    // so the bar must not grow again for the physical diagonal.
     let by_size = if scale > 1.0 {
         MIN_FACTOR
     } else {
@@ -196,8 +197,8 @@ async fn query_geometry(name: &str) -> Option<ScreenGeometry> {
 pub(super) async fn compositor_answer(request: &str) -> Option<String> {
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-    let signature = std::env::var_os("HYPRLAND_INSTANCE_SIGNATURE")?;
-    let runtime_dir = std::env::var_os("XDG_RUNTIME_DIR")?;
+    let signature = var_os("HYPRLAND_INSTANCE_SIGNATURE")?;
+    let runtime_dir = var_os("XDG_RUNTIME_DIR")?;
 
     let socket = std::path::Path::new(&runtime_dir)
         .join("hypr")

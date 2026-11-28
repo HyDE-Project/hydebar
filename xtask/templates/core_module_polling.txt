@@ -1,0 +1,34 @@
+//! Sampling of the {{label}} readout.
+
+use std::time::Duration;
+
+use super::{Message, {{Pascal}}};
+use crate::{
+    ModuleContext,
+    attention::PollSchedule,
+    modules::{Module, ModuleError}
+};
+
+/// How often the readout is taken at rest and while attended.
+///
+/// TODO: tune both cadences to the cost of one sample.
+const AT_REST: Duration = Duration::from_secs(30);
+const ATTENDED: Duration = Duration::from_secs(5);
+
+impl<M> Module<M> for {{Pascal}}
+where
+    M: 'static
+{
+    type RegistrationData<'a> = ();
+
+    fn poll_schedule(&self) -> Option<PollSchedule> {
+        Some(PollSchedule::new(AT_REST, ATTENDED))
+    }
+
+    fn poll(&mut self, _: &ModuleContext) -> Result<(), ModuleError> {
+        // TODO: take the real sample and fold it here.
+        self.update(Message::Tick(String::from("tick")));
+
+        Ok(())
+    }
+}

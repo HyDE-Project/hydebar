@@ -2,6 +2,8 @@
 
 use std::{
     fs,
+    process::id,
+    str::from_utf8,
     sync::{
         OnceLock,
         atomic::{AtomicU64, Ordering}
@@ -121,7 +123,7 @@ pub(super) fn terminate_marked(prefix: &[u8], wanted: impl Fn(&str) -> bool) -> 
 
 /// Lists the running processes whose stamp under `prefix` `wanted` accepts.
 pub(super) fn marked_processes(prefix: &[u8], wanted: &impl Fn(&str) -> bool) -> Vec<u32> {
-    let own = std::process::id();
+    let own = id();
     let Ok(entries) = fs::read_dir("/proc") else {
         return Vec::new();
     };
@@ -144,6 +146,6 @@ pub(super) fn marked_stamp<'a>(environ: &'a [u8], prefix: &[u8]) -> Option<&'a s
     environ.split(|byte| *byte == 0).find_map(|entry| {
         let stamp = entry.strip_prefix(prefix)?;
 
-        std::str::from_utf8(stamp).ok()
+        from_utf8(stamp).ok()
     })
 }

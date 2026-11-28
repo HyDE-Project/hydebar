@@ -30,12 +30,12 @@ pub fn hydebar_theme(appearance: &Appearance) -> Theme {
     Theme::custom_with_fn(
         "local".to_string(),
         Palette {
-            background: painted(appearance.background_color.get_base()),
-            text:       painted(appearance.text_color.get_base()),
-            primary:    painted(appearance.primary_color.get_base()),
-            success:    painted(appearance.success_color.get_base()),
-            warning:    painted(appearance.warning_color.get_base()),
-            danger:     painted(appearance.danger_color.get_base())
+            background: painted(appearance.background_color.base()),
+            text:       painted(appearance.text_color.base()),
+            primary:    painted(appearance.primary_color.base()),
+            success:    painted(appearance.success_color.base()),
+            warning:    painted(appearance.warning_color.base()),
+            danger:     painted(appearance.danger_color.base())
         },
         |palette| build_extended_palette(appearance, palette)
     )
@@ -46,7 +46,7 @@ fn build_extended_palette(appearance: &Appearance, palette: Palette) -> palette:
         palette.background,
         appearance
             .background_color
-            .get_text()
+            .text()
             .map_or(palette.text, painted)
     );
     let default_primary = palette::Primary::generate(
@@ -54,15 +54,15 @@ fn build_extended_palette(appearance: &Appearance, palette: Palette) -> palette:
         palette.background,
         appearance
             .primary_color
-            .get_text()
+            .text()
             .map_or(palette.text, painted)
     );
     let default_secondary = palette::Primary::generate(
-        painted(appearance.secondary_color.get_base()),
+        painted(appearance.secondary_color.base()),
         palette.background,
         appearance
             .secondary_color
-            .get_text()
+            .text()
             .map_or(palette.text, painted)
     );
     let default_success = palette::Success::generate(
@@ -70,16 +70,13 @@ fn build_extended_palette(appearance: &Appearance, palette: Palette) -> palette:
         palette.background,
         appearance
             .success_color
-            .get_text()
+            .text()
             .map_or(palette.text, painted)
     );
     let default_danger = palette::Danger::generate(
         palette.danger,
         palette.background,
-        appearance
-            .danger_color
-            .get_text()
-            .map_or(palette.text, painted)
+        appearance.danger_color.text().map_or(palette.text, painted)
     );
 
     palette::Extended {
@@ -98,11 +95,11 @@ fn build_extended_palette(appearance: &Appearance, palette: Palette) -> palette:
         ),
         success:    build_success_pair(&appearance.success_color, palette.text, default_success),
         warning:    palette::Warning::generate(
-            painted(appearance.warning_color.get_base()),
+            painted(appearance.warning_color.base()),
             palette.background,
             appearance
                 .warning_color
-                .get_text()
+                .text()
                 .map_or(palette.text, painted)
         ),
         danger:     build_danger_pair(&appearance.danger_color, palette.text, default_danger),

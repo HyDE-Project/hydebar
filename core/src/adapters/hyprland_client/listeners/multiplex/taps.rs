@@ -15,7 +15,7 @@ use log::{error, warn};
 use tokio::sync::broadcast;
 
 use super::singleton::multiplexer;
-use crate::adapters::hyprland_client::{HyprlandClient, config::HyprlandClientConfig};
+use crate::adapters::hyprland_client::config::HyprlandClientConfig;
 
 /// The stream handed out when the multiplexer cannot start.
 ///
@@ -31,10 +31,9 @@ fn dead_stream<T: Send + 'static>(
 
 /// Subscribes to the window events of the shared connection.
 pub fn window_events(
-    client: &HyprlandClient,
     config: &Arc<HyprlandClientConfig>
 ) -> HyprlandEventStream<HyprlandWindowEvent> {
-    match multiplexer(client, config) {
+    match multiplexer(config) {
         Ok(mux) => stream_from(mux.window.subscribe()),
         Err(err) => dead_stream(&err)
     }
@@ -42,10 +41,9 @@ pub fn window_events(
 
 /// Subscribes to the workspace events of the shared connection.
 pub fn workspace_events(
-    client: &HyprlandClient,
     config: &Arc<HyprlandClientConfig>
 ) -> HyprlandEventStream<HyprlandWorkspaceEvent> {
-    match multiplexer(client, config) {
+    match multiplexer(config) {
         Ok(mux) => stream_from(mux.workspace.subscribe()),
         Err(err) => dead_stream(&err)
     }
@@ -53,10 +51,9 @@ pub fn workspace_events(
 
 /// Subscribes to the keyboard events of the shared connection.
 pub fn keyboard_events(
-    client: &HyprlandClient,
     config: &Arc<HyprlandClientConfig>
 ) -> HyprlandEventStream<HyprlandKeyboardEvent> {
-    match multiplexer(client, config) {
+    match multiplexer(config) {
         Ok(mux) => stream_from(mux.keyboard.subscribe()),
         Err(err) => dead_stream(&err)
     }
@@ -66,11 +63,8 @@ pub fn keyboard_events(
 ///
 /// The receiver supports blocking reads, so the blur guard can keep its plain
 /// thread while sharing the one connection with everything else.
-pub fn config_reloads(
-    client: &HyprlandClient,
-    config: &Arc<HyprlandClientConfig>
-) -> broadcast::Receiver<()> {
-    match multiplexer(client, config) {
+pub fn config_reloads(config: &Arc<HyprlandClientConfig>) -> broadcast::Receiver<()> {
+    match multiplexer(config) {
         Ok(mux) => mux.reload.subscribe(),
         Err(err) => {
             error!(target: "hydebar::hyprland", "compositor reloads unavailable: {err}");

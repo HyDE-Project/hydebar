@@ -9,6 +9,15 @@ mod menu;
 mod recording;
 mod view;
 
+use jiff::ZonedDateTime;
+
+/// The wall-clock stamp both file names carry, down to the second.
+fn file_stamp() -> String {
+    ZonedDateTime::now()
+        .strftime("%Y-%m-%d_%H-%M-%S")
+        .to_string()
+}
+
 /// Screenshot action types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ScreenshotAction {

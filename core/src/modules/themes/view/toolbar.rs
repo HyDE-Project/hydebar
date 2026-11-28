@@ -3,7 +3,7 @@
 
 use iced::Element;
 
-use crate::modules::themes::Message;
+use crate::{components::text::text, modules::themes::Message};
 
 /// The row offering the one fetch that updates every installed theme.
 pub(super) fn update_all_row<'a>(
@@ -27,7 +27,7 @@ pub(super) fn update_all_row<'a>(
     let mut update = button(
         Row::new()
             .push(icon_raw(Icons::Refresh.default_glyph().to_owned()))
-            .push(crate::components::text::text("Update all").size(control))
+            .push(text("Update all").size(control))
             .spacing(scale::icon_gap())
             .align_y(iced::Alignment::Center)
     )

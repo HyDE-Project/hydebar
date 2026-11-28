@@ -74,6 +74,8 @@ jobs:
       - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25
         with:
           command: check
+        env:
+          RUSTUP_TOOLCHAIN: stable
 
   msrv:
     name: Minimum supported Rust

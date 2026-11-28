@@ -23,18 +23,18 @@
 //! owner in [`stale`], the displacement of a running bar in [`takeover`] and
 //! the failure vocabulary in [`error`].
 
-mod error;
+pub mod error;
 mod lock;
 mod stale;
 mod takeover;
 
-pub use error::InstanceError;
 pub use takeover::acquire;
 
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use std::{
+        env::temp_dir,
         fs, io,
         path::PathBuf,
         process::Command,
@@ -46,7 +46,7 @@ mod tests {
     };
 
     use super::{
-        InstanceError,
+        error::InstanceError,
         lock::{InstanceLock, LOCK_FILE_NAME, current_uid, lock_path, try_acquire},
         stale::{process_is_alive, read_owner},
         takeover::{TakeoverPolicy, acquire_at}
@@ -66,8 +66,8 @@ mod tests {
     impl TempDir {
         fn new() -> Self {
             let unique = COUNTER.fetch_add(1, Ordering::Relaxed);
-            let path = std::env::temp_dir()
-                .join(format!("hydebar-instance-{}-{unique}", std::process::id()));
+            let path =
+                temp_dir().join(format!("hydebar-instance-{}-{unique}", std::process::id()));
             fs::create_dir_all(&path).expect("failed to create the test directory");
 
             Self(path)

@@ -1,4 +1,4 @@
-use crate::services::network::{ConnectivityState, DeviceState};
+use crate::services::network::data::model::{ConnectivityState, DeviceState};
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DeviceType {

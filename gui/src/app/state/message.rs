@@ -35,7 +35,7 @@ pub enum Message {
         geometry: Option<hydebar_core::outputs::scaling::ScreenGeometry>
     },
     /// The compositor answered where the bar's own strip stands.
-    StripRowsMeasured(std::collections::HashMap<String, f32>),
+    StripRowsMeasured(std::collections::HashMap<String, (f32, f32)>),
     /// The wallpaper in force was read off the disk, ready to draw.
     WallpaperRead(Option<(std::path::PathBuf, iced::widget::image::Handle)>),
     /// The pictures the desktop keeps of its own look were read off the disk.
@@ -44,6 +44,9 @@ pub enum Message {
     ConfigChanged(ConfigApplied),
     /// The configuration file was read again and could not be used.
     ConfigDegraded(ConfigDegradation),
+    /// The desktop's reduced-motion preference, read from the portal and
+    /// restated whenever it changes. `true` asks the bar to hold its motion.
+    ReducedMotion(bool),
     /// The process was asked to quit, by a takeover or by the session.
     ///
     /// Handled by taking every surface off the screen before the runtime is
@@ -66,7 +69,9 @@ pub enum Message {
         /// Whether the pointer is on the module now.
         entered: bool,
         /// Hint to show while it rests there, absent when it publishes none.
-        tooltip: Option<TooltipInfo>
+        tooltip: Option<TooltipInfo>,
+        /// On-screen reference of the module, for menu switching on hover.
+        anchor:  Option<ButtonUIRef>
     },
     /// The slow clock came due for the modules resting on the bar.
     PollAtRest,

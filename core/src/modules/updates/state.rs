@@ -1,91 +1,27 @@
 //! State of the updates module: what the bar knows, said as data.
 //!
-//! The rooms around it hold the behaviour: [`queries`] answers what the
-//! menu asks, [`transitions`] folds messages in, [`runs`] spawns the two
-//! long commands and [`lifecycle`] ties the module to the bar.
-
-use std::sync::Arc;
-
-use tokio::runtime::Handle;
-
-use crate::ModuleEventSender;
+//! [`message`] holds what the module answers to and the payloads those
+//! answers carry, and [`schedule`] is the one runner that fills them. The
+//! rooms around them hold the behaviour: [`queries`] answers what the menu
+//! asks, [`transitions`] folds messages in, [`runs`] spawns the two long
+//! commands and [`lifecycle`] ties the module to the bar.
 
 mod failures;
 mod hyde_clone;
 mod lifecycle;
+pub(super) mod message;
 mod queries;
 mod runs;
 mod schedule;
 mod transitions;
 
-use schedule::Schedule;
+use std::sync::Arc;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Update {
-    pub(super) package: String,
-    pub(super) from:    String,
-    pub(super) to:      String
-}
+use tokio::runtime::Handle;
 
-impl Update {
-    /// Name of the package the update is for.
-    #[must_use]
-    pub fn package(&self) -> &str {
-        &self.package
-    }
-
-    /// Version installed now, and the one it is going to.
-    #[must_use]
-    pub fn versions(&self) -> (&str, &str) {
-        (&self.from, &self.to)
-    }
-}
-
-/// What one look at the `HyDE` clone reported.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct HydeSnapshot {
-    /// Version the clone describes itself as.
-    pub(crate) version: String,
-    /// Subjects of the upstream commits the clone has not taken yet.
-    pub(crate) commits: Vec<String>
-}
-
-/// What the updates entry answers to.
-#[derive(Debug, Clone)]
-pub enum Message {
-    /// The check finished, and this is what is waiting.
-    UpdatesCheckCompleted(Vec<Update>),
-    /// A check ran but could not be trusted; what is known already stands.
-    CheckFailed,
-    /// The configured check cannot be run on this machine.
-    UpdatesUnavailable,
-    /// The package update ended, well or badly.
-    UpdateFinished {
-        /// Whether the installation failed.
-        failed: bool
-    },
-    /// The last lines the running package update printed.
-    UpdateLog(Vec<String>),
-    /// Open or close the list of what is waiting.
-    ToggleUpdatesList,
-    /// Check for updates now.
-    CheckNow,
-    /// Apply the configured update command, narrating into the window.
-    Update,
-    /// The `HyDE` clone was compared against upstream.
-    HydeChecked(HydeSnapshot),
-    /// Open or close the desktop's own update list.
-    ToggleHydeList,
-    /// Bring the `HyDE` clone up to date, narrating into the window.
-    UpdateHyde,
-    /// The last lines the running `HyDE` update printed.
-    HydeUpdateLog(Vec<String>),
-    /// The `HyDE` update ended, well or badly.
-    HydeUpdateFinished {
-        /// Whether the update failed.
-        failed: bool
-    }
-}
+pub use self::message::{HydeSnapshot, Message, Update};
+use self::schedule::Schedule;
+use crate::ModuleEventSender;
 
 #[derive(Debug, Default, Clone, Eq, PartialEq)]
 pub enum CheckState {

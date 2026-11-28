@@ -1,0 +1,33 @@
+//! Configuration for the {{label}} module.
+
+use serde::Deserialize;
+
+/// {{Pascal}} module behaviour.
+#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq)]
+#[serde(default)]
+pub struct {{Pascal}}ModuleConfig {
+    /// TODO: describe the first setting of the module.
+    pub verbose: bool
+}
+
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn an_empty_section_takes_the_defaults() {
+        let config: {{Pascal}}ModuleConfig =
+            toml::from_str("").expect("an empty section deserializes");
+
+        assert!(!config.verbose);
+    }
+
+    #[test]
+    fn the_setting_reads_from_the_file() {
+        let config: {{Pascal}}ModuleConfig =
+            toml::from_str("verbose = true").expect("the setting deserializes");
+
+        assert!(config.verbose);
+    }
+}

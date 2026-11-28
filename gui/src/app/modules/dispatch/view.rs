@@ -8,14 +8,17 @@ use iced::{Element, SurfaceId as Id};
 use log::error;
 
 use super::super::actions::custom_module_action;
-use crate::app::state::{App, Message};
+use crate::{
+    app::state::{App, Message},
+    views::tray::render_tray
+};
 
 impl App {
     #[expect(
         clippy::too_many_lines,
         reason = "one view arm per module name, read as a single dispatch table"
     )]
-    pub(crate) fn get_module_view(
+    pub(crate) fn module_view(
         &self,
         module_name: &ModuleName,
         id: Id,
@@ -23,6 +26,7 @@ impl App {
     ) -> Option<(Element<'_, Message>, Option<OnModulePress<Message>>)> {
         match module_name {
             ModuleName::AppLauncher => self
+                .modules
                 .app_launcher
                 .bar_view(&self.config.app_launcher_cmd, self.icons())
                 .map(|(content, _)| {
@@ -38,7 +42,7 @@ impl App {
                     return None;
                 };
 
-                let Some(module) = self.custom.get(name) else {
+                let Some(module) = self.modules.custom.get(name) else {
                     error!("Custom module `{name}` not found");
                     return None;
                 };
@@ -47,8 +51,12 @@ impl App {
                     .bar_view(definition, self.appearance(), self.icons())
                     .map(|(content, _)| (content, custom_module_action(definition)))
             }
-            ModuleName::Updates => self.updates.bar_view(&self.config.updates, self.icons()),
+            ModuleName::Updates => self
+                .modules
+                .updates
+                .bar_view(&self.config.updates, self.icons()),
             ModuleName::Clipboard => self
+                .modules
                 .clipboard
                 .bar_view(&self.config.clipboard_cmd, self.icons())
                 .map(|(content, _)| {
@@ -57,61 +65,70 @@ impl App {
                         Some(OnModulePress::Action(Box::new(Message::OpenClipboard)))
                     )
                 }),
-            ModuleName::Workspaces => self.workspaces.bar_view(
+            ModuleName::Workspaces => self.modules.workspaces.bar_view(
                 &self.outputs,
                 id,
                 &self.config.workspaces,
                 self.appearance()
             ),
-            ModuleName::WindowTitle => self
-                .window_title
-                .bar_view(&self.config.window_title, self.attention.is_on(module_name)),
-            ModuleName::SystemInfo => {
-                self.system_info
-                    .bar_view(&self.config.system, self.appearance(), self.icons())
-            }
+            ModuleName::WindowTitle => self.modules.window_title.bar_view(
+                &self.config.window_title,
+                self.focus.attention.is_on(module_name)
+            ),
+            ModuleName::SystemInfo => self.modules.system_info.bar_view(
+                &self.config.system,
+                self.appearance(),
+                self.icons()
+            ),
             ModuleName::Cpu => hydebar_core::modules::cpu::bar_view(
-                self.system_info.data(),
+                self.modules.system_info.data(),
                 &self.config.system,
                 self.appearance(),
                 self.icons()
             ),
             ModuleName::Memory => hydebar_core::modules::memory::bar_view(
-                self.system_info.data(),
+                self.modules.system_info.data(),
                 &self.config.system,
-                self.system_info.active_memory_format(&self.config.system),
+                self.modules
+                    .system_info
+                    .active_memory_format(&self.config.system),
                 self.appearance(),
                 self.icons()
             ),
             ModuleName::CpuTemp => hydebar_core::modules::cpu_temp::bar_view(
-                self.system_info.data(),
+                self.modules.system_info.data(),
                 &self.config.system,
                 self.appearance(),
                 self.icons()
             ),
             ModuleName::GpuTemp => hydebar_core::modules::gpu_temp::bar_view(
-                self.system_info.data(),
+                self.modules.system_info.data(),
                 &self.config.system,
                 self.appearance(),
                 self.icons()
             ),
-            ModuleName::KeyboardLayout => {
-                self.keyboard_layout.bar_view(&self.config.keyboard_layout)
-            }
-            ModuleName::KeyboardSubmap => self.keyboard_submap.bar_view(),
-            ModuleName::Tray => {
-                crate::views::tray::render_tray(&self.tray, id, opacity, self.icons())
-                    .map(|content| (content, None))
-            }
-            ModuleName::Clock => self.clock.bar_view(&self.config.clock),
-            ModuleName::HydeMenu => self.hyde_menu.bar_view(self.icons()),
-            ModuleName::Battery => self.battery.bar_view(&self.config.battery, self.icons()),
-            ModuleName::Privacy => self.privacy.bar_view(self.icons()),
-            ModuleName::ControlCenter => self.control_center.bar_view(self.icons()),
-            ModuleName::Audio => self.control_center.audio_bar(self.icons()),
-            ModuleName::Brightness => self.control_center.brightness_bar(self.icons()),
-            ModuleName::Weather => self.weather.bar_view(self.icons()),
-            ModuleName::Taskbar => self.taskbar.bar_view(self.config.appearance.font_size_px()),
+            ModuleName::KeyboardLayout => self
+                .modules
+                .keyboard_layout
+                .bar_view(&self.config.keyboard_layout),
+            ModuleName::KeyboardSubmap => self.modules.keyboard_submap.bar_view(),
+            ModuleName::Tray => render_tray(&self.modules.tray, id, opacity, self.icons())
+                .map(|content| (content, None)),
+            ModuleName::Clock => self.modules.clock.bar_view(&self.config.clock),
+            ModuleName::HydeMenu => self.modules.hyde_menu.bar_view(self.icons()),
+            ModuleName::Battery => self
+                .modules
+                .battery
+                .bar_view(&self.config.battery, self.icons()),
+            ModuleName::Privacy => self.modules.privacy.bar_view(self.icons()),
+            ModuleName::ControlCenter => self.modules.control_center.bar_view(self.icons()),
+            ModuleName::Audio => self.modules.control_center.audio_bar(self.icons()),
+            ModuleName::Brightness => self.modules.control_center.brightness_bar(self.icons()),
+            ModuleName::Weather => self.modules.weather.bar_view(self.icons()),
+            ModuleName::Taskbar => self
+                .modules
+                .taskbar
+                .bar_view(self.config.appearance.font_size_px()),
             ModuleName::KeybindHint => Some(hyde_button::bar_view(
                 hyde_button::HydeButton::KeybindHint,
                 self.icons(),
@@ -127,20 +144,23 @@ impl App {
                 self.icons(),
                 Message::LaunchCommand
             )),
-            ModuleName::Network => self.control_center.network_bar(self.icons()),
-            ModuleName::Bluetooth => self.control_center.bluetooth_bar(self.icons()),
-            ModuleName::PowerProfile => self.control_center.power_profile_bar(self.icons()),
-            ModuleName::Settings => self.settings.bar_view(self.icons()),
-            ModuleName::Themes => self.themes.bar_view(self.icons()),
-            ModuleName::Wallpaper => self.wallpaper.bar_view(self.icons()),
-            ModuleName::BarLayout => self.bar_layout.bar_view(self.icons()),
+            ModuleName::Network => self.modules.control_center.network_bar(self.icons()),
+            ModuleName::Bluetooth => self.modules.control_center.bluetooth_bar(self.icons()),
+            ModuleName::PowerProfile => {
+                self.modules.control_center.power_profile_bar(self.icons())
+            }
+            ModuleName::Settings => self.modules.settings.bar_view(self.icons()),
+            ModuleName::Themes => self.modules.themes.bar_view(self.icons()),
+            ModuleName::Wallpaper => self.modules.wallpaper.bar_view(self.icons()),
+            ModuleName::BarLayout => self.modules.bar_layout.bar_view(self.icons()),
             ModuleName::MediaPlayer => self
+                .modules
                 .media_player
                 .bar_view(&self.config.media_player, self.icons()),
-            ModuleName::Notifications => self.notifications.bar_view(self.icons()),
-            ModuleName::Screenshot => self.screenshot.bar_view(self.icons()),
+            ModuleName::Notifications => self.modules.notifications.bar_view(self.icons()),
+            ModuleName::Screenshot => self.modules.screenshot.bar_view(self.icons()),
             ModuleName::IdleInhibitor => Some(hydebar_core::modules::idle_inhibitor::bar_view(
-                self.control_center.is_idle_inhibited(),
+                self.modules.control_center.is_idle_inhibited(),
                 self.icons()
             ))
         }
@@ -167,7 +187,7 @@ mod tests {
         let app = test_app();
 
         for module_name in ModuleName::BUILT_IN {
-            let _ = app.get_module_view(&module_name, surface(), 1.0);
+            let _ = app.module_view(module_name, surface(), 1.0);
         }
     }
 
@@ -176,7 +196,7 @@ mod tests {
         let app = test_app();
 
         for module_name in ModuleName::BUILT_IN {
-            if let Some((content, _)) = app.get_module_view(&module_name, surface(), 1.0) {
+            if let Some((content, _)) = app.module_view(module_name, surface(), 1.0) {
                 let mut ui = simulator(content);
 
                 assert!(
@@ -193,7 +213,7 @@ mod tests {
 
         for module_name in [ModuleName::AppLauncher, ModuleName::Clipboard] {
             let (_, press) = app
-                .get_module_view(&module_name, surface(), 1.0)
+                .module_view(&module_name, surface(), 1.0)
                 .unwrap_or_else(|| panic!("{module_name:?} is drawn"));
 
             assert!(
@@ -208,7 +228,7 @@ mod tests {
         let app = test_app();
 
         assert!(
-            app.get_module_view(&ModuleName::Custom("gone".to_owned()), surface(), 1.0)
+            app.module_view(&ModuleName::Custom("gone".to_owned()), surface(), 1.0)
                 .is_none()
         );
     }
@@ -223,7 +243,7 @@ mod tests {
         });
 
         let (content, _) = app
-            .get_module_view(&ModuleName::Custom("mine".to_owned()), surface(), 1.0)
+            .module_view(&ModuleName::Custom("mine".to_owned()), surface(), 1.0)
             .expect("a declared module is built with the bar");
 
         let mut ui = simulator(content);
@@ -240,7 +260,7 @@ mod tests {
         });
 
         assert!(
-            app.get_module_view(&ModuleName::Custom("other".to_owned()), surface(), 1.0)
+            app.module_view(&ModuleName::Custom("other".to_owned()), surface(), 1.0)
                 .is_none()
         );
     }
@@ -255,7 +275,7 @@ mod tests {
             ModuleName::GameMode
         ] {
             let (_, press) = app
-                .get_module_view(&module_name, surface(), 1.0)
+                .module_view(&module_name, surface(), 1.0)
                 .unwrap_or_else(|| panic!("{module_name:?} is drawn"));
 
             assert!(press.is_some(), "{module_name:?} answers a press");
@@ -267,7 +287,7 @@ mod tests {
         let app = test_app();
 
         assert!(
-            app.get_module_view(&ModuleName::IdleInhibitor, surface(), 1.0)
+            app.module_view(&ModuleName::IdleInhibitor, surface(), 1.0)
                 .is_some()
         );
     }

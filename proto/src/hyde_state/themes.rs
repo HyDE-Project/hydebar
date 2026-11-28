@@ -159,12 +159,15 @@ mod tests {
 
     #[test]
     fn an_empty_directory_lists_no_themes() {
-        assert!(order(Vec::new()).is_empty());
+        assert_eq!(order(Vec::<Entry>::new()), [] as [String; 0]);
     }
 
     #[test]
     fn a_missing_directory_lists_no_themes() {
-        assert!(installed(Path::new("/nonexistent/hyde/themes")).is_empty());
+        assert_eq!(
+            installed(Path::new("/nonexistent/hyde/themes")),
+            [] as [String; 0]
+        );
     }
 
     #[test]

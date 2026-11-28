@@ -6,7 +6,7 @@
 //! one over it turns the change into the same family of motion as every other
 //! transition on the bar.
 
-use std::time::Duration;
+use std::{mem::replace, time::Duration};
 
 use iced::{
     Element, Theme,
@@ -105,7 +105,7 @@ impl Crossfade {
             return;
         }
 
-        self.previous = Some(std::mem::replace(&mut self.current, value));
+        self.previous = Some(replace(&mut self.current, value));
         self.progress.snap_to(0.0);
         self.progress.set_target(1.0);
     }

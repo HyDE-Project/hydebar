@@ -9,7 +9,10 @@
 //! Only the paths are answered here. Decoding belongs to whoever is going to
 //! draw them, and this crate draws nothing.
 
-use std::path::{Path, PathBuf};
+use std::{
+    fs::canonicalize,
+    path::{Path, PathBuf}
+};
 
 use super::swatch::wallpaper_digest;
 use crate::hyde_dirs::HydeDirs;
@@ -35,7 +38,7 @@ const THEME_WALLPAPER: &str = "wall.set";
 /// or points at a wallpaper that is gone.
 #[must_use]
 pub fn theme_preview(dirs: &HydeDirs, theme: &str) -> Option<PathBuf> {
-    let wallpaper = std::fs::canonicalize(dirs.theme_dir(theme).join(THEME_WALLPAPER)).ok()?;
+    let wallpaper = canonicalize(dirs.theme_dir(theme).join(THEME_WALLPAPER)).ok()?;
 
     picture_preview(dirs, &wallpaper)
 }

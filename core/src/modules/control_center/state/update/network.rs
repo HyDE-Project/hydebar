@@ -13,7 +13,8 @@ use crate::{
     services::{
         ReadOnlyService, ServiceEvent,
         network::{NetworkCommand, NetworkEvent}
-    }
+    },
+    utils::launcher::execute_command
 };
 
 impl ControlCenter {
@@ -71,14 +72,14 @@ impl ControlCenter {
             }
             NetworkMessage::WiFiMore(id) => {
                 if let Some(cmd) = &config.wifi_more_cmd {
-                    crate::utils::launcher::execute_command(cmd.clone());
+                    execute_command(cmd.clone());
 
                     return outputs.close_menu::<Message>(id, main_config);
                 }
             }
             NetworkMessage::VpnMore(id) => {
                 if let Some(cmd) = &config.vpn_more_cmd {
-                    crate::utils::launcher::execute_command(cmd.clone());
+                    execute_command(cmd.clone());
 
                     return outputs.close_menu::<Message>(id, main_config);
                 }

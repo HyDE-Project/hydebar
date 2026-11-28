@@ -27,14 +27,16 @@ impl App {
     ) -> Option<Page<'_>> {
         match menu_type {
             MenuType::Updates => Some((
-                self.updates
+                self.modules
+                    .updates
                     .menu_view(id, opacity, self.icons())
                     .map(Message::Updates),
                 MenuSize::Small,
                 None
             )),
             MenuType::Tray(name) => Some((
-                self.tray
+                self.modules
+                    .tray
                     .menu_view(name, opacity, self.icons())
                     .map(Message::Tray),
                 MenuSize::Small,
@@ -42,7 +44,8 @@ impl App {
             )),
 
             MenuType::MediaPlayer => Some((
-                self.media_player
+                self.modules
+                    .media_player
                     .menu_view(&self.config.media_player, opacity, self.icons())
                     .map(Message::MediaPlayer),
                 MenuSize::Large,
@@ -50,14 +53,16 @@ impl App {
             )),
 
             MenuType::Notifications => Some((
-                self.notifications
+                self.modules
+                    .notifications
                     .menu_view(opacity, self.icons())
                     .map(Message::Notifications),
                 MenuSize::Medium,
                 None
             )),
             MenuType::Screenshot => Some((
-                self.screenshot
+                self.modules
+                    .screenshot
                     .menu_view(opacity, self.icons())
                     .map(Message::Screenshot),
                 MenuSize::Small,

@@ -13,6 +13,7 @@ mod keyboard_layout;
 mod media_player;
 mod modules;
 mod notifications;
+mod renderer;
 mod serde_helpers;
 mod system_info;
 mod themes;
@@ -27,11 +28,12 @@ mod themes_tests;
 
 pub use appearance::{
     AnimationConfig, Appearance, AppearanceColor, AppearanceStyle, BAR_PADDING_EM,
-    DEFAULT_FONT_SIZE, DEFAULT_RADIUS, GROUP_GAP_EM, ICON_LABEL_GAP_EM, MODULE_GAP_EM,
-    MODULE_SIDE_PADDING_EM, MODULE_VERTICAL_PADDING_EM, MenuAppearance, SizeValue,
-    WORKSPACE_ACTIVE_MARGIN_EM, WORKSPACE_ACTIVE_PADDING_EM, WORKSPACE_GAP_EM,
-    WORKSPACE_GLYPH_ADVANCE_EM, WORKSPACE_MIN_HEIGHT_EM, WORKSPACE_MIN_WIDTH_EM,
-    WORKSPACE_PADDING_EM, WindowBorder, WindowShadow
+    DEFAULT_FONT_SIZE, DEFAULT_RADIUS, EntryAlignment, FrameConfig, FrameEdge, FrameEdges,
+    FrameEntry, GROUP_GAP_EM, ICON_LABEL_GAP_EM, MODULE_GAP_EM, MODULE_SIDE_PADDING_EM,
+    MODULE_VERTICAL_PADDING_EM, MenuAppearance, SizeValue, WORKSPACE_ACTIVE_MARGIN_EM,
+    WORKSPACE_ACTIVE_PADDING_EM, WORKSPACE_GAP_EM, WORKSPACE_GLYPH_ADVANCE_EM,
+    WORKSPACE_MIN_HEIGHT_EM, WORKSPACE_MIN_WIDTH_EM, WORKSPACE_PADDING_EM, WindowBorder,
+    WindowShadow
 };
 pub use battery::BatteryModuleConfig;
 pub use clock::ClockModuleConfig;
@@ -45,15 +47,16 @@ pub use keyboard_layout::KeyboardLayoutModuleConfig;
 pub use media_player::MediaPlayerModuleConfig;
 pub use modules::{BarLayer, ModuleDef, ModuleName, Modules, Outputs, Position};
 pub use notifications::{NotificationSource, NotificationsConfig};
+pub use renderer::RendererChoice;
 use serde::Deserialize;
 pub use serde_helpers::RegexCfg;
 pub use system_info::{
     MemoryFormat, SystemIndicator, SystemInfoCpu, SystemInfoDisk, SystemInfoGpu, SystemInfoMemory,
     SystemInfoTemperature, SystemModuleConfig
 };
-pub use themes::PresetTheme;
+pub use themes::{preset_appearance, preset_names, preset_source};
 pub use updates::{HydeBranch, UpdatesModuleConfig};
-pub use validation::ConfigValidationError;
+pub use validation::error::ConfigValidationError;
 pub use weather::WeatherModuleConfig;
 pub use window_title::{WindowTitleConfig, WindowTitleMode};
 pub use workspaces::{WorkspaceVisibilityMode, WorkspacesModuleConfig};
@@ -136,7 +139,10 @@ pub struct Config {
     pub notifications:       NotificationsConfig,
     #[serde(default)]
     /// How the overview of the screens and their windows is drawn.
-    pub desk:                DeskConfig
+    pub desk:                DeskConfig,
+    #[serde(default)]
+    /// Which drawing backend the bar asks its renderer for.
+    pub renderer:            RendererChoice
 }
 
 impl Default for Config {
@@ -166,7 +172,8 @@ impl Default for Config {
             weather:             WeatherModuleConfig::default(),
             icons:               IconsConfig::default(),
             notifications:       NotificationsConfig::default(),
-            desk:                DeskConfig::default()
+            desk:                DeskConfig::default(),
+            renderer:            RendererChoice::default()
         }
     }
 }

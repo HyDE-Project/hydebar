@@ -5,12 +5,12 @@ use std::collections::HashMap;
 use iced::futures::StreamExt;
 use itertools::Itertools;
 use masterror::AppResult;
-use zbus::zvariant::OwnedObjectPath;
+use zbus::OwnedObjectPath;
 
 use super::super::super::proxies::{AccessPointProxy, DeviceProxy, WirelessDeviceProxy};
 use crate::services::{
     bus::bus_failure,
-    network::{AccessPoint, DeviceState}
+    network::data::model::{AccessPoint, DeviceState}
 };
 
 /// Scans one wireless device and returns the access points it can see,
@@ -21,14 +21,12 @@ pub(super) async fn access_points_of(
 ) -> AppResult<Vec<AccessPoint>> {
     let device = DeviceProxy::builder(conn)
         .path(path)
-        .map_err(|e| bus_failure("Failed to set DeviceProxy path", &e))?
         .build()
         .await
         .map_err(|e| bus_failure("Failed to build DeviceProxy", &e))?;
 
     let wireless_device = WirelessDeviceProxy::builder(conn)
         .path(path)
-        .map_err(|e| bus_failure("Failed to set WirelessDeviceProxy path", &e))?
         .build()
         .await
         .map_err(|e| bus_failure("Failed to build WirelessDeviceProxy", &e))?;
@@ -83,7 +81,6 @@ async fn read_access_point(
 ) -> AppResult<AccessPoint> {
     let ap = AccessPointProxy::builder(conn)
         .path(path)
-        .map_err(|e| bus_failure("Failed to set AccessPointProxy path", &e))?
         .build()
         .await
         .map_err(|e| bus_failure("Failed to build AccessPointProxy", &e))?;

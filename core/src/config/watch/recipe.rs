@@ -21,7 +21,7 @@ use super::{
     ConfigEvent, WatchLoopOutcome,
     interpret::{handle_watch_event, interpret_event, process_event_batches}
 };
-use crate::config::ConfigManager;
+use crate::{config::ConfigManager, services::reconnect_delay};
 
 struct ConfigWatcher {
     path:    PathBuf,
@@ -120,7 +120,7 @@ impl Recipe for ConfigWatcher {
                             );
 
                             restarts = restarts.saturating_add(1);
-                            tokio::time::sleep(crate::services::reconnect_delay(restarts)).await;
+                            tokio::time::sleep(reconnect_delay(restarts)).await;
                         }
                         WatchLoopOutcome::HandlerClosed => {
                             info!("Config watch handler closed; stopping watcher loop");

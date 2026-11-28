@@ -7,13 +7,15 @@ use iced::futures::{
 };
 use log::error;
 use masterror::{AppError, AppResult};
-use zbus::zvariant::ObjectPath;
+use zbus::ObjectPath;
 
 use super::{
-    PowerProfile, State, UPowerEvent, UPowerService,
-    dbus::{PowerProfilesProxy, UPowerDbus}
+    State,
+    dbus::{PowerProfilesProxy, UPowerDbus},
+    handle::UPowerService,
+    model::{PowerProfile, UPowerEvent}
 };
-use crate::services::{ServiceEvent, ServiceEventPublisher, bus::bus_failure};
+use crate::services::{ServiceEvent, ServiceEventPublisher, bus::bus_failure, reconnect_delay};
 
 impl UPowerService {
     #[expect(
@@ -30,7 +32,7 @@ impl UPowerService {
             let mut events = Vec::new();
 
             for device_path in battery_devices {
-                let device = upower.get_device(device_path).await?;
+                let device = upower.device(device_path).await?;
 
                 events.push(
                     stream_select!(
@@ -76,8 +78,7 @@ impl UPowerService {
                     UPowerEvent::UpdatePowerProfile(
                         powerprofiles
                             .cached_active_profile()
-                            .map(|d| d.map(PowerProfile::from).unwrap_or_default())
-                            .unwrap_or_default()
+                            .map_or_default(|d| d.map_or_default(PowerProfile::from))
                     )
                 });
 
@@ -129,15 +130,13 @@ impl UPowerService {
                         }
 
                         error!("the power event stream ended, reconnecting");
-
-                        State::Error
                     }
                     Err(err) => {
                         error!("Failed to listen for upower events: {err}");
-
-                        State::Error
                     }
                 }
+
+                State::Error
             }
             State::Error => State::Init
         }
@@ -157,7 +156,7 @@ impl UPowerService {
             match &state {
                 State::Error => {
                     failures = failures.saturating_add(1);
-                    tokio::time::sleep(crate::services::reconnect_delay(failures)).await;
+                    tokio::time::sleep(reconnect_delay(failures)).await;
                 }
                 State::Active(..) => failures = 0,
                 State::Init => {}

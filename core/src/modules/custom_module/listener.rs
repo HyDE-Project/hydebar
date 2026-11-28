@@ -13,7 +13,7 @@ use super::{
     data::CustomListenData,
     error::{CustomCommandError, CustomListenerError, truncate_snippet}
 };
-use crate::{ModuleEventSender, services::ServiceEvent};
+use crate::{ModuleEventSender, services::ServiceEvent, utils::process_group::spawn_guarded};
 
 pub(super) fn send_event(
     sender: &ModuleEventSender<Message>,
@@ -62,7 +62,7 @@ where
                 error!(
                     "Custom module '{module_name}' failed to parse JSON output: {parse_error:?}"
                 );
-                send_event(sender, ServiceEvent::Error(parse_error.clone()));
+                send_event(sender, ServiceEvent::Error(parse_error));
             }
         }
     }
@@ -89,7 +89,7 @@ pub(super) async fn run_custom_listener(
         .arg(command.as_ref())
         .stdout(Stdio::piped());
 
-    let (mut child, mut guard) = crate::utils::process_group::spawn_guarded(&mut spawner)
+    let (mut child, mut guard) = spawn_guarded(&mut spawner)
         .map_err(|err| CustomListenerError::Command(CustomCommandError::Spawn(Arc::new(err))))?;
 
     let stdout = child.stdout.take().ok_or(CustomListenerError::Command(

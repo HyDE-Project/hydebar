@@ -38,7 +38,7 @@ build() {
 
 check() {
   cd "$pkgname-$pkgver"
-  cargo test --release --locked --all-features
+  cargo test --locked --all-features --workspace
 }
 
 package() {

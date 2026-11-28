@@ -1,16 +1,14 @@
 //! Reading and parsing the configuration file from disk.
 //!
-//! One read is one pass: the file is read to a string, parsed as TOML, and
-//! handed to the `HyDE` overlay in [`super::hyde`] before it is returned.
+//! One read is one pass: the file is read to a string, parsed as TOML, a
+//! named theme is stood in for its file when one answers beside the
+//! configuration, and the result is handed to the `HyDE` overlay in
+//! [`super::hyde`] before it is returned.
 //! Whether the file declared a `[modules]` section of its own is noted while
 //! the raw table is still in hand, because that presence — not its content —
 //! is what pins the layout against the desktop's.
 
-use std::{
-    fs::File,
-    io::Read,
-    path::{Path, PathBuf}
-};
+use std::{fs::File, io::Read, path::Path};
 
 use hydebar_proto::{
     bar_layout,
@@ -18,64 +16,17 @@ use hydebar_proto::{
     theme_source::{self, HydeTheme}
 };
 
-use self::unknown::read_naming_unknown;
+use self::{
+    theme::resolve_named_theme, theme_base::resolve_theme_base, unknown::read_naming_unknown
+};
 use super::hyde::follow_hyde;
 
+mod error;
+pub(super) mod theme;
+mod theme_base;
 mod unknown;
 
-#[derive(Debug)]
-pub enum ConfigReadError {
-    Read {
-        path:   PathBuf,
-        source: std::io::Error
-    },
-    Parse {
-        path:   PathBuf,
-        source: toml::de::Error
-    }
-}
-
-impl std::fmt::Display for ConfigReadError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Read {
-                path,
-                source
-            } => {
-                write!(
-                    f,
-                    "failed to read config file '{}': {}",
-                    path.display(),
-                    source
-                )
-            }
-            Self::Parse {
-                path,
-                source
-            } => {
-                write!(
-                    f,
-                    "failed to parse config file '{}': {}",
-                    path.display(),
-                    source
-                )
-            }
-        }
-    }
-}
-
-impl std::error::Error for ConfigReadError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Self::Read {
-                source, ..
-            } => Some(source),
-            Self::Parse {
-                source, ..
-            } => Some(source)
-        }
-    }
-}
+pub use error::ConfigReadError;
 
 pub fn read_config(path: &Path) -> Result<Config, ConfigReadError> {
     read_config_with(path, theme_source::load, bar_layout::load)
@@ -101,11 +52,13 @@ where
             source
         })?;
 
-    let table: toml::Table =
+    let mut table: toml::Table =
         toml::from_str(&content).map_err(|source| ConfigReadError::Parse {
             path: path.to_path_buf(),
             source
         })?;
+    resolve_named_theme(&mut table, path)?;
+    resolve_theme_base(&mut table, path)?;
     let declared = declares_modules(&table);
 
     read_naming_unknown(table, path)

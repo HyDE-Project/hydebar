@@ -11,7 +11,10 @@
 //! layout of a `HyDE` install is stated in one place instead of being spelled
 //! out again at each call site.
 
-use std::path::{Path, PathBuf};
+use std::{
+    env::var,
+    path::{Path, PathBuf}
+};
 
 /// The four roots `HyDE` spreads its files across.
 ///
@@ -202,12 +205,14 @@ fn xdg_dir(key: &str, fallback: &str) -> Option<PathBuf> {
 
 /// Returns an environment variable only when it holds a non empty value.
 fn non_empty_var(key: &str) -> Option<String> {
-    std::env::var(key).ok().filter(|value| !value.is_empty())
+    var(key).ok().filter(|value| !value.is_empty())
 }
 
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
+    use std::fs::create_dir_all;
+
     use super::*;
 
     fn dirs() -> HydeDirs {
@@ -262,7 +267,7 @@ mod tests {
     #[test]
     fn a_configuration_directory_alone_is_enough_to_read_as_installed() {
         let root = tempfile::TempDir::new().expect("tempdir");
-        std::fs::create_dir_all(root.path().join("config").join("hyde"))
+        create_dir_all(root.path().join("config").join("hyde"))
             .expect("create hyde config directory");
 
         let dirs = HydeDirs::new(

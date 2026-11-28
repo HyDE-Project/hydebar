@@ -9,7 +9,8 @@ use super::super::super::{
 use crate::{
     config::ControlCenterModuleConfig,
     outputs::Outputs,
-    services::{ReadOnlyService, ServiceEvent, audio::AudioCommand}
+    services::{ReadOnlyService, ServiceEvent, audio::AudioCommand},
+    utils::launcher::execute_command
 };
 
 /// Volume moved by one wheel notch over the bar entry, in percent.
@@ -80,14 +81,14 @@ impl ControlCenter {
             }
             AudioMessage::SinksMore(id) => {
                 if let Some(cmd) = &config.audio_sinks_more_cmd {
-                    crate::utils::launcher::execute_command(cmd.clone());
+                    execute_command(cmd.clone());
 
                     return outputs.close_menu::<Message>(id, main_config);
                 }
             }
             AudioMessage::SourcesMore(id) => {
                 if let Some(cmd) = &config.audio_sources_more_cmd {
-                    crate::utils::launcher::execute_command(cmd.clone());
+                    execute_command(cmd.clone());
 
                     return outputs.close_menu::<Message>(id, main_config);
                 }

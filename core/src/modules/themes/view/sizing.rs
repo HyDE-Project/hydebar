@@ -186,9 +186,11 @@ pub(in crate::modules::themes) fn desired_height(
     let dots = (chip_rows * widgets::DOT_ROW_EM).mul_add(control, actions);
 
     style::page_height(
-        rows(state, font_size, available_width)
-            + offered_rows
-            + offered_sections * style::SECTION_TITLE_ROWS,
+        f32::mul_add(
+            offered_sections,
+            style::SECTION_TITLE_ROWS,
+            rows(state, font_size, available_width) + offered_rows
+        ),
         font_size
     ) + dots
 }

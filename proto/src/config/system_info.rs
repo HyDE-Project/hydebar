@@ -78,7 +78,7 @@ mod tests {
 
         assert!(!config.has_alternatives());
         assert_eq!(config.memory.format, MemoryFormat::Percentage);
-        assert!(config.memory.format_alt.is_empty());
+        assert_eq!(config.memory.format_alt, []);
     }
 
     #[test]

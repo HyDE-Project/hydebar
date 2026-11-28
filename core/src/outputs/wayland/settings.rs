@@ -11,6 +11,9 @@ use crate::{
     config::{AppearanceStyle, BarLayer, Position}
 };
 
+/// What one reservation panel of the frame asks the compositor for.
+pub mod panel;
+
 /// Maps the configured bar layer onto the compositor layer it is created on.
 const fn surface_layer(layer: BarLayer) -> Layer {
     match layer {
@@ -53,9 +56,28 @@ pub fn main_settings(
 ) -> LayerShellSettings {
     let height = layer_height(style, scale_factor, configured_height);
 
+    let (size, anchor) = match position {
+        Position::Top => (
+            Some((0, height as u32)),
+            Anchor::TOP | Anchor::LEFT | Anchor::RIGHT
+        ),
+        Position::Bottom => (
+            Some((0, height as u32)),
+            Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT
+        ),
+        Position::Left => (
+            Some((height as u32, 0)),
+            Anchor::LEFT | Anchor::TOP | Anchor::BOTTOM
+        ),
+        Position::Right => (
+            Some((height as u32, 0)),
+            Anchor::RIGHT | Anchor::TOP | Anchor::BOTTOM
+        )
+    };
+
     LayerShellSettings {
         namespace: MAIN_NAMESPACE.to_string(),
-        size: Some((0, height as u32)),
+        size,
         layer: surface_layer(layer),
         keyboard_interactivity: if menu_keyboard_focus {
             KeyboardInteractivity::OnDemand
@@ -64,11 +86,7 @@ pub fn main_settings(
         },
         exclusive_zone: height as i32,
         output,
-        anchor: match position {
-            Position::Top => Anchor::TOP,
-            Position::Bottom => Anchor::BOTTOM
-        } | Anchor::LEFT
-            | Anchor::RIGHT,
+        anchor,
         ..Default::default()
     }
 }
@@ -134,6 +152,28 @@ pub fn desk_settings(output: Option<OutputId>, layer: BarLayer) -> LayerShellSet
     }
 }
 
+/// Settings of the surface the ring of the frame is painted on.
+///
+/// The ring is one fullscreen, click-through paint of every strip the user
+/// switched on, drawn as a single shape so the outer corners can round past
+/// the thickness of a strip: a bezel one strip wide with wide corners is one
+/// thing, and only a surface spanning the whole screen can paint it. It
+/// reserves no space on its own — pushing windows off the strips is the
+/// panels' work — and it carries the bar's namespace, for the ring is the
+/// same paint continued around the screen and is blurred by the same rule.
+pub fn frame_settings(output: Option<OutputId>, layer: BarLayer) -> LayerShellSettings {
+    LayerShellSettings {
+        namespace: "hydebar-frame".to_string(),
+        size: Some((0, 0)),
+        layer: surface_layer(layer),
+        keyboard_interactivity: KeyboardInteractivity::None,
+        output,
+        anchor: Anchor::TOP | Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT,
+        exclusive_zone: -1,
+        ..Default::default()
+    }
+}
+
 /// Settings of the surface the notification popups are drawn on.
 ///
 /// Created input-free through [`draw_only`], stated as a follow-up task.
@@ -143,16 +183,19 @@ pub fn desk_settings(output: Option<OutputId>, layer: BarLayer) -> LayerShellSet
 /// raised there later. Rising only when there is something to show is what
 /// keeps the popups above whatever the bar raised before them.
 pub fn notifications_settings(output: Option<OutputId>, position: Position) -> LayerShellSettings {
+    let anchor = match position {
+        Position::Top | Position::Left => Anchor::TOP | Anchor::RIGHT,
+        Position::Bottom => Anchor::BOTTOM | Anchor::RIGHT,
+        Position::Right => Anchor::TOP | Anchor::LEFT
+    };
+
     LayerShellSettings {
         namespace: NOTIFICATIONS_NAMESPACE.to_string(),
         size: Some((NOTIFICATIONS_WIDTH, 1)),
         layer: Layer::Background,
         keyboard_interactivity: KeyboardInteractivity::None,
         output,
-        anchor: match position {
-            Position::Top => Anchor::TOP,
-            Position::Bottom => Anchor::BOTTOM
-        } | Anchor::RIGHT,
+        anchor,
         ..Default::default()
     }
 }
@@ -196,6 +239,53 @@ mod tests {
             notifications_settings(None, Position::Top).namespace,
             NOTIFICATIONS_NAMESPACE
         );
+        assert_eq!(
+            notifications_settings(None, Position::Top).namespace,
+            NOTIFICATIONS_NAMESPACE
+        );
+    }
+
+    #[test]
+    fn every_surface_anchors_to_its_bar_edge() {
+        for position in [
+            Position::Top,
+            Position::Bottom,
+            Position::Left,
+            Position::Right
+        ] {
+            let (edge, cross) = match position {
+                Position::Top => (Anchor::TOP, Anchor::LEFT | Anchor::RIGHT),
+                Position::Bottom => (Anchor::BOTTOM, Anchor::LEFT | Anchor::RIGHT),
+                Position::Left => (Anchor::LEFT, Anchor::TOP | Anchor::BOTTOM),
+                Position::Right => (Anchor::RIGHT, Anchor::TOP | Anchor::BOTTOM)
+            };
+
+            let bar = main_settings(
+                AppearanceStyle::Islands,
+                None,
+                position,
+                false,
+                1.0,
+                None,
+                BarLayer::Top
+            );
+
+            assert!(bar.anchor.contains(edge));
+            assert!(bar.anchor.contains(cross));
+        }
+
+        // notifications avoid the right bar and follow top/bottom bars
+        for position in [Position::Top, Position::Left] {
+            let anchor = notifications_settings(None, position).anchor;
+            assert!(anchor.contains(Anchor::TOP));
+            assert!(anchor.contains(Anchor::RIGHT));
+        }
+        let bottom = notifications_settings(None, Position::Bottom).anchor;
+        assert!(bottom.contains(Anchor::BOTTOM));
+        assert!(bottom.contains(Anchor::RIGHT));
+        let right = notifications_settings(None, Position::Right).anchor;
+        assert!(right.contains(Anchor::TOP));
+        assert!(right.contains(Anchor::LEFT));
     }
 
     #[test]
@@ -259,5 +349,16 @@ mod tests {
             76.0
         );
         assert_eq!(layer_height(AppearanceStyle::Solid, 0.5, Some(38.0)), 15.0);
+    }
+
+    #[test]
+    fn the_ring_surface_paints_everywhere_and_reserves_nothing() {
+        // the ring is one paint travelling around the screen, so it covers
+        // the whole output, takes no pointer and pushes no windows
+        let settings = frame_settings(Some(OutputId::for_tests()), BarLayer::Top);
+
+        assert_eq!(settings.anchor, Anchor::all());
+        assert_eq!(settings.exclusive_zone, -1);
+        assert_eq!(settings.namespace, "hydebar-frame");
     }
 }

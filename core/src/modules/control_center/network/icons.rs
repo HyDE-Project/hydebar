@@ -39,23 +39,23 @@ impl ActiveConnectionInfo {
 
     /// The glyph standing for this signal on an open network.
     #[must_use]
-    pub fn get_wifi_icon(signal: u8) -> Icons {
+    pub fn wifi_icon(signal: u8) -> Icons {
         WIFI_SIGNAL_ICONS[1 + Self::signal_bucket(signal)]
     }
 
     /// The glyph standing for this signal on a network needing a secret.
     #[must_use]
-    pub fn get_wifi_lock_icon(signal: u8) -> Icons {
+    pub fn wifi_lock_icon(signal: u8) -> Icons {
         WIFI_LOCK_SIGNAL_ICONS[Self::signal_bucket(signal)]
     }
 
     /// The glyph standing for this connection.
     #[must_use]
-    pub fn get_icon(&self) -> Icons {
+    pub fn icon(&self) -> Icons {
         match self {
             Self::WiFi {
                 strength, ..
-            } => Self::get_wifi_icon(*strength),
+            } => Self::wifi_icon(*strength),
             Self::Wired {
                 ..
             } => Icons::Ethernet,
@@ -67,7 +67,7 @@ impl ActiveConnectionInfo {
 
     /// How much attention this connection deserves.
     #[must_use]
-    pub const fn get_indicator_state(&self) -> IndicatorState {
+    pub const fn indicator_state(&self) -> IndicatorState {
         match self {
             Self::WiFi {
                 strength: 0 | 1, ..
@@ -85,55 +85,40 @@ mod tests {
     #[test]
     fn every_possible_signal_yields_a_wifi_icon_without_panicking() {
         for signal in u8::MIN..=u8::MAX {
-            let _ = ActiveConnectionInfo::get_wifi_icon(signal);
+            let _ = ActiveConnectionInfo::wifi_icon(signal);
         }
     }
 
     #[test]
     fn every_possible_signal_yields_a_wifi_lock_icon_without_panicking() {
         for signal in u8::MIN..=u8::MAX {
-            let _ = ActiveConnectionInfo::get_wifi_lock_icon(signal);
+            let _ = ActiveConnectionInfo::wifi_lock_icon(signal);
         }
     }
 
     #[test]
     fn signal_quartiles_pick_ascending_wifi_icons() {
-        assert_eq!(ActiveConnectionInfo::get_wifi_icon(0), Icons::Wifi1);
-        assert_eq!(ActiveConnectionInfo::get_wifi_icon(25), Icons::Wifi2);
-        assert_eq!(ActiveConnectionInfo::get_wifi_icon(50), Icons::Wifi3);
-        assert_eq!(ActiveConnectionInfo::get_wifi_icon(75), Icons::Wifi4);
-        assert_eq!(ActiveConnectionInfo::get_wifi_icon(100), Icons::Wifi5);
+        assert_eq!(ActiveConnectionInfo::wifi_icon(0), Icons::Wifi1);
+        assert_eq!(ActiveConnectionInfo::wifi_icon(25), Icons::Wifi2);
+        assert_eq!(ActiveConnectionInfo::wifi_icon(50), Icons::Wifi3);
+        assert_eq!(ActiveConnectionInfo::wifi_icon(75), Icons::Wifi4);
+        assert_eq!(ActiveConnectionInfo::wifi_icon(100), Icons::Wifi5);
     }
 
     #[test]
     fn signal_quartiles_pick_ascending_wifi_lock_icons() {
-        assert_eq!(
-            ActiveConnectionInfo::get_wifi_lock_icon(0),
-            Icons::WifiLock1
-        );
-        assert_eq!(
-            ActiveConnectionInfo::get_wifi_lock_icon(25),
-            Icons::WifiLock2
-        );
-        assert_eq!(
-            ActiveConnectionInfo::get_wifi_lock_icon(50),
-            Icons::WifiLock3
-        );
-        assert_eq!(
-            ActiveConnectionInfo::get_wifi_lock_icon(75),
-            Icons::WifiLock4
-        );
-        assert_eq!(
-            ActiveConnectionInfo::get_wifi_lock_icon(100),
-            Icons::WifiLock5
-        );
+        assert_eq!(ActiveConnectionInfo::wifi_lock_icon(0), Icons::WifiLock1);
+        assert_eq!(ActiveConnectionInfo::wifi_lock_icon(25), Icons::WifiLock2);
+        assert_eq!(ActiveConnectionInfo::wifi_lock_icon(50), Icons::WifiLock3);
+        assert_eq!(ActiveConnectionInfo::wifi_lock_icon(75), Icons::WifiLock4);
+        assert_eq!(ActiveConnectionInfo::wifi_lock_icon(100), Icons::WifiLock5);
     }
 
     #[test]
     fn a_signal_past_one_hundred_stays_in_the_top_bucket() {
-        assert_eq!(ActiveConnectionInfo::get_wifi_icon(u8::MAX), Icons::Wifi5);
+        assert_eq!(ActiveConnectionInfo::wifi_icon(u8::MAX), Icons::Wifi5);
         assert_eq!(
-            ActiveConnectionInfo::get_wifi_lock_icon(u8::MAX),
+            ActiveConnectionInfo::wifi_lock_icon(u8::MAX),
             Icons::WifiLock5
         );
     }

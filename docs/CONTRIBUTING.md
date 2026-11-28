@@ -113,7 +113,7 @@ git remote add upstream https://github.com/RAprogramm/hydebar.git
 cargo build --release
 
 # Run
-./target/release/hydebar-app
+./target/release/hydebar
 ```
 
 ---
@@ -321,9 +321,8 @@ mod tests {
 
     #[test]
     fn test_theme_loads_correctly() {
-        let theme = PresetTheme::CatppuccinMocha;
-        let appearance = theme.to_appearance();
-        assert_eq!(appearance.animations.enabled, true);
+        let appearance = preset_appearance("catppuccin-mocha").expect("theme");
+        assert!(appearance.animations.enabled);
     }
 }
 ```
@@ -334,76 +333,25 @@ mod tests {
 
 ### Creating a New Theme
 
-1. **Choose colors** - Pick a cohesive palette
-2. **Add to PresetTheme enum** in `proto/src/config/themes.rs`
-   (the enum is `#[serde(rename_all = "kebab-case")]`, so `YourThemeName`
-   becomes `appearance = "your-theme-name"`):
+Themes are data, not Rust. A preset is a whole appearance table in a TOML
+file; the roster beside it embeds the file. **No Rust logic changes.**
 
-```rust
-#[derive(Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
-#[serde(rename_all = "kebab-case")]
-pub enum PresetTheme {
-    // ... existing themes
-    YourThemeName
-}
-```
+1. **Copy an existing theme.** Duplicate one `.toml` in
+   `proto/src/config/themes/`, rename it to a kebab-case name
+   (`your-theme-name.toml`), and recolor it. Keep every key an appearance
+   needs; a partial table falls back to `Appearance::default()` for the
+   rest, which is easier to read as a full table.
 
-3. **Implement theme function** — follow the existing constructors in
-   `themes.rs`; colors are `AppearanceColor::Simple(HexColor::rgb(r, g, b))`:
+2. **Add one row to `THEME_SOURCES`.** In `proto/src/config/themes.rs`,
+   add `("your-theme-name", include_str!("themes/your-theme-name.toml"))`.
+   The name is `appearance = "your-theme-name"`. `preset_appearance` and
+   `preset_names` read the roster; nothing else changes.
 
-```rust
-fn your_theme_name() -> Appearance {
-    Appearance {
-        style: AppearanceStyle::Islands,
-        opacity: 0.95,
-        background_color: AppearanceColor::Simple(HexColor::rgb(26, 27, 38)),
-        primary_color: AppearanceColor::Simple(HexColor::rgb(122, 162, 247)),
-        secondary_color: AppearanceColor::Simple(HexColor::rgb(22, 22, 30)),
-        success_color: AppearanceColor::Simple(HexColor::rgb(158, 206, 106)),
-        danger_color: AppearanceColor::Simple(HexColor::rgb(247, 118, 142)),
-        warning_color: AppearanceColor::Simple(HexColor::rgb(224, 175, 104)),
-        text_color: AppearanceColor::Simple(HexColor::rgb(192, 202, 245)),
-        workspace_colors: vec![
-            AppearanceColor::Simple(HexColor::rgb(122, 162, 247)),
-            AppearanceColor::Simple(HexColor::rgb(187, 154, 247)),
-        ],
-        special_workspace_colors: Some(vec![AppearanceColor::Simple(
-            HexColor::rgb(247, 118, 142)
-        )]),
-        menu: MenuAppearance {
-            opacity: 0.95,
-            backdrop: 0.3
-        },
-        ..Appearance::default()
-    }
-}
-```
+3. **Check it loads.** `cargo test -p hydebar-proto` runs the theme
+   round-trips; `preset_appearance("your-theme-name")` must return `Some`,
+   `preset_appearance("no-such-theme")` stays `None`.
 
-4. **Add to match statement** in `to_appearance()`:
-
-```rust
-impl PresetTheme {
-    pub fn to_appearance(self) -> Appearance {
-        match self {
-            // ... existing themes
-            PresetTheme::YourThemeName => your_theme_name(),
-        }
-    }
-}
-```
-
-5. **Add tests**:
-
-```rust
-#[test]
-fn your_theme_name_loads() {
-    let theme = PresetTheme::YourThemeName;
-    let appearance = theme.to_appearance();
-    assert!(appearance.animations.enabled);
-}
-```
-
-6. **Update documentation** in `docs/THEMES.md`:
+4. **Update documentation** in `docs/THEMES.md`:
 
 ```markdown
 ## Your Theme Name
@@ -425,29 +373,33 @@ appearance = "your-theme-name"
 
 ### Creating a New Module
 
-A module lives in `core/src/modules/` and implements the
-`Module` trait from `core/src/modules.rs` (`register`,
-`deregister`, `poll_schedule`/`poll`, `view`, `subscription`). Wiring it up
-touches four places:
+Scaffold it instead of copying an existing one:
 
-1. **Name** - add a variant to `ModuleName` (and its `BUILT_IN` list,
-   `as_str`, `label`) in `proto/src/config/modules.rs`
-2. **Module** - the state, logic and iced view in
-   `core/src/modules/your_module.rs`, or in `core/src/modules/your_module/`
-   once its code passes 150 lines (see [File size](#file-size))
-3. **Events** - a `ModuleEvent` variant in
-   `core/src/event_bus.rs` if the module publishes background
-   updates
-4. **Registration and dispatch** - `gui/src/app/` —
-   `update/registration.rs` (register while hosted, release when not),
-   `update/modules.rs` and the module actions/element wiring under
-   `app/modules/`
+```bash
+cargo xtask new-module demo --kind polling --label "Demo" --doc "What it does."
+```
 
-Any per-module configuration gets its own file under
-`proto/src/config/` and a field on `Config`.
+Kinds: `simple` for a static entry, `polling` for a sampled readout,
+`listener` for an entry fed by an event stream it owns, `menu` for a
+listener entry opening a menu on press. The command writes the
+configuration, state, view and trait files, then prints the wiring
+checklist: the roster row, the `Config` field, the bus event and menu kind
+where the shape needs them, and the gui dispatch arms mirroring the clock
+module. Follow it top to bottom — the completed wiring passes
+`cargo check --workspace`, which also names any arm left behind. Finish
+with `cargo fmt`, `cargo clippy` and `cargo test` like any other change.
 
-See existing modules for reference: `modules/cpu.rs` is a small self-contained
-one, `modules/media_player/` a large one split into `state`, `messages`,
+What lands on disk: `proto/src/config/<name>.rs` holds the module
+configuration, `core/src/modules/<name>.rs` the shared state and messages,
+`core/src/modules/<name>/{module,state,view}.rs` the trait implementation,
+the message folding and the drawing. Fill the marked `TODO`s, replacing the
+placeholder readout, events and cadences with the real ones. A module
+lives in `core/src/modules/` and implements the `Module` trait from
+`core/src/modules.rs` (`register`, `deregister`, `poll_schedule`/`poll`,
+`subscription`); drawing stays in the module's own `bar_view`.
+
+See existing modules for reference: `keyboard_submap` is a small listener
+one, `media_player/` a large one split into `state`, `messages`,
 `commands` and `view`.
 
 ---
@@ -480,18 +432,58 @@ Aim for:
 
 ### Performance Testing
 
-For performance-critical changes:
+The bar earns its place on a desktop by costing almost nothing while it stands
+there, so a performance change is only done when it is measured. The first tool
+is the resource budget check, not a profiler: it turns "feels light" into a
+number and a pass/fail.
 
 ```bash
-# Profile with perf
-perf record --call-graph dwarf ./target/release/hydebar-app
+# Measure a running bar against the budgets (finds the one running bar, or pass a PID)
+cargo xtask resource-check
+cargo xtask resource-check <pid>
+```
+
+It reads the kernel's own accounting from `/proc` for a bar that is already
+running under a live compositor: resident memory, anonymous (heap) memory,
+thread count, and the CPU it burns while idle, each against a budget. The exit
+status is non-zero when a budget is exceeded, so the same command gates a
+release. It measures a running process rather than spawning one because the bar
+only lives under a Wayland compositor — a harness that started its own would be
+testing the compositor, not the bar.
+
+Budgets are read from the environment, so a baseline can be tightened without a
+code change: `RSS_MAX_KIB`, `ANON_MAX_KIB`, `THREADS_MAX`, `CPU_MAX_PCT`,
+`SETTLE_SECS`, `CPU_SECS`. The defaults are a measured floor plus headroom, not
+aspiration.
+
+**What the floor is made of.** On a Radeon under the default renderer the bar
+resides at about 96 MiB, and most of it is not the bar: the graphics driver
+stack (LLVM for the Vulkan shader compiler, `libgallium`, the Radeon driver)
+accounts for roughly 46 MiB on its own. The bar's own heap is a fraction of
+that. Two consequences worth knowing before chasing a number:
+
+- The bar probes for a hardware Vulkan device at startup and names Vulkan to
+  wgpu when one is present, so it does not also map the OpenGL driver — worth
+  about 19 MiB and two threads. A `WGPU_BACKEND` in the environment overrules
+  the probe.
+- The software renderer (`ICED_BACKEND=tiny-skia`) was measured and is worse on
+  this workload — about 320 MiB resident and twice the idle CPU, because it
+  keeps a full framebuffer in RAM and composites on the CPU. The GPU renderer
+  is the cheaper default; the software path is a fallback for a machine with no
+  GPU, not a lighter option.
+
+For deeper profiling once a budget is the thing to move:
+
+```bash
+# Where the CPU goes
+perf record --call-graph dwarf ./target/release/hydebar
 perf report
 
-# Memory profiling
-heaptrack ./target/release/hydebar-app
+# Where the allocations go
+heaptrack ./target/release/hydebar
 
-# Benchmark comparisons
-hyperfine "./target/release/hydebar-app" "waybar"
+# Which mappings hold the resident memory
+awk '/^[0-9a-f]+-/{n=$6; if(n=="")n="[anon]"} /^Rss:/{r[n]+=$2} END{for(k in r) printf "%9d KiB  %s\n", r[k], k}' /proc/<pid>/smaps | sort -rn | head
 ```
 
 ---
@@ -544,10 +536,17 @@ Maintainers handle releases:
 
 1. Update version in `Cargo.toml`
 2. Update `CHANGELOG.md`
-3. Create git tag: `git tag vX.Y.Z`
-4. Push tag: `git push origin vX.Y.Z`
-5. GitHub Actions builds packages
-6. Publish to AUR, Nix, etc.
+3. **Check the resource budget.** Build the release binary, run it on a real
+   session, and measure it: `cargo build --release && cargo xtask
+   resource-check`. Every budget must hold. A regression here is a regression in
+   the one promise the bar makes — that it costs nothing while idle — so it is
+   settled before the tag, not after. See [Performance
+   Testing](#performance-testing) for what the budgets mean and what the floor
+   is made of.
+4. Create git tag: `git tag vX.Y.Z`
+5. Push tag: `git push origin vX.Y.Z`
+6. GitHub Actions builds packages
+7. Publish to AUR, Nix, etc.
 
 ---
 

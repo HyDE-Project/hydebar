@@ -194,7 +194,8 @@ exec = "hyde-shell cpuinfo"
 interval = 5
 ```
 
-Advanced custom modules can update dynamically. See [README.md](../README.md#custom-modules).
+Advanced custom modules can update dynamically. See
+[CUSTOM_MODULES.md](CUSTOM_MODULES.md).
 
 ---
 

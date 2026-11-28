@@ -1,6 +1,10 @@
 //! Reading of the waybar module definition the desktop ships for its menu.
 
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    env::{var, var_os},
+    fs::read_to_string
+};
 
 use hydebar_proto::bar_layout::plain_json;
 use log::warn;
@@ -14,7 +18,7 @@ pub(super) struct Definition {
 
 /// Directory the desktop keeps its waybar assets in.
 fn data_dir() -> Option<std::path::PathBuf> {
-    std::env::var_os("XDG_DATA_HOME")
+    var_os("XDG_DATA_HOME")
         .map(std::path::PathBuf::from)
         .or_else(|| dirs::home_dir().map(|home| home.join(".local/share")))
 }
@@ -26,7 +30,7 @@ fn data_dir() -> Option<std::path::PathBuf> {
 /// well, so a caller naming the module once reaches both.
 pub(super) fn read_definition(module: &str) -> Option<Definition> {
     let path = data_dir()?.join(format!("waybar/modules/custom-{module}.jsonc"));
-    let source = std::fs::read_to_string(&path)
+    let source = read_to_string(&path)
         .inspect_err(|err| {
             if err.kind() == std::io::ErrorKind::NotFound {
                 log::debug!("the desktop ships no menu for {module}");
@@ -43,13 +47,12 @@ pub(super) fn read_definition(module: &str) -> Option<Definition> {
     let actions = module
         .get("menu-actions")
         .and_then(|value| value.as_object())
-        .map(|table| {
+        .map_or_default(|table| {
             table
                 .iter()
                 .filter_map(|(id, command)| Some((id.clone(), command.as_str()?.to_owned())))
                 .collect()
-        })
-        .unwrap_or_default();
+        });
 
     Some(Definition {
         glyph: module
@@ -70,7 +73,7 @@ pub(super) fn read_definition(module: &str) -> Option<Definition> {
 /// front of the path is the whole grammar.
 fn expand_path(raw: &str) -> String {
     let expand_var = |name: &str, fallback: Option<&str>| {
-        std::env::var(name)
+        var(name)
             .ok()
             .filter(|value| !value.is_empty())
             .or_else(|| fallback.map(str::to_owned))
@@ -88,10 +91,10 @@ fn expand_path(raw: &str) -> String {
         let fallback = fallback.map(expand_plain);
 
         return format!(
-            "{}{}{}",
-            &raw[..start],
-            expand_var(name, fallback.as_deref()),
-            &raw[start + end + 1..]
+            "{before}{value}{after}",
+            before = &raw[..start],
+            value = expand_var(name, fallback.as_deref()),
+            after = &raw[start + end + 1..]
         );
     }
 
@@ -106,7 +109,7 @@ fn expand_plain(raw: &str) -> String {
 
     let (name, rest) = name.split_at(name.find('/').unwrap_or(name.len()));
 
-    match std::env::var(name) {
+    match var(name) {
         Ok(value) if !value.is_empty() => format!("{value}{rest}"),
         _ => data_dir().map_or_else(|| raw.to_owned(), |dir| format!("{}{rest}", dir.display()))
     }
@@ -115,7 +118,12 @@ fn expand_plain(raw: &str) -> String {
 #[cfg(test)]
 #[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
-    use std::{io::Write, sync::Mutex};
+    use std::{
+        env::{remove_var, set_var, var_os},
+        fs::create_dir_all,
+        io::Write,
+        sync::Mutex
+    };
 
     use super::*;
 
@@ -129,7 +137,7 @@ mod tests {
             reason = "the ENVIRONMENT lock keeps every other test off the process environment"
         )]
         unsafe {
-            std::env::set_var(key, value);
+            set_var(key, value);
         }
     }
 
@@ -140,7 +148,7 @@ mod tests {
             reason = "the ENVIRONMENT lock keeps every other test off the process environment"
         )]
         unsafe {
-            std::env::remove_var(key);
+            remove_var(key);
         }
     }
 
@@ -154,7 +162,7 @@ mod tests {
 
         if let Some(definition) = definition {
             let modules = home.path().join("waybar/modules");
-            std::fs::create_dir_all(&modules).expect("the module directory is made");
+            create_dir_all(&modules).expect("the module directory is made");
 
             let mut file = std::fs::File::create(modules.join("custom-hyde-menu.jsonc"))
                 .expect("the module file is made");
@@ -162,7 +170,7 @@ mod tests {
                 .expect("the module is written");
         }
 
-        let previous = std::env::var_os("XDG_DATA_HOME");
+        let previous = var_os("XDG_DATA_HOME");
         set_env("XDG_DATA_HOME", home.path());
 
         let outcome = body();

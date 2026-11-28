@@ -48,7 +48,7 @@ impl ControlCenter {
         let profile = self
             .upower
             .as_ref()
-            .and_then(|u| u.power_profile.get_quick_setting_button(opacity, icons));
+            .and_then(|u| u.power_profile.quick_setting_button(opacity, icons));
 
         Column::new()
             .push(quick_settings_section(
