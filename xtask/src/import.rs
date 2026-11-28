@@ -7,7 +7,7 @@
 //! counterpart the native module wins and the script is reported as
 //! dropped; the rest rides along as custom modules with their commands.
 
-use std::{collections::BTreeSet, fs, fs::write, path::Path};
+use std::{collections::BTreeSet, fs, io::Write, path::Path};
 
 use hydebar_proto::bar_layout::{module_for, plain_json};
 use serde_json::Value;
@@ -128,10 +128,16 @@ pub fn run_command(arguments: &[String]) -> Result<(), String> {
     let rendered = render(&converted, source);
 
     if let Some(path) = out {
-        if Path::new(path).exists() {
-            return Err(format!("refusing to overwrite {path}"));
-        }
-        write(path, &rendered).map_err(|error| format!("cannot write {path}: {error}"))?;
+        let mut file = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(path)
+            .map_err(|error| match error.kind() {
+                std::io::ErrorKind::AlreadyExists => format!("refusing to overwrite {path}"),
+                _ => format!("cannot write {path}: {error}")
+            })?;
+        file.write_all(rendered.as_bytes())
+            .map_err(|error| format!("cannot write {path}: {error}"))?;
         println!("wrote {path}");
     } else {
         print!("{rendered}");

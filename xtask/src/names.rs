@@ -9,22 +9,22 @@ use std::fmt;
 /// Every spelling of a new module name.
 pub struct ModuleNames {
     /// Directory and file stem: `demo`.
-    pub snake:  String,
+    pub snake: String,
     /// Type and variant: `Demo`.
     pub pascal: String,
     /// Human label: `Demo` unless `--label` says otherwise.
-    pub label:  String,
+    pub label: String,
     /// Variant documentation: `--doc` or a marker to replace.
-    pub doc:    String
+    pub doc: String,
 }
 
 /// Why a name cannot become a module.
 #[derive(Debug, PartialEq, Eq)]
 pub struct InvalidName {
     /// What was typed.
-    pub input:  String,
+    pub input: String,
     /// What is wrong with it.
-    pub reason: &'static str
+    pub reason: &'static str,
 }
 
 impl fmt::Display for InvalidName {
@@ -37,12 +37,12 @@ impl fmt::Display for InvalidName {
 pub fn derive(
     input: &str,
     label: Option<&str>,
-    doc: Option<&str>
+    doc: Option<&str>,
 ) -> Result<ModuleNames, InvalidName> {
     if input.is_empty() {
         return Err(InvalidName {
-            input:  input.to_owned(),
-            reason: "a name is required"
+            input: input.to_owned(),
+            reason: "a name is required",
         });
     }
 
@@ -51,15 +51,22 @@ pub fn derive(
         .all(|char| char.is_ascii_lowercase() || char.is_ascii_digit() || char == '_')
     {
         return Err(InvalidName {
-            input:  input.to_owned(),
-            reason: "use snake_case: lowercase letters, digits and underscores"
+            input: input.to_owned(),
+            reason: "use snake_case: lowercase letters, digits and underscores",
         });
     }
 
     if input.starts_with(|char: char| char.is_ascii_digit()) || input.starts_with('_') {
         return Err(InvalidName {
-            input:  input.to_owned(),
-            reason: "start with a lowercase letter"
+            input: input.to_owned(),
+            reason: "start with a lowercase letter",
+        });
+    }
+
+    if is_rust_keyword(input) {
+        return Err(InvalidName {
+            input: input.to_owned(),
+            reason: "a reserved Rust keyword cannot name a module",
         });
     }
 
@@ -69,14 +76,82 @@ pub fn derive(
         .map(capitalize)
         .collect();
 
+    let doc = doc.unwrap_or("TODO: describe what the module does.");
+
+    if doc
+        .chars()
+        .any(|char| matches!(char, '\n' | '\r' | '\u{2028}' | '\u{2029}'))
+    {
+        return Err(InvalidName {
+            input: doc.to_owned(),
+            reason: "the doc is one line; line terminators are not allowed",
+        });
+    }
+
     Ok(ModuleNames {
         snake: input.to_owned(),
         label: label.unwrap_or(&pascal).to_owned(),
-        doc: doc
-            .unwrap_or("TODO: describe what the module does.")
-            .to_owned(),
-        pascal
+        doc: doc.to_owned(),
+        pascal,
     })
+}
+
+/// Whether `word` is a reserved Rust keyword and cannot name a module.
+///
+/// A keyword cannot serve as a `snake_case` file stem or a generated
+/// `PascalCase` type: `mod`, `use`, `struct`, `self`, `super`, … would not
+/// parse. The list is the compiler's own reserved set; `Self` cannot slip in
+/// because names are lowercase. Raw identifiers (`r#type`) are not offered —
+/// a scaffold names a clean module.
+fn is_rust_keyword(word: &str) -> bool {
+    const RUST_KEYWORDS: &[&str] = &[
+        "as",
+        "async",
+        "await",
+        "box",
+        "break",
+        "const",
+        "continue",
+        "crate",
+        "dyn",
+        "else",
+        "enum",
+        "extern",
+        "false",
+        "fn",
+        "for",
+        "if",
+        "impl",
+        "in",
+        "let",
+        "loop",
+        "macro",
+        "macro_rules",
+        "match",
+        "mod",
+        "move",
+        "mut",
+        "pub",
+        "ref",
+        "return",
+        "self",
+        "Self",
+        "static",
+        "struct",
+        "super",
+        "trait",
+        "true",
+        "try",
+        "type",
+        "union",
+        "unsafe",
+        "use",
+        "where",
+        "while",
+        "yield",
+    ];
+
+    RUST_KEYWORDS.contains(&word)
 }
 
 /// Capitalizes one `snake_case` segment: `submap` becomes `Submap`.
@@ -123,6 +198,42 @@ mod tests {
             assert!(
                 derive(input, None, None).is_err(),
                 "{input} must not derive"
+            );
+        }
+    }
+
+    #[test]
+    fn reserved_rust_keywords_are_refused() {
+        for input in [
+            "self", "super", "crate", "mod", "fn", "match", "impl", "struct", "enum", "trait",
+            "use", "pub", "let", "const", "static", "mut", "ref", "move", "as", "in", "for",
+            "loop", "while", "if", "else", "return", "break", "continue", "where", "type", "dyn",
+            "extern", "unsafe", "async", "await",
+        ] {
+            assert!(
+                derive(input, None, None).is_err(),
+                "keyword '{input}' must not derive"
+            );
+        }
+    }
+
+    #[test]
+    fn a_keyword_like_stem_that_is_not_reserved_is_allowed() {
+        assert!(derive("my_type", None, None).is_ok());
+        assert!(derive("asyncly", None, None).is_ok());
+    }
+
+    #[test]
+    fn a_multi_line_doc_is_refused() {
+        for doc in [
+            "first\nsecond",
+            "first\r\nsecond",
+            "first\rsecond",
+            "first\u{2028}second",
+        ] {
+            assert!(
+                derive("demo", None, Some(doc)).is_err(),
+                "doc with a line terminator must not derive"
             );
         }
     }

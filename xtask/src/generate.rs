@@ -109,6 +109,10 @@ pub fn write_files(root: &Path, files: &[RenderedFile]) -> io::Result<()> {
                 format!("refusing to overwrite {}", path.display())
             ));
         }
+    }
+
+    for file in files {
+        let path = root.join(&file.path);
 
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)?;

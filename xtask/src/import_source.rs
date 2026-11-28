@@ -40,7 +40,11 @@ pub fn read_customs(input: &Value) -> Vec<CustomEntry> {
         for (key, value) in object {
             if let Some(tail) = key.strip_prefix("custom/") {
                 let exec = value.get("exec").and_then(Value::as_str).map(str::to_owned);
-                if exec.is_none() {
+                let command = value
+                    .get("on-click")
+                    .and_then(Value::as_str)
+                    .map(str::to_owned);
+                if exec.is_none() && command.is_none() {
                     continue;
                 }
                 customs.push(CustomEntry {
@@ -51,10 +55,7 @@ pub fn read_customs(input: &Value) -> Vec<CustomEntry> {
                         .get("signal")
                         .and_then(Value::as_u64)
                         .and_then(|signal| u8::try_from(signal).ok()),
-                    command: value
-                        .get("on-click")
-                        .and_then(Value::as_str)
-                        .map(str::to_owned)
+                    command
                 });
             }
         }

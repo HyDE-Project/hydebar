@@ -118,34 +118,8 @@ impl Scope<'_> {
     /// emitted.
     pub fn expand_entry(&mut self, name: &str) {
         if let Some(group) = name.strip_prefix("group/") {
-            if self.visiting.iter().any(|known| known == group) {
-                return;
-            }
-            self.visiting.push(group.to_owned());
-
-            // The exact tail first (`pill#1`); the un-suffixed family only
-            // when nothing answers to it.
-            let base = group.split('#').next().unwrap_or(group);
-            let declared = self
-                .groups
-                .get(group)
-                .or_else(|| {
-                    if base == group {
-                        None
-                    } else {
-                        self.groups.get(base)
-                    }
-                })
-                .cloned()
-                .unwrap_or_default();
-
             let mut members = Vec::new();
-            for member in &declared {
-                if let Some(mapped) = self.map_member(member) {
-                    members.push(mapped);
-                }
-            }
-            self.visiting.pop();
+            self.append_members(group, &mut members);
 
             if !members.is_empty() {
                 self.entries.push(SectionEntry::Group(members));
@@ -156,6 +130,40 @@ impl Scope<'_> {
         if let Some(mapped) = self.map_member(name) {
             self.entries.push(SectionEntry::Single(mapped));
         }
+    }
+
+    /// Collects a group's members, flattening nested `group/*` into `out`.
+    ///
+    /// Waybar permits a group inside a group; the nested members belong to
+    /// the containing `SectionEntry::Group`. `visiting` guards cycles.
+    fn append_members(&mut self, group_key: &str, out: &mut Vec<String>) {
+        if self.visiting.iter().any(|known| known == group_key) {
+            return;
+        }
+        self.visiting.push(group_key.to_owned());
+
+        let base = group_key.split('#').next().unwrap_or(group_key);
+        let declared = self
+            .groups
+            .get(group_key)
+            .or_else(|| {
+                if base == group_key {
+                    None
+                } else {
+                    self.groups.get(base)
+                }
+            })
+            .cloned()
+            .unwrap_or_default();
+
+        for member in &declared {
+            if let Some(nested) = member.strip_prefix("group/") {
+                self.append_members(nested, out);
+            } else if let Some(mapped) = self.map_member(member) {
+                out.push(mapped);
+            }
+        }
+        self.visiting.pop();
     }
 
     /// Maps one Waybar module name, tracking scripts and the unknown.
