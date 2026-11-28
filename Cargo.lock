@@ -1807,6 +1807,7 @@ name = "hydebar-xtask"
 version = "0.2.0"
 dependencies = [
  "hydebar-proto",
+ "libc",
  "serde_json",
  "toml",
 ]

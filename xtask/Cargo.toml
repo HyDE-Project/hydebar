@@ -13,6 +13,7 @@ path = "src/main.rs"
 
 [dependencies]
 hydebar-proto = { path = "../proto" }
+libc.workspace = true
 serde_json.workspace = true
 
 [dev-dependencies]

@@ -15,11 +15,12 @@ mod import_scope;
 mod import_source;
 mod kinds;
 mod names;
+mod resource;
 
 use kinds::ModuleKind;
 
 /// Usage lines printed for any invocation the parser refuses.
-const USAGE: &str = "usage:\n  cargo xtask new-module <name> [--kind simple|polling|listener|menu] [--label \"...\"] [--doc \"...\"]\n  cargo xtask import-waybar <config.jsonc> [--out <config.toml>]";
+const USAGE: &str = "usage:\n  cargo xtask new-module <name> [--kind simple|polling|listener|menu] [--label \"...\"] [--doc \"...\"]\n  cargo xtask import-waybar <config.jsonc> [--out <config.toml>]\n  cargo xtask resource-check [pid]";
 
 /// Command-line flags of `new-module`, in the order they are read.
 struct Args {
@@ -108,6 +109,14 @@ fn run() -> Result<(), String> {
 
     if arguments.first().map(String::as_str) == Some("import-waybar") {
         return import::run_command(&arguments[1..]);
+    }
+
+    if arguments.first().map(String::as_str) == Some("resource-check") {
+        return match resource::resource_check(&arguments[1..]) {
+            Ok(true) => Ok(()),
+            Ok(false) => Err("resource budget exceeded".to_owned()),
+            Err(error) => Err(error)
+        };
     }
 
     if arguments.first().map(String::as_str) != Some("new-module") {
