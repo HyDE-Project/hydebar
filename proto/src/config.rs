@@ -13,6 +13,7 @@ mod keyboard_layout;
 mod media_player;
 mod modules;
 mod notifications;
+mod renderer;
 mod serde_helpers;
 mod system_info;
 mod themes;
@@ -46,6 +47,7 @@ pub use keyboard_layout::KeyboardLayoutModuleConfig;
 pub use media_player::MediaPlayerModuleConfig;
 pub use modules::{BarLayer, ModuleDef, ModuleName, Modules, Outputs, Position};
 pub use notifications::{NotificationSource, NotificationsConfig};
+pub use renderer::RendererChoice;
 use serde::Deserialize;
 pub use serde_helpers::RegexCfg;
 pub use system_info::{
@@ -137,7 +139,10 @@ pub struct Config {
     pub notifications:       NotificationsConfig,
     #[serde(default)]
     /// How the overview of the screens and their windows is drawn.
-    pub desk:                DeskConfig
+    pub desk:                DeskConfig,
+    #[serde(default)]
+    /// Which drawing backend the bar asks its renderer for.
+    pub renderer:            RendererChoice
 }
 
 impl Default for Config {
@@ -167,7 +172,8 @@ impl Default for Config {
             weather:             WeatherModuleConfig::default(),
             icons:               IconsConfig::default(),
             notifications:       NotificationsConfig::default(),
-            desk:                DeskConfig::default()
+            desk:                DeskConfig::default(),
+            renderer:            RendererChoice::default()
         }
     }
 }

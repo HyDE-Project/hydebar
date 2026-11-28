@@ -294,6 +294,20 @@ Disable animations entirely:
 enabled = false
 ```
 
+## Drawing backend
+
+The bar draws on the GPU when one answers and falls back to the CPU when
+none does. You can pin the choice — useful on machines whose graphics
+driver is flaky, or to keep a hybrid laptop off its discrete GPU entirely:
+
+```toml
+renderer = "auto"  # "auto" (default), "gpu", or "cpu"
+```
+
+The choice is read once at startup, before the first frame; a config reload
+does not re-pick it. An `ICED_BACKEND` set in the environment overrules the
+configuration.
+
 ## Greeting
 
 The first bar of a session greets you mid-screen for a few seconds and gets

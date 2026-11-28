@@ -5,7 +5,7 @@ use std::{borrow::Cow, num::NonZeroUsize, path::PathBuf, sync::Arc};
 use clap::Parser;
 use hydebar_core::{
     adapters::hyprland_client::HyprlandClient,
-    config::{Config, ConfigManager, config},
+    config::{Config, ConfigManager, RendererChoice, config},
     event_bus::EventBus
 };
 use hydebar_gui::{App, log_spec};
@@ -74,6 +74,31 @@ fn apply_screen_look(raw_config: &mut Config) {
     hydebar_core::components::scale::set_base(raw_config.appearance.font_size_px());
 }
 
+/// Points the renderer at the backend the configuration asks for.
+///
+/// The renderer reads this choice once, from the environment, before it
+/// brings up its first frame; `auto` leaves the variable alone and lets the
+/// renderer try the GPU and fall back to the CPU on its own. An
+/// `ICED_BACKEND` already in the environment wins: that is what a packager
+/// or a debugging user sets to overrule every configuration on the machine.
+fn apply_renderer_choice(renderer: RendererChoice) {
+    let Some(name) = renderer.backend_name() else {
+        return;
+    };
+
+    if std::env::var_os("ICED_BACKEND").is_some() {
+        return;
+    }
+
+    #[expect(
+        unsafe_code,
+        reason = "the choice is applied before the renderer reads it; the live runtime workers never touch the environment"
+    )]
+    unsafe {
+        std::env::set_var("ICED_BACKEND", name);
+    }
+}
+
 /// Reads the configuration, becomes the single instance and runs the bar.
 ///
 /// The bridge's own first surface is not one of the bar's: it is parked as an
@@ -94,6 +119,7 @@ pub fn run(runtime_handle: Handle) -> Result<(), MainError> {
 
     let mut raw_config = raw_config;
     apply_screen_look(&mut raw_config);
+    apply_renderer_choice(raw_config.renderer);
 
     let config = Arc::new(raw_config);
     let config_manager = Arc::new(ConfigManager::new((*config).clone()));
